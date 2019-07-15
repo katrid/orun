@@ -1,0 +1,79 @@
+<templates>
+
+  <script id="view.card.jinja2" type="text/ng-template">
+    <div class="content no-padding">
+      <div class="data-panel col-12">
+
+        <div class="card-view kanban" ng-if="groupings.length" card-draggable=".card-group" card-group>
+
+          <div ng-repeat="group in groupings" class="card-group sortable-item" data-id="{{ group._paramValue }}"
+               data-group-name="{{ group._paramName }}">
+            <div class="card-header margin-bottom-8">
+              <div class="pull-right">
+                <button class="btn" ng-click="cardShowAddGroupItemDlg = true"><i class="fa fa-plus"></i></button>
+              </div>
+              <h4 ng-bind="group.__str__"></h4>
+              <div class="clearfix"></div>
+
+              <form id="card-add-group-item-dlg" ng-submit="cardAddItem($event, cardNewName)"
+                    ng-if="cardShowAddGroupItemDlg">
+                <div class="form-group">
+                  <input ng-model="cardNewName" ng-init="cardNewName = ''" class="form-control"
+                         ng-esc="cardHideAddGroupItemDlg($event)" placeholder="{{ _.gettext('Add') }}"
+                         ng-blur="cardHideAddGroupItemDlg($event)">
+                </div>
+                <button type="submit" class="btn btn-primary"
+                        onmousedown="event.preventDefault();event.stopPropagation();">${Katrid.i18n.gettext('Add')}
+                </button>
+                <button class="btn btn-default">{{ _.gettext('Cancel') }}</button>
+              </form>
+
+            </div>
+            <div class="card-items" card-draggable=".card-items" card-item>
+              <div ng-repeat="record in group.records" class="card-item sortable-item ui-sortable-handle"
+                   ng-click="action.listRowClick($index, record, $event)">
+                {{ content }}
+              </div>
+            </div>
+          </div>
+
+          <div class="card-add-group" title="{{ _.gettext('Click here to add new column') }}"
+               ng-click="cardNewName='';cardShowAddGroupDlg($event);" data-group-name="{{ groupings[0]._paramName }}">
+            <div ng-hide="cardAddGroupDlg">
+              <i class="fa fa-fw fa-chevron-right fa-2x"></i>
+              <div class="clearfix"></div>
+              <span class="title">{{ _.gettext('Add New Column') }}</span>
+            </div>
+            <form ng-show="cardAddGroupDlg" ng-submit="cardAddGroup($event, cardNewName)">
+              <div class="form-group">
+                <input class="form-control" ng-blur="cardAddGroupDlg=false" ng-esc="cardAddGroupDlg=false"
+                       placeholder="{{ _.gettext('Add') }}" ng-model="cardNewName">
+              </div>
+              <button type="submit" class="btn btn-primary">{{ _.gettext('Add') }}</button>
+              <button type="button" class="btn btn-default">{{ _.gettext('Cancel') }}</button>
+            </form>
+          </div>
+        </div>
+        <div class="card-view card-deck" ng-if="!groupings.length">
+          <div ng-repeat="record in records" class="card panel-default card-item card-link"
+               ng-click="action.listRowClick($index, record, $event)">
+            {{ content }}
+          </div>
+          <div class="card-item card-ghost"></div>
+          <div class="card-item card-ghost"></div>
+          <div class="card-item card-ghost"></div>
+          <div class="card-item card-ghost"></div>
+          <div class="card-item card-ghost"></div>
+          <div class="card-item card-ghost"></div>
+          <div class="card-item card-ghost"></div>
+          <div class="card-item card-ghost"></div>
+          <div class="card-item card-ghost"></div>
+          <div class="card-item card-ghost"></div>
+          <div class="card-item card-ghost"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </script>
+</templates>

@@ -1,0 +1,128 @@
+<templates>
+  <script id="view.report.jinja2" type="text/ng-template">
+    <div ng-controller="ReportController">
+      <form id="report-form" method="get" action="/web/reports/report/">
+        <div class="data-heading panel panel-default">
+          <div class="panel-body">
+          <h2>{{ action.name }}</h2>
+          <div class="toolbar">
+            <button class="btn btn-primary" type="button" ng-click="report.preview()"><span class="fa fa-print fa-fw"></span> {{ _.gettext('Preview') }}</button>
+
+            <div class="btn-group">
+              <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+                      aria-expanded="false">{{ _.gettext('Export') }} <span class="caret"></span></button>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" ng-click="Katrid.Reports.Reports.preview()">PDF</a>
+                <a class="dropdown-item" ng-click="$event.preventDefault();report.telegram();">Telegram</a>
+                <a class="dropdown-item" ng-click="Katrid.Reports.Reports.export('docx')">Word</a>
+                <a class="dropdown-item" ng-click="Katrid.Reports.Reports.export('xlsx')">Excel</a>
+                <a class="dropdown-item" ng-click="Katrid.Reports.Reports.export('pptx')">PowerPoint</a>
+                <a class="dropdown-item" ng-click="Katrid.Reports.Reports.export('csv')">CSV</a>
+                <a class="dropdown-item" ng-click="Katrid.Reports.Reports.export('txt')">{{ _.gettext('Text File') }}</a>
+              </div>
+            </div>
+
+            <div class="btn-group">
+              <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+                      aria-expanded="false">{{ _.gettext('My reports') }} <span class="caret"></span></button>
+              <ul class="dropdown-menu">
+              </ul>
+            </div>
+
+          <div class="pull-right btn-group">
+            <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+                    aria-expanded="false"><i class="fa fa-sliders-h"></i></button>
+            <div class="dropdown-menu">
+              <a class="dropdown-item" href="javascript:void(0)" ng-click="report.saveDialog()">{{ _.gettext('Save') }}</a>
+              <a class="dropdown-item" href="#">{{ _.gettext('Load') }}</a>
+              <div class="dropdown-divider"></div>
+              <h6 class="dropdown-header">Report Viewer</h6>
+              <a class="dropdown-item" onclick="localStorage.setItem('katridReportViewer', 'pdf')">Visualizar em PDF</a>
+              <a class="dropdown-item" onclick="localStorage.setItem('katridReportViewer', 'native')">Visualizador Nativo</a>
+            </div>
+          </div>
+
+          </div>
+        </div>
+        </div>
+        <div class="col-sm-12">
+          <table class="col-sm-12" style="margin-top: 20px; display:none;">
+            <tr>
+              <td colspan="2" style="padding-top: 8px;">
+                <label>{{ _.gettext('My reports') }}</label>
+
+                <select class="form-control" ng-change="action.userReportChanged(action.userReport.id)" ng-model="action.userReport.id">
+                    <option value=""></option>
+                    <option ng-repeat="rep in userReports" value="${ rep.id }">${ rep.name }</option>
+                </select>
+              </td>
+            </tr>
+          </table>
+        </div>
+      <div id="report-params">
+      <div id="params-fields" class="col-sm-12 form-group" ng-if="::customizableReport">
+        <div class="checkbox"><label><input type="checkbox" ng-model="paramsAdvancedOptions"> {{ _.gettext('Advanced options') }}</label></div>
+        <div ng-show="paramsAdvancedOptions">
+          <div class="form-group">
+            <label>{{ _.gettext('Printable Fields') }}</label>
+            <input type="hidden" id="report-id-fields"/>
+          </div>
+          <div class="form-group">
+            <label>{{ _.gettext('Totalizing Fields') }}</label>
+            <input type="hidden" id="report-id-totals"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="clearfix"></div>
+
+      </div>
+        <div ng-if="::advancedOptions">
+        <div id="params-sorting" class="col-sm-12 form-group">
+          <label class="control-label">{{ _.gettext('Sorting') }}</label>
+          <select multiple id="report-id-sorting"></select>
+        </div>
+
+        <div id="params-grouping" class="col-sm-12 form-group">
+          <label class="control-label">{{ _.gettext('Grouping') }}</label>
+          <select multiple id="report-id-grouping"></select>
+        </div>
+        <hr>
+        <table class="col-sm-12">
+          <tr>
+            <td class="col-sm-4">
+              ${ 'teste' }
+              <select class="form-control" ng-model="newParam">
+                <option value="">--- {{ _.gettext('FILTERS') }} ---</option>
+                <option ng-repeat="field in report.fields" value="${ field.name }">${ field.label }</option>
+              </select>
+            </td>
+            <td class="col-sm-8">
+              <button
+                  class="btn btn-outline-secondary" type="button"
+                  ng-click="report.addParam(newParam)">
+                <i class="fa fa-plus fa-fw"></i> {{ _.gettext('Add Parameter') }}
+              </button>
+            </td>
+          </tr>
+        </table>
+        <div class="clearfix"></div>
+        <hr>
+      </div>
+      <div id="params-params" class="params-params margin-top-8 row">
+        <div ng-repeat="param in report.params" ng-controller="ReportParamController" class="col-lg-6 form-group">
+          <div class="col-12">
+            <label class="control-label">${ param.label }</label>
+          </div>
+          <div class="col-4" ng-if="param.operationsVisible">
+            <select ng-model="param.operation" class="form-control" ng-change="param.setOperation(param.operation)">
+              <option ng-repeat="op in param.operations" value="${op.id}">${op.text}</option>
+            </select>
+          </div>
+          <div class="col param-widget"></div>
+        </div>
+      </div>
+      </form>
+    </div>
+  </script>
+</templates>

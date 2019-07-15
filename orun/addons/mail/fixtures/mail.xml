@@ -1,0 +1,12 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<data translate="true">
+  <object id="mail.comment" model="mail.message.subtype">
+    <field name="name">Discuss</field>
+    <field name="sequence">10</field>
+  </object>
+  <object id="mail.note" model="mail.message.subtype">
+    <field name="name">Note</field>
+    <field name="default">False</field>
+    <field name="sequence">99</field>
+  </object>
+</data>

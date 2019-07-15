@@ -1,0 +1,4 @@
+<data>
+  <template id="web.base" name="Web Base" file="web/base.jinja2"/>
+  <template id="web.app" name="Web Application" file="web/index.jinja2"/>
+</data>

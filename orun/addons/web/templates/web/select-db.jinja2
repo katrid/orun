@@ -1,0 +1,17 @@
+{% extends "/web/login.jinja2" %}
+{% block content %}
+  <div style="width: 100%; max-width: 330px; padding: 15px;margin: 0 auto;">
+    <img class="mb-4" src="/static/web/assets/img/logo.png" alt="" style="max-height: 80px;">
+    <form class="form-signin" method="post" ng-submit="login(username, password, database)" ng-controller="LoginController">
+      {% raw %}
+      <div class="alert alert-{{ message.type }}" ng-cloak ng-repeat="message in messages">{{ message.message }}</div>
+      {% endraw %}
+      <div class="form-group">
+        <input type="text" class="form-control" name="database" placeholder="Banco de Dados" ng-model="database" {% if current_db %}value="{{current_db}}"{% endif %} autofocus>
+      </div>
+      <div class="form-group">
+        <button ng-disabled="loading" type="submit" class="btn btn-primary btn-block btn-lg">{{ gettext('Next') }}</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

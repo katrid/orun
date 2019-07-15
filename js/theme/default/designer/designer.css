@@ -1,0 +1,166 @@
+html, body {
+  height: 100%;
+}
+
+.designer {
+  background-color: #f2f2f2;
+  height: 100%;
+  display: flex;
+  flex-flow: column;
+}
+.designer .toolbar {
+  padding: 5px;
+}
+.designer .workspace {
+  height: 100%;
+  width: 100%;
+  display: flex;
+}
+.designer .workspace .design-surface {
+  overflow: auto;
+  padding: 10px;
+  cursor: default;
+  border: 1px solid #e2e2e2;
+  height: 100%;
+}
+.designer .workspace .prepared-band {
+  position: absolute;
+}
+.designer .workspace .toolbox {
+  vertical-align: top;
+  width: 170px;
+}
+.designer .workspace .toolbox .toolbox-search {
+  padding: 8px 0;
+}
+.designer .workspace .toolbox .widget-label {
+  font-size: 8pt;
+}
+.designer .workspace .right-bar {
+  vertical-align: top;
+  width: 38px;
+  border-left: 1px solid #d1d1d1;
+}
+.designer .workspace .right-bar .tool-button {
+  border-bottom: 1px solid #d1d1d1;
+  padding-top: 4px;
+  width: 36px;
+  height: 36px;
+  text-align: center;
+  cursor: pointer;
+}
+.designer .workspace .right-bar .tool-button:hover {
+  background-color: #d9d9d9;
+}
+.designer .workspace .workspace-area {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+}
+.designer .workspace .data-source-tree {
+  border-top: 1px solid #d1d1d1;
+  margin-top: 10px;
+  padding-top: 8px;
+}
+.designer .workspace .datasource-explorer {
+  margin-top: 10px;
+  border-top: 1px solid #d1d1d1;
+  padding-top: 10px;
+}
+.designer .workspace .tool-window {
+  height: 100%;
+  width: 400px;
+  float: right;
+  background-color: #ffffff;
+  border-style: solid;
+  border-color: #d1d1d1;
+  border-width: 1px 0 0 1px;
+  padding: 10px;
+}
+.designer .workspace .tool-window .tool-window-header {
+  font-weight: bold;
+  font-size: 11pt;
+  text-transform: uppercase;
+  padding: 8px 0;
+}
+.designer .grid {
+  padding: 30px 30px;
+  display: grid;
+  grid-gap: 16px;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+}
+.designer .grid .grid-cell {
+  height: 120px;
+  border: 1px dotted #cfcfcf;
+}
+.designer .grid .grid-cell.dragover {
+  border-color: #8c7eff;
+  background-color: #e7e4ff;
+  z-index: 999;
+  opacity: 0.5;
+}
+.designer .grid .grid-cell.dragover.drag-error {
+  border-color: #ff583d;
+  background-color: #ff9e99;
+}
+
+.workspace .toolbox-header {
+  background: #f2f2f2;
+  border: 1px solid #d1d1d1;
+  font-weight: bold;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.workspace .toolbox-header span {
+  margin-top: 3px;
+}
+.workspace .toolbox-menu {
+  background: #ffffff;
+}
+.workspace .toolbox-menu .toolbox-item {
+  padding: 8px 2px 0;
+  height: 72px;
+  text-align: center;
+  cursor: default;
+}
+.workspace .toolbox-menu .toolbox-item:hover {
+  background: #f2f2f2;
+}
+.workspace .toolbox-menu .toolbox-item.selected {
+  background: #d9d9d9;
+}
+.workspace .toolbox-menu .toolbox-item:nth-child(even) {
+  border-left: none;
+}
+.widget-designer-helper {
+  position: absolute;
+  border: 1px solid #a793ff;
+  z-index: 999;
+}
+
+.target-handle {
+  background-color: #a793ff;
+  position: absolute;
+  height: 8px;
+  width: 8px;
+  border-radius: 50%;
+  z-index: 999;
+}
+.target-handle.top-right, .target-handle.bottom-left {
+  cursor: nesw-resize;
+}
+.target-handle.top-left, .target-handle.bottom-right {
+  cursor: nwse-resize;
+}
+.target-handle.middle-left, .target-handle.middle-right {
+  cursor: ew-resize;
+}
+.target-handle.top-center, .target-handle.bottom-center {
+  cursor: ns-resize;
+}
+
+.widget-container {
+  background-color: white;
+}
+
+/*# sourceMappingURL=designer.css.map */

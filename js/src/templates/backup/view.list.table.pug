@@ -1,0 +1,14 @@
+table.table.table-hover.dataTable
+    thead
+        tr
+            if options.rowSelector
+                th.list-record-selector: input(type='checkbox', ng-click='action.selectToggle($event.currentTarget)', onclick="$(this).closest('table').find('td.list-record-selector input').prop('checked', $(this).prop('checked'))")
+    tbody
+        tr(ng-repeat='record in records', ng-click=rowClick)
+            if options.rowSelector
+                td.list-record-selector(onclick="event.stopPropagation();")
+                    input(type="checkbox", ng-click="action.selectToggle($event.currentTarget)", data-id="{{ record.id }}", onclick="if (!$(this).prop('checked')) $(this).closest('table').find('th.list-record-selector input').prop('checked', false)")
+
+    tfoot
+        tr
+

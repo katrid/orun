@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<data translate="true">
+  <menuitem id="menu.contacts" name="Contacts" sequence="91">
+    <menuitem id="menu.contacts.partners" name="Partners">
+      <menuitem id="menu.contacts.partners.partner" name="Contacts" action="action.contacts.view.partner" />
+      <menuitem id="menu.contacts.partners.partner.category" name="Categories" action="action.contacts.view.partner.category" />
+      <menuitem id="menu.contacts.partners.partner.title" name="Titles" action="action.contacts.view.partner.title" />
+    </menuitem>
+    <menuitem id="menu.contacts.localization" name="Localization">
+      <menuitem id="menu.contacts.localization.country" name="Countries" action="action.contacts.view.country"/>
+      <menuitem id="menu.contacts.localization.country.state" name="Fed. States" action="action.contacts.view.country.state"/>
+      <menuitem id="menu.contacts.localization.city" name="Cities" action="action.contacts.view.city"/>
+      <menuitem id="menu.contacts.localization.country.group" name="Country Groups" action="action.contacts.view.country.group"/>
+    </menuitem>
+  </menuitem>
+</data>

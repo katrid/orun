@@ -1,0 +1,7 @@
+extends view.form.field.pug
+
+append vars
+    -var cssClass = 'TextField'
+
+block field
+    div.form-field(code-editor, code-editor-options=fieldAttributes.codeEditorOptions)&attributes(attrs)

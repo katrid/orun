@@ -1,0 +1,18 @@
+
+msgid ""
+msgstr ""
+"Project-Id-Version: orun\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2016-07-24 11:06+0100\n"
+"PO-Revision-Date: 2016-08-01 19:20+0000\n"
+"Last-Translator: Alexandre Dias <alexandre@katrid.com>\n"
+"Language-Team: Portuguese (Brazil)"
+"language/pt_BR/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pt_BR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Voice Command"
+msgstr "Comando de Voz"

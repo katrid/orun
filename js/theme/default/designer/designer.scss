@@ -1,0 +1,225 @@
+html, body {
+  height: 100%;
+}
+
+$workspace-bg-color: #f2f2f2;
+$toolbox-header: $workspace-bg-color;
+$workspace-grid-border-color: #cfcfcf;
+$toolbox-border-color: #d1d1d1;
+$toolbox-menu-bg-color: #ffffff;
+$dragover-bg-color: #e7e4ff;
+$dragover-border-color: darken($dragover-bg-color, 20%);
+
+
+.designer {
+  background-color: $workspace-bg-color;
+  height: 100%;
+  display: flex;
+  flex-flow: column;
+
+  .toolbar {
+    padding: 5px;
+  }
+
+  .workspace {
+    height: 100%;
+    width: 100%;
+    display: flex;
+
+    .design-surface {
+      overflow: auto;
+      padding: 10px;
+      cursor: default;
+      border: 1px solid #e2e2e2;
+      height: 100%;
+    }
+
+    .draggable-object {
+
+    }
+
+    .prepared-band {
+      position: absolute;
+    }
+
+
+    .toolbox {
+      vertical-align: top;
+      width: 170px;
+
+      .toolbox-search {
+        padding: 8px 0;
+      }
+
+      .widget-label {
+        font-size: 8pt;
+      }
+
+    }
+
+
+    .right-bar {
+      vertical-align: top;
+      width: 38px;
+      border-left: 1px solid $toolbox-border-color;
+
+      .tool-button  {
+        border-bottom: 1px solid $toolbox-border-color;
+        padding-top: 4px;
+        width: 36px;
+        height: 36px;
+        text-align: center;
+        cursor: pointer;
+
+        &:hover {
+          background-color: darken($workspace-bg-color, 10%);
+        }
+      }
+    }
+
+    .workspace-area {
+      height: 100%;
+      width: 100%;
+      overflow: auto;
+    }
+
+    .data-source-tree {
+      border-top: 1px solid $toolbox-border-color;
+      margin-top: 10px;
+      padding-top: 8px;
+    }
+
+    .datasource-explorer {
+      margin-top: 10px;
+      border-top: 1px solid $toolbox-border-color;
+      padding-top: 10px;
+    }
+
+    .tool-window {
+      height: 100%;
+      width: 400px;
+      float: right;
+      background-color: #ffffff;
+      border-style: solid;
+      border-color: $toolbox-border-color;
+      border-width: 1px 0 0 1px;
+      padding: 10px;
+
+      .tool-window-header {
+        font-weight: bold;
+        font-size: 11pt;
+        text-transform: uppercase;
+        padding: 8px 0;
+      }
+    }
+  }
+
+  .grid {
+    padding: 30px 30px;
+    display: grid;
+    grid-gap: 16px;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+
+    .grid-cell {
+      height: 120px;
+      border: 1px dotted $workspace-grid-border-color;
+
+      &.dragover {
+        border-color: $dragover-border-color;
+        background-color: $dragover-bg-color;
+        z-index: 999;
+        opacity: .5;
+
+        &.drag-error {
+          border-color: #ff583d;
+          background-color: #ff9e99;
+        }
+      }
+    }
+  }
+}
+
+
+
+.workspace {
+
+  .toolbox-header {
+    background: $toolbox-header;
+    border: 1px solid $toolbox-border-color;
+    font-weight: bold;
+    padding: 6px 10px;
+    cursor: pointer;
+
+    span {
+      margin-top: 3px;
+    }
+
+  }
+
+  .toolbox-menu {
+    background: $toolbox-menu-bg-color;
+
+    .toolbox-item {
+      padding: 8px 2px 0;
+      height: 72px;
+      text-align: center;
+      cursor: default;
+
+      &:hover {
+        background: $workspace-bg-color;
+      }
+
+      &.selected {
+        background: darken($workspace-bg-color, 10%);
+      }
+
+      &:nth-child(even) {
+        border-left: none;
+      }
+    }
+
+  }
+
+
+
+  .widget-designer {
+
+  }
+
+}
+
+.widget-designer-helper {
+  position: absolute;
+  border: 1px solid #a793ff;
+  z-index: 999;
+}
+
+.target-handle {
+  background-color: #a793ff;;
+  position: absolute;
+  height: 8px;
+  width: 8px;
+  border-radius: 50%;
+  z-index: 999;
+
+  &.top-right, &.bottom-left {
+    cursor: nesw-resize;
+  }
+
+  &.top-left, &.bottom-right {
+    cursor: nwse-resize;
+  }
+
+  &.middle-left, &.middle-right {
+    cursor: ew-resize;
+  }
+
+  &.top-center, &.bottom-center {
+    cursor: ns-resize;
+  }
+}
+
+.widget-container {
+  background-color: white;
+}
+

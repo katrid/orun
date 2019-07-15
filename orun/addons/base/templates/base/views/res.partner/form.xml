@@ -1,0 +1,70 @@
+<form>
+  <div class="media">
+    <div class="d-flex mr-3">
+      <field name="image" nolabel ng-empty-image="(record.company_type === 'individual' && '/static/web/assets/img/avatar.png') || ('/static/web/assets/img/no-image.png')"/>
+    </div>
+    <div class="media-body">
+      <h3>
+        <field name="name" cols="12" class="form-control-lg" nolabel="placeholder"/>
+      </h3>
+      <div class="row">
+        <field name="is_employee"/>
+      </div>
+    </div>
+  </div>
+
+  <field name="company_type"/>
+  <field name="company"/>
+  <div class="clearfix"/>
+  <fieldset class="col-sm-6">
+    <legend><span class="fa fa-map-marker fa-fw"/> {{ _('Address') }}</legend>
+    <div class="row">
+      <label class="col-sm-12"><a class="pull-right" href="https://maps.google.com" target="_blank">{{ _('Show on google maps') }}</a></label>
+      <field name="address" cols="12" nolabel="placeholder"/>
+      <field name="address_2" cols="12" nolabel="placeholder"/>
+      <field name="zip" cols="4" nolabel="placeholder"/>
+      <field name="city" cols="8" nolabel="placeholder"/>
+      <field name="state" cols="6" nolabel="placeholder"/>
+      <field name="country" cols="6" nolabel="placeholder"/>
+    </div>
+  </fieldset>
+  <fieldset class="col-sm-6">
+    <legend>{{ _('Details') }}</legend>
+    <div class="row">
+      <field name="phone" icon="fa fa-phone" cols="4"/>
+      <field name="fax" cols="4"/>
+      <field name="mobile" icon="fa fa-mobile" cols="4"/>
+      <field name="website" icon="fa fa-globe"/>
+      <field name="email" icon="fa fa-envelope"/>
+      <field name="language"/>
+      <field name="title"/>
+    </div>
+  </fieldset>
+  <tabset>
+    <tab>
+      <tab-heading>{{ _('Additional Data') }}</tab-heading>
+      <field name="birthdate"/>
+      <field name="barcode"/>
+      <field name="color"/>
+    </tab>
+    <tab>
+      <tab-heading>{{ _('Sales & Purchases') }}</tab-heading>
+      <fieldset class="col-sm-6">
+        <legend>{{ _('Sales') }}</legend>
+        <div class="row">
+          <field name="is_customer" cols="12"/>
+        </div>
+      </fieldset>
+      <fieldset class="col-sm-6">
+        <legend>{{ _('Purchases') }}</legend>
+        <div class="row">
+          <field name="is_supplier" cols="12"/>
+        </div>
+      </fieldset>
+    </tab>
+    <tab>
+      <tab-heading>{{ _('Notes') }}</tab-heading>
+      <field name="comments" nolabel="true" cols="12"/>
+    </tab>
+  </tabset>
+</form>

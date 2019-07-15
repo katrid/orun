@@ -1,0 +1,4 @@
+each view in views
+    -viewTag = `${view.type}-view`
+    -viewCondition = `action.viewType === '${view.type}'`
+    #{viewTag}(class='action-view', ng-if=viewCondition) !{view.content}

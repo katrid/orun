@@ -1,0 +1,81 @@
+{% extends "/web/base.jinja2" %}
+{% block extra_head %}
+<style>
+html,
+body {
+  height: 100%;
+}
+
+body {
+  display: -ms-flexbox;
+  display: -webkit-box;
+  display: flex;
+  -ms-flex-align: center;
+  -ms-flex-pack: center;
+  -webkit-box-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  justify-content: center;
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+
+.form-signin {
+  width: 100%;
+  max-width: 330px;
+  padding: 15px;
+  margin: 0 auto;
+}
+.form-signin .checkbox {
+  font-weight: 400;
+}
+.form-signin .form-control {
+  position: relative;
+  box-sizing: border-box;
+  height: auto;
+  padding: 10px;
+  font-size: 16px;
+}
+.form-signin .form-control:focus {
+  z-index: 2;
+}
+.form-signin #id-username {
+  margin-bottom: -1px;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.form-signin input[type="password"] {
+  margin-bottom: 10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+</style>
+{% endblock %}
+{% block body_class %}text-center{% endblock %}
+{% block additional_assets %}
+
+{% endblock %}
+{% block content %}
+  <div style="width: 100%; max-width: 330px; padding: 15px;margin: 0 auto;" ng-app="basicApp">
+    <img class="mb-4" src="/static/web/assets/img/logo.png" alt="" style="max-height: 80px;">
+    <form class="form-signin" ng-submit="login(username, password{% if config.MULTI_DB == 'COOKIE' %}, true, database{% endif %})" ng-controller="LoginController">
+      {% raw %}
+      <div class="alert alert-{{ message.type }}" ng-cloak ng-repeat="message in messages">{{ message.message }}</div>
+      {% endraw %}
+      {% if config.MULTI_DB %}
+        <div class="form-group">
+          <input type="text" class="form-control" name="database" placeholder="{{ gettext('Database') }}" ng-model="database" {% if current_db %}ng-init="database='{{current_db}}'"{% endif %}>
+        </div>
+      {% endif %}
+      <div class="form-group">
+        <label for="id-username" class="sr-only">{{ gettext('Email address') }}</label>
+        <input id="id-username" class="form-control form-control-lg" name="username" ng-model="username" placeholder="{{ gettext('Email address') }}" autofocus>
+        <label for="id-password" class="sr-only">{{ _('Password') }}</label>
+        <input id="id-password" class="form-control form-control-lg" type="password" ng-model="password" name="password" placeholder="{{ gettext('Password') }}">
+      </div>
+      <div class="form-group">
+        <button ng-disabled="loading" type="submit" class="btn btn-primary btn-block btn-lg">{{ gettext('Sign in') }}</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

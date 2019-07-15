@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ report.title }}</title>
+  {% block head %}
+    <link href="{{static_fs('/static/web/assets/css/bootstrap.min.css')}}" rel="stylesheet">
+    <link href="{{static_fs('/static/web/assets/css/fontawesome.css')}}" rel="stylesheet">
+    <link href="{{static_fs('/static/web/api/reports/reports.css')}}"  rel="stylesheet">
+    <script src="{{static_fs('/static/web/assets/js/jquery.min.js')}}"></script>
+    <script src="{{static_fs('/static/web/api/reports/reports.js')}}"></script>
+  {% endblock %}
+</head>
+<body>
+	{% set company = g.user.user_company %}
+  {% block body %}{% endblock %}
+</body>
+</html>

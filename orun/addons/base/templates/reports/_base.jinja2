@@ -1,0 +1,14 @@
+{% import 'reports/report.jinja2' as report %}
+{% import 'reports/common.jinja2' as common %}
+<html>
+<head>
+  <title>{% block report_title %}Report Title{% endblock %}</title>
+
+  {{ common.includes() }}
+  {% block includes %}{% endblock %}
+</head>
+<body>
+{% block report %}
+{% endblock %}
+</body>
+</html>

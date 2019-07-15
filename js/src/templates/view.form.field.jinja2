@@ -1,0 +1,273 @@
+<templates>
+  <script id="view.form.field.utils.jinja2" type="text/ng-template">
+    {% macro field_attrs(field) %}
+      name="{{ field.name }}"
+      ng-model="record.{{ field.name }}"
+      {% if field.attrs.ngFieldChange %}
+        ng-change="{{ field.attrs.ngFieldChange }}"
+      {% endif %}
+    {% endmacro %}
+  </script>
+
+  <script id="view.form.field.jinja2" type="text/ng-template">
+    {% import "view.form.field.utils.jinja2" as utils %}
+    <section class="form-group
+		    {% block css_class %}{{ field.cssClass }}{% endblock %}
+		    {% block cols %} col-md-{{ field.cols }}{% endblock %}"
+        {% if field.ngShow %}
+             ng-show="{{ field.ngShow }}"
+        {% endif %}
+        {% if field.ngIf %}
+             ng-if="{{ field.ngIf }}"
+        {% endif %}
+        {% if field.ngClass %}
+             ng-class="{{ field.ngClass }}"
+        {% endif %}
+        {% if field.ngReadonly %}
+             ng-readonly="{{ field.ngReadonly }}"
+        {% elif field.readonly %}
+             readonly="true"
+        {% endif %}
+    >
+      {% block label %}
+        {% if not field.attrs.nolabel %}
+          <label class="form-label">
+            {{ field.caption }}
+          </label>
+        {% endif %}
+      {% endblock %}
+      {% block span %}
+        <span class="form-field-readonly">
+        {% block readonly %}
+          ${ record.{{ field.name }} || '{{ field.emptyText }}'}
+        {% endblock %}
+        </span>
+      {% endblock %}
+      {% block field %}
+        <input class="form-field form-control" {% block input_type %}type="text"{% endblock %} {{ utils.field_attrs(field) }}
+          {% if field.attrs.nolabel === 'placeholder' %}
+          placeholder="{{ field.caption }}"
+          {% endif %}
+		      {% block field_attrs %}input-field{% endblock %}
+        >
+      {% endblock %}
+    </section>
+  </script>
+
+  <script id="view.form.selection-field.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+    {% block readonly %}
+      ${ view.fields.{{ field.name }}.displayChoices[record.{{ field.name }}] || '{{ field.emptyText }}' }
+    {% endblock %}
+    {% block field %}
+      <select class="form-field form-control" name="{{ field.name }}" ng-model="record.{{ field.name }}">
+        <option ng-repeat="choice in view.fields.{{ field.name }}.choices" value="${ choice[0] }">
+          ${ choice[1] }
+        </option>
+      </select>
+    {% endblock %}
+  </script>
+
+  <script id="view.form.foreignkey.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+    {% block css_class %}ForeignKey{% endblock %}
+    {% block readonly %}
+      <a href="#/app/?menu_id=${ ::action.params.menu_id }&model={{ field.model }}&view_type=form&id=${ record.{{ field.name }}[0] }">
+        ${ record.{{ field.name }}[1]||'{{ field.emptyText }}' }
+      </a>
+    {% endblock %}
+    {% block field %}
+      <input foreignkey name="{{ field.name }}" ng-model="record.{{ field.name }}">
+    {% endblock %}
+  </script>
+
+  <script id="view.form.image-field.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+    {% block span %}
+    {% endblock %}
+    {% block field %}
+      <div class="image-box image-field">
+        <img ng-src="{{ field.ngSrc }}">
+        <div class="text-right image-box-buttons">
+          <button class="btn btn-default" type="button" title="{{ _.gettext('Change') }}"
+                  onclick="$(this).closest('.image-box').find('input').trigger('click')">
+            <i class="fa fa-pen"></i>
+          </button>
+          <button class="btn btn-default" type="button" title="{{ _.gettext('Clear') }}"
+                  ng-click="record.{{ attrs.name }} = null">
+            <i class="fa fa-trash"></i>
+          </button>
+        </div>
+        <input type="file" name="{{ field.name }}" file-reader accept="image/*" ng-model="record.{{ field.name }}">
+      </div>
+    {% endblock %}
+  </script>
+
+  <script id="view.form.boolean-field.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+    {% block label %}
+      <label class="form-label form-label-checkbox">
+        <span class="checkbox-span">
+        {{ field.caption }}
+        </span>
+        <span>
+        &nbsp;
+        </span>
+      </label>
+    {% endblock %}
+    {% block readonly %}
+      ${ record.{{ field.name }} ? '{{ _.gettext('yes') }}' : '{{ _.gettext('no') }}' }
+    {% endblock %}
+    {% block field %}
+      <label class="checkbox" ng-show="action.dataSource.changing">
+        <input class="form-field form-control" name="{{ field.name }}" ng-model="record.{{ field.name }}"
+               type="checkbox">
+        {% if field.helpText %}
+          {{ field.helpText }}
+        {% else %}
+          {{ field.caption }}
+        {% endif %}
+        <i class="fas"></i>
+      </label>
+    {% endblock %}
+  </script>
+
+  <script id="view.form.text-field.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+    {% block css_class %}TextField{% endblock %}
+    {% block field %}
+      <textarea class="form-field form-control" name="{{ field.name }}" ng-model="record.{{ field.name }}"></textarea>
+    {% endblock %}
+  </script>
+
+  <script id="view.form.password.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+    {% block readonly %}**********************{% endblock %}
+    {% block input_type %}type="password"{% endblock %}
+  </script>
+
+  <script id="view.form.code-editor.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+    {% block span %}{% endblock %}
+    {% block css_class %}CodeEditor{% endblock %}
+    {% block field %}
+      <div code-editor class="code-editor" name="{{ field.name }}" language="{% block language %}html{% endblock %}"
+           ng-model="record.{{ field.name }}"></div>
+    {% endblock %}
+  </script>
+
+  <script id="view.form.json-field.jinja2" type="text/ng-template">
+    {% extends "view.form.code-editor.jinja2" %}
+    {% block language %}json{% endblock %}
+  </script>
+
+  <script id="view.form.python-code.jinja2" type="text/ng-template">
+    {% extends "view.form.code-editor.jinja2" %}
+    {% block language %}python{% endblock %}
+  </script>
+
+  <script id="view.form.sql-editor.jinja2" type="text/ng-template">
+    {% extends "view.form.code-editor.jinja2" %}
+    {% block language %}sql{% endblock %}
+  </script>
+
+  <script id="view.form.grid.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+    {% block span %}
+    {% endblock %}
+    {% block field %}
+      <grid name="{{ field.name }}"
+          {% if attrs.inlineEditor %}
+            inline-editor
+          {% endif %}
+      >
+        {{ content }}
+      </grid>
+    {% endblock %}
+  </script>
+
+  <script id="view.form.grid.toolbar.jinja2" type="text/ng-template">
+    <div class="grid-toolbar" ng-show="dataSource.masterSource.changing">
+      {% block buttons %}
+        <button class="btn btn-xs btn-outline-secondary grid-editor-control" ng-click="addItem()" type="button">
+          {{ _.gettext('Add') }}
+        </button>
+      {% endblock %}
+    </div>
+  </script>
+
+  <script id="view.form.numeric-field.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+
+    {% block readonly %}
+      ${ (record.{{ field.name }}|number:{{ field.decimalPlaces or 0 }}) || '{{ field.emptyText }}' }
+    {% endblock %}
+    {% block field_attrs %}
+      input-field
+      input-decimal="{{ field.decimalPlaces }}"
+    {% endblock %}
+  </script>
+
+  <script id="view.form.date-field.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+    {% block readonly %}
+      ${ (record.{{ field.name }}|date:'{% block format %}shortDate{% endblock %}') || '{{ field.emptyText }}' }
+    {% endblock %}
+    {% block field %}
+      <div class="input-group date">
+        <input input-field date-picker="{% block date_picker %}L{% endblock %}" type="text" name="{{ field.name }}" class="form-field form-control"
+               ng-model="record.{{ field.name }}">
+        <div class="input-group-append input-group-addon">
+          <div class="input-group-text">
+            <i class="fa fa-calendar fa-sm"></i>
+          </div>
+        </div>
+      </div>
+    {% endblock %}
+  </script>
+
+  <script id="view.form.datetime-field.jinja2" type="text/ng-template">
+    {% extends "view.form.date-field.jinja2" %}
+    {% block format %}short{% endblock %}
+    {% block date_picker %}L LT{% endblock %}
+  </script>
+
+  <script id="view.form.time-field.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+    {% block readonly %}
+      ${ (record.{{ field.name }}|date:'shortTime') || '{{ field.emptyText }}' }
+    {% endblock %}
+    {% block field_attrs %}type="text" time-picker{% endblock %}
+  </script>
+
+  <script id="view.field.OneToManyField.Dialog.jinja2" type="text/ng-template">
+    <div class="modal fade" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-lg form-view" role="document"
+           ng-class="{'form-data-changing': dataSource.changing, 'form-data-readonly': !dataSource.changing}">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">{{ field.caption }}</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                aria-hidden="true">&times;</span></button>
+          </div>
+          <div class="modal-body">
+            {{ content }}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" type="button" ng-click="save()" ng-show="dataSource.changing">
+              {{ _.gettext('Save') }}
+            </button>
+            <button type="button" class="btn btn-outline-secondary" type="button" data-dismiss="modal"
+                    ng-show="dataSource.changing">
+              {{ _.gettext('Cancel') }}
+            </button>
+            <button type="button" class="btn btn-outline-secondary" type="button" data-dismiss="modal"
+                    ng-show="!dataSource.changing">
+              {{ _.gettext('Close') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </script>
+</templates>

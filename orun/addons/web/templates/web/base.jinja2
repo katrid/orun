@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Orun Business Framework</title>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="/static/web/assets/js/toastr/toastr.min.css" rel="stylesheet">
+  <!-- Bootstrap core CSS -->
+  <link href="/static/web/assets/css/bootstrap.min.css" rel="stylesheet">
+  <!--link href="css/bootstrap-theme.css" rel="stylesheet"-->
+
+  <!-- Font-awesome -->
+  <link href="/static/web/assets/css/fontawesome.css" rel="stylesheet">
+
+  <!-- animate.css -->
+  <link href="/static/web/assets/css/animate.css" type="text/css" rel="stylesheet">
+  <link href="/static/web/assets/js/select2/select2.css" type="text/css" rel="stylesheet">
+
+  <!-- Katrid style -->
+  <link href="/static/web/api/theme/style.css" rel="stylesheet" type="text/css">
+
+  <link href="/static/web/assets/js/datepicker/bootstrap-datetimepicker.min.css" rel="stylesheet" type="text/css"/>
+  <link href="/static/web/assets/js/c3/c3.min.css" rel="stylesheet"/>
+
+  <!-- extra head -->
+  {% block extra_head %}{% endblock %}
+  <!-- end extra head -->
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{% block content %}{% endblock %}
+
+  <script src="/static/web/assets/js/jquery.min.js"></script>
+  <script src="/static/web/assets/js/jquery-ui.min.js"></script>
+  <script src="/static/web/assets/js/jquery-sortable.js"></script>
+  <script src="/static/web/assets/js/moment/moment.js"></script>
+  <script src="/static/web/assets/js/moment/moment-duration-format.js"></script>
+  <script src="/static/web/assets/js/moment/pt-br.js"></script>
+  <script src="/static/web/assets/js/nunjucks.js"></script>
+  <script src="/static/web/assets/js/select2/select2.js"></script>
+  <script src="/static/web/assets/js/popper.js"></script>
+  <script src="/static/web/assets/js/bootstrap.min.js"></script>
+  <script src="/static/web/assets/js/angular/angular.min.js"></script>
+  <script src="/static/web/assets/js/angular/angular-sanitize.min.js"></script>
+  <script src="/static/web/assets/js/hotkeys/hotkeys.min.js"></script>
+  <script src="/static/web/assets/js/jquery.inputmask.bundle.js"></script>
+  <script src="/static/web/assets/js/datepicker/bootstrap-datetimepicker.js"></script>
+  <script src="/static/web/assets/js/alasql.min.js"></script>
+  <script src="/static/web/assets/js/toastr/toastr.min.js"></script>
+  <script src="/static/web/assets/js/underscore-min.js"></script>
+  <script src="/static/web/assets/js/c3/d3.v3.min.js"></script>
+  <script src="/static/web/assets/js/c3/c3.min.js"></script>
+
+  <script src="/static/web/api/1.7/katrid.full.min.js"></script>
+
+<!-- app scripts -->
+{% if i18n_js_catalog %}
+  <script>
+  {{ i18n_js_catalog }}
+  </script>
+  {% if g.lang_code and g.lang_code != 'en-us' %}
+    <script src="/static/web/assets/js/angular/i18n/angular-locale_{{ g.lang_code }}.js"></script>
+    <script src="/static/web/assets/js/select2/select2_locale_{{ g.lang_code }}.min.js"></script>
+  {% endif %}
+{% endif %}
+
+<!-- additional scripts -->
+
+
+<div id="loading-msg" class="animated fadeIn">
+  <span>{{ gettext('Loading...') }}</span>
+</div>
+<div id="overlay" class="animated fadeIn text-center">
+  <i class="fa-4x fas fa-circle-notch fa-spin"></i>
+  <h3 class="margin-top-16">
+    {{ gettext('Loading...') }}
+  </h3>
+</div>
+
+{% block page_loaded %}{% endblock %}
+{% block additional_assets %}{% endblock %}
+
+</body>
+</html>

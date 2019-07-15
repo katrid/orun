@@ -1,0 +1,47 @@
+{% macro dropdown_menu(menu, root) %}
+  <div class="dropdown-menu">
+    {% for submenu in menu.children %}
+      {% if submenu.children %}
+        {{ render_submenu(submenu, root) }}
+      {% else %}
+        {{ render_item(submenu, root) }}
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+{% macro render_item(menu, root) %}
+  <a class="dropdown-item {% if menu.action_id %}menu-item-action{% endif %}"
+     id="ui-menu-{{ menu.pk }}"
+     data-action-id="{{ menu.action_id }}"
+     data-parent-id="{{ root.pk }}"
+     href="{{ menu.url }}&menu_id={{ root.pk }}"
+  >
+    {{ gettext(menu.name) }}
+  </a>
+{% endmacro %}
+
+{% macro render_submenu(menu, root) %}
+  <h6 class="dropdown-header">{{ gettext(menu.name) }}</h6>
+  {% for submenu in menu.children %}
+    {{ render_item(submenu, root) }}
+  {% endfor %}
+{% endmacro %}
+
+{% macro menu_item(menu) %}
+  <li class="nav-link menu-item">
+    <a href="{{ menu.url }}" data-action-id="{{ menu.action_id }}"
+       id="ui-menu-{{ menu.pk }}"
+       class="nav-link {% if menu.action_id %}menu-item-action{% endif %}">
+      {{ gettext(menu.name) }}
+    </a>
+  {% set children_menu = menu.children %}
+  {% if children_menu %}
+  <ul class="nav">
+    {% for sub_menu in children_menu %}
+      {{ menu_item(sub_menu) }}
+    {% endfor %}
+  </ul>
+  {% endif %}
+  </li>
+{% endmacro %}

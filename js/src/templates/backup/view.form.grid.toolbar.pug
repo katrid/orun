@@ -1,0 +1,3 @@
+div.grid-toolbar(ng-show='parent.dataSource.changing')
+    block buttons
+        button.btn.btn-xs.btn-default.grid-editor-control(ng-click="addItem();", type='button') #{_.gettext('Add')}

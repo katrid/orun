@@ -1,0 +1,7 @@
+<form>
+  <field name="name"/>
+  <field name="category"/>
+  <field name="public"/>
+  <field name="params" cols="12"/>
+  <field name="sql" cols="12"/>
+</form>

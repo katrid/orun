@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<data>
+  <menuitem id="menu.settings.ui.copy.to" name="Copying Settings" parent="menu.settings.ui" action="action.mail.view.ir.copy.to"/>
+</data>

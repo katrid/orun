@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<data translate="true">
+  <menuitem id="menu.voice.command" parent="menu.settings.ui" action="action.view.voice.command"/>
+</data>

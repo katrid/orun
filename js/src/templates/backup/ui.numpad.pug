@@ -1,0 +1,50 @@
+div.modal(role='dialog')
+    div.modal-dialog(role='document')
+        div.modal-content
+            div.modal-body.numpad
+                div.row
+                    div.col-12.numpad-display.
+                        {{ val|number:2 }}
+                div.row
+                    table
+                        tr
+                            td
+                                button.btn.btn-lg.btn-block.btn-num(ng-click="buttonClick('1')") 1
+                            td
+                                button.btn.btn-lg.btn-block.btn-num(ng-click="buttonClick('2')") 2
+                            td
+                                button.btn.btn-lg.btn-block.btn-num(ng-click="buttonClick('3')") 3
+                            td
+                                button.btn.btn-lg.btn-block(ng-click="buttonClick('bs')")
+                                    <
+
+
+                        tr
+                            td
+                                button.btn.btn-lg.btn-block.btn-num(ng-click="buttonClick('4')") 4
+                            td
+                                button.btn.btn-lg.btn-block.btn-num(ng-click="buttonClick('5')") 5
+                            td
+                                button.btn.btn-lg.btn-block.btn-num(ng-click="buttonClick('6')") 6
+                            td
+                                button.btn.btn-lg.btn-block(ng-click="done()") OK
+
+                        tr
+                            td
+                                button.btn.btn-lg.btn-block.btn-num(ng-click="buttonClick('7')") 7
+                            td
+                                button.btn.btn-lg.btn-block.btn-num(ng-click="buttonClick('8')") 8
+                            td
+                                button.btn.btn-lg.btn-block.btn-num(ng-click="buttonClick('9')") 9
+                            td
+                                button.btn.btn-block(ng-click="cancel()") Cancelar
+
+                        tr
+                            td
+
+                            td
+                                button.btn.btn-lg.btn-block.btn-num(ng-click="buttonClick('0')") 0
+                            td
+
+                            td
+

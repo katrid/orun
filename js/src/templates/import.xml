@@ -1,0 +1,19 @@
+<templates>
+  <script id="view.import" type="text/ng-template">
+    <div>
+      <toolbar>
+        teste
+      </toolbar>
+      <form>
+        bla bla bla
+      </form>
+    </div>
+  </script>
+  <script extends="view.buttons" type="text/ng-template">
+    <jquery operation="append">
+      <button class="btn btn-default btn-import-data" ng-click="action.doAction({ type: 'ir.action.client', tag: 'import' })">
+        {{ ::gettext('Import') }}
+      </button>
+    </jquery>
+  </script>
+</templates>

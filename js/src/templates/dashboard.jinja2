@@ -1,0 +1,66 @@
+<templates>
+
+  <script id="dashboard.table.jinja2" type="text/ng-template">
+    {% if attrs.caption %}
+      <h6>{{ attrs.caption }}</h6>
+    {% endif %}
+    <table class="table table-striped table-hover">
+      <thead>
+      <tr>
+        {% for f in fields %}
+          {{ f.th() }}
+        {% endfor %}
+      </tr>
+      </thead>
+
+      <tbody>
+      <tr ng-repeat="record in {{ attrs.source }}.data">
+        {% for f in fields %}
+          {{ f.td() }}
+        {% endfor %}
+      </tr>
+      </tbody>
+
+    </table>
+    <div ng-if="{{ attrs.source }}.loading">
+      <span class="fas fa-spinner fa-spin"/> {{ _.gettext('Loading...') }}
+    </div>
+  </script>
+
+  <script id="dashboard.grid.jinja2" type="text/ng-template">
+    {% if query %}
+      {{ query }}
+    {% endif %}
+    {% if self.caption %}
+      <h6>{{ self.caption }}</h6>
+    {% endif %}
+    <table class="table table-bordered table-hover">
+      <thead>
+      <tr>
+        {% for f in fields %}
+          {{ f.th() }}
+        {% endfor %}
+      </tr>
+      </thead>
+
+      <tbody>
+      <tr ng-repeat="record in records" ng-class="{ 'group-row': record.$group, 'grid-row': !record.$group }">
+        {% for f in fields %}
+          {{ f.td() }}
+        {% endfor %}
+      </tr>
+      </tbody>
+      {% if self.totals.length %}
+      <tfoot>
+      <tr>
+        {% for f in fields %}
+          {{ f.tfoot() }}
+        {% endfor %}
+      </tr>
+      </tfoot>
+      {% endif %}
+
+    </table>
+  </script>
+
+</templates>

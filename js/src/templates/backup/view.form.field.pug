@@ -1,0 +1,23 @@
+block vars
+    -var cssClass = 'StringField'
+    -var spanClass = 'form-field-readonly'
+    -var labelClass = 'form-label'
+    if fieldAttributes.inlineEditor
+        -var spanClass = 'grid-field-readonly'
+    else
+        -var cols = 'col-md-' + (field.cols || '6')
+        -var formGroup = 'form-group'
+    if attrs.nolabel === 'placeholder'
+        -attrs.placeholder = field.caption
+section(class=[formGroup, cols, cssClass])&attributes(sectionAttrs)
+    block label
+        if !attrs.nolabel && !fieldAttributes.inlineEditor
+            label(class=labelClass) #{field.caption}
+
+    block span
+        span(class=spanClass)
+            block readonly
+                | ${ record.#{name}||'#{ field.emptyText }' }
+
+    block field
+        input.form-field.form-control&attributes(attrs)

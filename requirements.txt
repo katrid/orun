@@ -1,0 +1,9 @@
+flask
+flask_classy
+flask_mail
+jinja2
+lxml
+pyodbc
+click
+sqlalchemy
+python-dateutil

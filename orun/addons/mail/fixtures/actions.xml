@@ -1,0 +1,9 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<data>
+  <action id="action.mail.view.mail.approval" type="ir.action.window" model="mail.approval.model">
+    <field name="view_mode">list,form</field>
+  </action>
+  <action id="action.mail.view.ir.copy.to" type="ir.action.window" model="ir.copy.to">
+    <field name="view_mode">list,form</field>
+  </action>
+</data>

@@ -1,0 +1,220 @@
+<templates>
+
+  <script id="ir.action.window.jinja2" type="text/ng-template">
+    <div class="action-view">
+      {% include "view.toolbar.jinja2" %}
+      <div class="action-view-content content-scroll"></div>
+    </div>
+  </script>
+
+  <script id="view.header.jinja2" type="text/ng-template">
+  </script>
+
+  <script id="view.breadcrumb.jinja2" type="text/ng-template">
+    <ol class="breadcrumb">
+      {% for b in breadcrumb %}
+      <li class="breadcrumb-item">
+        {% if not b.isLeaf %}<a href="#" ng-click="$event.preventDefault();action.backTo({{ loop.index - 1 }})">{% endif %}
+        {{ b.text }}
+        {% if not b.isLeaf %}</a>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  </script>
+
+  <script id="view.toolbar.jinja2" type="text/ng-template">
+    <div class="data-heading panel panel-default">
+      <div class="panel-body">
+        <div class="row">
+          <div class="col-sm-6 breadcrumb-nav">
+          </div>
+          <search-view ng-show="action.viewType !== 'form'" class="col-md-6"/>
+          <!--<p class="help-block">${ action.info.usage }&nbsp;</p>-->
+        </div>
+        <div class="toolbar row">
+          <div class="col-sm-6">
+
+            {% include "view.buttons.jinja2" %}
+
+            <!--button class="btn btn-default" ng-click="dataSource.refresh()"><i class="fa fa-refresh"></i> ${ Katrid.i18n.gettext('Refresh') }</button-->
+
+          </div>
+          <div class="col-sm-6">
+
+            {% include "view.search.buttons.jinja2" %}
+
+            <div class="float-right" ng-if="action.viewType !== 'form'">
+              <div class="btn-group pagination-area">
+                <span ng-show="action.dataSource.pendingRequest"><span class="fas fa-spinner fa-spin"/> {{ _.gettext('Loading...') }}</span>
+                <div ng-show="!action.dataSource.pendingRequest">
+                <span
+                    class="paginator">${action.dataSource.offset|number} - ${action.dataSource.offsetLimit|number}</span>
+                  /
+                  <span class="total-pages">${action.dataSource.recordCount|number}</span>
+                </div>
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.prevPage()">
+                  <i class="fa fa-chevron-left"></i>
+                </button>
+                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.nextPage()">
+                  <i class="fa fa-chevron-right"></i>
+                </button>
+              </div>
+
+              <div class="btn-group" role="group">
+                {% if action.viewModes.includes('card') %}
+                  <button class="btn btn-outline-secondary" type="button" ng-click="action.viewType = 'card'">
+                    <i class="fa fa-th-large"></i>
+                  </button>
+                {% endif %}
+                {% if action.viewModes.includes('list') %}
+                  <button class="btn btn-outline-secondary" type="button" ng-click="action.viewType = 'list'">
+                    <i class="fa fa-list"></i>
+                  </button>
+                {% endif %}
+                {% if action.viewModes.includes('calendar') %}
+                  <button class="btn btn-outline-secondary" type="button" ng-click="action.viewType = 'calendar'">
+                    <i class="fa fa-calendar"></i>
+                  </button>
+                {% endif %}
+                {% if action.viewModes.includes('chart') %}
+                  <button class="btn btn-outline-secondary" type="button" ng-click="action.viewType = 'chart'">
+                    <i class="fa fa-bar-chart-o"></i>
+                  </button>
+                {% endif %}
+              </div>
+
+            </div>
+            <div class="float-right" ng-if="action.viewType === 'form'">
+              <div class="btn-group pagination-area">
+              <span ng-show="records.length">
+                ${ action.dataSource.recordIndex + 1 } / ${ records.length }
+              </span>
+              </div>
+              <div class="btn-group" role="group">
+                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.prior('form')">
+                  <i class="fa fa-chevron-left"></i>
+                </button>
+                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.next('form')">
+                  <i class="fa fa-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script id="view.buttons.jinja2" type="text/ng-template">
+    <div ng-show="action.viewType !== 'form'" class="btn-toolbar">
+      <button class="btn btn-primary toolbutton-action-create" type="button" ng-click="action.createNew()">
+        {{ _.gettext('Create') }}
+      </button>
+    </div>
+
+    <div ng-if="action.viewType === 'form'" class="btn-toolbar">
+      <button class="btn btn-primary toolbutton-action-save" ng-if="action.viewType" type="button" ng-disabled="action.dataSource.uploading"
+              ng-click="action.dataSource.save()" ng-show="action.dataSource.changing">
+        {{ _.gettext('Save') }}
+      </button>
+      <button class="btn btn-primary toolbutton-action-edit" type="button" ng-disabled="action.dataSource.uploading"
+              ng-click="action.dataSource.edit()" ng-show="!action.dataSource.changing">
+        {{ _.gettext('Edit') }}
+      </button>
+      <button class="btn btn-outline-secondary toolbutton-action-create" type="button" ng-disabled="action.dataSource.uploading"
+              ng-click="action.dataSource.insert()" ng-show="!action.dataSource.changing">
+        {{ _.gettext('Create') }}
+      </button>
+      <button class="btn btn-outline-secondary toolbutton-action-cancel" type="button" ng-click="action.dataSource.cancel()"
+              ng-show="action.dataSource.changing">
+        {{ _.gettext('Cancel') }}
+      </button>
+    </div>
+
+    {% include "view.buttons.reports.jinja2" %}
+    {% include "view.buttons.attachments.jinja2" %}
+    {% include "view.buttons.actions.jinja2" %}
+  </script>
+
+  <script id="view.buttons.reports.jinja2" type="text/ng-template">
+    <div class="btn-group" ng-show="action.selectionLength">
+      <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">
+        {{ _.gettext('Print') }} <span class="caret"></span>
+      </button>
+      <div class="dropdown-menu">
+        <a class="dropdown-item" ng-click="action.autoReport()">
+          {{ _.gettext('Auto Report') }}
+        </a>
+
+        <a ng-repeat="bindingAction in view.toolbar.print" class="dropdown-item" data-id="${ bindingAction.id }"
+           ng-click="$parent.action.doBindingAction($event)">
+          ${ bindingAction.name }
+        </a>
+
+      </div>
+    </div>
+  </script>
+
+  <script id="view.buttons.attachments.jinja2" type="text/ng-template">
+
+    <div class="btn-group" ng-if="action.viewType === 'form'">
+      <div class="dropdown">
+        <button id="attachments-button" attachments-button="" ng-show="!action.dataSource.inserting"
+                type="button" class="btn btn-outline-secondary dropdown-toggle"
+                data-toggle="dropdown" aria-haspopup="true">
+          <span ng-if="!attachments.length">{{ _.gettext('Attachments') }} </span>
+          <span
+              ng-if="attachments.length">${ _.sprintf(_.gettext('%d Attachment(s)'), attachments.length) }</span>
+          <span class="caret"></span>
+        </button>
+        <div class="dropdown-menu attachments-menu">
+          <a class="dropdown-item position-relative" ng-repeat="attachment in attachments"
+             href="${ ::attachment.download_url }">
+            ${ attachment.name } <span
+              class="fa fa-times remove-attachment-button" title="{{ _.gettext('Delete attachment') }}"
+              ng-click="$event.preventDefault();action.deleteAttachment(attachments, $index);$event.stopPropagation();"></span>
+          </a>
+          <div role="separator" class="dropdown-divider" ng-show="attachments.length"></div>
+          <a class="dropdown-item" onclick="$(this).next().click();">
+            {{ _.gettext('Add...') }}
+          </a>
+          <input type="file" class="input-file-hidden" multiple="multiple"
+                 onchange="Katrid.Services.Attachments.upload(this)"/>
+        </div>
+      </div>
+    </div>
+
+  </script>
+
+  <script id="view.buttons.actions.jinja2" type="text/ng-template">
+
+    <div class="btn-group">
+      <div class="dropdown">
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown"
+                aria-haspopup="true">
+          {{ _.gettext('Action') }} <span class="caret"></span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-actions">
+          <a class="dropdown-item" ng-click="action.deleteSelection()">
+            <i class="fa fa-fw fa-trash-o"></i> {{ _.gettext('Delete') }}
+          </a>
+          <a class="dropdown-item" ng-click="action.copy()" ng-if="action.viewType === 'form'">
+            <i class="fa fa-fw fa-files-o"></i>
+            {{ _.gettext('Duplicate') }}
+          </a>
+          <a class="dropdown-item" ng-if="(action.viewType === 'form') && $parent.record.id" ng-repeat="opt in ::copyToOpts"
+             ng-click="action.copyTo(opt.id)">
+            <i class="fa fa-fw fa-files-o"></i>
+            {{ _.sprintf(_.gettext('Copy To %s'), opt.name) }}
+          </a>
+          <!-- replace-actions -->
+        </div>
+      </div>
+    </div>
+
+  </script>
+
+</templates>

@@ -1,0 +1,7 @@
+<report>
+  <fields>
+  {% for f in opts.auto_report_fields %}
+    <field name="{{ f.name }}"/>
+  {% endfor %}
+  </fields>
+</report>

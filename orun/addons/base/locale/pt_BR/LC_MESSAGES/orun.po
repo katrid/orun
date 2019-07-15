@@ -1,0 +1,411 @@
+
+msgid ""
+msgstr ""
+"Project-Id-Version: orun\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2016-07-24 11:06+0100\n"
+"PO-Revision-Date: 2016-08-01 19:20+0000\n"
+"Last-Translator: Alexandre Dias <alexandre@katrid.com>\n"
+"Language-Team: Portuguese (Brazil)"
+"language/pt_BR/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pt_BR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Madam"
+msgstr "Senhora"
+
+msgid "Miss"
+msgstr "Senhorita"
+
+msgid "Sir"
+msgstr "Sir"
+
+msgid "Mister"
+msgstr "Senhor"
+
+msgid "Doctor"
+msgstr "Doutor"
+
+msgid "Mrs."
+msgstr "Sra."
+
+msgid "Sr."
+msgstr "Sr."
+
+msgid "Mr."
+msgstr "Sr."
+
+msgid "System"
+msgstr "Sistema"
+
+msgid "Category"
+msgstr "Categoria"
+
+msgid "Categories"
+msgstr "Categorias"
+
+msgid "Forms"
+msgstr "Formulários"
+
+msgid "Domain"
+msgstr "Domínio"
+
+msgid "Description"
+msgstr "Descrição"
+
+msgid "Title"
+msgstr "Título"
+
+msgid "Settings"
+msgstr "Configurações"
+
+msgid "Configuration"
+msgstr "Configuração"
+
+msgid "Name"
+msgstr "Nome"
+
+msgid "Action Type"
+msgstr "Tipo de Ação"
+
+msgid "View"
+msgstr "Visão"
+
+msgid "Context"
+msgstr "Contexto"
+
+msgid "Model"
+msgstr "Modelo"
+
+msgid "View Mode"
+msgstr "Modo de Visão"
+
+msgid "Limit"
+msgstr "Limite"
+
+msgid "Auto Search"
+msgstr "Auto Pesquisar"
+
+msgid "Models"
+msgstr "Modelos"
+
+msgid "Fields"
+msgstr "Campos"
+
+msgid "Views"
+msgstr "Visões"
+
+msgid "Users"
+msgstr "Usuários"
+
+msgid "Group"
+msgstr "Grupo"
+
+msgid "Groups"
+msgstr "Grupos"
+
+msgid "Active"
+msgstr "Ativo"
+
+msgid "Usage"
+msgstr "Uso"
+
+msgid "Object Type"
+msgstr "Tipo do Objeto"
+
+msgid "Object Name"
+msgstr "Nome do Objeto"
+
+msgid "Find resources here..."
+msgstr "Encontrar recursos aqui..."
+
+msgid "Technical Settings"
+msgstr "Configurações Técnicas"
+
+msgid "Sales"
+msgstr "Vendas"
+
+msgid "Projects"
+msgstr "Projetos"
+
+msgid "Accounting & Finance"
+msgstr "Contabilidade e Finanças"
+
+msgid "Manufacturing"
+msgstr "Fabricação"
+
+msgid "Human Resources"
+msgstr "Recursos Humanos"
+
+msgid "Administration"
+msgstr "Administração"
+
+msgid "Localization"
+msgstr "Localização"
+
+msgid "%s (copy)"
+msgstr "%s (cópia)"
+
+msgid "Notes"
+msgstr "Notas"
+
+msgid "Company"
+msgstr "Empresa"
+
+msgid "Invoice Ref."
+msgstr "Fatura Ref."
+
+msgid "Color"
+msgstr "Cor"
+
+msgid "Shortcuts"
+msgstr "Atalhos"
+
+msgid "Loading..."
+msgstr "Carregando..."
+
+msgid "Type"
+msgstr "Tipo"
+
+msgid "Image"
+msgstr "Imagem"
+
+msgid "General"
+msgstr "Geral"
+
+msgid "Unit"
+msgstr "Unidade"
+
+msgid "Reason"
+msgstr "Motivo"
+
+msgid "Due Date"
+msgstr "Data Vencimento"
+
+msgid "Payment Date"
+msgstr "Data Pagamento"
+
+msgid "Date/Time"
+msgstr "Data/Hora"
+
+msgid "Kind"
+msgstr "Espécie"
+
+msgid "Points"
+msgstr "Pontos"
+
+msgid "Amount"
+msgstr "Valor"
+
+msgid "Costs"
+msgstr "Custos"
+
+msgid "No"
+msgstr "Não"
+
+msgid "Record saved successfully."
+msgstr "Registro gravado com sucesso."
+
+msgid "Partner"
+msgstr "Parceiro"
+
+msgid "Partners"
+msgstr "Parceiros"
+
+msgid "Titles"
+msgstr "Títulos"
+
+msgid "Phone"
+msgstr "Telefone"
+
+msgid "Email"
+msgstr "E-mail"
+
+msgid "City"
+msgstr "Cidade"
+
+msgid "Language"
+msgstr "Idioma"
+
+msgid "Comments"
+msgstr "Comentários"
+
+msgid "Barcode"
+msgstr "Código Barras"
+
+msgid "Address"
+msgstr "Endereço"
+
+msgid "Zip"
+msgstr "CEP"
+
+msgid "Country"
+msgstr "País"
+
+msgid "State"
+msgstr "Estado"
+
+msgid "Mobile"
+msgstr "Celular"
+
+msgid "Birth Date"
+msgstr "Nascimento"
+
+msgid "Company Type"
+msgstr "Tipo Empresa"
+
+msgid "Is a Customer"
+msgstr "É um cliente"
+
+msgid "Is a Supplier"
+msgstr "É um fornecedor"
+
+msgid "Is a Employee"
+msgstr "É um funcionário"
+
+msgid "User"
+msgstr "Usuário"
+
+msgid "Address 2"
+msgstr "Bairro"
+
+msgid "Partner Categories"
+msgstr "Categorias de Parceiros"
+
+msgid "Abbreviation"
+msgstr "Abreviação"
+
+msgid "Partner Titles"
+msgstr "Títulos de Parceiros"
+
+msgid "Ending Date"
+msgstr "Data Final"
+
+msgid "Countries"
+msgstr "Países"
+
+msgid "Fed. States"
+msgstr "Estados Fed."
+
+msgid "Fed. State"
+msgstr "Estado Fed."
+
+msgid "Cities"
+msgstr "Cidades"
+
+msgid "Reports"
+msgstr "Relatórios"
+
+msgid "Country Groups"
+msgstr "Grupos de Países"
+
+msgid "Show on google maps"
+msgstr "Mostrar no google maps"
+
+msgid "Additional Data"
+msgstr "Dados Adicionais"
+
+msgid "Modules"
+msgstr "Módulos"
+
+msgid "Birthdate"
+msgstr "Data Nascimento"
+
+msgid "Companies"
+msgstr "Empresas"
+
+msgid "Authentication"
+msgstr "Autenticação"
+
+msgid "User Interface"
+msgstr "Interface do Usuário"
+
+msgid "Actions"
+msgstr "Ações"
+
+msgid "Database Dictionary"
+msgstr "Dicionário de Dados"
+
+msgid "Database"
+msgstr "Banco de Dados"
+
+msgid "Signature"
+msgstr "Assinatura"
+
+msgid "Date Joined"
+msgstr "Data Ingresso"
+
+msgid "Is staff"
+msgstr "Membro da Equipe"
+
+msgid "Invalid username and password."
+msgstr "Usuário e senha inválidos."
+
+msgid "Sales & Purchases"
+msgstr "Vendas & Compras"
+
+msgid "Purchases"
+msgstr "Compras"
+
+msgid "Is a Company"
+msgstr "É uma empresa"
+
+msgid "Persons"
+msgstr "Pessoas"
+
+msgid "Sign in"
+msgstr "Entrar"
+
+msgid "Next"
+msgstr "Próximo"
+
+msgid "Sign out"
+msgstr "Sair"
+
+msgid "Details"
+msgstr "Detalhes"
+
+msgid "Country Code"
+msgstr "Cód. País"
+
+msgid "Phone Code"
+msgstr "Cód. Fone"
+
+msgid "Image Flag"
+msgstr "Bandeira"
+
+msgid "Currency"
+msgstr "Moeda"
+
+msgid "Address Format"
+msgstr "Formato Endereço"
+
+msgid "Password"
+msgstr "Senha"
+
+msgid "Superuser"
+msgstr "Super Usuário"
+
+msgid "Created by"
+msgstr "Criado por"
+
+msgid "Updated by"
+msgstr "Atualizado por"
+
+msgid "Created on"
+msgstr "Criado em"
+
+msgid "Updated on"
+msgstr "Atualizado em"
+
+msgid "Invalid password!"
+msgstr "Senha inválida!"
+
+msgid "Permission denied!"
+msgstr "Permissão negada!"
+
+msgid "Login successful, please wait..."
+msgstr "Login realizado com sucesso, por favor aguarde..."

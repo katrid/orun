@@ -1,0 +1,10 @@
+extends view.form.field.pug
+
+append vars
+    -var cssClass = 'ForeignKey'
+
+block readonly
+    | {{ record.#{name}[1]||'#{ field.emptyText }' }}
+
+block field
+    input(foreignkey)&attributes(attrs)

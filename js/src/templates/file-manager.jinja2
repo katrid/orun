@@ -1,0 +1,35 @@
+<templates>
+  <script id="file-manager.jinja2" type="text/ng-template">
+    <table class="table">
+      <tr>
+        <td style="width: 280px">
+          <div class="list-group">
+            <a class="list-group-item list-group-action" ng-show="level" ng-click="backTo(level - 1)">
+              ..
+            </a>
+            <a class="list-group-item list-group-action" ng-repeat="item in dirs" ng-click="expand(item)">
+              ${item.name}
+            </a>
+          </div>
+        </td>
+        <td>
+          <table>
+            <tr>
+              <td>
+                <h6>${currentPath}</h6>
+              </td>
+              <td>
+    <input type="file" style="display: none" onchange="angular.element(this).scope().uploadFile(this)"/>
+                <button type="button" class="btn btn-primary" onclick="$(this).prev().trigger('click')")>Upload</button>
+              </td>
+            </tr>
+            </table>
+          </div>
+          <ul>
+            <li ng-repeat="item in files" title="Remover arquivo">${item.name} <i class="fas fa-trash"></i></li>
+          </ul>
+        </td>
+      </tr>
+    </table>
+	</script>
+</templates>

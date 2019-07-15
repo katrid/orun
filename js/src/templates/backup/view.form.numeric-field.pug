@@ -1,0 +1,10 @@
+extends view.form.field.pug
+
+append vars
+    -var cssClass = 'DecimalField'
+
+block readonly
+    | {{ (record.#{ name }|number:#{ field.decimalPlaces }) || '#{ field.emptyText }' }}
+
+block field
+    input.form-field.form-control(decimal)&attributes(attrs)

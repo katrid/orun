@@ -1,0 +1,3 @@
+th.list-column-delete(ng-show="parent.dataSource.changing && !dataSource.readonly")
+td.list-column-delete(ng-show="parent.dataSource.changing && !dataSource.readonly", ng-click="removeItem($index);$event.stopPropagation();")
+    i.fa.fa-trash-o

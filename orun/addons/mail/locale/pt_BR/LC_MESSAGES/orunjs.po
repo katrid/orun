@@ -1,0 +1,25 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: orun\n"
+"Report-Msgid-Bugs-To: \n"
+"language/pt_BR/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pt_BR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Comments"
+msgstr "Comentários"
+
+msgid "New message"
+msgstr "Nova mensagem"
+
+msgid "Send"
+msgstr "Enviar"
+
+msgid "Log an internal note"
+msgstr "Deixar uma nota interna"
+
+msgid "Copy To %s"
+msgstr "Copiar Para %s"

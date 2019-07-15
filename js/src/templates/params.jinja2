@@ -1,0 +1,59 @@
+<templates>
+  <script id="view.param.String" type="text/ng-template">
+    <div class="form-group">
+      <input class="form-control" ng-model="searchValue" ng-change="valueChange(searchValue)">
+    </div>
+  </script>
+
+  <script id="view.param.String.conditions" type="text/ng-template">
+    <select class="form-control" ng-model="condition" ng-change="conditionChange(condition)">
+      <option value="like">${ ::_.gettext('Contains') }</option>
+      <option value="not like">${ ::_.gettext('Not contains') }</option>
+      <option value="=">${ ::_.gettext('Is equal') }</option>
+      <option value="!=">${ ::_.gettext('Is different') }</option>
+      <option value="is not null">${ ::_.gettext('Is defined') }</option>
+      <option value="is null">${ ::_.gettext('Is not defined') }</option>
+    </select>
+  </script>
+
+  <script id="view.param.Integer" type="text/ng-template">
+    <div class="form-group">
+      <input class="form-control" type="number" step="1" placeholder="${ ::_.gettext('Field Value') }" ng-model="searchValue" ng-change="valueChange(searchValue)">
+    </div>
+  </script>
+
+  <script id="view.param.Boolean" type="text/ng-template">
+    <select class="form-control text-capitalize" ng-model="searchValue" ng-change="valueChange(searchValue)">
+      <option value="true">${ ::_.gettext('yes') }</option>
+      <option value="false">${ ::_.gettext('no') }</option>
+    </select>
+  </script>
+  <script id="view.param.Boolean.conditions" type="text/ng-template"></script>
+
+  <script id="view.param.Date" type="text/ng-template">
+    <div class="form-group">
+      <input class="form-control" date-input type="date" ng-model="searchValue" ng-change="valueChange(searchValue)">
+    </div>
+  </script>
+  <script id="view.param.Date.conditions" type="text/ng-template">
+    <select class="form-control" ng-model="condition" ng-change="conditionChange(condition)">
+      <option value="=">${ ::_.gettext('Is equal') }</option>
+      <option value="!=">${ ::_.gettext('Is different') }</option>
+    </select>
+  </script>
+
+  <script id="view.param.DateTime" type="text/ng-template">
+    <div class="form-group">
+      <input class="form-control" date-input type="date" ng-model="searchValue" ng-change="valueChange(searchValue)">
+    </div>
+  </script>
+
+  <script id="view.param.DateTime.conditions" type="text/ng-template">
+    <select class="form-control" ng-model="condition" ng-change="conditionChange(condition)">
+      <option value="=">${ ::_.gettext('Is equal') }</option>
+      <option value="!=">${ ::_.gettext('Is different') }</option>
+      <option value=">">${ ::_.gettext('Greater-than') }</option>
+      <option value="<">${ ::_.gettext('Less-than') }</option>
+    </select>
+  </script>
+</templates>
