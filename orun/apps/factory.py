@@ -7,12 +7,15 @@ from orun.apps import Application
 
 class BaseDispatcher(object):
     application_class = Application
+    database_map = None
 
     def __init__(self, settings=None, app=None):
         self.app = app
         self.instances = {}
         self.lock = Lock()
         self.base_settings = settings
+        if 'DATABASE_MAP' in settings:
+            self.database_map = settings.pop('DATABASE_MAP')
 
     def create_app(self, instance_name):
         settings = self.create_settings(instance_name)
@@ -21,7 +24,8 @@ class BaseDispatcher(object):
     def create_settings(self, instance_name):
         settings = copy.deepcopy(self.base_settings)
         url = make_url(settings['DATABASES']['default']['ENGINE'])
-        url.database = settings['DATABASE_MAP'][instance_name]
+        if self.database_map:
+            url.database = self.database_map[instance_name]
         print('CREATE SETTINGS', url.database)
         settings['DATABASES']['default']['ENGINE'] = str(url)
         return settings
