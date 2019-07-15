@@ -14,8 +14,7 @@ class BaseDispatcher(object):
         self.instances = {}
         self.lock = Lock()
         self.base_settings = settings
-        if 'DATABASE_MAP' in settings:
-            self.database_map = settings.pop('DATABASE_MAP')
+        self.database_map = settings.pop('DATABASE_MAP', {})
 
     def create_app(self, instance_name):
         settings = self.create_settings(instance_name)
