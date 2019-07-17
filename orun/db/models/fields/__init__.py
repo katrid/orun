@@ -675,6 +675,10 @@ class JsonField(TextField):
     pass
 
 
+class PythonCodeField(TextField):
+    pass
+
+
 class FilePathField(CharField):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('max_length', 1024)

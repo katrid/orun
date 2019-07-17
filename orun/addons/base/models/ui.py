@@ -163,13 +163,14 @@ class View(models.Model):
 
     def render(self, context):
         context['_'] = gettext
+        if self.view_type in ('dashboard', 'report'):
+            context['db'] = {
+                'session': session
+            }
         if settings.DEBUG and self.template_name:
             context['ref'] = g.env.ref
             templ = self.template_name.split(':')[-1]
             if self.view_type in ('dashboard', 'report'):
-                context['db'] = {
-                    'session': session,
-                }
                 return app.report_env.get_or_select_template(templ).render(**context)
             return render_template(templ, **context)
         return render_template_string(self.content, **context)

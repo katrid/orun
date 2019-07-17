@@ -16,6 +16,7 @@
         });
 
 
+        console.log('set language', attrs.language);
         require(['vs/editor/editor.main'], function () {
           editor = monaco.editor.create(elm[0], {
             value: '',
@@ -30,13 +31,11 @@
             ngModel.$setViewValue(editor.getValue());
           });
 
-          setTimeout(() => {
-            editor.setValue(ngModel.$viewValue);
-            ngModel.$render = function () {
+          ngModel.$render = function () {
+            setTimeout(() => {
               editor.setValue(ngModel.$viewValue);
-            };
-
-          }, 100);
+            }, 300);
+          };
 
         });
 

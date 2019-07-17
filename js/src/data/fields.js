@@ -459,6 +459,15 @@
     }
   }
 
+  class PythonCodeField extends TextField {
+    constructor(info) {
+      super(...arguments);
+      console.log('init python code field');
+      if (!info.template || (info.template && !info.template.form))
+        this.template.form = 'view.form.python-code.jinja2';
+    }
+  }
+
   class ImageField extends Field {
     constructor(info) {
       if (!info.template)
@@ -498,6 +507,7 @@
     TextField,
     XmlField,
     JsonField,
+    PythonCodeField,
     DateField,
     BooleanField,
     ImageField,
