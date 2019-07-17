@@ -137,7 +137,7 @@ class Query(models.Model):
         desc = cur.cursor.description
         return {
             'fields': [
-                {'name': f[0], 'type': datatype_map.get(f[1].__name__.lower(), 'CharField'), 'size': f[2]}
+                {'name': f[0], 'type': 'CharField', 'size': f[2]}
                 for f in desc
             ],
             'data': [dict(row) for row in cur],
