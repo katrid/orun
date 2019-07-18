@@ -483,9 +483,8 @@
       let _pendingOperation;
       scope.$parent.$watch('recordId', (key) => {
         let attachment = new Katrid.Services.Model('ir.attachment', scope);
-        console.log(scope);
         // scope.$parent.attachments = [];
-        clearTimeout(_pendingOperation);
+        clearTimeout(_pendingOperation);``
         _pendingOperation = setTimeout(() => {
           attachment.search({ params: { model: scope.action.model.name, object_id: key }, count: false })
           .then(res => {

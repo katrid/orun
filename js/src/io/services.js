@@ -254,7 +254,7 @@
         this.post(meth, { args: args, kwargs: kwargs })
         .then(res => {
           // open a document
-          if (res.open)
+          if (res && res.open)
             window.open(res.open);
           resolve(res);
         })

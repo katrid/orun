@@ -169,6 +169,8 @@
 
     render(container) {
       let form = $(this.viewInfo.content);
+      form.attr('smart-form', 'smart-form');
+
       form.addClass('row');
 
       compileButtons(form);
@@ -211,7 +213,6 @@
       return templ;
     }
   }
-
 
   class List extends View2 {
     constructor(...args) {
@@ -305,6 +306,19 @@
       $el.children('field').remove();
       $el.find('field').each((idx, el) => $(el).replaceWith(`{{ ::record.${ $(el).attr('name') } }}`));
       return sprintf(Katrid.app.getTemplate('view.card'), { content: $el.html() });
+    }
+  }))
+  .directive('smartForm', () => ({
+    restrict: 'A',
+    link(scope, el, attrs) {
+      if ('edit' in attrs) {
+        attrs.$observe('edit', (v) => {
+          if (v === 'false')
+            $('.action-view:first').find('.toolbutton-action-edit').hide();
+          else
+            $('.action-view:first').find('.toolbutton-action-edit').show();
+        })
+      }
     }
   }));
 

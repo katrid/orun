@@ -807,9 +807,11 @@
     }
 
     _applyResponse(res) {
-      if (res.value)
-        this.setValues(res.value);
-      this.scope.$apply();
+      if (res) {
+        if (res.value)
+          this.setValues(res.value);
+        this.scope.$apply();
+      }
     }
 
     async dispatchEvent(name, ...args) {

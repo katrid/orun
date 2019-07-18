@@ -174,6 +174,12 @@ class ForeignKey(RelatedField):
         if value:
             return (value.pk, str(value))
 
+    def _db_type(self, connection):
+        return self.rel.remote_field.rel_db_type(connection=connection)
+
+    def db_parameters(self, connection):
+        return {"type": self._db_type(connection), "check": self.db_check(connection)}
+
 
 class ManyToManyField(RelatedField):
     # Field flags

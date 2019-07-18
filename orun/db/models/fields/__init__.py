@@ -279,6 +279,14 @@ class Field(BaseField):
         except KeyError:
             return None
 
+    def rel_db_type(self, connection):
+        """
+        Return the data type that a related field pointing to this field should
+        use. For example, this method is called by ForeignKey and OneToOneField
+        to determine its data type.
+        """
+        return self._db_type(connection)
+
     def get_internal_type(self):
         return self.__class__.__name__
 
@@ -476,9 +484,15 @@ class AutoField(IntegerField):
         kwargs.setdefault('readonly', True)
         super().__init__(*args, **kwargs)
 
+    def _db_type(self, connection):
+        return IntegerField()._db_type(connection=connection)
+
 
 class BigAutoField(AutoField):
     db_type = sa.BigInteger().with_variant(sa.Integer, 'sqlite')
+
+    def _db_type(self, connection):
+        return BigIntegerField()._db_type(connection=connection)
 
 
 class TextField(Field):

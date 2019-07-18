@@ -32,7 +32,6 @@
 
       controller.$render = function () {
         if (controller.$modelValue) {
-          console.log('render', el, controller.$modelValue);
           calendar.datetimepicker('date', moment.utc(controller.$modelValue));
         } else
           el.val('');

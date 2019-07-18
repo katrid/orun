@@ -815,9 +815,18 @@ class Model(metaclass=ModelBase):
         raise DeprecationWarning('DONT USE THIS FIELD')
 
     def save(self, update_fields=None, force_insert=False):
-        if not self.pk or force_insert:
+        inserting = not self.pk or force_insert
+        if inserting:
+            self.__before_insert__()
             session.add(self)
+            self.__after_insert__()
         session.flush((self,))
+
+    def __before_insert__(self):
+        pass
+
+    def __after_insert__(self):
+        pass
 
 
 def unpickle_inner_exception(klass, exception_name):
