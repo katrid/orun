@@ -607,11 +607,11 @@
 
   Katrid.UI.uiKatrid.filter('duration', () => {
     return (input, unit, format) => {
-      console.log('duration', input, format);
       if (!format)
         format = 'HH:mm:ss';
       if (input) {
         let fmt = moment.duration(input, unit).format(format);
+        console.log('duration', input, fmt, format);
         if (fmt.length === 5)
           fmt = '00:' + fmt;
         return fmt;

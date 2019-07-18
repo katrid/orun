@@ -118,5 +118,5 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
                     self.execute(self._delete_constraint_sql(self.sql_delete_index, model, index_name))
 
     def reset_sequence(self, table_name):
-        self.connection.engine.session.execute(f'''SELECT pg_catalog.setval(pg_get_serial_sequence('{table_name}', 'id'), MAX(id)) FROM {table_name};''')
+        self.connection.engine.session.execute(f'''SELECT pg_catalog.setval(pg_get_serial_sequence('{table_name}', 'id'), MAX(id) + 1) FROM {table_name};''')
 
