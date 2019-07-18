@@ -174,7 +174,7 @@ class View(models.Model):
                 return app.report_env.get_or_select_template(templ).render(**context)
             return render_template(templ, **context)
         if self.view_type in ('dashboard', 'report'):
-            return app.report_env.get_or_select_template(self.content).render(**context)
+            return app.report_env.from_string(self.content).render(**context)
         return render_template_string(self.content, **context)
 
     @classmethod
