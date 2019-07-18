@@ -20,8 +20,10 @@ def command(database, username, **options):
 
     if not options.get('password'):
         password = commands.prompt('New Password', hide_input=True)
-    else:
-        password = options['password'][0]
+    elif 'password' in options:
+        password = options['password']
+        if isinstance(password, (list, tuple)):
+            password = password[0]
     user = app['auth.user']
     u = user.objects.filter(user.c.username == username).one()
     u.set_password(password)
