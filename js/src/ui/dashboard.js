@@ -613,7 +613,6 @@
         if ((unit === 'seconds') && (_.isString(input)))
           input = parseInt(input);
         let fmt = moment.duration(input, unit).format(format);
-        console.log('duration', input, units, fmt, format);
         if (fmt.length === 5)
           fmt = '00:' + fmt;
         return fmt;
