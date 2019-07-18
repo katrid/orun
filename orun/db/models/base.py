@@ -717,14 +717,14 @@ class Model(metaclass=ModelBase):
             if self._meta.title_field == f.name:
                 new_item[f.name] = gettext('%s (copy)') % v
             elif f.one_to_many:
-                new_item[f.name] = [
+                values = new_item[f.name] = [
                     {
                         'action': 'CREATE',
-                        'values': copy.copy(obj),
+                        # remove parent record information
+                        'values': {k: v for k, v in copy.copy(obj).items() if k != f.rel.field_name},
                     }
                     for obj in v
                 ]
-
             else:
                 new_item[f.name] = f.to_json(v)
         return new_item
