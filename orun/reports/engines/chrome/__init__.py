@@ -2,15 +2,7 @@ import json
 import os
 import uuid
 import datetime
-import mako.lookup
-import mako.template
 from sqlalchemy import text
-try:
-    from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
-    from PyQt5.QtWidgets import QApplication
-    qapp: QApplication = None
-except:
-    pass
 
 from orun import app, render_template_string
 from orun.db import session, models
