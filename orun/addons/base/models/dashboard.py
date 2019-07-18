@@ -98,7 +98,7 @@ class Query(models.Model):
         desc = q.cursor.description
         if with_desc:
             fields = [
-                {'name': f[0], 'type': datatype_map.get(f[1].__name__.lower(), 'CharField'), 'size': f[2]}
+                {'name': f[0], 'type': 'CharField', 'size': f[2]}
                 for f in desc
             ]
         else:
