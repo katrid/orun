@@ -26,7 +26,7 @@ class Deserializer(base.Deserializer):
             for i, obj in enumerate(PythonDeserializer(reader, app=self.app, model=model, fields=cols)):
                 pass
         except Exception as e:
-            print('Error at line:', i)
             print(e)
+            print('Error at line:', i)
             raise
         self.postpone = [lambda app=self.app, table=model._meta.table.fullname: app.connection.schema_editor().reset_sequence(table)]
