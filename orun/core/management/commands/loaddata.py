@@ -27,7 +27,7 @@ def load_fixture(app_config, filename, **options):
     deserializer = get_deserializer(fmt)
     d = deserializer(app, app_config=app_config, filename=filename)
 
-    with transaction.begin:
+    with transaction.begin():
         d.execute()
     if d.postpone:
         for op in d.postpone:
