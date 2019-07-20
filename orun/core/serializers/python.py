@@ -86,6 +86,8 @@ def get_prep_value(model, field_name, field, value):
         k, f = field_name.split(':')
         model_field = model._meta.fields_dict[k].rel.model
         obj = model_field.objects.filter({f: value}).options(load_only(model_field.pk)).first()
+        if not obj:
+            print('Value "%s" not found for "%s"' % (value, field_name))
         assert obj, 'Value "%s" not found for "%s"' % (value, field_name)
         return k, obj.pk
     elif field:
