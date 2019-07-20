@@ -16,7 +16,7 @@ class Deserializer(BaseDeserializer):
         reader = csv.DictReader(stream_or_string, delimiter='\t')
         cols = reader.fieldnames
         model_name = os.path.basename(self.filename).rsplit('.', 1)[0]
-        model = self.app[model_name]
+        self.model = model = self.app[model_name]
         # mandatory fields for txt deserializer
         assert 'pk' in cols or 'id' in cols, 'Unable do detect an identity column'
         i = 1
@@ -26,4 +26,4 @@ class Deserializer(BaseDeserializer):
         except:
             print('Error at line:', i)
             raise
-        self.app.connection.schema_editor().reset_sequence(model._meta.table.fullname)
+        self.postpone = [lambda app=self.app, table=model._meta.table.fullname: app.connection.schema_editor().reset_sequence(table)]

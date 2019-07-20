@@ -28,4 +28,4 @@ class Deserializer(base.Deserializer):
         except:
             print('Error at line:', i)
             raise
-        self.app.connection.schema_editor().reset_sequence(model._meta.table.fullname)
+        self.postpone = [lambda app=self.app, table=model._meta.table.fullname: app.connection.schema_editor().reset_sequence(table)]

@@ -161,6 +161,7 @@ class Deserializer:
         self.filename = filename
         self.options = kwargs
         self.encoding = kwargs.get('encoding', 'utf-8')
+        self.postpone = None
 
     def from_file(self, filename: str, encoding: str='utf-8'):
         with open(filename, encoding=encoding) as f:

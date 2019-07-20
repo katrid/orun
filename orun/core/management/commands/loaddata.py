@@ -19,7 +19,6 @@ def command(app_label, fixture, **options):
     load_fixture(app_label, fixture, **options)
 
 
-@transaction.atomic
 def load_fixture(app_config, filename, **options):
     if isinstance(app_config, str):
         app_config = apps.app_configs[app_config]
@@ -27,4 +26,9 @@ def load_fixture(app_config, filename, **options):
     fmt = filename.rsplit('.', 1)[1]
     deserializer = get_deserializer(fmt)
     d = deserializer(app, app_config=app_config, filename=filename)
-    d.execute()
+
+    with transaction.begin:
+        d.execute()
+    if d.postpone:
+        for op in d.postpone:
+            op()
