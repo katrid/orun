@@ -312,6 +312,8 @@
 
       let unkook = [
         scope.$on('masterChanged', async function (evt, master, key) {
+
+          console.log('master changed');
           // Ajax load nested data
           if (master === scope.dataSource.masterSource) {
             scope.dataSet = [];
@@ -336,6 +338,8 @@
               scope.$parent.record[field.name] = [];
             }
           }
+
+
         }),
         scope.$on('afterCancel', function (evt, master) {
           if (master === scope.dataSource.masterSource)
