@@ -92,7 +92,7 @@
     async copy(id) {
       let res = await this.model.copy(id);
       this.record = {};
-      this.state = DataSourceState.inserting;
+      await this.insert();
       this.setValues(res);
       return res;
     }
@@ -661,7 +661,10 @@
     }
 
     fieldByName(fieldName) {
-      return this.scope.view.fields[fieldName];
+      if (this.scope.views)
+        return this.scope.views.form.fields[fieldName];
+      else
+        return this.scope.view.fields[fieldName];
     }
 
     set state(state) {

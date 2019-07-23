@@ -175,10 +175,10 @@
     new Record(rec, dataSource);
     return new Proxy(rec, {
       set(target, propKey, value, receiver) {
-        let scope = dataSource.scope;
-        let field = dataSource.fieldByName(propKey);
         if (!propKey.startsWith('$$')) {
-          if (!propKey.startsWith('$') && scope && field && !(_.isArray(value) && ((field instanceof Katrid.Data.Fields.OneToManyField) || (field instanceof Katrid.Data.Fields.ManyToManyField)))) {
+          let scope = dataSource.scope;
+          let field = dataSource.fieldByName(propKey);
+          if (!propKey.startsWith('$') && scope && field && !(field instanceof Katrid.Data.Fields.OneToManyField)) {
             rec.$record.set(propKey, value);
           }
         }
