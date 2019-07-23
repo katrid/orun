@@ -74,6 +74,8 @@
       this._pendingChanges = false;
       if (this.state === DataSourceState.editing)
         await this.refresh();
+      else if (this.action)
+        this.action.switchView('list');
       this.state = DataSourceState.browsing;
 
       this.scope.$emit('afterCancel', this);
@@ -697,6 +699,9 @@
       // refresh record id
       this.scope.recordId = value;
       // refresh children
+      // avoid grid field delayed
+      for (let child of this.children)
+        child.pendingMasterId = value;
       this.scope.$broadcast('masterChanged', this, value);
     }
 
@@ -843,6 +848,12 @@
           control.$setDirty();
       } else if (this.action)
         this.action.setDirty(field);
+    }
+
+    destroyChildren() {
+      for (let child of this.children)
+        child.scope.$destroy();
+      this.children = [];
     }
   }
 

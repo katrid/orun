@@ -86,7 +86,7 @@
         await this.execute();
       }
       if (this.params.id && (this.dataSource.recordId != this.params.id))
-        this.dataSource.get(this.params.id);
+        await this.dataSource.get(this.params.id);
     }
 
     rpc(method, data, event) {
@@ -286,6 +286,8 @@
         // invalidate the current record id
         if (value !== 'form')
           this.dataSource.recordId = null;
+        // destroy children fields
+        this.dataSource.destroyChildren();
         this._viewType = value;
       }
 

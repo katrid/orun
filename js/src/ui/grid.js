@@ -172,9 +172,9 @@
         for (let [k, v] of Object.entries(rec))
           record[k] = v;
         scope.records.push(record);
-        if (!scope.$parent.record[scope.fieldName])
-          scope.$parent.record[scope.fieldName] = [];
-        scope.$parent.record[scope.fieldName].push(record);
+        if (!scope.dataSource.parent.record[scope.fieldName])
+          scope.dataSource.parent.record[scope.fieldName] = [];
+        scope.dataSource.parent.record[scope.fieldName].push(record);
         console.log('add record', record);
       };
 
@@ -309,38 +309,40 @@
         scope.$apply();
       };
 
+      let masterChanged = function (evt, master, key) {
 
-      let unkook = [
-        scope.$on('masterChanged', async function (evt, master, key) {
-
-          console.log('master changed');
-          // Ajax load nested data
-          if (master === scope.dataSource.masterSource) {
-            scope.dataSet = [];
-            scope._changeCount = 0;
-            scope.records = [];
-            if (key != null) {
-              const data = {};
-              data[field.field] = key;
-              if (key) {
-                // TODO remove in future
-                scope.dataSource.pageLimit = 1000;
-                return await scope.dataSource.search(data)
-                .then((data) => {
-                  // setup the log information, it will be useful to watch field value changes
-                  scope.$parent.$fieldLog[field.name] = {count: 0, value: data.data};
-                  scope.$parent.record[field.name] = data.data;
-                  scope.$parent.$apply();
-                })
-                .finally(() => scope.dataSource.state = Katrid.Data.DataSourceState.browsing);
-              }
-            } else {
-              scope.$parent.record[field.name] = [];
+        // Ajax load nested data
+        if (master === scope.dataSource.masterSource) {
+          scope.dataSet = [];
+          scope._changeCount = 0;
+          scope.records = [];
+          if (key != null) {
+            const data = {};
+            data[field.field] = key;
+            if (key) {
+              // TODO remove in future
+              scope.dataSource.pageLimit = 1000;
+              return scope.dataSource.search(data)
+              .then((data) => {
+                // setup the log information, it will be useful to watch field value changes
+                scope.$parent.$fieldLog[field.name] = {count: 0, value: data.data};
+                scope.$parent.record[field.name] = data.data;
+                scope.$apply();
+              })
+              .finally(() => scope.dataSource.state = Katrid.Data.DataSourceState.browsing);
             }
+          } else {
+            scope.$parent.record[field.name] = [];
           }
+        }
 
+      };
 
-        }),
+      if (scope.dataSource.pendingMasterId)
+        masterChanged(null, scope.dataSource.parent, scope.dataSource.pendingMasterId);
+
+      let unhook = [
+        scope.$on('masterChanged', masterChanged),
         scope.$on('afterCancel', function (evt, master) {
           if (master === scope.dataSource.masterSource)
             scope.dataSource.cancel();
@@ -349,8 +351,7 @@
 
 
       scope.$on('$destroy', function () {
-        unkook.map(fn => fn());
-        dataSource.masterSource.children.splice(dataSource.masterSource.indexOf(dataSource), 1);
+        unhook.map(fn => fn());
       });
 
 

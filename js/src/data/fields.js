@@ -417,8 +417,9 @@
           else if (obj.action === 'CREATE') {
             child.scope.addRecord(obj.values);
           }
-          child.scope.$apply();
         });
+          child.scope.$apply();
+
       }
     }
   }
