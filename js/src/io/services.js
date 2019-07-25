@@ -144,6 +144,8 @@
                     messages.push(res.result.message);
                   else if (res.result.warn)
                     messages.push({ type: 'warn', message: res.result.warn });
+                  else if (res.result.info)
+                    messages.push({ type: 'info', message: res.result.info });
                   else if (res.result.error)
                     messages.push({ type: 'error', message: res.result.error });
                   messages.forEach(function (msg) {

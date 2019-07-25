@@ -2092,7 +2092,12 @@ section div.checkbox {
 }
 .dataTable.table > tbody > tr {
   cursor: pointer;
-  background-color: #ffffff;
+}
+.table-success > td {
+  background-color: #e5f5e9;
+}
+.table-danger > td {
+  background-color: #f9cad4;
 }
 label.checkbox {
   margin: 0;

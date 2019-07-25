@@ -9,6 +9,10 @@
       return toastr['warning'](msg);
     }
 
+    static info(msg) {
+      return toastr['info'](msg);
+    }
+
     static error(msg) {
       return toastr['error'](msg);
     }
