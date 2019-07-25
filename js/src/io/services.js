@@ -135,18 +135,32 @@
                 reject(res.error);
               else {
                 if (res.result) {
+                  let messages;
+                  if (res.result.messages)
+                    messages = res.result.messages;
+                  else
+                    messages = [];
                   if (res.result.message)
-                    Katrid.UI.Dialogs.Alerts.success(res.result.message);
-                  else if (res.result.messages)
-                    res.result.messages.forEach(function (msg) {
+                    messages.push(res.result.message);
+                  else if (res.result.warn)
+                    messages.push({ type: 'warn', message: res.result.warn });
+                  else if (res.result.error)
+                    messages.push({ type: 'error', message: res.result.error });
+                  messages.forEach(function (msg) {
+                    if (_.isString(msg))
                       Katrid.UI.Dialogs.Alerts.success(msg);
-                    });
+                    else if (msg.type === 'warn')
+                      Katrid.UI.Dialogs.Alerts.warn(msg.message);
+                    else if (msg.type === 'info')
+                      Katrid.UI.Dialogs.Alerts.info(msg.message);
+                    else if ((msg.type === 'error') || (msg.type === 'danger'))
+                      Katrid.UI.Dialogs.Alerts.error(msg.message);
+                  });
                 }
                 resolve(res.result);
               }
             })
             .catch(res => reject(res));
-
           }
         );
       }
