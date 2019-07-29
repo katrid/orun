@@ -485,7 +485,7 @@
       let templ = Katrid.app.getTemplate('dashboard.grid.jinja2', {
         self: this,
         fields: this.fields,
-        rowClick: attrs.rowClick,
+        rowClick: attrs && attrs.rowClick,
       });
       templ = Katrid.Core.$compile(templ)(this.$scope);
       this.$el.html(templ);
