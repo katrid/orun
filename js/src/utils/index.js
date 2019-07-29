@@ -26,8 +26,10 @@
       return r;
     },
     avg(iterable, member) {
-      let r = 0;
-      return _.sum(iterable, member) / iterable.length;
+      if (iterable && iterable.length) {
+        let r = 0;
+        return _.sum(iterable, member) / iterable.length;
+      }
     }
   })
 

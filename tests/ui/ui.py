@@ -9,7 +9,7 @@ class TestUI(TestChrome):
     addons = ['contacts', 'demoapp']
 
     @classmethod
-    def setUpClass(cls) -> None:
+    def setUpClass(cls):
         os.environ['ORUN_ADDONS_PATH'] = os.path.dirname(__file__)
 
     def test_ui(self):

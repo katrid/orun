@@ -484,7 +484,8 @@
 
       let templ = Katrid.app.getTemplate('dashboard.grid.jinja2', {
         self: this,
-        fields: this.fields
+        fields: this.fields,
+        rowClick: attrs.rowClick,
       });
       templ = Katrid.Core.$compile(templ)(this.$scope);
       this.$el.html(templ);
@@ -578,7 +579,7 @@
     // },
 
     async link(scope, el, attrs) {
-      let grid = new GridView({el, scope, sourceScope: scope.$parent});
+      let grid = new GridView({el, attrs, scope, sourceScope: scope.$parent});
       return;
       scope.loading = false;
       let res, sql;

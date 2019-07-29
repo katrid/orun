@@ -26,7 +26,7 @@ class TestServer(LiveServerTestCase):
             migrate.migrate(None, None, True, 'default', False, False, True, verbosity=True)
             # load fixtures
             if self.fixtures:
-                upgrade.upgrade(None)
+                upgrade.upgrade(None, None)
         return app
 
 
