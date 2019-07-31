@@ -99,6 +99,8 @@
         console.log(url);
 
         let data = res.data;
+        console.log(data);
+
         let cfg = {
           bindto: el[0],
           data: {},
@@ -126,8 +128,6 @@
           cfg.data.columns = data.map(obj => [obj[cols[0]], obj[cols[1]]]);
           hasData = true;
         }
-
-        console.log(cfg);
 
         if (hasData)
           chart = c3.generate(cfg);
