@@ -91,6 +91,8 @@
 
         if (sql)
           res = await Katrid.Services.Query.executeSql(sql);
+        else if (attrs.source)
+          res = scope[attrs.source].data;
         else {
           res = await fetch(url).then(res => res.json());
         }
