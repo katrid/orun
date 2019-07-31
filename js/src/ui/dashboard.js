@@ -127,6 +127,8 @@
           hasData = true;
         }
 
+        console.log(cfg);
+
         if (hasData)
           chart = c3.generate(cfg);
       };
