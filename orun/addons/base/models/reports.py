@@ -106,6 +106,8 @@ class ReportAction(Action):
             xml = self.view.to_string()
         else:
             xml = self.view.get_xml(model)
+            report_file = xml.attrib['file']
+            rep_type = report_file.rsplit('.', 1)[1]
 
         engine = get_engine(REPORT_ENGINES[rep_type])
         fname = uuid.uuid4().hex + '.html'

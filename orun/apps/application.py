@@ -48,7 +48,6 @@ class Application(Flask):
 
         # Load connections
         from orun.db import ConnectionHandler
-        print(settings['DATABASES'])
         self.connections = ConnectionHandler(self, self.settings['DATABASES'])
 
         self.config.update(self.settings)
@@ -70,6 +69,11 @@ class Application(Flask):
         self.addons['web'] = registry['web']
 
         self._report_env = None
+
+        # register report engines
+        if 'REPORT_ENGINES' in settings:
+            from base.models.reports import REPORT_ENGINES
+            REPORT_ENGINES.update(settings['REPORT_ENGINES'])
 
     def create_report_environment(self):
         # prepare jinja2 environment
