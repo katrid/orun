@@ -133,6 +133,8 @@
         let urlParams = attrs.urlParams;
         // TODO add list support
         scope.$watch(attrs.urlParams, observe);
+      } else if (attrs.source) {
+        scope.$watch(attrs.source, observe);
       } else
         observe();
       attrs.$observe('url', observe);
