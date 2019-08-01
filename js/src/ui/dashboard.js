@@ -137,7 +137,7 @@
         // TODO add list support
         scope.$watch(attrs.urlParams, observe);
       } else if (attrs.source) {
-        scope.$watch(attrs.source, observe);
+        scope.$watch(attrs.source + '.data', observe);
       } else
         observe();
       attrs.$observe('url', observe);
