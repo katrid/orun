@@ -96,10 +96,9 @@
         else {
           res = await fetch(url).then(res => res.json());
         }
-        console.log(url);
 
         let data = res.data;
-        console.log(data);
+        console.log(attrs);
 
         let cfg = {
           bindto: el[0],
