@@ -584,13 +584,10 @@ class FloatField(Field):
 class DecimalField(FloatField):
     def __init__(self, digits=29, decimal_places=6, *args, **kwargs):
         self.digits = digits
+        self.max_digits = digits
         self.decimal_places = decimal_places
         super(DecimalField, self).__init__(*args, **kwargs)
         self.db_type = sa.Numeric(self.digits, self.decimal_places)
-
-    @property
-    def max_digits(self):
-        return self.digits
 
     def to_python(self, value):
         if isinstance(value, str):
