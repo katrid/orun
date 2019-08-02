@@ -588,6 +588,10 @@ class DecimalField(FloatField):
         super(DecimalField, self).__init__(*args, **kwargs)
         self.db_type = sa.Numeric(self.digits, self.decimal_places)
 
+    @property
+    def max_digits(self):
+        return self.digits
+
     def to_python(self, value):
         if isinstance(value, str):
             value = value.replace(',', '.')

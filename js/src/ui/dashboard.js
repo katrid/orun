@@ -144,7 +144,7 @@
     }
   }
 
-
+https://economia.estadao.com.br/noticias/geral,carga-tributaria-bate-recorde-de-35-07-do-pib-mesmo-com-a-economia-fraca,70002944416?fbclid=IwAR2zcBjvLNYa3Dx5T3cbFYh5qLaBIcim1yl7G2qMyx0UjWmbIV1WXOwvos4
   class Query extends Katrid.UI.Widgets.Component {
     constructor() {
       super();
