@@ -530,7 +530,11 @@ class Model(metaclass=ModelBase):
             if exact:
                 q = [sa.or_(*[fld.column == name for fld in name_fields])]
             else:
-                q = [sa.or_(*[fld.column.ilike('%' + name + '%') for fld in name_fields])]
+                if app.connection.engine.url.drivername == 'postgresql':
+                    from sqlalchemy.sql.operators import ilike_op
+                    q = [sa.or_(*[ilike_op(unaccent(fld.column), '%' + name + '%') for fld in name_fields])]
+                else:
+                    q = [sa.or_(*[fld.column.ilike('%' + name + '%') for fld in name_fields])]
             if params:
                 q.append(params)
             kwargs = {'params': q}
@@ -841,6 +845,12 @@ def _resolve_fk_search(field, join_list):
         join_list.append(rel_model)
         return rel_model._meta.get_name_fields()
     return [field]
+
+
+from sqlalchemy.sql.functions import ReturnTypeFromArgs
+
+class unaccent(ReturnTypeFromArgs):
+    pass
 
 
 from orun.db.models.fields import BaseField, CharField, Field, BigAutoField, BooleanField, NOT_PROVIDED

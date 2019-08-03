@@ -245,6 +245,7 @@ class Insert(object):
 def convert_params(model, params, joins=None):
     from orun.db import models
 
+    import ipdb; ipdb.set_trace()
     sub_param = None
     if not isinstance(params, (tuple, list)):
         params = [params]
@@ -275,9 +276,11 @@ def convert_params(model, params, joins=None):
                     if isinstance(v, (list, tuple)):
                         yield attr(*v)
                     else:
+                        import ipdb; ipdb.set_trace()
                         yield attr(v)
                 elif sub_param is None:
                     yield col == v
+
 
 
 class Query(orm.Query):
