@@ -295,6 +295,9 @@ class Migrate(object):
                     elif f.db_compute and not old_col.info.get('compute'):
                         editor.safe_alter_column(c, old_col, indexes=indexes)
                         editor.add_field(model, f)
+                    elif not editor.connection.data_type_eq(str(old_col.type), str(c.type)):
+                        editor.safe_alter_column(c, old_col, indexes=indexes)
+                        editor.add_field(model, f)
                     elif old_col.foreign_keys and not editor.compare_fks(old_col.foreign_keys, c.foreign_keys):
                         if indexes is None:
                             indexes = insp.get_indexes(tbl.name, tbl.schema)
@@ -302,5 +305,4 @@ class Migrate(object):
                         editor.add_field(model, f)
                     elif c.nullable != old_col.nullable and c.nullable:
                         editor.alter_column_null(c)
-
 

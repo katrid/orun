@@ -43,4 +43,16 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'PositiveSmallIntegerField': '"%(column)s" >= 0',
     }
 
-
+    def data_type_eq(self, old_type, new_type):
+        r = super().data_type_compare(old_type, new_type)
+        if new_type == 'BOOLEAN' and old_type.startswith('BIT'):
+            return True
+        if new_type == 'BLOB' and old_type.startswith('VARBINARY'):
+            return True
+        if new_type == 'TEXT' and (old_type == 'TEXT' or old_type.startswith('VARCHAR')):
+            return True
+        if new_type == 'VARCHAR' and (old_type == 'TEXT' or old_type.startswith('VARCHAR')):
+            return True
+        if new_type.startswith('NUMERIC') and old_type.startswith('NUMERIC'):
+            return True
+        return r

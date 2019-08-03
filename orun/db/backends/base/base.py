@@ -12,6 +12,8 @@ class BaseDatabaseWrapper:
     features_class = None
     ops_class = BaseDatabaseOperations
 
+    data_type_migration_map = {}
+
     def __init__(self, url, alias, settings_dict, **kwargs):
         self.engine = sa.create_engine(str(url), echo=settings.SQL_DEBUG, **kwargs)
         self.engine.backend = self
@@ -62,4 +64,11 @@ class BaseDatabaseWrapper:
     def database_name(self):
         url = make_url(self.engine.url)
         return url.database
+
+    def data_type_compare(self, old_type, new_type):
+        if old_type == new_type:
+            return True
+        if old_type.startswith(new_type):
+            return True
+        return False
 
