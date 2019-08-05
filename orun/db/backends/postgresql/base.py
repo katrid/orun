@@ -71,3 +71,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'PositiveSmallIntegerField': '"%(column)s" >= 0',
     }
 
+    def data_type_eq(self, old_type, new_type):
+        if old_type.startswith('TIMESTAMP') and new_type == 'DATETIME':
+            return True
+        return super().data_type_eq(old_type, new_type)
+

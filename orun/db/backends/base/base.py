@@ -65,7 +65,7 @@ class BaseDatabaseWrapper:
         url = make_url(self.engine.url)
         return url.database
 
-    def data_type_compare(self, old_type, new_type):
+    def data_type_eq(self, old_type, new_type):
         if old_type == new_type:
             return True
         if old_type.startswith(new_type):
