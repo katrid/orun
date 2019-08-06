@@ -245,7 +245,6 @@ class Insert(object):
 def convert_params(model, params, joins=None):
     from orun.db import models
 
-    import ipdb; ipdb.set_trace()
     sub_param = None
     if not isinstance(params, (tuple, list)):
         params = [params]

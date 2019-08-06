@@ -291,11 +291,13 @@ class Migrate(object):
                     if old_col is None:
                         if c.name not in cols:
                             # connection.execute(CreateColumn(c))
+                            print(f'Add new field {f.name} at model {model._meta.name}')
                             editor.add_field(model, f)
                     elif f.db_compute and not old_col.info.get('compute'):
                         editor.safe_alter_column(c, old_col, indexes=indexes)
                         editor.add_field(model, f)
                     elif not editor.connection.data_type_eq(str(old_col.type), str(c.type)):
+                        print(f'Field {f.name} at model {model._meta.name} has changed, from "{old_col.type}" to "{c.type}"')
                         editor.safe_alter_column(c, old_col, indexes=indexes)
                         editor.add_field(model, f)
                     elif old_col.foreign_keys and not editor.compare_fks(old_col.foreign_keys, c.foreign_keys):

@@ -550,12 +550,15 @@ class BaseDatabaseSchemaEditor(object):
         old_name = f'old__{column.name}'
         s = ''
         i = 0
+        print(f'Rename column {column.name} at table {column.table}')
         while old_name + s in old.table.c:
             i += 1
             s = '_' + str(i)
         old_name += s
         new_name = column.name
         db_type = old.type.compile(dialect=self.connection.engine.dialect)
+        if db_type.startswith('VARCHAR(-1)'):
+            db_type = 'varchar(max)'
         sql = self.sql_create_column % {'table': table_name, 'column': old_name, 'definition': db_type}
         self.execute(sql)
         self.execute(f"UPDATE {table_name} SET {old_name} = {column.compile(dialect=self.connection.engine.dialect)}")

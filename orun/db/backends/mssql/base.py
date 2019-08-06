@@ -47,6 +47,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         r = super().data_type_eq(old_type, new_type)
         if new_type == 'BOOLEAN' and old_type.startswith('BIT'):
             return True
+        if new_type == 'BOOLEAN' and old_type.startswith('BIT'):
+            return True
         if new_type == 'BLOB' and old_type.startswith('VARBINARY'):
             return True
         if new_type == 'TEXT' and (old_type == 'TEXT' or old_type.startswith('VARCHAR')):

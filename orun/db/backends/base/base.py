@@ -70,5 +70,11 @@ class BaseDatabaseWrapper:
             return True
         if old_type.startswith(new_type):
             return True
+        if (
+                old_type.startswith('DECIMAL') and new_type.startswith('NUMERIC')
+        ) or (
+                old_type.startswith('NUMERIC') and new_type.startswith('DECIMAL')
+        ):
+            return True
         return False
 
