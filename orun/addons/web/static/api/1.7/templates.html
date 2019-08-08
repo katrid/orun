@@ -1489,7 +1489,7 @@
         </span>
       {% endblock %}
       {% block field %}
-        <input class="form-field form-control" {% block input_type %}type="text"{% endblock %} {{ utils.field_attrs(field) }}
+        <input {% block fields_css %}class="form-field form-control"{% endblock %} {% block input_type %}type="text"{% endblock %} {{ utils.field_attrs(field) }}
           {% if field.attrs.nolabel === 'placeholder' %}
           placeholder="{{ field.caption }}"
           {% endif %}
@@ -1521,8 +1521,23 @@
         ${ record.{{ field.name }}[1]||'{{ field.emptyText }}' }
       </a>
     {% endblock %}
-    {% block field %}
-      <input foreignkey name="{{ field.name }}" ng-model="record.{{ field.name }}">
+    {% block fields_css %}{% endblock %}
+    {% block field_attrs %}
+      foreignkey
+    {% endblock %}
+  </script>
+
+  <script id="view.form.manytomany.jinja2" type="text/ng-template">
+    {% extends "view.form.foreignkey.jinja2" %}
+    {% block readonly %}
+      <a href="#/app/?menu_id=${ ::action.params.menu_id }&model={{ field.model }}&view_type=form&id=${ record.{{ field.name }}[0] }">
+        <span ng-repeat="val in record.{{ field.name }}">
+        ${ val[1] }
+        </span>
+      </a>
+    {% endblock %}
+    {% block field_attrs %}
+      foreignkey multiple
     {% endblock %}
   </script>
 
