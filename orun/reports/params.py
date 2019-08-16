@@ -19,7 +19,7 @@ def prepare_params(params, context=None):
 
     if params:
         context = {}
-        params = eval(params, {
+        return eval(params, {
             'dateutil': dateutil,
             'datetime': datetime,
             'now': datetime.datetime.now(),
