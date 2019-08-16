@@ -2,6 +2,7 @@ import datetime
 import jinja2
 from lxml import etree
 
+from orun import app
 from orun.template.pug import Environment, Element, Component
 from orun.template.pug.parser import Parser
 from orun.reports.pdf import ChromePDF
@@ -10,6 +11,9 @@ from orun.reports.pdf import ChromePDF
 class ChromeEngine:
     env: jinja2.Environment = None
     default_connection = None
+
+    def __init__(self):
+        self.env = app.report_env
 
     def auto_report(self, xml, *args, **kwargs):
         return self.from_xml(xml, **kwargs)
