@@ -11,10 +11,7 @@ from orun import app
 
 
 def get_engine(engine=None):
-    e = ReportEngines.get_engine(engine)
-    if e.env is None:
-        e.env = app.report_env
-    return e
+    return ReportEngines.get_engine(engine)
 
 
 class ConnectionProxy:

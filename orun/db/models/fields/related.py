@@ -216,6 +216,10 @@ class ManyToManyField(RelatedField):
             else:
                 self.rel.through = create_many_to_many_intermediary_model(self, cls)
 
+    @property
+    def name_fields(self):
+        return
+
     def _formfield(self):
         info = super()._formfield()
         info['model'] = self.rel.model._meta.name

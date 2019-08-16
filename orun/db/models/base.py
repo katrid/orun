@@ -438,7 +438,7 @@ class Model(metaclass=ModelBase):
         for k, v in data.items():
             field = instance.__class__._meta.fields[k]
             v = field.to_python(v)
-            if field.one_to_many:
+            if field.one_to_many or field.many_to_many:
                 children[field] = v
             elif field.set:
                 field.set(instance, v)
@@ -455,7 +455,13 @@ class Model(metaclass=ModelBase):
 
         for child, v in children.items():
             try:
-                child.set(instance, v)
+                if child.many_to_many:
+                    v = v or []
+                    if v:
+                        v = list(child.rel.model.objects.only('pk').filter(child.rel.model._meta.pk.column.in_(v)))
+                    setattr(instance, child.name, v)
+                else:
+                    child.set(instance, v)
             except ValidationError as e:
                 for k, v in dict(e.error_dict).items():
                     e.error_dict[f"{child.name}.{k}"] = e.error_dict.pop(k)
@@ -570,6 +576,8 @@ class Model(metaclass=ModelBase):
         field = self._meta.fields_dict[field_name]
         related_model = self.env[field.rel.model]
         search_params = {}
+        if field.many_to_many:
+            field = field.rel.to_field
         if ids is None:
             search_params['name_fields'] = kwargs.get('name_fields', (field.name_fields is not None and [related_model._meta.fields_dict[f] for f in field.name_fields]) or None)
             search_params['name'] = q

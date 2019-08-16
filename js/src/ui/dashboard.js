@@ -144,7 +144,6 @@
     }
   }
 
-https://economia.estadao.com.br/noticias/geral,carga-tributaria-bate-recorde-de-35-07-do-pib-mesmo-com-a-economia-fraca,70002944416?fbclid=IwAR2zcBjvLNYa3Dx5T3cbFYh5qLaBIcim1yl7G2qMyx0UjWmbIV1WXOwvos4
   class Query extends Katrid.UI.Widgets.Component {
     constructor() {
       super();
@@ -306,6 +305,7 @@ https://economia.estadao.com.br/noticias/geral,carga-tributaria-bate-recorde-de-
       this.controls = [];
       this.$counter = 0;
       this.$scope = scope;
+      this.params = this.$el.data('params');
       this.name = el.attr('name');
       if (this.name)
         scope[this.name] = this;
@@ -321,8 +321,25 @@ https://economia.estadao.com.br/noticias/geral,carga-tributaria-bate-recorde-de-
         if (this.url) {
           res = await fetch(this.url)
           .then(res => res.json());
-        } else if (this.sql)
-          res = await Katrid.Services.Query.executeSql(this.sql);
+        } else if (this.sql) {
+          let params = this.params;
+          console.log(params);
+          if (!params)
+            params = this.$scope;
+          else {
+            let dataParams = params;
+            params = {};
+            for (let k of dataParams) {
+              let v = this.$scope[k];
+              console.log(k, v);
+              if (_.isDate(v))
+                console.log('param is date', v);
+              params[k] = v;
+            }
+          }
+          let sql = _.sprintf(this.sql, params);
+          res = await Katrid.Services.Query.executeSql(sql);
+        }
         this.$counter++;
         this.data = res.data;
         this.$scope.$apply();

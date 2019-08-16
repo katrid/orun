@@ -144,6 +144,7 @@
 
 
       sel.on("change", async e => {
+        console.log('on change', e.val);
         let v = e.added;
         if (v && v.id === newItem) {
           let service = new Katrid.Services.Model(field.model);
@@ -200,12 +201,11 @@
       if (!multiple) scope.$watch(attrs.ngModel, (newValue, oldValue) => sel.select2("val", newValue));
       return controller.$render = function () {
         if (multiple) {
-          if (controller.$viewValue) {
-            const v = Array.from(controller.$viewValue).map(obj => obj[0]);
-            sel.select2("val", v)
+          if (controller.$modelValue) {
+            const v = Array.from(controller.$modelValue).map(obj => obj[0]);
+            sel.select2("val", controller.$modelValue);
           }
-        }
-        if (controller.$viewValue) {
+        } else if (controller.$viewValue) {
           return sel.select2("val", controller.$viewValue[0])
         } else {
           return sel.select2("val", null)

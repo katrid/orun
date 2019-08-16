@@ -425,6 +425,12 @@
   }
 
   class ManyToManyField extends ForeignKey {
+    constructor(info) {
+      super(...arguments);
+      if (!info.template || (info.template && !info.template.form))
+        this.template.form = 'view.form.manytomany.jinja2';
+    }
+
     toJSON(val) {
       if (_.isArray(val))
         return val.map(obj => _.isArray(obj) ? obj[0] : obj);

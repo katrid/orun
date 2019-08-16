@@ -371,7 +371,7 @@
         IntegerField(param) {
           let secondField = '';
           if (param.operation === 'between') {
-            secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" ng-model="param.value2" type="text" class="form-control"></div>`;
+            secondField = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-2" ng-model="param.value2" type="number" class="form-control"></div>`;
           }
           return `<div class="row"><div class="col-sm-6"><input id="rep-param-id-${param.id}" type="number" ng-model="param.value1" class="form-control"></div>${secondField}</div>`;
         },
