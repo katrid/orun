@@ -45,6 +45,10 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def data_type_eq(self, old_type, new_type):
         r = super().data_type_eq(old_type, new_type)
+        if new_type == 'BIGINT' and old_type.startswith('INT'):
+            return True
+        if new_type == 'INT' and old_type.startswith('BIGINT'):
+            return True
         if new_type == 'BOOLEAN' and old_type.startswith('BIT'):
             return True
         if new_type == 'BOOLEAN' and old_type.startswith('BIT'):
