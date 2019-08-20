@@ -157,7 +157,4 @@ REPORT_ENGINES = {
     'mako': 'orun.reports.engines.chrome.ChromeEngine',
     'jinja2': 'orun.reports.engines.chrome.JinjaEngine',
     'pug': 'orun.reports.engines.pug.ChromeEngine',
-    'xml': 'orun.reports.engines.fastreports.FastReports',
-    'frx': 'orun.reports.engines.fastreports.FastReports',
-    None: 'orun.reports.engines.fastreports.FastReports',
 }
