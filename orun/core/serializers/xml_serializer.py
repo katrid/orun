@@ -236,6 +236,7 @@ class Deserializer(base.Deserializer):
         model = obj.attrib.get('model')
         if model:
             ct = self.app['ir.model']
+        print('model name', model)
         view = {
             'model': 'ui.view',
             'id': obj.attrib.get('view-id'),
