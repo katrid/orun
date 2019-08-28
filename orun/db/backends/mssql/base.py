@@ -25,6 +25,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'FileField': 'varchar(%(max_length)s)',
         'FilePathField': 'varchar(%(max_length)s)',
         'FloatField': 'float',
+        'ImageField': 'binary',
         'IntegerField': 'int',
         'BigIntegerField': 'bigint',
         'IPAddressField': 'int',

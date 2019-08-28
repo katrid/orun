@@ -53,6 +53,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'FilePathField': 'varchar(%(max_length)s)',
         'FloatField': 'double precision',
         'IntegerField': 'integer',
+        'ImageField': 'bytea',
         'BigIntegerField': 'bigint',
         'IPAddressField': 'inet',
         'GenericIPAddressField': 'inet',
@@ -72,7 +73,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     }
 
     def data_type_eq(self, old_type, new_type):
+        r = super().data_type_eq(old_type, new_type)
         if old_type.startswith('TIMESTAMP') and new_type == 'DATETIME':
             return True
-        return super().data_type_eq(old_type, new_type)
-
+        if new_type.startswith('BLOB') and old_type.startswith('BYTEA'):
+            return True
+        if new_type.startswith('FLOAT') and old_type.startswith('DOUBLE PRECISION'):
+            return True
+        return r
