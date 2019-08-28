@@ -280,6 +280,7 @@ class Migrate(object):
                 table.name, meta, schema=table.schema, autoload=True,
             )
             indexes = None
+            print('Checking table', table.name)
             with connection.schema_editor() as editor:
                 if editor.connection.engine.name == 'sqlite':
                     return
