@@ -104,6 +104,8 @@ class ReportAction(Action):
             xml = self.view._get_content({})
         elif rep_type == 'pug':
             xml = self.view.to_string()
+        elif rep_type == 'html':
+            xml = self.view.to_string()
         else:
             xml = self.view.get_xml(model)
             report_file = xml.attrib['file']
@@ -153,7 +155,7 @@ class AutoReport(models.Model):
 
 
 REPORT_ENGINES = {
-    'html': 'orun.reports.engines.chrome.ChromeEngine',
+    'html': 'orun.reports.engines.html.ChromeEngine',
     'mako': 'orun.reports.engines.chrome.ChromeEngine',
     'jinja2': 'orun.reports.engines.chrome.JinjaEngine',
     'pug': 'orun.reports.engines.pug.ChromeEngine',
