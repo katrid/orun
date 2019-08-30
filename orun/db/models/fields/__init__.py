@@ -3,6 +3,7 @@ import decimal
 import datetime
 from functools import partialmethod
 import base64
+import warnings
 import sqlalchemy as sa
 from sqlalchemy import Column
 from sqlalchemy.engine import Engine
@@ -31,7 +32,7 @@ def calc_field(field, fn):
         try:
             return fn(*args, **kwargs)
         except:
-            Warning('Error calculating field: %s' % field)
+            warnings.warn('Error calculating field: %s' % field)
     return wrapper
 
 
