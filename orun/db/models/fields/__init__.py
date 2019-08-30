@@ -31,7 +31,7 @@ def calc_field(field, fn):
         try:
             return fn(*args, **kwargs)
         except:
-            raise Warning('Error calculating field: %s' % field)
+            Warning('Error calculating field: %s' % field)
     return wrapper
 
 
