@@ -26,6 +26,15 @@ class NOT_PROVIDED:
     pass
 
 
+def calc_field(field, fn):
+    def wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except:
+            raise Warning('Error calculating field: %s' % field)
+    return wrapper
+
+
 class Fields(list):
     def __init__(self, meta, *args):
         self.meta = meta
@@ -161,7 +170,7 @@ class Field(BaseField):
         self.proxy_field = proxy
 
         if getter is not None:
-            pargs = [getter]
+            pargs = [calc_field(self, getter)]
             if setter is not None:
                 pargs.append(setter)
             descriptor = pargs
