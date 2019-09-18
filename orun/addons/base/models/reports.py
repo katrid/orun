@@ -92,7 +92,10 @@ class ReportAction(Action):
                     for i, val in enumerate(v):
                         where[k + str(i + 1)] = val
                 else:
-                    where[k] = v[0]
+                    val = v[0]
+                    if val == '':
+                        val = None
+                    where[k] = val
         elif params:
             where = params
 
