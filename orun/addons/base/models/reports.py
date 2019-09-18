@@ -100,11 +100,7 @@ class ReportAction(Action):
         if self.view and self.view.template_name:
             rep_type = self.view.template_name.rsplit('.', 1)[1]
 
-        if rep_type in ('mako', 'jinja2'):
-            xml = self.view._get_content({})
-        elif rep_type == 'pug':
-            xml = self.view.to_string()
-        elif rep_type == 'html':
+        if rep_type == 'rep':
             xml = self.view.to_string()
         else:
             xml = self.view.get_xml(model)
@@ -112,9 +108,8 @@ class ReportAction(Action):
             rep_type = report_file.rsplit('.', 1)[1]
 
         engine = get_engine(REPORT_ENGINES[rep_type])
-        fname = uuid.uuid4().hex + '.html'
-        file_path = os.path.join(settings.REPORT_PATH, fname)
-        output_path = file_path + '.pdf'
+        fname = uuid.uuid4().hex + '.pdf'
+        output_path = os.path.join(settings.REPORT_PATH, fname)
         rep = engine.auto_report(
             xml,
             connection=ConnectionProxy(connection),
@@ -159,4 +154,5 @@ REPORT_ENGINES = {
     'mako': 'orun.reports.engines.chrome.ChromeEngine',
     'jinja2': 'orun.reports.engines.chrome.JinjaEngine',
     'pug': 'orun.reports.engines.pug.ChromeEngine',
+    'rep': 'orun.reports.engines.reptile.ReptileEngine',
 }

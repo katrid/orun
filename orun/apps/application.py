@@ -80,14 +80,20 @@ class Application(Flask):
         from orun.reports.engines.chrome.filters import localize, linebreaks, groupby
         from orun.reports.engines.chrome.extension import ReportExtension
         from orun.reports.engines.chrome.utils import avg, total, to_list
+        from reptile import ReportEngine
+
         env = self.create_jinja_environment()
+        ReportEngine.env = env
+        env.autoescape = False
         env.add_extension(ReportExtension)
         env.finalize = localize
         env.filters['localize'] = localize
         env.filters['linebreaks'] = linebreaks
         env.globals['static_fs'] = self.static_fs
         env.filters['total'] = total
-        env.filters['avg'] = avg
+        env.globals['avg'] = avg
+        env.globals['sum'] = sum
+        env.globals['count'] = len
         # env.filters['groupby'] = groupby
         self._report_env = env
 
