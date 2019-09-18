@@ -13,7 +13,7 @@ class ReptileEngine:
         return self.from_xml(xml, *args, **kwargs)
 
     def from_xml(self, xml, output_file, connection, **kwargs):
-        report = reptile.Report()
+        report = reptile.Report(params=kwargs.get('params'))
         report.from_string(xml)
         report.default_connection = connection
         doc = report.prepare()
