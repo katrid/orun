@@ -87,6 +87,7 @@ class Application(Flask):
         env.autoescape = False
         env.add_extension(ReportExtension)
         env.finalize = localize
+        env.undefined = SilentUndefined
         env.filters['localize'] = localize
         env.filters['linebreaks'] = linebreaks
         env.globals['static_fs'] = self.static_fs
