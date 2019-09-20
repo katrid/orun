@@ -12,9 +12,13 @@ class ReptileEngine:
     def auto_report(self, xml, *args, **kwargs):
         return self.from_xml(xml, *args, **kwargs)
 
+    def create_report(self, xml, **kwargs):
+        rep = reptile.Report(params=kwargs.get('params'))
+        rep.from_string(xml)
+        return rep
+
     def from_xml(self, xml, output_file, connection, **kwargs):
-        report = reptile.Report(params=kwargs.get('params'))
-        report.from_string(xml)
+        report = self.create_report(xml, **kwargs)
         report.default_connection = connection
         doc = report.prepare()
         pdf.Export(doc).export(output_file)

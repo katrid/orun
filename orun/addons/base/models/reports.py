@@ -50,7 +50,6 @@ class ReportAction(Action):
                 if params is not None:
                     data['content'] = params
 
-        print('report type', rep_type)
         if rep_type != 'jinja2' and rep_type != 'pug':
             xml = self.view.get_xml(model)
             print(xml)
@@ -153,9 +152,5 @@ class AutoReport(models.Model):
 
 
 REPORT_ENGINES = {
-    'html': 'orun.reports.engines.html.ChromeEngine',
-    'mako': 'orun.reports.engines.chrome.ChromeEngine',
-    'jinja2': 'orun.reports.engines.chrome.JinjaEngine',
-    'pug': 'orun.reports.engines.pug.ChromeEngine',
     'rep': 'orun.reports.engines.reptile.ReptileEngine',
 }
