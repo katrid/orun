@@ -73,13 +73,13 @@ class ReportAction(Action):
                 data['content'] = '<params/>'
         return data
 
-    def _export_report(self, format='pdf', params=None):
+    def _export_report(self, format='pdf', params=None, where=None):
         qs = model = None
         if self.model:
             model = app[self.model]
             qs = model.objects.all()
         _params = defaultdict(list)
-        if 'data' in params:
+        if params and 'data' in params:
             for crit in params['data']:
                 for k, v in crit.items():
                     if k.startswith('value'):
@@ -95,8 +95,6 @@ class ReportAction(Action):
                     if val == '':
                         val = None
                     where[k] = val
-        elif params:
-            where = params
 
         rep_type = None
         if self.view and self.view.template_name:
