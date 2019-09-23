@@ -105,6 +105,9 @@ class ReportAction(Action):
         else:
             xml = self.view.get_xml(model)
             report_file = xml.attrib['file']
+            if rep_type == 'xml':
+                with open(app.jinja_env.get_or_select_template(report_file).filename, 'rb') as f:
+                    xml = f.read()
             rep_type = report_file.rsplit('.', 1)[1]
 
         engine = get_engine(REPORT_ENGINES[rep_type])
