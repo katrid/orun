@@ -17,3 +17,14 @@ def avg(iterable, member=None):
 def total(iterable, member):
     return sum([getattr(obj, member) or 0 for obj in iterable])
 
+
+def COUNT(band):
+    return band.counter
+
+
+def SUM(iterable, band):
+    return sum(iterable)
+
+
+def AVG(iterable, band):
+    return mean(iterable)
