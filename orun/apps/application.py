@@ -79,7 +79,7 @@ class Application(Flask):
         # prepare jinja2 environment
         from orun.reports.engines.chrome.filters import localize, linebreaks, groupby
         from orun.reports.engines.chrome.extension import ReportExtension
-        from orun.reports.engines.chrome.utils import avg, total, to_list
+        from orun.reports.engines.chrome.utils import avg, total, to_list, COUNT, AVG, SUM
         from reptile import ReportEngine
 
         env = self.create_jinja_environment()
@@ -95,6 +95,9 @@ class Application(Flask):
         env.globals['avg'] = avg
         env.globals['sum'] = sum
         env.globals['count'] = len
+        env.globals['COUNT'] = COUNT
+        env.globals['SUM'] = SUM
+        env.globals['AVG'] = AVG
         # env.filters['groupby'] = groupby
         self._report_env = env
 
