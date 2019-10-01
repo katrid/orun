@@ -83,6 +83,8 @@ class ReportAction(Action):
             for crit in params['data']:
                 for k, v in crit.items():
                     if k.startswith('value'):
+                        if crit['op'] == 'in':
+                            v = v.split(',')
                         _params[crit['name']].append(v)
 
             where = {}

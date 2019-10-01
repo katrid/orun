@@ -410,7 +410,11 @@
         },
 
         ModelChoices(param) {
-          return `<div><input id="rep-param-id-${param.id}" ajax-choices="ir.action.report" model-choices="${param.info.modelChoices}" ng-model="param.value1"></div>`;
+          let multiple = '';
+          if (param.operation === 'in') {
+            multiple = 'multiple';
+          }
+          return `<div><input id="rep-param-id-${param.id}" ajax-choices="ir.action.report" model-choices="${param.info.modelChoices}" ng-model="param.value1" ${multiple}></div>`;
         },
 
         SelectionField(param) {

@@ -2,6 +2,7 @@ from enum import Enum
 from lxml import etree
 from sqlalchemy.sql import text
 
+import jinja2
 from orun.utils.translation import gettext
 from orun import render_template
 from orun.utils.functional import cached_property
@@ -19,6 +20,11 @@ class ConnectionProxy:
         self.connection = connection
 
     def execute(self, sql, params, **kwargs):
+        for k, v in params.items():
+            if isinstance(v, list):
+                v = ','.join(v)
+                params[k] = v
+        sql = jinja2.Template(sql, '/*', '*/').render(**params)
         sql = text(sql)
         for param in sql._bindparams:
             if param not in params:
