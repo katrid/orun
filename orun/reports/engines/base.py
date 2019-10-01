@@ -24,7 +24,7 @@ class ConnectionProxy:
             if isinstance(v, list):
                 v = ','.join(v)
                 params[k] = v
-        sql = jinja2.Template(sql, '/*', '*/').render(**params)
+        sql = jinja2.Template(sql, '--', '!--').render(**params)
         sql = text(sql)
         for param in sql._bindparams:
             if param not in params:
