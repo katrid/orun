@@ -16,7 +16,7 @@ def localize(ctx, value, fmt=None):
         if fmt == 'date':
             if isinstance(value, str):
                 value = datetime.date.fromisoformat(value)
-    if value is None:
+    if value is None or value == '':
         return ''
     this = ctx.parent.get('this')
     if this and this.format_type:
