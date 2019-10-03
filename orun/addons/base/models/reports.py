@@ -79,6 +79,7 @@ class ReportAction(Action):
             model = app[self.model]
             qs = model.objects.all()
         _params = defaultdict(list)
+        types = {}
         if params and 'data' in params:
             for crit in params['data']:
                 for k, v in crit.items():
@@ -86,12 +87,15 @@ class ReportAction(Action):
                         if crit['op'] == 'in':
                             v = v.split(',')
                         _params[crit['name']].append(v)
+                        types[crit['name']] = crit['type']
 
             where = {}
             for k, v in _params.items():
                 if len(v) > 1:
                     for i, val in enumerate(v):
-                        where[k + str(i + 1)] = val
+                        nm = k + str(i + 1)
+                        where[nm] = val
+                        types[nm] = types[k]
                 else:
                     val = v[0]
                     if val == '':
@@ -118,7 +122,7 @@ class ReportAction(Action):
         rep = engine.auto_report(
             xml,
             connection=ConnectionProxy(connection),
-            format=format, model=model, query=qs, report_title=self.name, params=where, output_file=output_path,
+            format=format, model=model, query=qs, report_title=self.name, params=where, types=types, output_file=output_path,
         )
         if rep:
             if not isinstance(rep, str):
