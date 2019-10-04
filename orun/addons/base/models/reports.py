@@ -3,7 +3,7 @@ import os
 import uuid
 from collections import defaultdict
 
-from orun import app, api
+from orun import app, api, g
 from orun.conf import settings
 from orun.db import models, connection
 from orun.reports.engines import get_engine, ConnectionProxy
@@ -122,6 +122,7 @@ class ReportAction(Action):
         rep = engine.auto_report(
             xml,
             connection=ConnectionProxy(connection),
+            company=g.user.user_company,
             format=format, model=model, query=qs, report_title=self.name, params=where, types=types, output_file=output_path,
         )
         if rep:
