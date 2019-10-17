@@ -11,7 +11,7 @@ def avg(iterable, member=None):
     if member:
         vals = list([getattr(obj, member) or 0 for obj in iterable])
     if vals:
-        return mean(vals)
+        return mean([val or 0 for val in vals])
 
 
 def total(iterable, member):
