@@ -193,6 +193,10 @@ class Field(BaseField):
             self.copy = copy
 
     @property
+    def verbose_name(self):
+        return self.label
+
+    @property
     def caption(self):
         return self.label
 
@@ -588,7 +592,7 @@ class DecimalField(FloatField):
         self.max_digits = digits
         self.decimal_places = decimal_places
         super(DecimalField, self).__init__(*args, **kwargs)
-        self.db_type = sa.Numeric(self.digits, self.decimal_places)
+        self.db_type = sa.Numeric(self.digits, decimal_places, False)
 
     def to_python(self, value):
         if isinstance(value, str):
@@ -600,8 +604,9 @@ class DecimalField(FloatField):
         return super(DecimalField, self).to_python(value)
 
     def to_json(self, value):
-        if value is not None:
-            return float(value)
+        if value:
+            value = value / int('1' + ('0' * self.decimal_places))
+            return value
 
 
 class EmailField(CharField):

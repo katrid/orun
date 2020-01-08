@@ -161,19 +161,15 @@ def jsonrpc(fn):
     def wrapped(*args, **kwargs):
         from orun.utils.json import jsonify
         data = request.json
-        _id = data['id']
         kwargs['params'] = data.get('params')
         try:
             r = fn(*args, **kwargs)
             return jsonify({
                 'jsonrpc': '2.0',
-                'id': _id,
                 'result': r
             })
         except ValidationError as e:
             return jsonify({
-                'jsonrpc': '2.0',
-                'id': _id,
                 'error': {
                     'code': e.code,
                     'messages': e.message_dict,
@@ -182,7 +178,6 @@ def jsonrpc(fn):
         except RPCError as e:
             return jsonify({
                 'jsonrpc': '2.0',
-                'id': _id,
                 'error': {
                     'code': e.code,
                     'message': str(e)
@@ -191,7 +186,6 @@ def jsonrpc(fn):
         except AssertionError as e:
             return jsonify({
                 'jsonrpc': '2.0',
-                'id': _id,
                 'error': {
                     'message': str(e),
                 }

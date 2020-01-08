@@ -79,7 +79,7 @@ class AppConfig(flask.Blueprint):
                 try:
                     import_module('%s.views' % self.schema)
                 except ImportError:
-                    if self.schema == 'web':
+                    if self.schema == 'pwacompra':
                         raise
 
                 # Register addon commands

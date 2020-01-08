@@ -1,13 +1,10 @@
 {% extends "/web/base.jinja2" %}
 {% import "/web/include/menu-utils.html" as menu_utils %}
-{% block extra_head %}
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-{% endblock %}
 {% block content %}
   <div id="page-content">
 
   <!-- Fixed navbar -->
-  <nav id="header" class="navbar navbar-expand-lg navbar-dark bg-purple" ng-cloak>
+  <nav id="header" class="navbar navbar-expand-lg navbar-dark bg-purple flex-row" ng-cloak>
     <a id="apps-button" class="header-link" data-toggle="dropdown">
       <i class="fa fa-th"></i>
     </a>

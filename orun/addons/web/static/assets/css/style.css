@@ -5188,7 +5188,6 @@ table.grid.inline-editor .grid-field-readonly {
   background-color: #ffffff;
 }
 .content-scroll > .content {
-  position: absolute;
   height: 100%;
   top: 0;
   left: 0;

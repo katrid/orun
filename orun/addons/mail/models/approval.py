@@ -95,7 +95,7 @@ class DocumentApproval(comment.Comments):
 
     class Meta:
         abstract = True
-        auto_send_approval = True
+        auto_send_approval = False
 
     def deserialize(self, instance, data):
         original_level = instance.current_approval_level_id

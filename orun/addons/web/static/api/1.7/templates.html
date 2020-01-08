@@ -1366,22 +1366,36 @@
 <templates>
 
   <script id="view.card.jinja2" type="text/ng-template">
+    <style>
+
+      .card-group {
+        width: 270px;
+        display: inline-block;
+        margin: 0 16px;
+        vertical-align: top;
+      }
+
+      .card-items {
+        min-height: 400px;
+      }
+    </style>
     <div class="content no-padding">
       <div class="data-panel col-12">
+        <div class="card-view kanban" ng-if="groups.length">
 
-        <div class="card-view kanban" ng-if="groupings.length" card-draggable=".card-group" card-group>
-
-          <div ng-repeat="group in groupings" class="card-group sortable-item" data-id="{{ group._paramValue }}"
-               data-group-name="{{ group._paramName }}">
+          <div ng-repeat="group in groups" class="card-group sortable-item" data-id="{{ group._paramValue }}"
+               data-group-name="{{ group._paramName }}"
+               ng-init="action.loadGroupRecords(group)"
+          >
             <div class="card-header margin-bottom-8">
-              <div class="pull-right">
+              <div class="pull-right" ng-if="false">
                 <button class="btn" ng-click="cardShowAddGroupItemDlg = true"><i class="fa fa-plus"></i></button>
               </div>
-              <h4 ng-bind="group.__str__"></h4>
+              <h4 ng-bind="group.__str__" title="${group.count} Registros"></h4>
               <div class="clearfix"></div>
 
               <form id="card-add-group-item-dlg" ng-submit="cardAddItem($event, cardNewName)"
-                    ng-if="cardShowAddGroupItemDlg">
+                    ng-if="cardShowAddGroupItemDlg && false">
                 <div class="form-group">
                   <input ng-model="cardNewName" ng-init="cardNewName = ''" class="form-control"
                          ng-esc="cardHideAddGroupItemDlg($event)" placeholder="{{ _.gettext('Add') }}"
@@ -1395,14 +1409,15 @@
 
             </div>
             <div class="card-items" card-draggable=".card-items" card-item>
-              <div ng-repeat="record in group.records" class="card-item sortable-item ui-sortable-handle"
-                   ng-click="action.listRowClick($index, record, $event)">
+              <div ng-repeat="record in group.records" class="card panel-default card-item card-link sortable-item"
+                   ng-click="action.listRowClick($index, record, $event)"
+              >
                 {{ content }}
               </div>
             </div>
           </div>
-
           <div class="card-add-group" title="{{ _.gettext('Click here to add new column') }}"
+               ng-if="false"
                ng-click="cardNewName='';cardShowAddGroupDlg($event);" data-group-name="{{ groupings[0]._paramName }}">
             <div ng-hide="cardAddGroupDlg">
               <i class="fa fa-fw fa-chevron-right fa-2x"></i>
@@ -1419,7 +1434,7 @@
             </form>
           </div>
         </div>
-        <div class="card-view card-deck" ng-if="!groupings.length">
+        <div class="card-view card-deck" ng-if="!groups.length">
           <div ng-repeat="record in records" class="card panel-default card-item card-link"
                ng-click="action.listRowClick($index, record, $event)">
             {{ content }}

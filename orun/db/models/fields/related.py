@@ -174,6 +174,11 @@ class ForeignKey(RelatedField):
         if value:
             return (value.pk, str(value))
 
+    def to_python(self, value):
+        if isinstance(value, list):
+            return value[0]
+        return super().to_python(value)
+
     def _db_type(self, connection):
         return self.rel.remote_field.rel_db_type(connection=connection)
 

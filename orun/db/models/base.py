@@ -436,6 +436,8 @@ class Model(metaclass=ModelBase):
         data.pop('id', None)
         children = {}
         for k, v in data.items():
+            if k.startswith('$'):
+                continue
             field = instance.__class__._meta.fields[k]
             v = field.to_python(v)
             if field.one_to_many or field.many_to_many:
@@ -725,6 +727,8 @@ class Model(metaclass=ModelBase):
     def __copy__(self):
         new_item = {}
         for f in self._meta.copyable_fields:
+            if not f.name:
+                continue
             v = getattr(self, f.name)
             if self._meta.title_field == f.name:
                 new_item[f.name] = gettext('%s (copy)') % v
@@ -750,18 +754,38 @@ class Model(metaclass=ModelBase):
     @api.method
     def group_by(self, grouping, params):
         field = self._meta.fields_dict[grouping[0]]
-        col = field.column
-        qs = self._search(params).options(orm.load_only(field.attname))
-        qs = qs.from_self(col, func.count(col)).order_by(col).group_by(col).all()
-        if col.foreign_keys:
+        if field.choices:
+            choices = field.choices
+            if isinstance(choices, dict):
+                choices = choices.items()
+            res = {}
+            col = field.column
+            qs = self._search(params).options(orm.load_only(field.attname))
+            qs = qs.from_self(col, func.count(col)).order_by(col).group_by(col).all()
+            for c in choices:
+                res[c[0]] = {grouping[0]: c, 'count': 0}
             for row in qs:
-                yield {
-                    grouping[0]: field.rel.model.objects.get(row[0])._get_instance_label() if row[0] else None,
-                    'count': row[1]
-                }
+                g = row[0]
+                if g not in res:
+                    res[g] = {grouping[0]: g, 'count': row[1]}
+                else:
+                    res[g]['count'] = row[1]
+            for row in res.values():
+                yield row
+
         else:
-            for row in qs:
-                yield {grouping[0]: row[0], 'count': row[1]}
+            col = field.column
+            qs = self._search(params).options(orm.load_only(field.attname))
+            qs = qs.from_self(col, func.count(col)).order_by(col).group_by(col).all()
+            if col.foreign_keys:
+                for row in qs:
+                    yield {
+                        grouping[0]: field.rel.model.objects.get(row[0])._get_instance_label() if row[0] else None,
+                        'count': row[1]
+                    }
+            else:
+                for row in qs:
+                    yield {grouping[0]: row[0], 'count': row[1]}
 
     def _search(self, params=None, fields=None, domain=None, join=None, *args, **kwargs):
         self.check_permission('read')

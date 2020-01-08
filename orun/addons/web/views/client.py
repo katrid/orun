@@ -13,23 +13,59 @@ from orun.utils.translation import gettext
 from orun.views import BaseView, route, json_route
 
 
+def index(template_name='/web/index.jinja2', **kwargs):
+    menu = app['ui.menu']
+    menu_items = menu.search_visible_items()
+    menu_id = menu_items[0]
+    context = {
+        'current_menu': menu_id,
+        'root_menu': menu_items,
+    }
+    context.update(kwargs)
+    if settings.USE_I18N:
+        from .i18n import javascript_catalog
+        context['i18n_js_catalog'] = javascript_catalog(request, packages=app.addons.keys())
+    return render_template(template_name, **context)
+
+
+def login():
+    if request.method == 'POST':
+        next_url = None
+        if request.is_json:
+            username = request.json['username']
+            password = request.json['password']
+            next_url = request.json['next']
+        else:
+            username = request.form['username']
+            password = request.form['password']
+        print('next url', next_url)
+        # check if db exists
+        u = auth.authenticate(username=username, password=password)
+        if u and u.is_authenticated:
+            auth.login(u)
+            if request.is_json:
+                return jsonify({
+                    'ok': True,
+                    'user_id': u.id,
+                    'redirect': next_url or request.args.get('next', url_for('WebClient:index')),
+                    'message': gettext('Login successful, please wait...'),
+                })
+            return redirect(request.args.get('next', url_for('WebClient:index')))
+        if request.is_json:
+            return jsonify({
+                'error': True,
+                'message': gettext('Invalid username and password.'),
+            })
+        flash(gettext('Invalid username and password.'), 'danger')
+    return render_template('web/login.jinja2', current_db=request.cookies.get('db'))
+
+
 class WebClient(BaseView):
     route_base = '/web/'
 
     @login_required
     def index(self):
-        menu = app['ui.menu']
-        menu_items = menu.search_visible_items()
-        menu_id = menu_items[0]
-        context = {
-            'current_menu': menu_id,
-            'root_menu': menu_items,
-        }
-        if settings.USE_I18N:
-            from .i18n import javascript_catalog
-            context['i18n_js_catalog'] = javascript_catalog(request, packages=app.addons.keys())
-        return render_template('/web/index.jinja2', **context)
-        return app['ui.view'].render_template('web.app', **context)
+        return index()
 
     @route('/company/logo/')
     def company_logo(self):
@@ -67,33 +103,7 @@ class WebClient(BaseView):
 
     @route('/login/', methods=['GET', 'POST'])
     def login(self):
-        if request.method == 'POST':
-            if request.is_json:
-                username = request.json['username']
-                password = request.json['password']
-            else:
-                username = request.form['username']
-                password = request.form['password']
-            # check if db exists
-            u = auth.authenticate(username=username, password=password)
-            if u and u.is_authenticated:
-                auth.login(u)
-                if request.is_json:
-                    return jsonify({
-                        'ok': True,
-                        'user_id': u.id,
-                        'redirect': request.args.get('next', url_for('WebClient:index')),
-                        'message': gettext('Login successful, please wait...'),
-                    })
-                return redirect(request.args.get('next', url_for('WebClient:index')))
-            if request.is_json:
-                return jsonify({
-                    'error': True,
-                    'message': gettext('Invalid username and password.'),
-                })
-            flash(gettext('Invalid username and password.'), 'danger')
-
-        return render_template('web/login.jinja2', current_db=request.cookies.get('db'))
+        return login()
 
     def logout(self):
         auth.logout()

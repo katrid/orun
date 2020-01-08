@@ -10,6 +10,10 @@ class Comments(models.Model):
     @api.method
     def post_message(self, ids, content=None, **kwargs):
         Message = self.env['mail.message']
+        Attachment = self.env['ir.attachment']
+        attachments = kwargs.get('attachments')
+        if attachments:
+            attachments = [Attachment.objects.get(id) for id in attachments]
         for id in ids:
             yield Message.create(
                 author=g.user_id,
@@ -17,7 +21,7 @@ class Comments(models.Model):
                 model=self._meta.name,
                 object_id=id,
                 message_type='comment',
-                attachments=kwargs.get('attachments'),
+                attachments=attachments,
             ).get_message()
 
     class Meta:

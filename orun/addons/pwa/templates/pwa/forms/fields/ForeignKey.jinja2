@@ -1,0 +1,4 @@
+{% extends "pwa/forms/fields/Field.jinja2" %}
+{% block css_class %}ForeignKey{% endblock %}
+{% block input_attrs %}foreignkey="{{ field.rel.model._meta.name }}"{% endblock %}
+{% block field_css %}{% endblock %}
