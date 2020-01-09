@@ -20,6 +20,9 @@
     <a href="#/app/?#menu_id=" class="navbar-menu-header">
       <h3>${ currentMenu.name }</h3>
     </a>
+    <div class="dropdown-menu current-menu">
+
+    </div>
     <div id="navbar" class="collapse navbar-collapse">
       {% for main_menu in root_menu %}
       <ul class="navbar-nav mr-auto" data-parent-id="{{ main_menu.pk }}" ng-show="currentMenu.id=={{ main_menu.pk }}">
