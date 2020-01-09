@@ -54,17 +54,17 @@ self.addEventListener("fetch", function(event) {
     // try to get fresh data
     fetch(event.request)
       // put a fresh copy on the cache
-      .then(function(res) {
-        caches.open(CACHE_NAME)
-          .then(function(cache) {
-            cachePut(cache, request, res);
-          });
-        return res;
-      })
+      // .then(function(res) {
+      //   caches.open(CACHE_NAME)
+      //     .then(function(cache) {
+      //       cachePut(cache, request, res);
+      //     });
+      //   return res;
+      // })
       // falling back to the cache
       .catch(function() {
         console.log(event.request);
-        return cacheMatch(event.request);
+        return caches.match(event.request);
       })
   );
 
