@@ -28,9 +28,6 @@ class MSDDLCompiler(sqlalchemy.dialects.mssql.base.MSDDLCompiler):
         return col
 
 
-#mssql.ischema_names['decimal'] = mssql.ischema_names['numeric']
-mssql.ischema_names['numeric'] = mssql.ischema_names['decimal']
-
 class MSSQLDialect(sqlalchemy.dialects.mssql.pyodbc.dialect):
     statement_compiler = MSSQLCompiler
     ddl_compiler = MSDDLCompiler
