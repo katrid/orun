@@ -50,7 +50,7 @@ self.addEventListener("fetch", function(event) {
 
   let request = event.request.clone();
 
-  if (event.request.method === 'POST')
+  if (event.request.method !== 'POST')
   event.respondWith(
     // try to get fresh data
     fetch(event.request)
