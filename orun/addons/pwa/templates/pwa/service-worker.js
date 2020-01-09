@@ -1,4 +1,4 @@
-let CACHE_NAME = 'orun-v1';
+let CACHE_NAME = 'orun-v2';
 const DB_NAME = 'orun-db-cache';
 
 self.importScripts(['/static/web/assets/js/alasql.min.js']);
