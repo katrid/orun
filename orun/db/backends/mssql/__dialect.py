@@ -1,12 +1,80 @@
 import sys
+import re
+
+from sqlalchemy.dialects.mssql.base import MSDialect, MSIdentifierPreparer
+from sqlalchemy import processors
+from sqlalchemy import types as sqltypes
+from sqlalchemy import util
+
+
+class _MSNumeric_pymssql(sqltypes.Numeric):
+    def result_processor(self, dialect, type_):
+        if not self.asdecimal:
+            return processors.to_float
+        else:
+            return sqltypes.Numeric.result_processor(self, dialect, type_)
+
+
+class MSIdentifierPreparer_pymssql(MSIdentifierPreparer):
+    def __init__(self, dialect):
+        super(MSIdentifierPreparer_pymssql, self).__init__(dialect)
+        # pymssql has the very unusual behavior that it uses pyformat
+        # yet does not require that percent signs be doubled
+        self._double_percents = False
+
+
+class MSDialect_pymssql(MSDialect):
+    supports_native_decimal = True
+    driver = "ctds"
+
+    preparer = MSIdentifierPreparer_pymssql
+
+    colspecs = util.update_copy(
+        MSDialect.colspecs,
+        {sqltypes.Numeric: _MSNumeric_pymssql, sqltypes.Float: sqltypes.Float},
+    )
+
+    @classmethod
+    def dbapi(cls):
+        return __import__("ctds")
+
+    def connect(self, *cargs, **cparams):
+        return self.dbapi.connect(*cargs, **cparams)
+
+    def _get_server_version_info(self, connection):
+        vers = connection.scalar("select @@version")
+        m = re.match(r"Microsoft .*? - (\d+).(\d+).(\d+).(\d+)", vers)
+        if m:
+            return tuple(int(x) for x in m.group(1, 2, 3, 4))
+        else:
+            return None
+
+    def create_connect_args(self, url):
+        opts = url.translate_connect_args(username="user")
+        opts.update(url.query)
+        opts['server'] = opts.pop('host')
+        opts.pop('driver')
+        return [[], opts]
+
+    def set_isolation_level(self, connection, level):
+        if level == "AUTOCOMMIT":
+            connection.autocommit(True)
+        else:
+            connection.autocommit(False)
+            super(MSDialect_pymssql, self).set_isolation_level(
+                connection, level
+            )
+
+
+dialect = MSDialect_pymssql
+
+
+
+
 import warnings
 from sqlalchemy.engine import reflection
 import sqlalchemy.dialects.mssql.base
 from sqlalchemy.dialects.mssql import base as mssql
-import sqlalchemy.dialects.mssql.pyodbc
-from sqlalchemy import util
-from sqlalchemy.sql import sqltypes
-from sqlalchemy import processors
 
 from orun.core.exceptions import DatabaseWarning
 
@@ -31,22 +99,9 @@ class MSDDLCompiler(sqlalchemy.dialects.mssql.base.MSDDLCompiler):
         return col
 
 
-class _MSNumeric_pymssql(sqltypes.Numeric):
-    def result_processor(self, dialect, type_):
-        if not self.asdecimal:
-            return processors.to_float
-        else:
-            return sqltypes.Numeric.result_processor(self, dialect, type_)
-
-
-class MSSQLDialect(sqlalchemy.dialects.mssql.pyodbc.dialect):
+class MSSQLDialect(dialect):
     statement_compiler = MSSQLCompiler
     ddl_compiler = MSDDLCompiler
-
-    colspecs = util.update_copy(
-        sqlalchemy.dialects.mssql.pyodbc.dialect.colspecs,
-        {sqltypes.Numeric: _MSNumeric_pymssql, sqltypes.Float: sqltypes.Float},
-    )
 
     @reflection.cache
     @sqlalchemy.dialects.mssql.base._db_plus_owner
@@ -79,7 +134,7 @@ class MSSQLDialect(sqlalchemy.dialects.mssql.pyodbc.dialect):
                 warnings.warn(
                     "Did not recognize type '%s' of column '%s'" % (col.type, col.name),
                     DatabaseWarning,
-                )
+                    )
                 coltype = mssql.sqltypes.NULLTYPE
             else:
                 if issubclass(coltype, mssql.sqltypes.Numeric) and coltype is not mssql.MSReal:
@@ -121,13 +176,3 @@ where fk.parent_object_id = OBJECT_ID('%s')
                 'referred_table': fk.table_name,
                 'referred_columns': [fk.referred_name]
             }
-
-
-if 'gevent' in sys.modules:
-    import gevent.socket
-    # import pymssql
-    #
-    # def wait_callback(read_fileno):
-    #     gevent.socket.wait_read(read_fileno)
-    #
-    # pymssql.set_wait_callback(wait_callback)
