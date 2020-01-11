@@ -603,11 +603,6 @@ class DecimalField(FloatField):
             value = round(value, self.decimal_places)
         return super(DecimalField, self).to_python(value)
 
-    def to_json(self, value):
-        if value:
-            value = value / int('1' + ('0' * self.decimal_places))
-            return value
-
 
 class EmailField(CharField):
     def __init__(self, *args, **kwargs):
