@@ -109,7 +109,7 @@ class DocumentApproval(comment.Comments):
                     approval_needed.send(instance, user=g.user, level=instance.current_approval_level)
 
     def get_confirmation_message(self):
-        pass
+        raise NotImplemented
 
     @api.record
     def send_approval(self):
