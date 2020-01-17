@@ -40,6 +40,7 @@ class _MSNumeric_pymssql(sqltypes.Numeric):
 
 
 class MSSQLDialect(sqlalchemy.dialects.mssql.pymssql.dialect):
+    supports_native_decimal = True
     statement_compiler = MSSQLCompiler
     ddl_compiler = MSDDLCompiler
 
