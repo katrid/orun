@@ -413,9 +413,9 @@ class Model(metaclass=ModelBase):
         return r
 
     @api.method
-    def get_defaults(self, context=None, *args, **kwargs):
+    def get_defaults(self, *args, **kwargs):
         r = {}
-        defaults = context or {}
+        defaults = self.env.context or {}
         for f in self._meta.fields:
             if 'default_' + f.name in defaults:
                 r[f.name] = defaults['default_' + f.name]

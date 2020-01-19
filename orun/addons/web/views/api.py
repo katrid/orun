@@ -35,6 +35,8 @@ class RPC(BaseView):
 
                 args = params.get('args', ())
                 kwargs = params.get('kwargs', {})
+                if 'context' in params:
+                    service.env.context = params['context']
                 r = meth(service, *args, **kwargs)
 
                 if isinstance(r, Query):
