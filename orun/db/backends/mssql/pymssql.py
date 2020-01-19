@@ -59,7 +59,7 @@ class MSSQLDialect(sqlalchemy.dialects.mssql.pymssql.dialect):
             LEFT OUTER JOIN sys.index_columns ic ON ic.object_id = c.object_id AND ic.column_id = c.column_id
             LEFT OUTER JOIN sys.indexes i ON ic.object_id = i.object_id AND ic.index_id = i.index_id
             LEFT OUTER JOIN sys.computed_columns comp on comp.column_id = c.column_id and comp.object_id = c.object_id
-            WHERE c.object_id = OBJECT_ID(?)
+            WHERE c.object_id = OBJECT_ID(%s)
         '''
         cursor = connection.execute(q, '%s.%s' % (owner, tablename))
         cols = []
