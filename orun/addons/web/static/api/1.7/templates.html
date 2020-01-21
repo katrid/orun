@@ -1692,7 +1692,7 @@
     {% block field %}
       <div class="input-group date">
         <input input-field date-picker="{% block date_picker %}L{% endblock %}" type="text" name="{{ field.name }}" class="form-field form-control"
-               ng-model="record.{{ field.name }}">
+               ng-model="record.{{ field.name }}" inputmode="numeric">
         <div class="input-group-append input-group-addon">
           <div class="input-group-text">
             <i class="fa fa-calendar fa-sm"></i>
