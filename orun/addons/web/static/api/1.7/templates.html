@@ -1473,7 +1473,7 @@
     {% import "view.form.field.utils.jinja2" as utils %}
     <section class="form-group
 		    {% block css_class %}{{ field.cssClass }}{% endblock %}
-		    {% block cols %} col-md-{{ field.cols }}{% endblock %}"
+		    {% block cols %} {% if window.isNaN(field.cols) %}{{ field.cols }}{% else %}col-md-{{ field.cols }}{% endif %} {% endblock %}"
         {% if field.ngShow %}
              ng-show="{{ field.ngShow }}"
         {% endif %}
