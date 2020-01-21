@@ -1675,7 +1675,7 @@
     {% extends "view.form.field.jinja2" %}
 
     {% block readonly %}
-      ${ (record.{{ field.name }}|number:0 || '{{ field.emptyText }}' }
+      ${ (record.{{ field.name }}|number:0) || '{{ field.emptyText }}' }
     {% endblock %}
     {% block field_attrs %}
       input-field
