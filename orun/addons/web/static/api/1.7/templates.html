@@ -1675,6 +1675,19 @@
     {% extends "view.form.field.jinja2" %}
 
     {% block readonly %}
+      ${ (record.{{ field.name }}|number:0 || '{{ field.emptyText }}' }
+    {% endblock %}
+    {% block field_attrs %}
+      input-field
+      input-decimal="0"
+      inputmode="numeric"
+    {% endblock %}
+  </script>
+
+  <script id="view.form.decimal-field.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+
+    {% block readonly %}
       ${ (record.{{ field.name }}|number:{{ field.decimalPlaces or 0 }}) || '{{ field.emptyText }}' }
     {% endblock %}
     {% block field_attrs %}
@@ -2029,6 +2042,13 @@
   </script>
 
   <script id="view.list.numeric-field.jinja2" type="text/ng-template">
+    {% extends "view.list.field.jinja2" %}
+    {% block span_content %}
+      ${ (record.{{ field.name }}|number:0) || '{{ field.emptyText }}' }
+    {% endblock %}
+  </script>
+
+  <script id="view.list.decimal-field.jinja2" type="text/ng-template">
     {% extends "view.list.field.jinja2" %}
     {% block span_content %}
       ${ (record.{{ field.name }}|number:2) || '{{ field.emptyText }}' }
