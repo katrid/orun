@@ -855,8 +855,11 @@ class Model(metaclass=ModelBase):
         if inserting:
             self.__before_insert__()
             session.add(self)
-            self.__after_insert__()
+
         session.flush((self,))
+
+        if inserting:
+            self.__after_insert__()
 
     def __before_insert__(self):
         pass
