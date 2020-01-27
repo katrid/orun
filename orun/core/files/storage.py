@@ -235,7 +235,10 @@ class FileSystemStorage(Storage):
         return self._value_or_setting(self._directory_permissions_mode, settings.FILE_UPLOAD_DIRECTORY_PERMISSIONS)
 
     def _open(self, name, mode='rb'):
-        return File(open(self.path(name), mode))
+        try:
+            return File(open(self.path(name), mode))
+        except FileNotFoundError as e:
+            warnings.warn(str(e))
 
     def _save(self, name, content):
         full_path = self.path(name)
