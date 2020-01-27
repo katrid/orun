@@ -238,7 +238,7 @@ class FileSystemStorage(Storage):
         try:
             return File(open(self.path(name), mode))
         except FileNotFoundError as e:
-            warnings.warn(str(e))
+            print(str(e))
 
     def _save(self, name, content):
         full_path = self.path(name)
