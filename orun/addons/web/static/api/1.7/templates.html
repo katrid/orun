@@ -1542,6 +1542,16 @@
     {% endblock %}
   </script>
 
+  <script id="view.form.autocomplete.jinja2" type="text/ng-template">
+    {% extends "view.form.field.jinja2" %}
+    {% block readonly %}
+      <a href="#/app/?menu_id=${ ::action.params.menu_id }&model={{ field.model }}&view_type=form&id=${ record.{{ field.name }}[0] }">
+        ${ record.{{ field.name }}[1]||'{{ field.emptyText }}' }
+      </a>
+    {% endblock %}
+    {% block field_attrs %}input-field fk-autocomplete ng-model-options="{updateOn: 'change'}"{% endblock %}
+  </script>
+
   <script id="view.form.manytomany.jinja2" type="text/ng-template">
     {% extends "view.form.foreignkey.jinja2" %}
     {% block readonly %}
