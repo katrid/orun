@@ -1,7 +1,0 @@
-extends view.list.field.pug
-
-block vars
-    -var cssClass = 'DecimalField'
-block td.span
-    span
-        | {{ (record.#{ name }|number:2) || '#{ field.emptyText }' }}

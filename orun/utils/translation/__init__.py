@@ -2,16 +2,16 @@
 Internationalization support.
 """
 import re
+from contextlib import ContextDecorator
 
-from orun.utils.decorators import ContextDecorator
-from orun.utils.encoding import force_text
+from orun.utils.autoreload import autoreload_started, file_changed
 from orun.utils.functional import lazy
 
 __all__ = [
     'activate', 'deactivate', 'override', 'deactivate_all',
     'get_language', 'get_language_from_request',
     'get_language_info', 'get_language_bidi',
-    'check_for_language', 'to_locale', 'templatize', 'string_concat',
+    'check_for_language', 'to_language', 'to_locale', 'templatize',
     'gettext', 'gettext_lazy', 'gettext_noop',
     'ugettext', 'ugettext_lazy', 'ugettext_noop',
     'ngettext', 'ngettext_lazy',
@@ -36,7 +36,7 @@ class TranslatorCommentWarning(SyntaxWarning):
 # replace the functions with their real counterparts (once we do access the
 # settings).
 
-class Trans(object):
+class Trans:
     """
     The purpose of this class is to store the actual translation function upon
     receiving the first call to that function. After this is done, changes to
@@ -53,10 +53,14 @@ class Trans(object):
         from orun.conf import settings
         if settings.USE_I18N:
             from orun.utils.translation import trans_real as trans
+            from orun.utils.translation.reloader import watch_for_translation_changes, translation_file_changed
+            autoreload_started.connect(watch_for_translation_changes, dispatch_uid='translation_file_changed')
+            file_changed.connect(translation_file_changed, dispatch_uid='translation_file_changed')
         else:
             from orun.utils.translation import trans_null as trans
         setattr(self, real_name, getattr(trans, real_name))
         return getattr(trans, real_name)
+
 
 _trans = Trans()
 
@@ -67,6 +71,7 @@ del Trans
 def gettext_noop(message):
     return _trans.gettext_noop(message)
 
+
 ugettext_noop = gettext_noop
 
 
@@ -74,16 +79,14 @@ def gettext(message):
     return _trans.gettext(message)
 
 
+ugettext = gettext
+
+
 def ngettext(singular, plural, number):
     return _trans.ngettext(singular, plural, number)
 
 
-def ugettext(message):
-    return _trans.ugettext(message)
-
-
-def ungettext(singular, plural, number):
-    return _trans.ungettext(singular, plural, number)
+ungettext = ngettext
 
 
 def pgettext(context, message):
@@ -93,13 +96,13 @@ def pgettext(context, message):
 def npgettext(context, singular, plural, number):
     return _trans.npgettext(context, singular, plural, number)
 
-gettext_lazy = lazy(gettext, str)
-ugettext_lazy = lazy(ugettext, str)
+
+gettext_lazy = ugettext_lazy = lazy(gettext, str)
 pgettext_lazy = lazy(pgettext, str)
 
 
 def lazy_number(func, resultclass, number=None, **kwargs):
-    if isinstance(number, str):
+    if isinstance(number, int):
         kwargs['number'] = number
         proxy = lazy(func, resultclass)(**kwargs)
     else:
@@ -109,27 +112,34 @@ def lazy_number(func, resultclass, number=None, **kwargs):
             def __bool__(self):
                 return bool(kwargs['singular'])
 
-            def __nonzero__(self):  # Python 2 compatibility
-                return type(self).__bool__(self)
+            def _get_number_value(self, values):
+                try:
+                    return values[number]
+                except KeyError:
+                    raise KeyError(
+                        "Your dictionary lacks key '%s\'. Please provide "
+                        "it, because it is required to determine whether "
+                        "string is singular or plural." % number
+                    )
+
+            def _translate(self, number_value):
+                kwargs['number'] = number_value
+                return func(**kwargs)
+
+            def format(self, *args, **kwargs):
+                number_value = self._get_number_value(kwargs) if kwargs and number else args[0]
+                return self._translate(number_value).format(*args, **kwargs)
 
             def __mod__(self, rhs):
                 if isinstance(rhs, dict) and number:
-                    try:
-                        number_value = rhs[number]
-                    except KeyError:
-                        raise KeyError(
-                            "Your dictionary lacks key '%s\'. Please provide "
-                            "it, because it is required to determine whether "
-                            "string is singular or plural." % number
-                        )
+                    number_value = self._get_number_value(rhs)
                 else:
                     number_value = rhs
-                kwargs['number'] = number_value
-                translated = func(**kwargs)
+                translated = self._translate(number_value)
                 try:
                     translated = translated % rhs
                 except TypeError:
-                    # String doesn't contain a placeholder for the number
+                    # String doesn't contain a placeholder for the number.
                     pass
                 return translated
 
@@ -146,8 +156,8 @@ def ngettext_lazy(singular, plural, number=None):
     return lazy_number(ngettext, str, singular=singular, plural=plural, number=number)
 
 
-def ungettext_lazy(singular, plural, number=None):
-    return lazy_number(ungettext, str, singular=singular, plural=plural, number=number)
+# An alias since Orun 2.0
+ungettext_lazy = ngettext_lazy
 
 
 def npgettext_lazy(context, singular, plural, number=None):
@@ -195,8 +205,29 @@ def check_for_language(lang_code):
     return _trans.check_for_language(lang_code)
 
 
+def to_language(locale):
+    """Turn a locale name (en_US) into a language name (en-us)."""
+    p = locale.find('_')
+    if p >= 0:
+        return locale[:p].lower() + '-' + locale[p + 1:].lower()
+    else:
+        return locale.lower()
+
+
 def to_locale(language):
-    return _trans.to_locale(language)
+    """Turn a language name (en-us) into a locale name (en_US)."""
+    language, _, country = language.lower().partition('-')
+    if not country:
+        return language
+    # A language with > 2 characters after the dash only has its first
+    # character after the dash capitalized; e.g. sr-latn becomes sr_Latn.
+    # A language with 2 characters after the dash has both characters
+    # capitalized; e.g. en-us becomes en_US.
+    country, _, tail = country.partition('-')
+    country = country.title() if len(country) > 2 else country.upper()
+    if tail:
+        country += '-' + tail
+    return language + '_' + country
 
 
 def get_language_from_request(request, check_path=False):
@@ -207,21 +238,17 @@ def get_language_from_path(path):
     return _trans.get_language_from_path(path)
 
 
-def templatize(src, origin=None):
-    return _trans.templatize(src, origin)
+def get_supported_language_variant(lang_code, *, strict=False):
+    return _trans.get_supported_language_variant(lang_code, strict)
+
+
+def templatize(src, **kwargs):
+    from .template import templatize
+    return templatize(src, **kwargs)
 
 
 def deactivate_all():
     return _trans.deactivate_all()
-
-
-def _string_concat(*strings):
-    """
-    Lazy variant of string concatenation, needed for translations that are
-    constructed from multiple parts.
-    """
-    return ''.join(force_text(s) for s in strings)
-string_concat = lazy(_string_concat, str)
 
 
 def get_language_info(lang_code):
@@ -242,10 +269,11 @@ def get_language_info(lang_code):
             raise KeyError("Unknown language code %s and %s." % (lang_code, generic_lang_code))
 
     if info:
-        info['name_translated'] = ugettext_lazy(info['name'])
+        info['name_translated'] = gettext_lazy(info['name'])
     return info
 
-trim_whitespace_re = re.compile('\s*\n\s*')
+
+trim_whitespace_re = re.compile(r'\s*\n\s*')
 
 
 def trim_whitespace(s):

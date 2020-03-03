@@ -2,14 +2,12 @@ import gettext as gettext_module
 import importlib
 import json
 import os
-from flask import redirect
 
-from orun import render_template_string, app
+from orun.shortcuts import render
 from orun.apps import apps
 from orun.conf import settings
 #from orun.core.urlresolvers import translate_url
-from orun.utils.json import jsonify
-from orun.http import Response
+from orun.http import HttpResponse, JsonResponse
 from orun.utils.encoding import smart_text
 from orun.utils.formats import get_format, get_format_modules
 from orun.utils.http import is_safe_url
@@ -81,7 +79,7 @@ def get_formats():
 js_catalog_template = r"""
 (function(globals) {
   /* initialize gettext library */
-  globals.Katrid.i18n.initialize('{{ plural|safe or 'false' }}', {{ catalog_str|safe or '{}' }}, {{ format_str|safe or '[]' }});
+  globals.katrid.i18n.initialize('{{ plural|safe or 'false' }}', {{ catalog_str|safe or '{}' }}, {{ format_str|safe or '[]' }});
 }(this));
 """
 
@@ -102,7 +100,7 @@ def render_javascript_catalog(catalog=None, plural=None):
 
 def get_javascript_catalog(locale, domain, packages):
     default_locale = to_locale(settings.LANGUAGE_CODE)
-    addons = app.addons
+    addons = apps.addons
     allowable_packages = set(addons.keys())
     allowable_packages.update(DEFAULT_PACKAGES)
     packages = [p for p in packages if p in allowable_packages]
@@ -112,8 +110,8 @@ def get_javascript_catalog(locale, domain, packages):
     en_catalog_missing = True
     # paths of requested packages
     for package in packages:
-        p = importlib.import_module(package)
-        path = os.path.join(os.path.dirname(p.__file__), 'locale')
+        p = apps.addons[package]
+        path = os.path.join(p.path, 'locale')
         paths.append(path)
     # add the filesystem paths listed in the LOCALE_PATHS setting
     paths.extend(reversed(settings.LOCALE_PATHS))
@@ -190,7 +188,7 @@ def get_javascript_catalog(locale, domain, packages):
 
 
 def _get_locale(request):
-    language = request.args.get(LANGUAGE_QUERY_PARAMETER)
+    language = request.GET.get(LANGUAGE_QUERY_PARAMETER)
     if not (language and check_for_language(language)):
         language = get_language()
     return to_locale(language)
@@ -233,7 +231,7 @@ def javascript_catalog(request, domain='orunjs', packages=None):
         'formats': get_formats(),
         'plural': plural,
     }
-    s = """$(document).ready(function () {var js = %s;Katrid.i18n.initialize(js.plural, js.catalog, js.formats)});""" % json.dumps(data)
+    s = """var KATRID_I18N = %s;""" % json.dumps(data)
     return s
 
 

@@ -1,34 +1,42 @@
 import os
+from pathlib import Path
 
-from orun import app
 from orun.apps import apps
-from orun.core.management import commands
-from orun.core.serializers import get_deserializer
-from orun.db import transaction
+from orun.core import serializers
+from orun.db import DEFAULT_DB_ALIAS, transaction
+from orun.core.management.base import BaseCommand, CommandError
 
 
-@commands.command('loaddata')
-@commands.argument(
-    'app_label', nargs=1,
-)
-@commands.argument(
-    'fixture', nargs=1,
-)
-@commands.option('--encoding', default='utf-8')
-def command(app_label, fixture, **options):
-    load_fixture(app_label, fixture, **options)
+def load_fixture(schema, *filenames, **options):
+    if isinstance(schema, str):
+        addon = apps.addons[schema]
+    else:
+        addon = schema
+    for filename in filenames:
+        filename = os.path.join(addon.path, 'fixtures', filename)
+        fmt = filename.rsplit('.', 1)[1]
+        deserializer = serializers.get_deserializer(fmt)
+        d = deserializer(Path(filename), addon=addon, format=fmt, **options)
+
+        with transaction.atomic(options['database']):
+            d.deserialize()
+        if d.postpone:
+            for op in d.postpone:
+                op()
 
 
-def load_fixture(app_config, filename, **options):
-    if isinstance(app_config, str):
-        app_config = apps.app_configs[app_config]
-    filename = os.path.join(app_config.root_path, 'fixtures', filename)
-    fmt = filename.rsplit('.', 1)[1]
-    deserializer = get_deserializer(fmt)
-    d = deserializer(app, app_config=app_config, filename=filename)
+class Command(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'args', nargs='+',
+            help='Specify the schema and filenames.',
+        )
+        parser.add_argument(
+            '--database',
+            default=DEFAULT_DB_ALIAS,
+            help='Nominates a specific database to dump fixtures from. '
+                 'Defaults to the "default" database.',
+        )
 
-    with transaction.begin():
-        d.execute()
-    if d.postpone:
-        for op in d.postpone:
-            op()
+    def handle(self, schema, *filenames, **options):
+        load_fixture(schema, *filenames, **options)

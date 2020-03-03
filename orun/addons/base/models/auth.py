@@ -1,8 +1,8 @@
-from orun import app, api, g, SUPERUSER
+from orun import apps, api, g, SUPERUSER
 from orun import auth
 from orun.auth.hashers import check_password
 from orun.core.exceptions import PermissionDenied
-from orun.db import models, session
+from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 from .partner import Partner
 
@@ -52,9 +52,9 @@ class ModelAccess(models.Model):
         User = app['auth.user']
         Model = app['ir.model']
         Group = app['auth.group']
-        qs = session.query(cls.c.pk).join(Model).outerjoin(Group).filter(
-            Model.c.name == model, cls.c.active == True, *args
-        )
+        # qs = session.query(cls.c.pk).join(Model).outerjoin(Group).filter(
+        #     Model.c.name == model, cls.c.active == True, *args
+        # )
         return bool(len(qs))
 
 
@@ -90,7 +90,7 @@ class User(Partner):
     @classmethod
     def authenticate(cls, username, password):
         print(cls._meta.fields['active'])
-        usr = cls.objects.filter(cls.c.username == username, cls.c.active == True, cls.c.is_staff == True).first()
+        usr = cls.objects.filter(username=username, active=True, is_staff=True).first()
         if usr and check_password(password, usr.password):
             return usr
 

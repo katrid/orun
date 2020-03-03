@@ -1,9 +1,10 @@
+import warnings
 import os
 from io import BytesIO
 import hashlib
-from orun import app, g
+from orun.apps import apps
 from orun.conf import settings
-from orun.db import models, connection
+from orun.db import models, connection, DEFAULT_DB_ALIAS
 from orun.utils.translation import gettext_lazy as _
 from orun.core.files.storage import get_storage_class
 
@@ -40,12 +41,15 @@ class Attachment(models.Model):
 
     @property
     def storage(self):
-        storage_cls = app['ir.config.parameter'].get_param('ir.attachment.storage')
+        storage_cls = apps['ir.config.parameter'].get_param('ir.attachment.storage')
         if storage_cls == 'db':
             return None
-        return get_storage_class(storage_cls)(
-            os.path.join(settings.MEDIA_ROOT, 'files', g.DEFAULT_DB_ALIAS, self.prefix)
-        )
+        try:
+            return get_storage_class(storage_cls)(
+                os.path.join(settings.MEDIA_ROOT, 'files', DEFAULT_DB_ALIAS, self.prefix)
+            )
+        except:
+            warnings.warn('Invalid attachment filename')
 
     def get_content(self):
         storage = self.storage
@@ -69,7 +73,7 @@ class Attachment(models.Model):
             self.db_content = v
         else:
             self.file_size = len(v)
-            self.stored_file_name = (storage.store_file_name and checksum) or None
+            self.stored_file_name = (storage.store_filename and checksum) or None
             if not storage.exists(checksum):
                 storage.save(checksum, value)
 
@@ -78,7 +82,8 @@ class Attachment(models.Model):
 
     @property
     def prefix(self):
-        return self.checksum[:2]
+        if self.checksum:
+            return self.checksum[:2]
 
     def copy_attachments(self, source, dest):
         attachments = self.objects.filter(model=source._meta.name, field=None, object_id=source.pk)

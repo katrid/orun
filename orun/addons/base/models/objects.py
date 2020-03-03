@@ -17,11 +17,13 @@ class Object(models.Model):
         name = 'ir.object'
         index_together = (('model', 'object_id'),)
 
-    def get_object(self, name):
-        return self.objects.filter(self.c.name == name).one()
+    @classmethod
+    def get_object(cls, name):
+        return cls.objects.get(name=name)
 
-    def get_by_natural_key(self, name):
-        return self.get_object(name)
+    @classmethod
+    def get_by_natural_key(cls, name):
+        return cls.get_object(name)
 
     def get_by_object_id(self, model, object_id):
         return self.objects.filter(self.c.model == model, self.c.object_id == object_id).first()

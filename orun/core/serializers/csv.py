@@ -3,29 +3,36 @@ Serialize data to/from CSV
 """
 import os
 import csv
+from functools import partial
 
-from orun.core.serializers.python import Deserializer as PythonDeserializer
-from orun.core.serializers import base
+from orun.core.serializers import python, base
+from orun.apps import apps
 
 
 class Deserializer(base.Deserializer):
-    def deserialize(self, stream_or_string):
+    def deserialize(self):
         """
         Deserialize a stream or string of CSV data.
         """
-        h = stream_or_string.readline()
-        stream_or_string.seek(0, 0)
-        reader = csv.DictReader(stream_or_string, delimiter=';' if ';' in h else ',')
-        row = reader.reader
+        h = self.stream.readline().strip()
+        stream_or_string = self.stream
+        if self.format == 'csv':
+            delimiter = ';'
+            if delimiter not in h and ',' in h:
+                delimiter = ','
+        else:
+            delimiter = '\t'
+        cols = h.split(delimiter)
+        reader = csv.DictReader(stream_or_string, fieldnames=cols, delimiter=delimiter)
         cols = reader.fieldnames
-        model_name = os.path.basename(self.options['filename']).rsplit('.', 1)[0]
-        model = self.app[model_name]
+        model_name = self.path.name.rsplit('.', 1)[0]
+        model = apps[model_name]
         # mandatory fields for csv deserializer
         i = 0
         try:
-            for i, obj in enumerate(PythonDeserializer(reader, app=self.app, model=model, fields=cols)):
-                pass
+            for i, obj in enumerate(python.Deserializer(reader, model=model, fields=cols)):
+                obj.save(using=self.database)
         except Exception as e:
             print('Error at line:', i)
             raise
-        self.postpone = [lambda app=self.app, table=model._meta.table.fullname: app.connection.schema_editor().reset_sequence(table)]
+        self.postpone = [partial(self.reset_sequence, model)]

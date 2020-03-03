@@ -1,14 +1,13 @@
-(function() {
-
+(function () {
 
   let pwApp = angular.module('pwApp', ['ui.katrid'])
-  .config(['$locationProvider', '$interpolateProvider', function ($locationProvider, $interpolateProvider) {
-    $locationProvider.hashPrefix('');
-    $interpolateProvider.startSymbol('${');
-    $interpolateProvider.endSymbol('}');
-  }]);
+    .config(['$locationProvider', '$interpolateProvider', function ($locationProvider, $interpolateProvider) {
+      $locationProvider.hashPrefix('');
+      $interpolateProvider.startSymbol('${');
+      $interpolateProvider.endSymbol('}');
+    }]);
 
-  pwApp.controller('pwaController', function($scope) {
+  pwApp.controller('pwaController', function ($scope) {
     $scope.pwa = new Pwa($scope);
   });
 
@@ -19,8 +18,39 @@
       this.scope = scope;
     }
 
-    async save(service, obj) {
-      return await katrid.services.local.write({ service, data: obj });
+    get db() {
+      if (!this._db) {
+        this._db = new Dexie(DB_NAME);
+        this._db.version(1)
+          .stores({ records: '++$id, service, status, id', });
+      }
+      return this._db;
+    }
+
+    async save(service, obj, config) {
+      let r;
+      if (obj.$id) {
+        await this.db.records.update(obj.$id, {
+          $id: obj.$id,
+          service,
+          data: obj,
+          status: 'pending',
+        });
+        r = obj.$id;
+      } else {
+        r = await this.db.records.add({
+          service,
+          data: obj,
+          status: 'pending',
+        });
+        obj.$id = r;
+      }
+      navigator.serviceWorker.ready.then(reg => reg.sync.register('syncRecords'));
+
+      if (config && config.redirect)
+        window.location.href = config.redirect;
+
+      return r;
     }
 
     async write(service, obj, redir) {
@@ -57,6 +87,12 @@
       this.scope[member] = res.data;
       this.scope.$apply();
       return res;
+    }
+
+    async list(member, service, where) {
+      let res = await this.db.records.where({ service }).toArray();
+
+      this.scope.$apply(() => this.scope[member] = res);
     }
 
   }

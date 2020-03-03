@@ -1,8 +1,0 @@
-<data>
-  <menuitem id="demoapp/menu" name="Demo App">
-    <menuitem id="demoapp/menu/ui" name="User Interface">
-      <menuitem id="demoapp/menu/ui/all controls" name="All Controls" action="demoapp/action.window/all.controls"/>
-      <menuitem id="demoapp/menu/ui/dashboard" action="demoapp/dashboard"/>
-    </menuitem>
-  </menuitem>
-</data>

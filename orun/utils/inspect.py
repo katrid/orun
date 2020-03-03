@@ -1,29 +1,6 @@
 import inspect
 
 
-def getargspec(func):
-    sig = inspect.signature(func)
-    args = [
-        p.name for p in sig.parameters.values()
-        if p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
-    ]
-    varargs = [
-        p.name for p in sig.parameters.values()
-        if p.kind == inspect.Parameter.VAR_POSITIONAL
-    ]
-    varargs = varargs[0] if varargs else None
-    varkw = [
-        p.name for p in sig.parameters.values()
-        if p.kind == inspect.Parameter.VAR_KEYWORD
-    ]
-    varkw = varkw[0] if varkw else None
-    defaults = [
-        p.default for p in sig.parameters.values()
-        if p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD and p.default is not p.empty
-    ] or None
-    return args, varargs, varkw, defaults
-
-
 def get_func_args(func):
     sig = inspect.signature(func)
     return [
@@ -73,12 +50,13 @@ def func_accepts_var_args(func):
     )
 
 
-def func_has_no_args(func):
-    args = [
-        p for p in inspect.signature(func).parameters.values()
+def method_has_no_args(meth):
+    """Return True if a method only accepts 'self'."""
+    count = len([
+        p for p in inspect.signature(meth).parameters.values()
         if p.kind == p.POSITIONAL_OR_KEYWORD
-    ]
-    return len(args) == 1
+    ])
+    return count == 0 if inspect.ismethod(meth) else count == 1
 
 
 def func_supports_parameter(func, parameter):

@@ -1,11 +1,11 @@
+import os
 import sys
 from io import StringIO
-from sqlalchemy.engine.url import make_url
 
 from orun.apps import apps
 from orun.conf import settings
 from orun.core import serializers
-from orun.db import router, DEFAULT_DB_ALIAS
+from orun.db import router
 
 # The prefix to put on the default database name when creating
 # the test database.
@@ -27,13 +27,16 @@ class BaseDatabaseCreation:
         """
         return self.connection._nodb_connection
 
+    def log(self, msg):
+        sys.stderr.write(msg + os.linesep)
+
     def create_test_db(self, verbosity=1, autoclobber=False, serialize=True, keepdb=False):
         """
         Create a test database, prompting the user for confirmation if the
         database already exists. Return the name of the test database created.
         """
         # Don't import orun.core.management if it isn't needed.
-        from orun.core.management.commands import migrate, upgrade
+        from orun.core.management import call_command
 
         test_database_name = self._get_test_db_name()
 
@@ -42,7 +45,7 @@ class BaseDatabaseCreation:
             if keepdb:
                 action = "Using existing"
 
-            print("%s test database for alias %s..." % (
+            self.log('%s test database for alias %s...' % (
                 action,
                 self._get_database_display_str(verbosity, test_database_name),
             ))
@@ -53,26 +56,30 @@ class BaseDatabaseCreation:
         # create it, then just not destroy it. If we instead skip
         # this, we will get an exception.
         self._create_test_db(verbosity, autoclobber, keepdb)
-        test_database_url = self._get_test_db_url()
 
-        # self.connection.close()
-        settings.DATABASES[self.connection.alias]["ENGINE"] = test_database_url
-        self.connection.settings_dict["ENGINE"] = test_database_url
+        self.connection.close()
+        settings.DATABASES[self.connection.alias]["NAME"] = test_database_name
+        self.connection.settings_dict["NAME"] = test_database_name
 
         # We report migrate messages at one level lower than that requested.
         # This ensures we don't get flooded with messages during testing
         # (unless you really ask to be flooded).
-        migrate.migrate(None, None, True, DEFAULT_DB_ALIAS, None, None, True, verbosity=False)
-        upgrade.upgrade(app.app_configs.keys())
+        call_command(
+            'syncdb',
+            verbosity=max(verbosity - 1, 0),
+            interactive=False,
+            database=self.connection.alias,
+        )
 
         # We then serialize the current state of the database into a string
         # and store it on the connection. This slightly horrific process is so people
         # who are testing on databases without transactions or who are using
         # a TransactionTestCase still get a clean database on every test run.
-        if serialize:
-            self.connection._test_serialized_contents = self.serialize_db_to_string()
 
-        # call_command('createcachetable', database=self.connection.alias)
+        # if serialize:
+        #     self.connection._test_serialized_contents = self.serialize_db_to_string()
+
+        call_command('createcachetable', database=self.connection.alias)
 
         # Ensure a connection for the side effect of initializing the test database.
         self.connection.ensure_connection()
@@ -86,7 +93,7 @@ class BaseDatabaseCreation:
         """
         self.connection.settings_dict['NAME'] = primary_settings_dict['NAME']
 
-    def serialize_db_to_string(self):
+    def serialize_db_to_string_(self):
         """
         Serialize all data in the database into a JSON string.
         Designed only for test runner usage; will not handle large
@@ -98,9 +105,9 @@ class BaseDatabaseCreation:
         app_list = []
         for app_config in apps.get_app_configs():
             if (
-                    app_config.models_module is not None and
-                    app_config.label in loader.migrated_apps and
-                    app_config.name not in settings.TEST_NON_SERIALIZED_APPS
+                app_config.models_module is not None and
+                app_config.label in loader.migrated_apps and
+                app_config.name not in settings.TEST_NON_SERIALIZED_APPS
             ):
                 app_list.append((app_config, None))
 
@@ -141,12 +148,9 @@ class BaseDatabaseCreation:
         _create_test_db() and when no external munging is done with the 'NAME'
         settings.
         """
-        return TEST_DATABASE_PREFIX + self.connection.engine.url.database
-
-    def _get_test_db_url(self):
-        url = make_url(self.connection.engine.url)
-        url.database = self._get_test_db_name()
-        return str(url)
+        if self.connection.settings_dict['TEST']['NAME']:
+            return self.connection.settings_dict['TEST']['NAME']
+        return TEST_DATABASE_PREFIX + self.connection.settings_dict['NAME']
 
     def _execute_create_test_db(self, cursor, parameters, keepdb=False):
         cursor.execute('CREATE DATABASE %(dbname)s %(suffix)s' % parameters)
@@ -161,36 +165,34 @@ class BaseDatabaseCreation:
             'suffix': self.sql_table_creation_suffix(),
         }
         # Create the test database and connect to it.
-        nodb_conn = self._nodb_connection
-        try:
-            self._execute_create_test_db(nodb_conn, test_db_params, keepdb)
-        except Exception as e:
-            # if we want to keep the db, then no need to do any of the below,
-            # just return and skip it all.
-            if keepdb:
-                return test_database_name
+        with self._nodb_connection.cursor() as cursor:
+            try:
+                self._execute_create_test_db(cursor, test_db_params, keepdb)
+            except Exception as e:
+                # if we want to keep the db, then no need to do any of the below,
+                # just return and skip it all.
+                if keepdb:
+                    return test_database_name
 
-            sys.stderr.write(
-                "Got an error creating the test database: %s\n" % e)
-            if not autoclobber:
-                confirm = input(
-                    "Type 'yes' if you would like to try deleting the test "
-                    "database '%s', or 'no' to cancel: " % test_database_name)
-            if autoclobber or confirm == 'yes':
-                try:
-                    if verbosity >= 1:
-                        print("Destroying old test database for alias %s..." % (
-                            self._get_database_display_str(verbosity, test_database_name),
-                        ))
-                    cursor.execute('DROP DATABASE %(dbname)s' % test_db_params)
-                    self._execute_create_test_db(cursor, test_db_params, keepdb)
-                except Exception as e:
-                    sys.stderr.write(
-                        "Got an error recreating the test database: %s\n" % e)
-                    sys.exit(2)
-            else:
-                print("Tests cancelled.")
-                sys.exit(1)
+                self.log('Got an error creating the test database: %s' % e)
+                if not autoclobber:
+                    confirm = input(
+                        "Type 'yes' if you would like to try deleting the test "
+                        "database '%s', or 'no' to cancel: " % test_database_name)
+                if autoclobber or confirm == 'yes':
+                    try:
+                        if verbosity >= 1:
+                            self.log('Destroying old test database for alias %s...' % (
+                                self._get_database_display_str(verbosity, test_database_name),
+                            ))
+                        cursor.execute('DROP DATABASE %(dbname)s' % test_db_params)
+                        self._execute_create_test_db(cursor, test_db_params, keepdb)
+                    except Exception as e:
+                        self.log('Got an error recreating the test database: %s' % e)
+                        sys.exit(2)
+                else:
+                    self.log('Tests cancelled.')
+                    sys.exit(1)
 
         return test_database_name
 
@@ -204,7 +206,7 @@ class BaseDatabaseCreation:
             action = 'Cloning test database'
             if keepdb:
                 action = 'Using existing clone'
-            print("%s for alias %s..." % (
+            self.log('%s for alias %s...' % (
                 action,
                 self._get_database_display_str(verbosity, source_database_name),
             ))
@@ -246,7 +248,7 @@ class BaseDatabaseCreation:
             action = 'Destroying'
             if keepdb:
                 action = 'Preserving'
-            print("%s test database for alias %s..." % (
+            self.log('%s test database for alias %s...' % (
                 action,
                 self._get_database_display_str(verbosity, test_database_name),
             ))
@@ -285,11 +287,10 @@ class BaseDatabaseCreation:
         DATABASES setting value) that uniquely identify a database
         accordingly to the RDBMS particularities.
         """
-        settings_dict = self.connection.connection.url
+        settings_dict = self.connection.settings_dict
         return (
-            settings_dict.host,
-            settings_dict.port,
-            settings_dict.drivername,
+            settings_dict['HOST'],
+            settings_dict['PORT'],
+            settings_dict['ENGINE'],
             self._get_test_db_name(),
         )
-

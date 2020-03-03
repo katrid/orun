@@ -12,14 +12,14 @@ class Deserializer(base.Deserializer):
     """
     Execute a SQL File Script using the native command line interface
     """
-    def from_file(self, filename: str, encoding: str='utf-8'):
+    def deserialize(self):
         database = connections.databases[DEFAULT_DB_ALIAS]
-        url = make_url(database['ENGINE'])
-        db_engine = url.drivername.split('+')[0]
-        user_name = url.username
-        host = url.host
-        db_name = url.database
-        pwd = url.password
+        db_engine = self.connection.vendor
+        user_name = database['USER']
+        host = database['HOST']
+        db_name = database['NAME']
+        pwd = database['PASSWORD']
+        filename = str(self.path)
         # detect specific version of sql file
         db_filename = f'%s.{db_engine}.sql' % filename.rsplit('.', 1)[0]
         if os.path.isfile(db_filename):
@@ -39,11 +39,13 @@ class Deserializer(base.Deserializer):
             else:
                 os.system(
                     'sqlcmd -E -S %s -d %s -i "%s" -f 65001' %
-                    (host, db_name, filename,)
+                    (host, db_name, str(self.path),)
                 )
         elif db_engine == 'postgresql':
-            conn = connection.engine.raw_connection()
-            with conn.cursor() as cur:
+            with self.connection.cursor() as cursor:
                 sql = open(filename, 'r', encoding='utf-8').read()
-                cur.execute(sql)
-                conn.commit()
+                cursor.execute(sql)
+        elif db_engine == 'sqlite':
+            with self.connection.cursor() as cursor:
+                sql = open(filename, 'r', encoding='utf-8').read()
+                cursor.execute(sql)

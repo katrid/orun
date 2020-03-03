@@ -1,7 +1,0 @@
-block th
-    th.DateField: span #{field.caption}
-block td
-    td.DateField: span
-        | {{ (record.#{ name }|date:'#{_.gettext('yyyy-mm-dd').replace(/[m]/g, 'M')}') || '#{ field.emptyText }' }}
-        div
-

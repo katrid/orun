@@ -1,6 +1,7 @@
 from collections import defaultdict
 
-from orun import app, api
+from orun import api
+from orun.apps import apps
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 
@@ -36,20 +37,21 @@ class Action(models.Model):
         super(Action, self).save(*args, **kwargs)
 
     def get_action(self):
-        return app[self.action_type].objects.get(self.pk)
+        return apps[self.action_type].objects.get(pk=self.pk)
 
     @api.method
     def load(self, id, context=None):
-        return self.objects.get(id).get_action().serialize()
+        return self.objects.get(pk=id).get_action().to_json()
 
     def execute(self):
         raise NotImplemented()
 
-    def get_bindings(self, model):
+    @classmethod
+    def get_bindings(cls, model):
         r = defaultdict(list)
         # TODO: optimize filter by name (plain query)
-        obj = self.env['ir.model'].get_by_natural_key(model)
-        for action in self.objects.filter(self.c.binding_model_id==obj.pk):
+        obj = apps['ir.model'].get_by_natural_key(model)
+        for action in cls.objects.filter(binding_model_id=obj.pk):
             r[action.binding_type].append(action)
         return r
 

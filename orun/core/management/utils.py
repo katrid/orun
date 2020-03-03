@@ -1,42 +1,37 @@
 import os
-import sys
 from subprocess import PIPE, Popen
 
-from orun.utils import reraise
-from orun.utils.encoding import DEFAULT_LOCALE_ENCODING, force_text
+from orun.apps import apps as installed_apps
 from orun.utils.crypto import get_random_string
+from orun.utils.encoding import DEFAULT_LOCALE_ENCODING
 
-from .base import CommandError
+from .base import CommandError, CommandParser
 
 
-def popen_wrapper(args, os_err_exc_type=CommandError, universal_newlines=True):
+def popen_wrapper(args, stdout_encoding='utf-8'):
     """
     Friendly wrapper around Popen.
 
-    Returns stdout output, stderr output and OS status code.
+    Return stdout output, stderr output, and OS status code.
     """
     try:
-        p = Popen(args, shell=False, stdout=PIPE, stderr=PIPE,
-                close_fds=os.name != 'nt', universal_newlines=universal_newlines)
-    except OSError as e:
-        strerror = force_text(e.strerror, DEFAULT_LOCALE_ENCODING,
-                              strings_only=True)
-        reraise(os_err_exc_type, os_err_exc_type('Error executing %s: %s' %
-                    (args[0], strerror)), sys.exc_info()[2])
+        p = Popen(args, shell=False, stdout=PIPE, stderr=PIPE, close_fds=os.name != 'nt')
+    except OSError as err:
+        raise CommandError('Error executing %s' % args[0]) from err
     output, errors = p.communicate()
     return (
-        output,
-        force_text(errors, DEFAULT_LOCALE_ENCODING, strings_only=True),
+        output.decode(stdout_encoding),
+        errors.decode(DEFAULT_LOCALE_ENCODING, errors='replace'),
         p.returncode
     )
 
 
 def handle_extensions(extensions):
     """
-    Organizes multiple extensions that are separated with commas or passed by
+    Organize multiple extensions that are separated with commas or passed by
     using --extension/-e multiple times.
 
-    For example: running 'django-admin makemessages -e js,txt -e xhtml -a'
+    For example: running 'orun-admin makemessages -e js,txt -e xhtml -a'
     would result in an extension list: ['.js', '.txt', '.xhtml']
 
     >>> handle_extensions(['.html', 'html,js,py,py,py,.py', 'py,.py'])
@@ -84,3 +79,46 @@ def get_random_secret_key():
     """
     chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
     return get_random_string(50, chars)
+
+
+def parse_apps_and_model_labels(labels):
+    """
+    Parse a list of "app_label.ModelName" or "app_label" strings into actual
+    objects and return a two-element tuple:
+        (set of model classes, set of app_configs).
+    Raise a CommandError if some specified models or apps don't exist.
+    """
+    apps = set()
+    models = set()
+
+    for label in labels:
+        if '.' in label:
+            try:
+                model = installed_apps.get_model(label)
+            except LookupError:
+                raise CommandError('Unknown model: %s' % label)
+            models.add(model)
+        else:
+            try:
+                app_config = installed_apps.get_app_config(label)
+            except LookupError as e:
+                raise CommandError(str(e))
+            apps.add(app_config)
+
+    return models, apps
+
+
+def get_command_line_option(argv, option):
+    """
+    Return the value of a command line option (which should include leading
+    dashes, e.g. '--testrunnner') from an argument list. Return None if the
+    option wasn't passed or if the argument list couldn't be parsed.
+    """
+    parser = CommandParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(option, dest='value')
+    try:
+        options, _ = parser.parse_known_args(argv[2:])
+    except CommandError:
+        return None
+    else:
+        return options.value

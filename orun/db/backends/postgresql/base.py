@@ -1,44 +1,70 @@
-import psycopg2
-from psycopg2 import extensions
+"""
+PostgreSQL database backend for Orun.
 
-from gevent.socket import wait_read, wait_write
+Requires psycopg 2: http://initd.org/projects/psycopg2
+"""
 
+import threading
+import warnings
 
-def monkey_patch():
-    """Configure psycopg2 to be used with gevent in non-blocking way."""
-
-    extensions.set_wait_callback(gevent_wait_callback)
-
-
-def gevent_wait_callback(conn, timeout=None):
-    """A wait callback useful to allow gevent to work with Psycopg."""
-
-    while True:
-        state = conn.poll()
-        if state == extensions.POLL_OK:
-            break
-        elif state == extensions.POLL_READ:
-            wait_read(conn.fileno(), timeout=timeout)
-        elif state == extensions.POLL_WRITE:
-            wait_write(conn.fileno(), timeout=timeout)
-        else:
-            raise psycopg2.OperationalError(
-                "Bad result from poll: %r" % state)
-
-
+from orun.conf import settings
+from orun.core.exceptions import ImproperlyConfigured
+from orun.db import connections
 from orun.db.backends.base.base import BaseDatabaseWrapper
-from .schema import DatabaseSchemaEditor
-from .creation import DatabaseCreation
-from .features import DatabaseFeatures
-from .operations import DatabaseOperations
+from orun.db.utils import DatabaseError as WrappedDatabaseError
+from orun.utils.functional import cached_property
+from orun.utils.safestring import SafeText
+from orun.utils.version import get_version_tuple
+
+try:
+    import psycopg2 as Database
+    import psycopg2.extensions
+    import psycopg2.extras
+except ImportError as e:
+    raise ImproperlyConfigured("Error loading psycopg2 module: %s" % e)
+
+
+def psycopg2_version():
+    version = psycopg2.__version__.split(' ', 1)[0]
+    return get_version_tuple(version)
+
+
+PSYCOPG2_VERSION = psycopg2_version()
+
+if PSYCOPG2_VERSION < (2, 5, 4):
+    raise ImproperlyConfigured("psycopg2_version 2.5.4 or newer is required; you have %s" % psycopg2.__version__)
+
+
+# Some of these import psycopg2, so import them after checking if it's installed.
+from .client import DatabaseClient                          # NOQA isort:skip
+from .creation import DatabaseCreation                      # NOQA isort:skip
+from .features import DatabaseFeatures                      # NOQA isort:skip
+from .introspection import DatabaseIntrospection            # NOQA isort:skip
+from .operations import DatabaseOperations                  # NOQA isort:skip
+from .schema import DatabaseSchemaEditor                    # NOQA isort:skip
+from .utils import utc_tzinfo_factory                       # NOQA isort:skip
+
+psycopg2.extensions.register_adapter(SafeText, psycopg2.extensions.QuotedString)
+psycopg2.extras.register_uuid()
+
+# Register support for inet[] manually so we don't have to handle the Inet()
+# object on load all the time.
+INETARRAY_OID = 1041
+INETARRAY = psycopg2.extensions.new_array_type(
+    (INETARRAY_OID,),
+    'INETARRAY',
+    psycopg2.extensions.UNICODE,
+)
+psycopg2.extensions.register_type(INETARRAY)
 
 
 class DatabaseWrapper(BaseDatabaseWrapper):
-    SchemaEditorClass = DatabaseSchemaEditor
-    creation_class = DatabaseCreation
-    features_class = DatabaseFeatures
-    ops_class = DatabaseOperations
-
+    vendor = 'postgresql'
+    display_name = 'PostgreSQL'
+    # This dictionary maps Field objects to their associated PostgreSQL column
+    # types, as strings. Column-type strings can contain format strings; they'll
+    # be interpolated against the values of Field.__dict__ before being output.
+    # If a column type is set to None, it won't be included in the output.
     data_types = {
         'AutoField': 'serial',
         'BigAutoField': 'bigserial',
@@ -53,7 +79,6 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'FilePathField': 'varchar(%(max_length)s)',
         'FloatField': 'double precision',
         'IntegerField': 'integer',
-        'ImageField': 'bytea',
         'BigIntegerField': 'bigint',
         'IPAddressField': 'inet',
         'GenericIPAddressField': 'inet',
@@ -71,13 +96,188 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'PositiveIntegerField': '"%(column)s" >= 0',
         'PositiveSmallIntegerField': '"%(column)s" >= 0',
     }
+    operators = {
+        'exact': '= %s',
+        'iexact': '= UPPER(%s)',
+        'contains': 'LIKE %s',
+        'icontains': 'LIKE UPPER(%s)',
+        'regex': '~ %s',
+        'iregex': '~* %s',
+        'gt': '> %s',
+        'gte': '>= %s',
+        'lt': '< %s',
+        'lte': '<= %s',
+        'startswith': 'LIKE %s',
+        'endswith': 'LIKE %s',
+        'istartswith': 'LIKE UPPER(%s)',
+        'iendswith': 'LIKE UPPER(%s)',
+    }
 
-    def data_type_eq(self, old_type, new_type):
-        r = super().data_type_eq(old_type, new_type)
-        if old_type.startswith('TIMESTAMP') and new_type == 'DATETIME':
+    # The patterns below are used to generate SQL pattern lookup clauses when
+    # the right-hand side of the lookup isn't a raw string (it might be an expression
+    # or the result of a bilateral transformation).
+    # In those cases, special characters for LIKE operators (e.g. \, *, _) should be
+    # escaped on database side.
+    #
+    # Note: we use str.format() here for readability as '%' is used as a wildcard for
+    # the LIKE operator.
+    pattern_esc = r"REPLACE(REPLACE(REPLACE({}, E'\\', E'\\\\'), E'%%', E'\\%%'), E'_', E'\\_')"
+    pattern_ops = {
+        'contains': "LIKE '%%' || {} || '%%'",
+        'icontains': "LIKE '%%' || UPPER({}) || '%%'",
+        'startswith': "LIKE {} || '%%'",
+        'istartswith': "LIKE UPPER({}) || '%%'",
+        'endswith': "LIKE '%%' || {}",
+        'iendswith': "LIKE '%%' || UPPER({})",
+    }
+
+    Database = Database
+    SchemaEditorClass = DatabaseSchemaEditor
+    # Classes instantiated in __init__().
+    client_class = DatabaseClient
+    creation_class = DatabaseCreation
+    features_class = DatabaseFeatures
+    introspection_class = DatabaseIntrospection
+    ops_class = DatabaseOperations
+    # PostgreSQL backend-specific attributes.
+    _named_cursor_idx = 0
+
+    def get_connection_params(self):
+        settings_dict = self.settings_dict
+        # None may be used to connect to the default 'postgres' db
+        if settings_dict['NAME'] == '':
+            raise ImproperlyConfigured(
+                "settings.DATABASES is improperly configured. "
+                "Please supply the NAME value.")
+        if len(settings_dict['NAME'] or '') > self.ops.max_name_length():
+            raise ImproperlyConfigured(
+                "The database name '%s' (%d characters) is longer than "
+                "PostgreSQL's limit of %d characters. Supply a shorter NAME "
+                "in settings.DATABASES." % (
+                    settings_dict['NAME'],
+                    len(settings_dict['NAME']),
+                    self.ops.max_name_length(),
+                )
+            )
+        conn_params = {
+            'database': settings_dict['NAME'] or 'postgres',
+            **settings_dict['OPTIONS'],
+        }
+        conn_params.pop('isolation_level', None)
+        if settings_dict['USER']:
+            conn_params['user'] = settings_dict['USER']
+        if settings_dict['PASSWORD']:
+            conn_params['password'] = settings_dict['PASSWORD']
+        if settings_dict['HOST']:
+            conn_params['host'] = settings_dict['HOST']
+        if settings_dict['PORT']:
+            conn_params['port'] = settings_dict['PORT']
+        return conn_params
+
+    def get_new_connection(self, conn_params):
+        connection = Database.connect(**conn_params)
+
+        # self.isolation_level must be set:
+        # - after connecting to the database in order to obtain the database's
+        #   default when no value is explicitly specified in options.
+        # - before calling _set_autocommit() because if autocommit is on, that
+        #   will set connection.isolation_level to ISOLATION_LEVEL_AUTOCOMMIT.
+        options = self.settings_dict['OPTIONS']
+        try:
+            self.isolation_level = options['isolation_level']
+        except KeyError:
+            self.isolation_level = connection.isolation_level
+        else:
+            # Set the isolation level to the value from OPTIONS.
+            if self.isolation_level != connection.isolation_level:
+                connection.set_session(isolation_level=self.isolation_level)
+
+        return connection
+
+    def ensure_timezone(self):
+        if self.connection is None:
+            return False
+        conn_timezone_name = self.connection.get_parameter_status('TimeZone')
+        timezone_name = self.timezone_name
+        if timezone_name and conn_timezone_name != timezone_name:
+            with self.connection.cursor() as cursor:
+                cursor.execute(self.ops.set_time_zone_sql(), [timezone_name])
             return True
-        if new_type.startswith('BLOB') and old_type.startswith('BYTEA'):
+        return False
+
+    def init_connection_state(self):
+        self.connection.set_client_encoding('UTF8')
+
+        timezone_changed = self.ensure_timezone()
+        if timezone_changed:
+            # Commit after setting the time zone (see #17062)
+            if not self.get_autocommit():
+                self.connection.commit()
+
+    def create_cursor(self, name=None):
+        if name:
+            # In autocommit mode, the cursor will be used outside of a
+            # transaction, hence use a holdable cursor.
+            cursor = self.connection.cursor(name, scrollable=False, withhold=self.connection.autocommit)
+        else:
+            cursor = self.connection.cursor()
+        cursor.tzinfo_factory = utc_tzinfo_factory if settings.USE_TZ else None
+        return cursor
+
+    def chunked_cursor(self):
+        self._named_cursor_idx += 1
+        return self._cursor(
+            name='_orun_curs_%d_%d' % (
+                # Avoid reusing name in other threads
+                threading.current_thread().ident,
+                self._named_cursor_idx,
+            )
+        )
+
+    def _set_autocommit(self, autocommit):
+        with self.wrap_database_errors:
+            self.connection.autocommit = autocommit
+
+    def check_constraints(self, table_names=None):
+        """
+        Check constraints by setting them to immediate. Return them to deferred
+        afterward.
+        """
+        self.cursor().execute('SET CONSTRAINTS ALL IMMEDIATE')
+        self.cursor().execute('SET CONSTRAINTS ALL DEFERRED')
+
+    def is_usable(self):
+        try:
+            # Use a psycopg cursor directly, bypassing Orun's utilities.
+            self.connection.cursor().execute("SELECT 1")
+        except Database.Error:
+            return False
+        else:
             return True
-        if new_type.startswith('FLOAT') and old_type.startswith('DOUBLE PRECISION'):
-            return True
-        return r
+
+    @property
+    def _nodb_connection(self):
+        nodb_connection = super()._nodb_connection
+        try:
+            nodb_connection.ensure_connection()
+        except (Database.DatabaseError, WrappedDatabaseError):
+            warnings.warn(
+                "Normally Orun will use a connection to the 'postgres' database "
+                "to avoid running initialization queries against the production "
+                "database when it's not needed (for example, when running tests). "
+                "Orun was unable to create a connection to the 'postgres' database "
+                "and will use the first PostgreSQL database instead.",
+                RuntimeWarning
+            )
+            for connection in connections.all():
+                if connection.vendor == 'postgresql' and connection.settings_dict['NAME'] != 'postgres':
+                    return self.__class__(
+                        {**self.settings_dict, 'NAME': connection.settings_dict['NAME']},
+                        alias=self.alias,
+                    )
+        return nodb_connection
+
+    @cached_property
+    def pg_version(self):
+        with self.temporary_connection():
+            return self.connection.server_version

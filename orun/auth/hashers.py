@@ -85,7 +85,7 @@ def make_password(password, salt=None, hasher='default'):
 @lru_cache()
 def get_hashers():
     hashers = []
-    for hasher_path in settings['PASSWORD_HASHERS']:
+    for hasher_path in settings.PASSWORD_HASHERS:
         hasher_cls = import_string(hasher_path)
         hasher = hasher_cls()
         if not getattr(hasher, 'algorithm'):

@@ -1,14 +1,17 @@
-from orun import app
+from orun.http import HttpResponse
+from orun.apps import apps
 from orun.db import models
 
 
 class Http(models.Model):
-    def get_attachment(self, attachment_id):
-        obj = self.env['ir.attachment'].get(attachment_id)
+    @classmethod
+    def get_attachment(cls, attachment_id):
+        obj = apps['ir.attachment'].get(attachment_id)
         headers = None
+        res = HttpResponse(obj.content, content_type=obj.mimetype)
         if obj.file_name:
-            headers = {'Content-Disposition': 'attachment; filename=' + obj.file_name}
-        return app.response_class(obj.content, content_type=obj.mimetype, headers=headers)
+            res['Content-Disposition'] = 'attachment; filename=' + obj.file_name
+        return res
 
     class Meta:
         name = 'ir.http'

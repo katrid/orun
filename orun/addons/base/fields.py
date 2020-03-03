@@ -1,7 +1,4 @@
-from sqlalchemy.orm import foreign, remote
-from sqlalchemy.sql import and_
-
-from orun import app
+from orun import apps
 from orun.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from orun.db.models.fields import BaseField
 from orun.db import DEFAULT_DB_ALIAS, models #, router, transaction
@@ -52,7 +49,7 @@ class GenericForeignKey(BaseField):
         self.model = cls
         self.cache_attr = "_%s_cache" % name
         # cls._meta.add_field(self, private=True)
-        if cls._meta.app:
+        if cls._meta.apps:
             setattr(cls, name, self)
 
     def get_filter_kwargs_for_object(self, obj):

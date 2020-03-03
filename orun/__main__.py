@@ -1,6 +1,9 @@
-from orun import Application
+"""
+Invokes orun-admin when the django module is run as a script.
 
-# Create an app instance
-app = Application(__name__)
-with app.app_context():
-    app.cli()
+Example: python -m orun check
+"""
+from orun.core import management
+
+if __name__ == "__main__":
+    management.execute_from_command_line()

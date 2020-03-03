@@ -108,7 +108,7 @@
       <div class="clearfix"></div>
 
       <a class="user-profile-menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        <span>{{ g.user.name }}</span>
+        <span>{{ request.user.name }}</span>
         <span class="user-dropdown"><i class="fa fa-fw fa-angle-down"></i></span>
       </a>
       <div class="dropdown-menu">
@@ -186,7 +186,7 @@
   <script>
     // start katrid application
     var app = Katrid.Core.WebApplication.bootstrap({
-      templates: '/web/client/templates/',
+      templates: '/web/js/templates/',
     });
   </script>
 
@@ -210,12 +210,6 @@
       }
     })
   </script>
-  <script src="/static/web/monaco/min/vs/loader.js"></script>
-
-  <script src="/static/bi/plugins/cube.js"></script>
-  <link href="/static/bi/css/bi.css" rel="stylesheet"/>
   <link href="/static/web/assets/css/orun.css" rel="stylesheet"/>
-  <script src="/static/bi/plugins/bi.js"></script>
-  <script src="/static/bi/plugins/cube.js"></script>
 
 {% endblock %}

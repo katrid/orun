@@ -2,12 +2,12 @@ import os
 import re
 from jinja2 import Environment, FunctionLoader
 
-from orun import g, app
-from orun import render_template
-from orun import render_template_string
-from orun.apps import registry
+from orun import g
+from orun.apps import apps
+from orun.shortcuts import render
+from orun.template import loader, Template
 from orun.conf import settings
-from orun.db import models, session
+from orun.db import models
 from orun.utils.translation import gettext, gettext_lazy as _
 from orun.utils.xml import etree
 
@@ -15,7 +15,7 @@ from orun.utils.xml import etree
 def get_template(self, template):
     # TODO try to find on db (if not found, try to search on file system)
     app_label = template.split('/', 1)[0]
-    addon = registry.addons[app_label]
+    addon = apps.addons[app_label]
     f = os.path.join(addon.root_path, addon.template_folder, template)
     if os.path.isfile(f):
         with open(f, encoding='utf-8') as tmpl:
@@ -141,7 +141,8 @@ class View(models.Model):
                 groups = child.attrib['groups']
                 if groups not in _groups:
                     has_groups = len(list(objects.objects.only('id').filter(
-                        objects.c.model=='auth.group', objects.c.name.in_(groups.split(',')), objects.c.object_id.in_(user.groups)
+                        objects.c.model == 'auth.group', objects.c.name.in_(groups.split(',')),
+                        objects.c.object_id.in_(user.groups)
                     )[:1])) > 0
                     _groups[groups] = has_groups
                 if not _groups[groups]:
@@ -149,15 +150,15 @@ class View(models.Model):
 
     def _get_content(self, context):
         if self.view_type == 'report':
-            templ = app.report_env.get_or_select_template(self.template_name.split(':')[-1])
+            templ = apps.report_env.get_or_select_template(self.template_name.split(':')[-1])
         else:
-            templ = app.jinja_env.get_or_select_template(self.template_name.split(':')[-1])
+            templ = apps.jinja_env.get_or_select_template(self.template_name.split(':')[-1])
             return templ.render(context)
         res = open(templ.filename, encoding='utf-8').read()
         return res
 
     def to_string(self):
-        templ = app.jinja_env.get_or_select_template(self.template_name.split(':')[-1])
+        templ = apps.jinja_env.get_or_select_template(self.template_name.split(':')[-1])
         with open(templ.filename, encoding='utf-8') as f:
             return f.read()
 
@@ -168,29 +169,33 @@ class View(models.Model):
                 'session': session
             }
         if settings.DEBUG and self.template_name:
-            context['ref'] = g.env.ref
+            # context['ref'] = g.env.ref
             templ = self.template_name.split(':')[-1]
             if self.view_type in ('dashboard', 'report'):
-                return app.report_env.get_or_select_template(templ).render(**context)
-            return render_template(templ, **context)
+                return apps.report_env.get_or_select_template(templ).render(**context)
+            return loader.get_template(templ).render(context)
         if self.view_type in ('dashboard', 'report'):
-            return app.report_env.from_string(self.content).render(**context)
-        return render_template_string(self.content, **context)
+            return apps.report_env.from_string(self.content).render(**context)
+        return Template(self.content).render(context)
 
     @classmethod
-    def generate_view(self, model, view_type='form'):
+    def generate_view(self, request, model, view_type='form'):
         opts = model._meta
-        return render_template([
-            'views/%s/%s.html' % (opts.name, view_type),
-            'views/%s/%s.xml' % (opts.name, view_type),
-            'views/%s/%s.xml' % (opts.app_label, view_type),
-            'views/%s.xml' % view_type,
-        ], opts=opts, _=gettext)
+        return render_template(
+            request,
+            [
+                'views/%s/%s.html' % (opts.name, view_type),
+                'views/%s/%s.xml' % (opts.name, view_type),
+                'views/%s/%s.xml' % (opts.app_label, view_type),
+                'views/%s.xml' % view_type,
+            ], context=dict(opts=opts, _=gettext)
+        )
 
-    def render_template(self, template, **context):
+    @classmethod
+    def render_template(self, request, template, context):
         # find template by ref id
-        templ = self.env['ir.object'].get_by_natural_key(template).object
-        children = list(self.objects.filter(self.c.mode == 'primary', parent=templ.id))
+        templ = apps['ir.object'].get_by_natural_key(template).object
+        children = list(self.objects.filter(mode='primary', parent=templ.id))
         if children:
             for child in children:
                 print(child)

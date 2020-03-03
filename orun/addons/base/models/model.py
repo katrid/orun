@@ -20,9 +20,10 @@ class Model(models.Model):
     class Meta:
         name = 'ir.model'
 
+    @classmethod
     def get_by_natural_key(self, name):
         try:
-            return self.objects.filter(self.c.name == name).one()
+            return self.objects.get(name=name)
         except ObjectDoesNotExist:
             raise ObjectDoesNotExist('Model not found %s' % name)
 

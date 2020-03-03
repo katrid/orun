@@ -1,6 +1,14 @@
+"""
+Module for abstract serializer/unserializer base classes.
+"""
 from io import StringIO
+from pathlib import Path
 
-from orun.db import DEFAULT_DB_ALIAS
+from orun.core.exceptions import ObjectDoesNotExist
+from orun.db import models, connections, DEFAULT_DB_ALIAS
+from orun.utils.functional import cached_property
+
+DEFER_FIELD = object()
 
 
 class SerializerDoesNotExist(KeyError):
@@ -25,7 +33,14 @@ class DeserializationError(Exception):
         return cls("%s: (%s:pk=%s) field_value was '%s'" % (original_exc, model, fk, field_value))
 
 
-class ProgressBar(object):
+class M2MDeserializationError(Exception):
+    """Something bad happened during deserialization of a ManyToManyField."""
+    def __init__(self, original_exc, pk):
+        self.original_exc = original_exc
+        self.pk = pk
+
+
+class ProgressBar:
     progress_width = 75
 
     def __init__(self, output, total_count):
@@ -48,7 +63,7 @@ class ProgressBar(object):
         self.output.flush()
 
 
-class Serializer(object):
+class Serializer:
     """
     Abstract serializer base class.
     """
@@ -59,19 +74,18 @@ class Serializer(object):
     progress_class = ProgressBar
     stream_class = StringIO
 
-    def serialize(self, queryset, **options):
+    def serialize(self, queryset, *, stream=None, fields=None, use_natural_foreign_keys=False,
+                  use_natural_primary_keys=False, progress_output=None, object_count=0, **options):
         """
         Serialize a queryset.
         """
         self.options = options
 
-        self.stream = options.pop("stream", self.stream_class())
-        self.selected_fields = options.pop("fields", None)
-        self.use_natural_foreign_keys = options.pop('use_natural_foreign_keys', False)
-        self.use_natural_primary_keys = options.pop('use_natural_primary_keys', False)
-        progress_bar = self.progress_class(
-            options.pop('progress_output', None), options.pop('object_count', 0)
-        )
+        self.stream = stream if stream is not None else self.stream_class()
+        self.selected_fields = fields
+        self.use_natural_foreign_keys = use_natural_foreign_keys
+        self.use_natural_primary_keys = use_natural_primary_keys
+        progress_bar = self.progress_class(progress_output, object_count)
 
         self.start_serialization()
         self.first = True
@@ -80,8 +94,16 @@ class Serializer(object):
             # Use the concrete parent class' _meta instead of the object's _meta
             # This is to avoid local_fields problems for proxy models. Refs #17717.
             concrete_model = obj._meta.concrete_model
+            # When using natural primary keys, retrieve the pk field of the
+            # parent for multi-table inheritance child models. That field must
+            # be serialized, otherwise deserialization isn't possible.
+            if self.use_natural_primary_keys:
+                pk = concrete_model._meta.pk
+                pk_parent = pk if pk.remote_field and pk.remote_field.parent_link else None
+            else:
+                pk_parent = None
             for field in concrete_model._meta.local_fields:
-                if field.serialize:
+                if field.serialize or field is pk_parent:
                     if field.remote_field is None:
                         if self.selected_fields is None or field.attname in self.selected_fields:
                             self.handle_field(obj, field)
@@ -94,8 +116,7 @@ class Serializer(object):
                         self.handle_m2m_field(obj, field)
             self.end_object(obj)
             progress_bar.update(count)
-            if self.first:
-                self.first = False
+            self.first = self.first and False
         self.end_serialization()
         return self.getvalue()
 
@@ -154,32 +175,168 @@ class Deserializer:
     """
     Abstract base deserializer class.
     """
-    def __init__(self, app, stream_or_string=None, filename=None, app_config=None, **kwargs):
-        self.app = app
-        self.app_config = app_config
-        self.stream_or_string = stream_or_string
-        self.filename = filename
-        self.options = kwargs
-        self.encoding = kwargs.get('encoding', 'utf-8')
+
+    def __init__(self, stream_or_string, addon=None, **options):
+        """
+        Init this serializer given a stream or a string
+        """
+        self.addon = addon
+        self.options = options
         self.postpone = None
+        self.path = None
+        self.format = options.get('format')
+        self.database = options.get('database', DEFAULT_DB_ALIAS)
+        self.connection = connections[self.database]
+        if isinstance(stream_or_string, Path):
+            self.path = stream_or_string
+        self.stream_or_string = stream_or_string
 
-    def from_file(self, filename: str, encoding: str='utf-8'):
-        with open(filename, encoding=encoding) as f:
-            self.options['filename'] = filename
-            try:
-                self.deserialize(f)
-            except:
-                print('Error loading the file %s on module: %s' % (filename, self.app_config))
+    @cached_property
+    def stream(self):
+        return self.create_stream()
+
+    def create_stream(self):
+        if isinstance(self.stream_or_string, Path):
+            return open(str(self.stream_or_string))
+        elif isinstance(self.stream_or_string, str):
+            return StringIO(self.stream_or_string)
+        return self.stream_or_string
+
+    def deserialize(self):
+        pass
+
+    def reset_sequence(self, model):
+        self.connection.schema_editor().reset_sequence(model)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        """Iteration interface -- return the next item in the stream"""
+        raise NotImplementedError('subclasses of Deserializer must provide a __next__() method')
+
+
+class DeserializedObject:
+    """
+    A deserialized model.
+
+    Basically a container for holding the pre-saved deserialized data along
+    with the many-to-many data saved with the object.
+
+    Call ``save()`` to save the object (with the many-to-many data) to the
+    database; call ``save(save_m2m=False)`` to save just the object fields
+    (and not touch the many-to-many stuff.)
+    """
+
+    def __init__(self, obj, m2m_data=None, deferred_fields=None):
+        self.object = obj
+        self.m2m_data = m2m_data
+        self.deferred_fields = deferred_fields
+
+    def __repr__(self):
+        return "<%s: %s(pk=%s)>" % (
+            self.__class__.__name__,
+            self.object._meta.label,
+            self.object.pk,
+        )
+
+    def save(self, save_m2m=True, using=None, **kwargs):
+        # Call save on the Model baseclass directly. This bypasses any
+        # model-defined save. The save is also forced to be raw.
+        # raw=True is passed to any pre/post_save signals.
+        models.Model.save_base(self.object, using=using, raw=True, **kwargs)
+        if self.m2m_data and save_m2m:
+            for accessor_name, object_list in self.m2m_data.items():
+                getattr(self.object, accessor_name).set(object_list)
+
+        # prevent a second (possibly accidental) call to save() from saving
+        # the m2m data twice.
+        self.m2m_data = None
+
+    def save_deferred_fields(self, using=None):
+        self.m2m_data = {}
+        for field, field_value in self.deferred_fields.items():
+            opts = self.object._meta
+            label = opts.app_label + '.' + opts.model_name
+            if isinstance(field.remote_field, models.ManyToManyRel):
+                try:
+                    values = deserialize_m2m_values(field, field_value, using, handle_forward_references=False)
+                except M2MDeserializationError as e:
+                    raise DeserializationError.WithData(e.original_exc, label, self.object.pk, e.pk)
+                self.m2m_data[field.name] = values
+            elif isinstance(field.remote_field, models.ManyToOneRel):
+                try:
+                    value = deserialize_fk_value(field, field_value, using, handle_forward_references=False)
+                except Exception as e:
+                    raise DeserializationError.WithData(e, label, self.object.pk, field_value)
+                setattr(self.object, field.attname, value)
+        self.save()
+
+
+def build_instance(Model, data, db):
+    """
+    Build a model instance.
+
+    If the model instance doesn't have a primary key and the model supports
+    natural keys, try to retrieve it from the database.
+    """
+    default_manager = Model._meta.default_manager
+    pk = data.get(Model._meta.pk.name)
+    if (pk is None and hasattr(default_manager, 'get_by_natural_key') and
+            hasattr(Model, 'natural_key')):
+        natural_key = Model(**data).natural_key()
+        try:
+            data[Model._meta.pk.attname] = Model._meta.pk.to_python(
+                default_manager.db_manager(db).get_by_natural_key(*natural_key).pk
+            )
+        except Model.DoesNotExist:
+            pass
+    return Model(**data)
+
+
+def deserialize_m2m_values(field, field_value, using, handle_forward_references):
+    model = field.remote_field.model
+    if hasattr(model._default_manager, 'get_by_natural_key'):
+        def m2m_convert(value):
+            if hasattr(value, '__iter__') and not isinstance(value, str):
+                return model._default_manager.db_manager(using).get_by_natural_key(*value).pk
+            else:
+                return model._meta.pk.to_python(value)
+    else:
+        def m2m_convert(v):
+            return model._meta.pk.to_python(v)
+
+    try:
+        values = []
+        for pk in field_value:
+            values.append(m2m_convert(pk))
+        return values
+    except Exception as e:
+        if isinstance(e, ObjectDoesNotExist) and handle_forward_references:
+            return DEFER_FIELD
+        else:
+            raise M2MDeserializationError(e, pk)
+
+
+def deserialize_fk_value(field, field_value, using, handle_forward_references):
+    if field_value is None:
+        return None
+    model = field.remote_field.model
+    default_manager = model._default_manager
+    field_name = field.remote_field.field_name
+    if (hasattr(default_manager, 'get_by_natural_key') and
+            hasattr(field_value, '__iter__') and not isinstance(field_value, str)):
+        try:
+            obj = default_manager.db_manager(using).get_by_natural_key(*field_value)
+        except ObjectDoesNotExist:
+            if handle_forward_references:
+                return DEFER_FIELD
+            else:
                 raise
-
-    def deserialize(self, stream_or_string):
-        raise NotImplemented
-
-    def execute(self):
-        # load file
-        self.from_file(self.filename, self.encoding)
-
-    def build_instance(self, model, values, using=DEFAULT_DB_ALIAS):
-        obj = model(**values)
-        obj.save()
-        return obj
+        value = getattr(obj, field_name)
+        # If this is a natural foreign key to an object that has a FK/O2O as
+        # the foreign key, use the FK value.
+        if model._meta.pk.remote_field:
+            value = value.pk
+        return value
+    return model._meta.get_field(field_name).to_python(field_value)

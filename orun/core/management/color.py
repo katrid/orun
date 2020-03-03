@@ -2,16 +2,16 @@
 Sets up the terminal color scheme.
 """
 
+import functools
 import os
 import sys
-from functools import lru_cache
 
 from orun.utils import termcolors
 
 
 def supports_color():
     """
-    Returns True if the running system's terminal supports color,
+    Return True if the running system's terminal supports color,
     and False otherwise.
     """
     plat = sys.platform
@@ -19,12 +19,10 @@ def supports_color():
 
     # isatty is not always implemented, #6223.
     is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
-    if not supported_platform or not is_a_tty:
-        return False
-    return True
+    return supported_platform and is_a_tty
 
 
-class Style(object):
+class Style:
     pass
 
 
@@ -58,18 +56,18 @@ def make_style(config_string=''):
     return style
 
 
-@lru_cache(maxsize=None)
+@functools.lru_cache(maxsize=None)
 def no_style():
     """
-    Returns a Style object with no color scheme.
+    Return a Style object with no color scheme.
     """
     return make_style('nocolor')
 
 
-def color_style():
+def color_style(force_color=False):
     """
-    Returns a Style object from the Orun color scheme.
+    Return a Style object from the Orun color scheme.
     """
-    if not supports_color():
+    if not force_color and not supports_color():
         return no_style()
     return make_style(os.environ.get('ORUN_COLORS', ''))

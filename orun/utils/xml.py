@@ -1,4 +1,5 @@
-from lxml import html as etree
+from io import StringIO
+from lxml import etree
 
 
 def _get_xml_field(parent):
@@ -12,5 +13,6 @@ def _get_xml_field(parent):
 
 def get_xml_fields(xml):
     if isinstance(xml, str):
-        xml = etree.fromstring(xml)
+        parser = etree.HTMLParser()
+        xml = etree.parse(StringIO(xml), parser).getroot()
     return [f for f in _get_xml_field(xml)]

@@ -1,4 +1,4 @@
-from orun import app
+from orun import apps
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 
@@ -26,6 +26,7 @@ class PartnerTitle(models.Model):
 
 class Partner(models.Model):
     name = models.CharField(128, label=_('Name'))
+    parent = models.ForeignKey('self')
     title = models.ForeignKey(PartnerTitle, label=_('Title'))
     active = models.BooleanField(default=True, label=_('Active'))
     color = models.IntegerField(label=_('Color'))
@@ -48,6 +49,15 @@ class Partner(models.Model):
     mobile = models.CharField(64, label=_('Mobile'))
     birthdate = models.CharField(64, label=_('Birthdate'))
     is_company = models.BooleanField(default=False, label=_('Is a Company'))
+    contact_type = models.SelectionField(
+        (
+            ('contact', _('Contact')),
+            ('invoice', _('Invoice address')),
+            ('shipping', _('Shipping address')),
+            ('private', _('Private address')),
+            ('other', _('Other address')),
+        ), label=_('Address Type'), default='contact'
+    )
     company_type = models.CharField(16, label=_('Company Type'), choices=(
         ('individual', 'Individual'),
         ('company', 'Company'),
@@ -55,6 +65,7 @@ class Partner(models.Model):
     company = models.ForeignKey('res.company', label=_('Company'))
     comments = models.TextField(label=_('Notes'))
     image = models.ImageField(attachment=True)
+    children = models.OneToManyField('self')
     # user password
     site_password = models.PasswordField()
 

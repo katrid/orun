@@ -1,7 +1,6 @@
 from collections import defaultdict
-from sqlalchemy.sql import or_, text
 from orun import SUPERUSER, g
-from orun.db import models, session
+from orun.db import models
 from orun.utils.translation import gettext
 
 
@@ -26,7 +25,8 @@ class Menu(models.Model):
     def __str__(self):
         return self.get_full_name()
 
-    def search_visible_items(self):
+    @classmethod
+    def search_visible_items(cls, request):
         visible_items = defaultdict(list)
 
         def _iter_item(item):
@@ -41,19 +41,19 @@ class Menu(models.Model):
                 for menu_item in visible_items[item]
             ]
 
-        qs = self.objects
-        if self.env.user_id == SUPERUSER or self.env.user.is_superuser:
+        qs = cls.objects.all()
+        if cls.env.user_id == SUPERUSER or cls.env.user.is_superuser:
             items = qs
         else:
-            Group = self.env['auth.group']
-            UserGroups = self.env['auth.user.groups.rel']
-            MenuGroups = self.env['ui.menu.groups.rel']
+            Group = cls.env['auth.group']
+            UserGroups = cls.env['auth.user.groups.rel']
+            MenuGroups = cls.env['ui.menu.groups.rel']
             q = MenuGroups.objects.join(Group).join(UserGroups)
             q = q.filter(
-                UserGroups.c.from_auth_user_id == self.env.user_id, MenuGroups.c.from_ui_menu_id == self.c.pk
+                UserGroups.c.from_auth_user_id == cls.env.user_id, MenuGroups.c.from_ui_menu_id == cls.c.pk
             )
             items = qs.filter(
-                or_(~MenuGroups.objects.filter(MenuGroups.c.from_ui_menu_id == self.c.pk).exists(), q.exists())
+                or_(~MenuGroups.objects.filter(MenuGroups.c.from_ui_menu_id == cls.c.pk).exists(), q.exists())
             ).all()
         for item in items:
             visible_items[item.parent_id].append(item)
@@ -67,7 +67,7 @@ class Menu(models.Model):
     def get_absolute_url(self):
         if self.action_id:
             return '#/app/?action=%s' % self.action_id
-        elif self.parent:
+        elif self.parent_id:
             return '#'
         return '/web/menu/%s/' % self.pk
 

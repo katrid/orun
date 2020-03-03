@@ -1,7 +1,6 @@
-import errno
 import os
-import warnings
 from datetime import datetime
+from urllib.parse import urljoin
 
 from orun.conf import settings
 from orun.core.exceptions import SuspiciousFileOperation
@@ -9,18 +8,21 @@ from orun.core.files import File, locks
 from orun.core.files.move import file_move_safe
 from orun.core.signals import setting_changed
 from orun.utils import timezone
-from orun.utils._os import abspath, safe_join
+from orun.utils._os import safe_join
 from orun.utils.crypto import get_random_string
-from orun.utils.encoding import filepath_to_uri, force_text
+from orun.utils.deconstruct import deconstructible
+from orun.utils.encoding import filepath_to_uri
 from orun.utils.functional import LazyObject, cached_property
 from orun.utils.module_loading import import_string
-from urllib.parse import urljoin
 from orun.utils.text import get_valid_filename
 
-__all__ = ('Storage', 'FileSystemStorage', 'DefaultStorage', 'default_storage')
+__all__ = (
+    'Storage', 'FileSystemStorage', 'DefaultStorage', 'default_storage',
+    'get_storage_class',
+)
 
 
-class Storage(object):
+class Storage:
     """
     A base storage class, providing some default behaviors that all other
     storage systems can inherit or override, as necessary.
@@ -29,18 +31,14 @@ class Storage(object):
     # The following methods represent a public interface to private methods.
     # These shouldn't be overridden by subclasses unless absolutely necessary.
 
-    store_file_name = False
-
     def open(self, name, mode='rb'):
-        """
-        Retrieves the specified file from storage.
-        """
+        """Retrieve the specified file from storage."""
         return self._open(name, mode)
 
     def save(self, name, content, max_length=None):
         """
-        Saves new content to the file specified by name. The content should be
-        a proper File object or any python file-like object, ready to be read
+        Save new content to the file specified by name. The content should be
+        a proper File object or any Python file-like object, ready to be read
         from the beginning.
         """
         # Get the proper name for the file, as it will actually be saved.
@@ -57,14 +55,14 @@ class Storage(object):
 
     def get_valid_name(self, name):
         """
-        Returns a filename, based on the provided filename, that's suitable for
+        Return a filename, based on the provided filename, that's suitable for
         use in the target storage system.
         """
         return get_valid_filename(name)
 
     def get_available_name(self, name, max_length=None):
         """
-        Returns a filename that's free on the target storage system, and
+        Return a filename that's free on the target storage system and
         available for new content to be written to.
         """
         dir_name, file_name = os.path.split(name)
@@ -104,7 +102,7 @@ class Storage(object):
 
     def path(self, name):
         """
-        Returns a local filesystem path where the file can be retrieved using
+        Return a local filesystem path where the file can be retrieved using
         Python's built-in open() function. Storage systems that can't be
         accessed using open() should *not* implement this method.
         """
@@ -115,79 +113,69 @@ class Storage(object):
 
     def delete(self, name):
         """
-        Deletes the specified file from the storage system.
+        Delete the specified file from the storage system.
         """
         raise NotImplementedError('subclasses of Storage must provide a delete() method')
 
     def exists(self, name):
         """
-        Returns True if a file referenced by the given name already exists in the
+        Return True if a file referenced by the given name already exists in the
         storage system, or False if the name is available for a new file.
         """
         raise NotImplementedError('subclasses of Storage must provide an exists() method')
 
     def listdir(self, path):
         """
-        Lists the contents of the specified path, returning a 2-tuple of lists;
+        List the contents of the specified path. Return a 2-tuple of lists:
         the first item being directories, the second item being files.
         """
         raise NotImplementedError('subclasses of Storage must provide a listdir() method')
 
     def size(self, name):
         """
-        Returns the total size, in bytes, of the file specified by name.
+        Return the total size, in bytes, of the file specified by name.
         """
         raise NotImplementedError('subclasses of Storage must provide a size() method')
 
     def url(self, name):
         """
-        Returns an absolute URL where the file's contents can be accessed
+        Return an absolute URL where the file's contents can be accessed
         directly by a Web browser.
         """
         raise NotImplementedError('subclasses of Storage must provide a url() method')
 
     def get_accessed_time(self, name):
         """
-        Returns the last accessed time (as datetime object) of the file
-        specified by name. Deprecated: use get_accessed_time() instead.
+        Return the last accessed time (as a datetime) of the file specified by
+        name. The datetime will be timezone-aware if USE_TZ=True.
         """
-        raise NotImplementedError('subclasses of Storage must provide an accessed_time() method')
+        raise NotImplementedError('subclasses of Storage must provide a get_accessed_time() method')
 
     def get_created_time(self, name):
         """
-        Returns the creation time (as datetime object) of the file
-        specified by name. Deprecated: use get_created_time() instead.
+        Return the creation time (as a datetime) of the file specified by name.
+        The datetime will be timezone-aware if USE_TZ=True.
         """
-        raise NotImplementedError('subclasses of Storage must provide a created_time() method')
+        raise NotImplementedError('subclasses of Storage must provide a get_created_time() method')
 
     def get_modified_time(self, name):
         """
-        Returns the last modified time (as datetime object) of the file
-        specified by name. Deprecated: use get_modified_time() instead.
+        Return the last modified time (as a datetime) of the file specified by
+        name. The datetime will be timezone-aware if USE_TZ=True.
         """
-        raise NotImplementedError('subclasses of Storage must provide a modified_time() method')
+        raise NotImplementedError('subclasses of Storage must provide a get_modified_time() method')
 
 
-def _possibly_make_aware(dt):
-    """
-    Convert a datetime object in the local timezone to aware
-    in UTC, if USE_TZ is True.
-    """
-    # This function is only needed to help with the deprecations above and can
-    # be removed in Orun 2.0, RemovedInOrun20Warning.
-    if settings.USE_TZ:
-        tz = timezone.get_default_timezone()
-        return timezone.make_aware(dt, tz).astimezone(timezone.utc)
-    else:
-        return dt
-
-
+@deconstructible
 class FileSystemStorage(Storage):
     """
     Standard filesystem storage
     """
-    public = False
-    store_file_name = True
+    # The combination of O_CREAT and O_EXCL makes os.open() raise OSError if
+    # the file already exists before it's opened.
+    OS_OPEN_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_BINARY', 0)
+
+    store_filename = True
 
     def __init__(self, location=None, base_url=None, file_permissions_mode=None,
                  directory_permissions_mode=None):
@@ -218,7 +206,7 @@ class FileSystemStorage(Storage):
 
     @cached_property
     def location(self):
-        return abspath(self.base_location)
+        return os.path.abspath(self.base_location)
 
     @cached_property
     def base_url(self):
@@ -237,16 +225,13 @@ class FileSystemStorage(Storage):
     def _open(self, name, mode='rb'):
         try:
             return File(open(self.path(name), mode))
-        except FileNotFoundError as e:
-            print(str(e))
+        except:
+            pass
 
     def _save(self, name, content):
         full_path = self.path(name)
 
         # Create any intermediate directories that do not exist.
-        # Note that there is a race between os.path.exists and os.makedirs:
-        # if os.makedirs fails with EEXIST, the directory was created
-        # concurrently, and we can continue normally. Refs #16082.
         directory = os.path.dirname(full_path)
         if not os.path.exists(directory):
             try:
@@ -260,9 +245,11 @@ class FileSystemStorage(Storage):
                         os.umask(old_umask)
                 else:
                     os.makedirs(directory)
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    raise
+            except FileExistsError:
+                # There's a race between os.path.exists() and os.makedirs().
+                # If os.makedirs() fails with FileExistsError, the directory
+                # was created concurrently.
+                pass
         if not os.path.isdir(directory):
             raise IOError("%s exists and is not a directory." % directory)
 
@@ -280,12 +267,8 @@ class FileSystemStorage(Storage):
 
                 # This is a normal uploadedfile that we can stream.
                 else:
-                    # This fun binary flag incantation makes os.open throw an
-                    # OSError if the file already exists before we open it.
-                    flags = (os.O_WRONLY | os.O_CREAT | os.O_EXCL |
-                             getattr(os, 'O_BINARY', 0))
                     # The current umask value is masked out by os.open!
-                    fd = os.open(full_path, flags, 0o666)
+                    fd = os.open(full_path, self.OS_OPEN_FLAGS, 0o666)
                     _file = None
                     try:
                         locks.lock(fd, locks.LOCK_EX)
@@ -300,13 +283,10 @@ class FileSystemStorage(Storage):
                             _file.close()
                         else:
                             os.close(fd)
-            except OSError as e:
-                if e.errno == errno.EEXIST:
-                    # Ooops, the file exists. We need a new file name.
-                    name = self.get_available_name(name)
-                    full_path = self.path(name)
-                else:
-                    raise
+            except FileExistsError:
+                # A new name is needed if the file exists.
+                name = self.get_available_name(name)
+                full_path = self.path(name)
             else:
                 # OK, the file save worked. Break out of the loop.
                 break
@@ -315,21 +295,21 @@ class FileSystemStorage(Storage):
             os.chmod(full_path, self.file_permissions_mode)
 
         # Store filenames with forward slashes, even on Windows.
-        return force_text(name.replace('\\', '/'))
+        return name.replace('\\', '/')
 
     def delete(self, name):
         assert name, "The name argument is not allowed to be empty."
         name = self.path(name)
-        # If the file exists, delete it from the filesystem.
-        # Note that there is a race between os.path.exists and os.remove:
-        # if os.remove fails with ENOENT, the file was removed
-        # concurrently, and we can continue normally.
-        if os.path.exists(name):
-            try:
+        # If the file or directory exists, delete it from the filesystem.
+        try:
+            if os.path.isdir(name):
+                os.rmdir(name)
+            else:
                 os.remove(name)
-            except OSError as e:
-                if e.errno != errno.ENOENT:
-                    raise
+        except FileNotFoundError:
+            # FileNotFoundError is raised if the file or directory was removed
+            # concurrently.
+            pass
 
     def exists(self, name):
         return os.path.exists(self.path(name))
@@ -337,11 +317,11 @@ class FileSystemStorage(Storage):
     def listdir(self, path):
         path = self.path(path)
         directories, files = [], []
-        for entry in os.listdir(path):
-            if os.path.isdir(os.path.join(path, entry)):
-                directories.append(entry)
+        for entry in os.scandir(path):
+            if entry.is_dir():
+                directories.append(entry.name)
             else:
-                files.append(entry)
+                files.append(entry.name)
         return directories, files
 
     def path(self, name):
@@ -358,15 +338,6 @@ class FileSystemStorage(Storage):
             url = url.lstrip('/')
         return urljoin(self.base_url, url)
 
-    def get_accessed_time(self, name):
-        return datetime.fromtimestamp(os.path.getatime(self.path(name)))
-
-    def get_created_time(self, name):
-        return datetime.fromtimestamp(os.path.getctime(self.path(name)))
-
-    def get_modified_time(self, name):
-        return datetime.fromtimestamp(os.path.getmtime(self.path(name)))
-
     def _datetime_from_timestamp(self, ts):
         """
         If timezone support is enabled, make an aware datetime object in UTC;
@@ -378,6 +349,15 @@ class FileSystemStorage(Storage):
         else:
             return datetime.fromtimestamp(ts)
 
+    def get_accessed_time(self, name):
+        return self._datetime_from_timestamp(os.path.getatime(self.path(name)))
+
+    def get_created_time(self, name):
+        return self._datetime_from_timestamp(os.path.getctime(self.path(name)))
+
+    def get_modified_time(self, name):
+        return self._datetime_from_timestamp(os.path.getmtime(self.path(name)))
+
 
 def get_storage_class(import_path=None):
     return import_string(import_path or settings.DEFAULT_FILE_STORAGE)
@@ -386,5 +366,6 @@ def get_storage_class(import_path=None):
 class DefaultStorage(LazyObject):
     def _setup(self):
         self._wrapped = get_storage_class()()
+
 
 default_storage = DefaultStorage()

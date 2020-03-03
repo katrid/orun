@@ -7,19 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
 
   <link href="/static/web/assets/js/toastr/toastr.min.css" rel="stylesheet">
-  <!-- Bootstrap core CSS -->
-  <link href="/static/web/assets/css/bootstrap.min.css" rel="stylesheet">
-  <!--link href="css/bootstrap-theme.css" rel="stylesheet"-->
-
   <!-- Font-awesome -->
   <link href="/static/web/assets/css/fontawesome.css" rel="stylesheet">
-
   <!-- animate.css -->
   <link href="/static/web/assets/css/animate.css" type="text/css" rel="stylesheet">
   <link href="/static/web/assets/js/select2/select2.css" type="text/css" rel="stylesheet">
-
   <!-- Katrid style -->
-  <link href="/static/web/api/theme/style.css" rel="stylesheet" type="text/css">
+  <link href="/static/web/katrid/style.css" rel="stylesheet" type="text/css">
 
   <link href="/static/web/assets/js/datepicker/bootstrap-datetimepicker.min.css" rel="stylesheet" type="text/css"/>
   <link href="/static/web/assets/js/c3/c3.min.css" rel="stylesheet"/>
@@ -31,6 +25,12 @@
 <body class="{% block body_class %}{% endblock %}">
 
 {% block content %}{% endblock %}
+
+{% if i18n_js_catalog %}
+  <script>
+  {{ i18n_js_catalog }}
+  </script>
+{% endif %}
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
@@ -52,20 +52,13 @@
   <script src="/static/web/assets/js/c3/d3.v3.min.js"></script>
   <script src="/static/web/assets/js/c3/c3.min.js"></script>
 
-  <script src="/static/web/api/1.7/katrid.full.min.js"></script>
-
-<!-- app scripts -->
-{% if i18n_js_catalog %}
-  <script>
-  {{ i18n_js_catalog }}
-  </script>
-  {% if g.lang_code and g.lang_code != 'en-us' %}
-    <script src="/static/web/assets/js/angular/i18n/angular-locale_{{ g.lang_code }}.js"></script>
-    <script src="/static/web/assets/js/select2/select2_locale_{{ g.lang_code }}.min.js"></script>
-  {% endif %}
-{% endif %}
+  <script src="/static/web/katrid/katrid.js"></script>
 
 <!-- additional scripts -->
+  {% if LANGUAGE_CODE != 'en-us' %}
+    <script src="/static/web/assets/js/angular/i18n/angular-locale_{{ LANGUAGE_CODE }}.js"></script>
+    <script src="/static/web/assets/js/select2/select2_locale_{{ LANGUAGE_CODE }}.min.js"></script>
+  {% endif %}
 
 
 <div id="loading-msg" class="animated fadeIn">

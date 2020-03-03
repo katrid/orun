@@ -2,13 +2,13 @@ import inspect
 from collections import Mapping
 from functools import wraps, partial
 
-from orun import app, request
 from orun.core.exceptions import RPCError, ValidationError
 from orun.utils.functional import SimpleLazyObject
+from functools import wraps
 
 
-class RecordsProxy(object):
-    def __init__(self, model, iterable, env=None):
+class RecordsProxy:
+    def __init__(self, model, iterable=None, env=None):
         self.__dict__['env'] = env
         self.__dict__['__model__'] = model
         self.__dict__['__instance__'] = iterable
@@ -61,15 +61,10 @@ class Environment(Mapping):
         return self['ir.object'].get_object(name).object_id
 
 
-def method(*args, public=False, methods=None):
-    def decorator(fn):
-        fn.exposed = True
-        fn.public = public
-        fn.methods = methods
-        return fn
-    if args and callable(args[0]):
-        return decorator(args[0])
-    return decorator
+def method(fn):
+    fn.exposed = True
+    fn = classmethod(fn)
+    return fn
 
 
 def records(*args, each=False, **kwargs):
@@ -158,37 +153,45 @@ def serialize(*args, **kwargs):
 def jsonrpc(fn):
 
     @wraps(fn)
-    def wrapped(*args, **kwargs):
-        from orun.utils.json import jsonify
+    def wrapped(request, *args, **kwargs):
+        from orun.http import JsonResponse
         data = request.json
+        _id = None
         kwargs['params'] = data.get('params')
         try:
-            r = fn(*args, **kwargs)
-            return jsonify({
+            r = fn(request, *args, **kwargs)
+            return JsonResponse({
                 'jsonrpc': '2.0',
+                'id': _id,
                 'result': r
             })
         except ValidationError as e:
-            return jsonify({
+            code = getattr(e, 'code', None)
+            return JsonResponse({
+                'jsonrpc': '2.0',
+                'id': _id,
                 'error': {
-                    'code': e.code,
+                    'code': code,
                     'messages': e.message_dict,
                 }
             })
         except RPCError as e:
-            return jsonify({
+            return JsonResponse({
                 'jsonrpc': '2.0',
+                'id': _id,
                 'error': {
                     'code': e.code,
                     'message': str(e)
                 }
             })
         except AssertionError as e:
-            return jsonify({
+            return JsonResponse({
                 'jsonrpc': '2.0',
+                'id': _id,
                 'error': {
                     'message': str(e),
                 }
             })
 
     return wrapped
+

@@ -1,7 +1,5 @@
-from flask import request
-
 from orun import api, g
-from orun.db import models, session
+from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 
 

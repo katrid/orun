@@ -4,10 +4,10 @@ from orun.db import models
 
 def sql_flush(style, connection, only_orun=False, reset_sequences=True, allow_cascade=False):
     """
-    Returns a list of the SQL statements used to flush the database.
+    Return a list of the SQL statements used to flush the database.
 
-    If only_orun is True, then only table names that have associated Orun
-    models and are in INSTALLED_APPS will be included.
+    If only_orun is True, only include the table names that have associated
+    Orun models and are in INSTALLED_APPS .
     """
     if only_orun:
         tables = connection.introspection.orun_table_names(only_existing=True, include_views=False)
@@ -26,7 +26,8 @@ def emit_pre_migrate_signal(verbosity, interactive, db, **kwargs):
         if verbosity >= 2:
             print("Running pre-migrate handlers for application %s" % app_config.label)
         models.signals.pre_migrate.send(
-            app_config,
+            sender=app_config,
+            app_config=app_config,
             verbosity=verbosity,
             interactive=interactive,
             using=db,
@@ -35,14 +36,13 @@ def emit_pre_migrate_signal(verbosity, interactive, db, **kwargs):
 
 
 def emit_post_migrate_signal(verbosity, interactive, db, **kwargs):
-    # Emit the post_migrate signal for every application.
-    for app_config in apps.get_app_configs():
-        if app_config.models_module is None:
-            continue
+    # Emit the post_migrate signal for every model
+    if 'addon' in kwargs:
+        addon = kwargs['addon']
         if verbosity >= 2:
-            print("Running post-migrate handlers for application %s" % app_config.label)
+            print("Running post-migrate handlers for Addon %s" % addon.schema)
         models.signals.post_migrate.send(
-            app_config,
+            sender=addon,
             verbosity=verbosity,
             interactive=interactive,
             using=db,
