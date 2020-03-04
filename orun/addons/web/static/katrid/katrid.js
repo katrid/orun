@@ -442,12 +442,11 @@ var Katrid;
                 return super.getCurrentTitle();
             }
             switchView(viewType, params) {
-                console.log('switch view');
                 if (viewType !== this.viewType) {
-                    this.viewType = viewType;
-                    this.execute();
-                    let search = Katrid.app.$location.$$search;
-                    Object.assign(search, params);
+                    let search = {};
+                    Object.assign(search, Katrid.app.$location.$$search);
+                    if (params)
+                        Object.assign(search, params);
                     search.view_type = viewType;
                     Katrid.app.$location.search(search);
                 }
@@ -2049,6 +2048,49 @@ var Katrid;
                     context['html'] = $el.html();
                     this.el = $(Katrid.app.getTemplate(this.template[view.viewType], context))[0];
                 }
+                listRender() {
+                    let el = this._fieldEl;
+                    let view = this.view;
+                    let widget = el.getAttribute('widget') || this.widget;
+                    if (widget) {
+                        let r = document.createElement(widget + '-field');
+                        r.bind(this);
+                        this.el = r;
+                        return;
+                    }
+                    let attrs = {};
+                    for (let attr of el.attributes) {
+                        attrs[attr.name] = attr.value;
+                        let camelCase = toCamelCase(attr.name);
+                        if (camelCase !== attr.name)
+                            attrs[camelCase] = attr.value;
+                    }
+                    if (attrs.cols)
+                        this.cols = attrs.cols;
+                    if (attrs.ngReadonly)
+                        this.ngReadonly = attrs.ngReadonly;
+                    if (attrs.domain)
+                        this.domain = attrs.domain;
+                    if (attrs.visible === 'false')
+                        this.visible = false;
+                    else if (attrs.visible === 'true')
+                        this.visible = true;
+                    if (attrs.ngShow)
+                        this.ngShow = attrs.ngShow;
+                    if (attrs.ngIf)
+                        this.ngIf = attrs.ngIf;
+                    if (attrs.ngClass)
+                        this.ngClass = attrs.ngClass;
+                    let context = {
+                        field: this,
+                        html: $(el).html(),
+                        attrs,
+                    };
+                    let html = Katrid.app.getTemplate(this.template[this.view.viewType], context);
+                    let templ = document.createElement('template');
+                    templ.innerHTML = html;
+                    this.el = templ;
+                }
                 cardRender() {
                     let el = this._fieldEl;
                     let view = this.view;
@@ -2059,6 +2101,36 @@ var Katrid;
                         this.el = r;
                         return;
                     }
+                }
+                render(viewType, el, context) {
+                    let attrs = {};
+                    for (let attr of el.attributes) {
+                        attrs[attr.name] = attr.value;
+                        let camelCase = toCamelCase(attr.name);
+                        if (camelCase !== attr.name)
+                            attrs[camelCase] = attr.value;
+                    }
+                    if (attrs.cols)
+                        this.cols = attrs.cols;
+                    if (attrs.ngReadonly)
+                        this.ngReadonly = attrs.ngReadonly;
+                    if (attrs.domain)
+                        this.domain = attrs.domain;
+                    if (attrs.visible === 'false')
+                        this.visible = false;
+                    else if (attrs.visible === 'true')
+                        this.visible = true;
+                    if (attrs.ngShow)
+                        this.ngShow = attrs.ngShow;
+                    if (attrs.ngIf)
+                        this.ngIf = attrs.ngIf;
+                    if (attrs.ngClass)
+                        this.ngClass = attrs.ngClass;
+                    this.attrs = attrs;
+                    context['field'] = this;
+                    context['attrs'] = attrs;
+                    context['html'] = $(el).html();
+                    return Katrid.app.getTemplate(this.template[viewType], context);
                 }
                 fromJSON(value, dataSource) {
                     dataSource.record[this.name] = value;
@@ -2759,17 +2831,6 @@ var Katrid;
                         $btn.addClass('btn btn-outline-secondary');
                 });
             };
-            class ToolbarComponent extends Katrid.Forms.Widgets.Component {
-                constructor() {
-                    super();
-                    this.scope = false;
-                    this.restrict = 'E';
-                    this.replace = true;
-                    this.transclude = true;
-                    this.templateUrl = 'view.header.jinja2';
-                }
-            }
-            Katrid.UI.uiKatrid.directive('toolbar', ToolbarComponent);
             class ClientView {
                 constructor(action) {
                     this.action = action;
@@ -2885,127 +2946,19 @@ var Katrid;
                 }
                 ready() {
                 }
-            }
-            Views.WindowView = WindowView;
-            class FormView extends WindowView {
-                create() {
-                    super.create();
-                    if (!this.templateUrl)
-                        this.templateUrl = 'view.form.jinja2';
-                    this.viewType = 'form';
-                }
-                template() {
-                    let form = super.template();
-                    $(form).find('tabset').tabset();
-                    return form;
-                }
-                prepare(container) {
-                    let form = this.template();
-                    form.setAttribute('smart-form', 'smart-form');
-                    form.classList.add('row');
-                    compileButtons($(form));
-                    let headerEl = form.querySelector('header');
+                createHeader(el) {
+                    compileButtons($(el));
+                    let headerEl = el.querySelector('header');
                     let header = '';
                     if (headerEl) {
                         headerEl.querySelector('field[name=status]').setAttribute('status-field', 'status-field');
+                        headerEl.remove();
                         header = headerEl.innerHTML;
-                        headerEl.remove();
                     }
-                    for (let child of form.querySelectorAll('field')) {
-                        if (child.hasAttribute('invisible'))
-                            continue;
-                        let newField = this.renderField(child);
-                        if (newField) {
-                            child.parentElement.insertBefore(newField, child);
-                            child.remove();
-                            newField.setAttribute('form-field', 'form-field');
-                        }
-                    }
-                    let context = {};
-                    Object.assign(context, this.context);
-                    Object.assign(context, {
-                        header,
-                    });
-                    let templ = $(Katrid.app.getTemplate(this.templateUrl, context));
-                    templ.find('.template-placeholder').append(form);
-                    if (this.action)
-                        this.action.$form = templ.find('form:first').first();
-                    this.el = templ;
-                    return templ;
-                }
-                render(container) {
-                    let templ = this.prepare(container);
-                    templ = Katrid.Core.$compile(templ)(this.action.scope);
-                    this.action.form = angular.element(this.action.$form).controller('form');
-                    templ.addClass('ng-form');
-                    return templ;
+                    return header;
                 }
             }
-            Views.FormView = FormView;
-            class List extends WindowView {
-                create() {
-                    super.create();
-                    this.viewType = 'list';
-                    this.templateUrl = 'view.list.jinja2';
-                    this.action.view = this;
-                }
-                render(container) {
-                    let list = $(this.viewInfo.content);
-                    let context = {};
-                    Object.assign(context, this.context);
-                    compileButtons(list);
-                    let headerEl = list.find('header:first');
-                    let header = null;
-                    if (headerEl.length) {
-                        header = headerEl.html();
-                        headerEl.remove();
-                    }
-                    let templ = $(Katrid.app.getTemplate(this.templateUrl, { header, content: list[0].outerHTML }));
-                    templ.find('list')
-                        .attr('ng-row-click', 'action.listRowClick($index, record, $event)')
-                        .attr('list-options', '{"rowSelector": true}').attr('ng-row-click', 'action.listRowClick($index, record, $event)');
-                    templ = Katrid.Core.$compile(templ)(this.action.scope);
-                    if (this.action && this.action.dataSource)
-                        setTimeout(() => this.action.dataSource.open());
-                    return templ;
-                }
-                ready() {
-                    this.action.dataSource.open();
-                }
-            }
-            Views.List = List;
-            class Card extends WindowView {
-                create() {
-                    super.create();
-                    this.viewType = 'card';
-                    this.templateUrl = 'view.card.jinja2';
-                    this.action.view = this;
-                }
-                render(container) {
-                    let content = $(this.template());
-                    content.children('field').remove();
-                    for (let element of content.find('field')) {
-                        let el = $(element);
-                        let newField = this.renderField(element);
-                        if (newField)
-                            el.replaceWith(newField);
-                        else
-                            el.replaceWith(`\$\{ record.${el.attr('name')} }`);
-                    }
-                    let templ = $(Katrid.app.getTemplate(this.templateUrl, { content: content[0].outerHTML }));
-                    return Katrid.Core.$compile(templ)(this.action.scope);
-                }
-                ready() {
-                    setTimeout(() => this.action.dataSource.open().then(() => this.action.scope.$apply()), 500);
-                }
-            }
-            Views.Card = Card;
-            class FormDialog extends FormView {
-                get caption() {
-                    return this.el.attr('caption');
-                }
-            }
-            Views.FormDialog = FormDialog;
+            Views.WindowView = WindowView;
             Katrid.UI.uiKatrid
                 .directive('smartForm', () => ({
                 restrict: 'A',
@@ -3021,11 +2974,7 @@ var Katrid;
                 }
             }));
             Views.searchModes = ['list', 'card'];
-            Views.registry = {
-                list: List,
-                card: Card,
-                form: FormView,
-            };
+            Views.registry = {};
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -3135,6 +3084,144 @@ var Katrid;
             }
             Dialogs.Window = Window;
         })(Dialogs = Forms.Dialogs || (Forms.Dialogs = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            class Card extends Views.WindowView {
+                create() {
+                    super.create();
+                    this.viewType = 'card';
+                    this.templateUrl = 'view.card.jinja2';
+                    this.action.view = this;
+                }
+                render(container) {
+                    let content = $(this.template());
+                    content.children('field').remove();
+                    for (let element of content.find('field')) {
+                        let el = $(element);
+                        let newField = this.renderField(element);
+                        if (newField)
+                            el.replaceWith(newField);
+                        else
+                            el.replaceWith(`\$\{ record.${el.attr('name')} }`);
+                    }
+                    let templ = $(Katrid.app.getTemplate(this.templateUrl, { content: content[0].outerHTML }));
+                    return Katrid.Core.$compile(templ)(this.action.scope);
+                }
+                ready() {
+                    setTimeout(() => this.action.dataSource.open().then(() => this.action.scope.$apply()), 500);
+                }
+            }
+            Views.Card = Card;
+            Views.registry['card'] = Card;
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            class FormView extends Views.WindowView {
+                create() {
+                    super.create();
+                    if (!this.templateUrl)
+                        this.templateUrl = 'view.form.jinja2';
+                    this.viewType = 'form';
+                }
+                template() {
+                    let form = super.template();
+                    $(form).find('tabset').tabset();
+                    return form;
+                }
+                prepare(container) {
+                    let form = this.template();
+                    form.setAttribute('smart-form', 'smart-form');
+                    form.classList.add('row');
+                    let header = this.createHeader(form);
+                    for (let child of form.querySelectorAll('field')) {
+                        if (child.hasAttribute('invisible'))
+                            continue;
+                        let newField = this.renderField(child);
+                        if (newField) {
+                            child.parentElement.insertBefore(newField, child);
+                            child.remove();
+                            newField.setAttribute('form-field', 'form-field');
+                        }
+                    }
+                    let context = {};
+                    Object.assign(context, this.context);
+                    Object.assign(context, {
+                        header,
+                    });
+                    let templ = $(Katrid.app.getTemplate(this.templateUrl, context));
+                    templ.find('.template-placeholder').append(form);
+                    if (this.action)
+                        this.action.$form = templ.find('form:first').first();
+                    this.el = templ;
+                    return templ;
+                }
+                render(container) {
+                    let templ = this.prepare(container);
+                    templ = Katrid.Core.$compile(templ)(this.action.scope);
+                    this.action.form = angular.element(this.action.$form).controller('form');
+                    templ.addClass('ng-form');
+                    return templ;
+                }
+            }
+            Views.FormView = FormView;
+            class FormDialog extends FormView {
+                get caption() {
+                    return this.el.attr('caption');
+                }
+            }
+            Views.FormDialog = FormDialog;
+            Views.registry['form'] = FormView;
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            class List extends Views.WindowView {
+                create() {
+                    super.create();
+                    this.viewType = 'list';
+                    this.templateUrl = 'view.list.html';
+                    this.action.view = this;
+                }
+                render(container) {
+                    let list = this.template();
+                    let context = {};
+                    Object.assign(context, this.context);
+                    let header = this.createHeader(list);
+                    let templ = $(Katrid.app.getTemplate(this.templateUrl));
+                    templ.find('header:first').append($(header));
+                    templ.find('.template-placeholder').append(list);
+                    templ.find('list')
+                        .attr('ng-row-click', 'action.listRowClick($index, record, $event)')
+                        .attr('list-options', '{"rowSelector": true}').attr('ng-row-click', 'action.listRowClick($index, record, $event)');
+                    templ = Katrid.Core.$compile(templ)(this.action.scope);
+                    if (this.action && this.action.dataSource)
+                        setTimeout(() => this.action.dataSource.open());
+                    return templ;
+                }
+                ready() {
+                    this.action.dataSource.open();
+                }
+            }
+            Views.List = List;
+            Views.registry['list'] = List;
+        })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -7578,12 +7665,11 @@ var Katrid;
                     let hasTotal = false;
                     let td, th;
                     for (let fld of fields.children('field')) {
-                        fld = $(fld);
-                        let fieldName = fld.attr('name');
+                        let fieldName = fld.getAttribute('name');
                         let field = scope.view.fields[fieldName];
                         if (field) {
-                            field.assign(fld);
-                            let total = fld.attr('total');
+                            field.assign(scope.action.view, fld);
+                            let total = fld.getAttribute('total');
                             if (total) {
                                 hasTotal = true;
                                 totals.push({

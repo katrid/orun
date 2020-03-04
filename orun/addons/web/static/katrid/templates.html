@@ -1819,12 +1819,12 @@
 
               <div class="btn-group" role="group">
                 {% if action.viewModes.includes('card') %}
-                  <button class="btn btn-outline-secondary" type="button" ng-click="action.viewType = 'card'">
+                  <button class="btn btn-outline-secondary" type="button" ng-click="action.switchView('card')">
                     <i class="fa fa-th-large"></i>
                   </button>
                 {% endif %}
                 {% if action.viewModes.includes('list') %}
-                  <button class="btn btn-outline-secondary" type="button" ng-click="action.viewType = 'list'">
+                  <button class="btn btn-outline-secondary" type="button" ng-click="action.switchView('list')">
                     <i class="fa fa-list"></i>
                   </button>
                 {% endif %}
@@ -2057,15 +2057,13 @@
 </templates>
 
 <templates>
-  <script id="view.list.jinja2" type="text/ng-template">
+  <script id="view.list.html" type="text/ng-template">
     <div class="content no-padding">
       <div class="clearfix"></div>
-      <header class="content-container-heading">{{ header }}</header>
+      <header class="content-container-heading"></header>
       <div class="panel-default data-panel">
         <div class="panel-body no-padding">
-          <div class="form-inline dt-bootstrap no-footer">
-            {{ content }}
-          </div>
+          <div class="form-inline dt-bootstrap no-footer template-placeholder"></div>
         </div>
       </div>
     </div>
