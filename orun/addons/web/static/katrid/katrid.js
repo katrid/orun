@@ -2951,7 +2951,9 @@ var Katrid;
                     let headerEl = el.querySelector('header');
                     let header = '';
                     if (headerEl) {
-                        headerEl.querySelector('field[name=status]').setAttribute('status-field', 'status-field');
+                        let statusField = headerEl.querySelector('field[name=status]');
+                        if (statusField)
+                            statusField.setAttribute('status-field', 'status-field');
                         headerEl.remove();
                         header = headerEl.innerHTML;
                     }
@@ -4691,9 +4693,9 @@ var Katrid;
                     btn.setAttribute('type', 'button');
                     btn.classList.add('btn', 'btn-xs', 'btn-outline-secondary', 'grid-editor-control');
                     btn.innerText = Katrid.i18n.gettext('Add');
-                    btn.setAttribute('ng-if', '$parent.action.dataSource.changing');
-                    btn.onclick = () => this._action.addItem();
+                    btn.setAttribute('ng-show', '$parent.action.dataSource.changing');
                     tb.appendChild(btn);
+                    btn.addEventListener('click', () => this._action.addItem());
                     return tb;
                 }
                 get viewMode() {
@@ -5006,9 +5008,8 @@ var Katrid;
     (function (Services) {
         class Model extends Services.Service {
             searchName(name) {
-                if (_.isString(name))
-                    name = { args: name };
-                return this.post('search_name', name);
+                let args = { name };
+                return this.post('search_name', args);
             }
             createName(name) {
                 let kwargs = { name };

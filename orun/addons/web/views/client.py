@@ -26,6 +26,7 @@ def index(request: HttpRequest):
 
 
 def company_logo(request):
+    return HttpResponseRedirect('/static/web/assets/img/katrid-logo.png')
     if request.user.is_authenticated:
         company = request.user.user_company
         if company and company.image:

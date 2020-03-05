@@ -158,11 +158,16 @@ class Options:
                 if cls.db_schema is None and cls.addon:
                     cls.db_schema = cls.addon.db_schema or ''
                 if cls.db_schema and cls.name.startswith(cls.db_schema + '.'):
-                    cls.db_table = cls.name.split('.', 1)[-1].replace('.', '_')
+                    cls.db_table = '"{}"."{}"'.format(cls.db_schema, cls.name.split('.', 1)[-1].replace('.', '_'))
 
             if cls.inherited is None:
                 cls.inherited = cls.extension or bool(cls.parents)
             cls.concrete = bool(cls.db_table)
+
+    @property
+    def tablename(self):
+        # TODO get the qualified table name from db backend
+        return '"{}"."{}"'.format(self.db_schema, self.db_table)
 
     @classmethod
     def from_model(cls, meta, model, parents=None, attrs=None):

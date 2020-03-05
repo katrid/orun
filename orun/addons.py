@@ -17,6 +17,12 @@ class Addon:
     db_schema: str = None
     verbose_name: str = None
     js_templates: List[str] = None
+    fixtures = None
+    default_language = None
+    dependencies = None
+    installable = False
+    auto_install = False
+    version: str = None
 
     def __init__(self, app_name: str, app_module):
         self.name = app_name

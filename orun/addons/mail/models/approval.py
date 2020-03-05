@@ -1,4 +1,5 @@
-from orun import app, g, api
+from orun import g, api
+from orun.apps import apps
 from orun.dispatch import Signal
 from orun.utils.translation import gettext_lazy as _, gettext
 from orun.db import models
@@ -66,7 +67,7 @@ class DocumentApproval(comment.Comments):
                 document_approved.send(self, user=g.user, level=self.current_approval_level)
             return False
         else:
-            level = app['mail.approval.level'].objects.filter(id=next_level.pk, permission='allow').first()
+            level = apps['mail.approval.level'].objects.filter(id=next_level.pk, permission='allow').first()
             if level is not None:
                 self.current_approval_level = level
                 setattr(self, self._meta.status_field, level.level)
@@ -79,7 +80,7 @@ class DocumentApproval(comment.Comments):
         current_level = self.current_approval_level
         if current_level is None:
             level = self.get_document_level_value()
-            objs = app['mail.approval.level'].objects.filter(
+            objs = apps['mail.approval.level'].objects.filter(
                 approval_model__model__name=self._meta.name, approval_model__active=True
             )
             if level:
@@ -87,7 +88,7 @@ class DocumentApproval(comment.Comments):
                 return obj
             return objs.first()
         else:
-            Level = app['mail.approval.level']
+            Level = apps['mail.approval.level']
             return Level.objects.filter(
                 Level.c.sequence > self.current_approval_level.sequence,
                 approval_model=self.current_approval_level.approval_model,
@@ -161,7 +162,7 @@ class ApprovalHistory(models.Model):
 
 
 def _document_approved(doc, user, level):
-    history = app['mail.approval.history']
+    history = apps['mail.approval.history']
     history.create(model=doc._meta.name, object_id=doc.pk, level_id=level.pk)
     for msg in doc.post_message([doc.pk], gettext('Document has been approved.')):
         send_approved_message.send(doc, msg=msg, user=user, level=level)
@@ -172,10 +173,10 @@ def _approval_needed(doc, user, level):
         send_approval_message.send(doc, msg=msg, user=user, level=level)
 
 
-document_approved = Signal()
-approval_needed = Signal()
-send_approval_message = Signal()
-send_approved_message = Signal()
+# document_approved = Signal()
+# approval_needed = Signal()
+# send_approval_message = Signal()
+# send_approved_message = Signal()
 
-document_approved.connect(_document_approved)
-approval_needed.connect(_approval_needed)
+# document_approved.connect(_document_approved)
+# approval_needed.connect(_approval_needed)

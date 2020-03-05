@@ -1,5 +1,6 @@
 import json
-from orun import api, app
+from orun import api
+from orun.apps import apps
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 

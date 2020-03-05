@@ -1557,8 +1557,7 @@ class DecimalField(Field):
     }
     description = _("Decimal number")
 
-    def __init__(self, verbose_name=None, name=None, max_digits=29,
-                 decimal_places=6, **kwargs):
+    def __init__(self, max_digits=29, decimal_places=6, verbose_name=None, name=None, **kwargs):
         self.max_digits, self.decimal_places = max_digits, decimal_places
         super().__init__(verbose_name, name, **kwargs)
 
