@@ -2,7 +2,6 @@
 Execute SQL File Script
 """
 import os
-from sqlalchemy.engine.url import make_url
 
 from orun.db import connections, DEFAULT_DB_ALIAS, connection
 from orun.core.serializers import base

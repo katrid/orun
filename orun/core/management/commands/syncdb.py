@@ -111,6 +111,7 @@ class Command(BaseCommand):
     def sync_apps(self, connection, app_labels):
         """Run the old syncdb-style operation on a list of app_labels."""
         with connection.cursor() as cursor:
+            schemas = connection.introspection.schema_names(cursor)
             tables = connection.introspection.table_names(cursor)
 
         # Build the manifest of apps and models that are to be synchronized.
@@ -141,8 +142,17 @@ class Command(BaseCommand):
             self.stdout.write("  Creating tables...\n")
         post_model_list = {}
         with connection.schema_editor() as editor:
+            for app_name in manifest:
+                app = apps.addons[app_name]
+                if app.db_schema and app.create_schema and app.db_schema not in schemas:
+                    editor.create_schema(app.db_schema)
             for app_name, model_list in manifest.items():
                 for model in model_list:
+                    # Check if table exists on database
+                    if editor.table_exists(tables, model):
+                        # TODO compare table structure
+                        print('need to compare structure')
+                        continue
                     # Never install unmanaged models, etc.
                     if not model._meta.can_migrate(connection):
                         continue
@@ -156,7 +166,9 @@ class Command(BaseCommand):
                 post_model_list[app_name] = model_list
 
             for app_name, model_list in post_model_list.items():
-                emit_post_migrate_signal(self.verbosity, self.interactive, connection.alias, addon=apps.addons[app_name], models=model_list)
+                emit_post_migrate_signal(
+                    self.verbosity, self.interactive, connection.alias, addon=apps.addons[app_name], models=model_list
+                )
 
             # Deferred SQL is executed when exiting the editor's context.
             if self.verbosity >= 1:

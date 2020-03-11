@@ -46,6 +46,7 @@ class BaseDatabaseSchemaEditor:
 
     # Overrideable SQL templates
     sql_create_table = "CREATE TABLE %(table)s (%(definition)s)"
+    sql_create_schema = "CREATE SCHEMA %(table)s"
     sql_rename_table = "ALTER TABLE %(old_table)s RENAME TO %(new_table)s"
     sql_retablespace_table = "ALTER TABLE %(table)s SET TABLESPACE %(new_tablespace)s"
     sql_delete_table = "DROP TABLE %(table)s CASCADE"
@@ -1166,3 +1167,16 @@ class BaseDatabaseSchemaEditor:
 
     def reset_sequence(self, model):
         pass
+
+    def create_schema(self, schema: str):
+        """
+        Create a database schema.
+        """
+        if self.connection.features.allows_schema:
+            sql = self.sql_create_schema % {
+                "table": self.quote_name(schema),
+            }
+            self.execute(sql, None)
+
+    def table_exists(self, tables: list, model):
+        return model._meta.db_table.replace('"', '') in tables

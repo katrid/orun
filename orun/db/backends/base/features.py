@@ -9,6 +9,9 @@ class BaseDatabaseFeatures:
     empty_fetchmany_value = []
     update_can_self_select = True
 
+    # Required for orun database migration and introspection
+    allows_schema = False
+
     # Does the backend distinguish between '' and None?
     interprets_empty_strings_as_nulls = False
 

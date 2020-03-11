@@ -15,6 +15,7 @@ class Addon:
     name: str = None
     schema: str = None
     db_schema: str = None
+    create_schema = True
     verbose_name: str = None
     js_templates: List[str] = None
     fixtures = None

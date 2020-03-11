@@ -70,6 +70,10 @@ def _has_contribute_to_class(value):
     return not inspect.isclass(value) and hasattr(value, 'contribute_to_class')
 
 
+# TODO add store option to related/proxy field
+# TODO add related/proxy field to ForeignKey, OneToManyField and ManyToManyField
+# TODO add field compute operation (maybe use getter with api records)
+# TODO store generic foreign key values to database
 class ModelBase(type):
     """Metaclass for all models."""
     Meta: Options = None

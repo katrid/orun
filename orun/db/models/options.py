@@ -229,9 +229,9 @@ class Options:
         self.original_attrs = {}
 
     def _prepare(self, model):
-        if self.ordering is None:
-            self.__class__.ordering = ('-pk',)
-        elif isinstance(self.ordering, str):
+        # if self.ordering is None:
+        #     self.__class__.ordering = ('-pk',)
+        if isinstance(self.ordering, str):
             self.__class__.ordering = [self.ordering]
         if self.order_with_respect_to:
             # The app registry will not be ready at this point, so we cannot

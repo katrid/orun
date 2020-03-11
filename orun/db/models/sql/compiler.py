@@ -168,7 +168,7 @@ class SQLCompiler:
                 expressions = [pk] + [
                     expr for expr in expressions
                     if expr in having or (
-                        getattr(expr, 'alias', None) is not None and expr.alias not in pk_aliases
+                            getattr(expr, 'alias', None) is not None and expr.alias not in pk_aliases
                     )
                 ]
         elif self.connection.features.allows_group_by_selected_pks:
@@ -246,6 +246,7 @@ class SQLCompiler:
                         ki['select_fields'] = (klass_info['select_fields'] +
                                                ki['select_fields'])
                     get_select_from_parent(ki)
+
             get_select_from_parent(klass_info)
 
         ret = []
@@ -390,7 +391,7 @@ class SQLCompiler:
             return self.quote_cache[name]
         if ((name in self.query.alias_map and name not in self.query.table_map) or
                 name in self.query.extra_select or (
-                    name in self.query.external_aliases and name not in self.query.table_map)):
+                        name in self.query.external_aliases and name not in self.query.table_map)):
             self.quote_cache[name] = name
             return name
         r = self.connection.ops.quote_name(name)
@@ -557,17 +558,18 @@ class SQLCompiler:
                     order_by = order_by or self.connection.ops.force_no_ordering()
                     result.append('GROUP BY %s' % ', '.join(grouping))
                     if self._meta_ordering:
+                        pass
                         # When the deprecation ends, replace with:
                         # order_by = None
-                        warnings.warn(
-                            "%s QuerySet won't use Meta.ordering in Orun 3.1. "
-                            "Add .order_by(%s) to retain the current query." % (
-                                self.query.model.__name__,
-                                ', '.join(repr(f) for f in self._meta_ordering),
-                            ),
-                            RemovedInOrun31Warning,
-                            stacklevel=4,
-                        )
+                        #  warnings.warn(
+                        #      "%s QuerySet won't use Meta.ordering in Orun 3.1. "
+                        #      "Add .order_by(%s) to retain the current query." % (
+                        #          self.query.model.__name__,
+                        #          ', '.join(repr(f) for f in self._meta_ordering),
+                        #      ),
+                        #      RemovedInOrun31Warning,
+                        #      stacklevel=4,
+                        # )
                 if having:
                     result.append('HAVING %s' % having)
                     params.extend(h_params)
@@ -774,6 +776,7 @@ class SQLCompiler:
         (for example, cur_depth=1 means we are looking at models with direct
         connections to the root model).
         """
+
         def _get_field_choices():
             direct_choices = (f.name for f in opts.fields if f.is_relation)
             reverse_choices = (
@@ -902,6 +905,7 @@ class SQLCompiler:
 
                     def remote_setter(obj, from_obj):
                         setattr(from_obj, name, obj)
+
                     klass_info = {
                         'model': model,
                         'field': f,
@@ -944,6 +948,7 @@ class SQLCompiler:
         Return a quoted list of arguments for the SELECT FOR UPDATE OF part of
         the query.
         """
+
         def _get_field_choices():
             """Yield all allowed field paths in breadth-first search order."""
             queue = collections.deque([(None, self.klass_info)])
@@ -962,6 +967,7 @@ class SQLCompiler:
                     (path, klass_info)
                     for klass_info in klass_info.get('related_klass_infos', [])
                 )
+
         result = []
         invalid_names = []
         for name in self.query.select_for_update_of:
@@ -1323,8 +1329,8 @@ class SQLInsertCompiler(SQLCompiler):
 
     def execute_sql(self, return_id=False):
         assert not (
-            return_id and len(self.query.objs) != 1 and
-            not self.connection.features.can_return_ids_from_bulk_insert
+                return_id and len(self.query.objs) != 1 and
+                not self.connection.features.can_return_ids_from_bulk_insert
         )
         self.return_id = return_id
         with self.connection.cursor() as cursor:

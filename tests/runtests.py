@@ -64,12 +64,12 @@ ALWAYS_INSTALLED_APPS = [
     'orun.contrib.auth',
     'orun.contrib.sites',
     'orun.contrib.sessions',
-    # 'orun.contrib.messages',
-    # 'orun.contrib.admin.apps.SimpleAdminConfig',
+    'orun.contrib.messages',
     'orun.contrib.staticfiles',
     'orun.contrib.erp',
     'orun.contrib.web',
     'orun.contrib.mail',
+    # 'orun.contrib.comments',
 ]
 
 ALWAYS_MIDDLEWARE = [

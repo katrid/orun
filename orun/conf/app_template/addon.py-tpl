@@ -1,0 +1,8 @@
+import orun.addons
+
+
+class Addon(orun.addons.Addon):
+    name = '{{ app_name }}'
+    verbose_name = '{{ camel_case_app_name }}'
+    version = '1.0'
+    fixtures = []

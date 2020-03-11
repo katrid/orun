@@ -12,7 +12,7 @@ from orun.utils.translation import gettext as _
 from orun.apps import apps
 
 Object = apps['ir.object']
-ContentType = apps['ir.content.type']
+ContentType = apps['ir.model']
 
 
 def ref(xml_id):
@@ -119,7 +119,7 @@ class Deserializer(base.Deserializer):
                 schema=self.addon.schema,
                 name=obj_name,
                 object_id=instance.pk,
-                content_type=ContentType.objects.get_by_natural_key(instance._meta.name),
+                model=ContentType.objects.get_by_natural_key(instance._meta.name),
                 can_update=not obj.get('no-update', False),
             )
         for child, v in children.items():

@@ -224,7 +224,7 @@ class Field(BaseField):
         }
     description = property(_description)
 
-    def __init__(self, verbose_name=None, name=None, primary_key=False,
+    def __init__(self, verbose_name: str=None, name: str=None, primary_key=False,
                  max_length=None, unique=False, null=True, required=None,
                  db_index=False, rel=None, default=NOT_PROVIDED, editable=True,
                  serialize=True, unique_for_date=None, unique_for_month=None,
@@ -233,7 +233,7 @@ class Field(BaseField):
                  translate=None, copy=None, widget_attrs=None, readonly=None,
                  defer=False,
                  auto_created=False, validators=(), error_messages=None, concrete=None, getter=None, setter=None,
-                 group_choices=None,
+                 group_choices=None, track_visibility=None,
                  descriptor=None, **kwargs):
         self.name = name
         self.verbose_name = verbose_name  # May be set by set_attributes_from_name
@@ -308,6 +308,8 @@ class Field(BaseField):
             if isinstance(add_choices, dict):
                 add_choices = add_choices.items()
             self.choices += add_choices
+
+        self.track_visibility = track_visibility
 
         self.selectable = self.concrete and not descriptor
 
@@ -1407,6 +1409,7 @@ class DateTimeField(DateField):
                               "but it is an invalid date/time."),
     }
     description = _("Date (with time)")
+    now = lambda: None
 
     # __init__ is inherited from DateField
 
@@ -1910,7 +1913,6 @@ class BigIntegerField(IntegerField):
 
     def get_internal_type(self):
         return "BigIntegerField"
-
 
 
 class IPAddressField(Field):

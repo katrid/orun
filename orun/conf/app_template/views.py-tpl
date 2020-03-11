@@ -1,0 +1,3 @@
+from orun.shortcuts import render
+
+# Create your views here.

@@ -1,0 +1,16 @@
+ul.ui-menu.ui-autocomplete {
+    border: 1px solid #e2e2e2;
+    background: white;
+    list-style: none;
+    padding-left: 8px;
+}
+
+ul.ui-menu.ui-autocomplete .ui-menu-item>div {
+    min-height: 26px;
+    padding-top: 4px;
+}
+
+ul.ui-menu.ui-autocomplete .ui-state-active {
+    background: #7C7BAD;
+    color: white;
+}
