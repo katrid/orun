@@ -50,7 +50,7 @@ class Action(models.Model):
     def get_bindings(cls, model):
         r = defaultdict(list)
         # TODO: optimize filter by name (plain query)
-        obj = apps['ir.model'].get_by_natural_key(model)
+        obj = apps['ir.model'].objects.get_by_natural_key(model)
         for action in cls.objects.filter(binding_model_id=obj.pk):
             r[action.binding_type].append(action)
         return r
