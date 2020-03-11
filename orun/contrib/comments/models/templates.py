@@ -58,7 +58,7 @@ class MailTemplate(models.Model):
         help_text="Name to use for the generated report file (may contain placeholders)\n"
                   "The extension can be omitted and will then come from the report type."
     )
-    report_template = models.ForeignKey('ir.actions.report', 'Optional report to print and attach')
+    report_template = models.ForeignKey('ir.action.report', 'Optional report to print and attach')
     ref_ir_act_window = models.ForeignKey('ir.actions.act_window', 'Sidebar action', readonly=True, copy=False,
                                           help_text="Sidebar action to make this template available on records "
                                                     "of the related document model")
