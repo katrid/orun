@@ -171,7 +171,7 @@ class AppDirectoriesFinder(BaseFinder):
         """
         Look for files in the app directories.
         """
-        schema, _, path = path.partition('/')
+        schema, _, path = path.partition(os.path.sep)
         addon = apps.addons[schema]
         return os.path.join(addon.path, self.source_dir, path)
 
