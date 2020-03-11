@@ -8,4 +8,4 @@ from .partner import *
 from .approval import *
 from .copying import *
 # from .activity import *
-from .templates import *
+# from .templates import *

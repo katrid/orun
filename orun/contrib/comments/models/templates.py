@@ -59,15 +59,15 @@ class MailTemplate(models.Model):
                   "The extension can be omitted and will then come from the report type."
     )
     report_template = models.ForeignKey('ir.action.report', 'Optional report to print and attach')
-    ref_ir_act_window = models.ForeignKey('ir.actions.act_window', 'Sidebar action', readonly=True, copy=False,
+    ref_ir_act_window = models.ForeignKey('ir.action.window', 'Sidebar action', readonly=True, copy=False,
                                           help_text="Sidebar action to make this template available on records "
                                                     "of the related document model")
-    attachment_ids = models.ManyToManyField(
-        'ir.attachment', 'email_template_attachment_rel', 'email_template_id',
-        'attachment_id', 'Attachments',
-        help_text="You may attach files to this template, to be added to all "
-                  "emails created from this template"
-    )
+    # attachments = models.ManyToManyField(
+    #     'ir.attachment', 'email_template_attachment_rel', 'email_template_id',
+    #     'attachment_id', 'Attachments',
+    #     help_text="You may attach files to this template, to be added to all "
+    #               "emails created from this template"
+    # )
     auto_delete = models.BooleanField(
         verbose_name=_('Auto Delete'), default=True,
         help_text="Permanently delete this email after sending it, to save space"
