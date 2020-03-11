@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<data>
+  <object id="view.res.partner.list" model="ui.view">
+    <field name="name">res.partner.list</field>
+    <field name="model">res.partner</field>
+    <field name="template_name">base/views/res.partner/list.xml</field>
+  </object>
+  <object id="view.res.partner.form" model="ui.view">
+    <field name="name">res.partner.form</field>
+    <field name="model">res.partner</field>
+    <field name="template_name">base/views/res.partner/form.xml</field>
+  </object>
+  <object id="view.res.partner.card" model="ui.view">
+    <field name="name">res.partner.card</field>
+    <field name="model">res.partner</field>
+    <field name="template_name">base/views/res.partner/card.xml</field>
+  </object>
+  <object id="view.auth.user.form" model="ui.view">
+    <field name="name">auth.user.form</field>
+    <field name="model">auth.user</field>
+    <field name="template_name">base/views/auth.user/form.xml</field>
+  </object>
+  <object id="view.auth.user.list" model="ui.view">
+    <field name="name">auth.user.list</field>
+    <field name="model">auth.user</field>
+    <field name="template_name">base/views/auth.user/list.xml</field>
+  </object>
+  <object id="view.res.company.form" model="ui.view">
+    <field name="name">res.company.form</field>
+    <field name="model">res.company</field>
+    <field name="template_name">base/views/res.company/form.xml</field>
+  </object>
+  <object id="view.res.company.list" model="ui.view">
+    <field name="name">res.company.list</field>
+    <field name="model">res.company</field>
+    <field name="template_name">base/views/res.company/list.xml</field>
+  </object>
+  <object id="view.ir.model.form" model="ui.view">
+    <field name="name">ir.model.form</field>
+    <field name="model">ir.model</field>
+    <field name="template_name">base/views/ir.model/form.xml</field>
+  </object>
+
+  <view id="view.ui.view.form" name="ui.view.form" model="ui.view" file="base/views/ui.view/form.xml"/>
+  <view id="view.ui.view.list" name="ui.view.list" model="ui.view" file="base/views/ui.view/list.xml"/>
+</data>

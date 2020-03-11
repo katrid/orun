@@ -1,0 +1,10 @@
+<list>
+  <field name="name"/>
+  <field name="active"/>
+  <field name="parent"/>
+  <field name="view_type"/>
+  <field name="mode"/>
+  <field name="model"/>
+  <field name="priority"/>
+  <field name="template_name"/>
+</list>

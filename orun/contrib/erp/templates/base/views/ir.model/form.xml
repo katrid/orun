@@ -1,0 +1,6 @@
+<form>
+  <field name="name"/>
+  <field name="parent"/>
+  <field name="object_type"/>
+  <field name="description"/>
+</form>

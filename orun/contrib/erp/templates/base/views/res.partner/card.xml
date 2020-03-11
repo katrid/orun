@@ -1,0 +1,20 @@
+<card>
+  <field name="record_name"/>
+  <field name="color"/>
+  <field name="title"/>
+  <field name="email"/>
+
+  <div>
+    <div class="card-image">
+      <img src="/static/web/assets/img/avatar.png"/>
+    </div>
+    <div class="card-details">
+      <strong>
+        <field name="record_name"/>
+      </strong>
+      <ul>
+        <li ng-if="record.email"><span class="fa fa-envelope fa-fw"/> <field name="email"/></li>
+      </ul>
+    </div>
+  </div>
+</card>
