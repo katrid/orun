@@ -308,7 +308,7 @@ class AbstractUser(AbstractBaseUser, PermissionsMixin):
         },
     )
     password = models.PasswordField(_('password'), max_length=128)
-    last_login = models.DateTimeField(_('last login'), null=True)
+    # last_login = models.DateTimeField(_('last login'), null=True)
     email = models.EmailField(_('email address'))
     is_staff = models.BooleanField(
         _('staff status'),
