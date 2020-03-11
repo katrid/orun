@@ -229,8 +229,8 @@ class Options:
         self.original_attrs = {}
 
     def _prepare(self, model):
-        # if self.ordering is None:
-        #     self.__class__.ordering = ('-pk',)
+        if self.ordering is None:
+            self.__class__.ordering = ('-pk',)
         if isinstance(self.ordering, str):
             self.__class__.ordering = [self.ordering]
         if self.order_with_respect_to:
