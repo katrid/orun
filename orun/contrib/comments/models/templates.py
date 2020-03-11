@@ -48,7 +48,7 @@ class MailTemplate(models.Model):
     email_cc = models.CharField('Cc', help_text="Carbon copy recipients (placeholders may be used here)")
     reply_to = models.CharField('Reply-To', help_text="Preferred response address (placeholders may be used here)")
     mail_server = models.ForeignKey(
-        'ir.mail_server', verbose_name=_('Outgoing Mail Server'), readonly=False,
+        'ir.mail.server', verbose_name=_('Outgoing Mail Server'), readonly=False,
         help_text="Optional preferred server for outgoing mails. If not set, the highest "
                   "priority one will be used."
     )
