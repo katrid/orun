@@ -809,6 +809,7 @@ class ForeignKey(ForeignObject):
         )]
 
     def validate(self, value, model_instance):
+        return True
         if self.remote_field.parent_link:
             return
         super().validate(value, model_instance)
