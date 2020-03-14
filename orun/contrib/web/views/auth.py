@@ -1,7 +1,7 @@
 from orun import request
 from orun.utils.json import jsonify
 from orun.views import BaseView, route
-from orun.auth.decorators import login_required
+from orun.contrib.auth.decorators import login_required
 
 
 class Auth(BaseView):

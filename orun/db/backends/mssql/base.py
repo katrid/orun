@@ -187,6 +187,10 @@ class CursorWrapper:
     def fetchmany(self, size=None):
         return self.cursor.fetchmany(size)
 
+    @property
+    def rowcount(self):
+        return self.cursor.rowcount
+
     def __iter__(self):
         return iter(self.cursor)
 

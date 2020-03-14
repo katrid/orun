@@ -1,5 +1,5 @@
 from orun.conf import settings
-from orun import auth
+from orun.contrib import auth
 from orun.utils.deprecation import MiddlewareMixin
 from orun.utils.functional import SimpleLazyObject
 

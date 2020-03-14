@@ -100,12 +100,12 @@ class Partner(models.Model):
         app.mail.send(msg)
 
     def set_password(self, password):
-        from orun.auth.hashers import make_password
+        from orun.contrib.auth.hashers import make_password
         self.site_password = make_password(password)
 
     @classmethod
     def authenticate(cls, username, password):
-        from orun.auth.hashers import check_password
+        from orun.contrib.auth.hashers import check_password
         usr = cls.objects.filter(email=username, active=True).first()
         if usr and check_password(password, usr.site_password):
             return usr

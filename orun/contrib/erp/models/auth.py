@@ -1,6 +1,6 @@
 from orun import apps, api, g, SUPERUSER
-from orun import auth
-from orun.auth.hashers import check_password
+from orun.contrib import auth
+from orun.contrib.auth.hashers import check_password
 from orun.core.exceptions import PermissionDenied
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
@@ -61,7 +61,7 @@ class User(Partner, AbstractUser):
         name = 'auth.user'
 
     def set_password(self, password):
-        from orun.auth.hashers import make_password
+        from orun.contrib.auth.hashers import make_password
         self.password = make_password(password)
 
     def has_perm(self, perm, obj=None):

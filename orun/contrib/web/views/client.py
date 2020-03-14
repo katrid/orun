@@ -3,8 +3,8 @@ from orun.conf import settings
 from orun.utils.translation import gettext
 from orun.http import HttpResponse, HttpRequest, JsonResponse, HttpResponseRedirect
 from orun.contrib import messages
-from orun.auth.decorators import login_required
-from orun import auth
+from orun.contrib.auth.decorators import login_required
+from orun.contrib import auth
 from orun.apps import apps
 
 View = apps['ui.view']

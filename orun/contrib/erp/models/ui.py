@@ -29,18 +29,20 @@ class View(models.Model):
     name = models.CharField(max_length=100)
     active = models.BooleanField(label=_('Active'), default=True)
     parent = models.ForeignKey('self')
-    view_type = models.CharField(64, choices=(
-        ('list', 'List'),
-        ('form', 'Form'),
-        ('card', 'Card'),
-        ('chart', 'Chart'),
-        ('calendar', 'Calendar'),
-        ('search', 'Search'),
-        ('template', 'Template'),
-        ('report', 'Report'),
-        ('dashboard', 'Dashboard'),
-        ('custom', 'Custom'),
-    ), null=False)
+    view_type = models.ChoiceField(
+        (
+            ('list', 'List'),
+            ('form', 'Form'),
+            ('card', 'Card'),
+            ('chart', 'Chart'),
+            ('calendar', 'Calendar'),
+            ('search', 'Search'),
+            ('template', 'Template'),
+            ('report', 'Report'),
+            ('dashboard', 'Dashboard'),
+            ('custom', 'Custom'),
+        ), null=False
+    )
     mode = models.CharField(16, choices=(
         ('primary', _('Primary')),
         ('extension', _('Extension'))

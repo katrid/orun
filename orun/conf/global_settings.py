@@ -518,6 +518,11 @@ PASSWORD_HASHERS = [
     'orun.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
     'orun.contrib.auth.hashers.Argon2PasswordHasher',
     'orun.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'orun.contrib.auth.hashers.BCryptPasswordHasher',
+    # 'orun.contrib.auth.hashers.PBKDF2PasswordHasher',
+    # 'orun.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    # 'orun.contrib.auth.hashers.Argon2PasswordHasher',
+    # 'orun.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
 
 AUTH_PASSWORD_VALIDATORS = []

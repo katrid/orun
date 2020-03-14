@@ -230,7 +230,7 @@ class Options:
 
     def _prepare(self, model):
         if self.ordering is None:
-            self.__class__.ordering = ('-pk',)
+            self.__class__.ordering = ('pk',)
         if isinstance(self.ordering, str):
             self.__class__.ordering = [self.ordering]
         if self.order_with_respect_to:

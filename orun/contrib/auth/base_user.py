@@ -190,7 +190,7 @@ class AbstractBaseUser(models.Model):
         """
         Return an HMAC of the password field.
         """
-        key_salt = "django.contrib.auth.models.AbstractBaseUser.get_session_auth_hash"
+        key_salt = "orun.contrib.auth.models.AbstractBaseUser.get_session_auth_hash"
         return salted_hmac(key_salt, self.password).hexdigest()
 
     @classmethod

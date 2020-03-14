@@ -4,7 +4,7 @@ from orun.conf import settings
 from orun.core.exceptions import MethodNotFound
 from orun.db import models, transaction
 # from orun.contrib.auth.decorators import login_required
-from orun.auth.decorators import login_required
+from orun.contrib.auth.decorators import login_required
 from orun.apps import apps
 from orun.http import HttpResponse, JsonResponse, HttpResponseForbidden
 

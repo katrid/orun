@@ -1028,6 +1028,7 @@ class AutoField(Field):
         kwargs.setdefault('primary_key', True)
         kwargs['required'] = False
         kwargs['readonly'] = True
+        kwargs.setdefault('editable', False)
         super().__init__(*args, **kwargs)
 
     def check(self, **kwargs):
