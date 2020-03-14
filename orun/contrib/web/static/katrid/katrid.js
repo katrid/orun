@@ -914,14 +914,14 @@ var Katrid;
                     let loadingTimeout, overlayTimeout;
                     let loadingMsg = $('#loading-msg').hide();
                     let overlay = $('#overlay').hide();
-                    $(Katrid).on('fetch.before', () => {
+                    document.addEventListener('ajax.start', (evt) => {
                         loadingTimeout = setTimeout(() => loadingMsg.show(), 400);
                         overlayTimeout = setTimeout(() => {
                             loadingMsg.hide();
                             overlay.show();
                         }, 2500);
-                    })
-                        .on('fetch.always', () => {
+                    });
+                    document.addEventListener('ajax.stop', () => {
                         clearTimeout(loadingTimeout);
                         clearTimeout(overlayTimeout);
                         loadingMsg.hide();
@@ -1183,6 +1183,7 @@ var Katrid;
                 this.recordId = null;
                 this.scope.$fieldLog = {};
                 this._records = [];
+                this.pendingPromises = [];
             }
             get pageIndex() {
                 return this._pageIndex;
@@ -1299,6 +1300,7 @@ var Katrid;
             }
             search(params, page, fields, timeout) {
                 let master = this.masterSource;
+                this.pendingPromises = [];
                 this._params = params;
                 this._page = page;
                 this._fields = fields;
@@ -1324,8 +1326,9 @@ var Katrid;
                     limit: this.pageLimit,
                 };
                 return new Promise((resolve, reject) => {
+                    let controller = new AbortController();
                     let req = () => {
-                        this.model.search(params)
+                        this.model.search(params, null, { signal: controller.signal })
                             .catch((res) => {
                             return reject(res);
                         })
@@ -1359,9 +1362,10 @@ var Katrid;
                             this.pendingRequest = false;
                         });
                     };
+                    this.pendingPromises.push(controller);
                     timeout = 0;
                     if (((this.requestInterval > 0) || timeout) && (timeout !== false))
-                        this.pendingOperation = setTimeout(req, this.requestInterval);
+                        this.pendingOperation = setTimeout(req, timeout || this.requestInterval);
                     else
                         req();
                 });
@@ -1429,6 +1433,12 @@ var Katrid;
                 this._canceled = true;
                 this.pendingRequest = false;
                 clearTimeout(this.pendingOperation);
+                for (let controller of this.pendingPromises)
+                    try {
+                        controller.abort();
+                    }
+                    catch { }
+                this.pendingPromises = [];
             }
             set masterSource(master) {
                 this._masterSource = master;
@@ -1619,15 +1629,19 @@ var Katrid;
                 this._clearTimeout();
                 this.state = DataSourceState.loading;
                 this.loadingRecord = true;
-                this._canceled = false;
+                console.log('get by id', id);
                 return new Promise((resolve, reject) => {
                     const _get = () => {
-                        return this.model.getById(id)
-                            .catch((res) => {
-                            return reject(res);
+                        let controller = new AbortController();
+                        this.pendingPromises.push(controller);
+                        return this.model.getById(id, { signal: controller.signal })
+                            .catch((err) => {
+                            if (err.name === 'AbortError')
+                                return reject();
+                            return reject(err);
                         })
                             .then((res) => {
-                            if (this._canceled || !res)
+                            if (!res)
                                 return;
                             if (this.state === DataSourceState.loading)
                                 this.state = DataSourceState.browsing;
@@ -1671,8 +1685,11 @@ var Katrid;
                 let res;
                 for (let child of this.children)
                     child._records = [];
-                if (loadDefaults)
-                    res = await this.model.getDefaults(kwargs);
+                if (loadDefaults) {
+                    let controller = new AbortController();
+                    this.pendingPromises.push(controller);
+                    res = await this.model.getDefaults(kwargs, { signal: controller.signal });
+                }
                 const urlParams = new URLSearchParams();
                 this.state = DataSourceState.inserting;
                 this.scope.record.record_name = Katrid.i18n.gettext('(New)');
@@ -1928,6 +1945,12 @@ var Katrid;
             }
         }
         Data.DataSource = DataSource;
+        class SearchRequest {
+            constructor(fn) {
+                this.canceled = false;
+                this.fn = fn;
+            }
+        }
     })(Data = Katrid.Data || (Katrid.Data = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -3213,8 +3236,6 @@ var Katrid;
                         .attr('ng-row-click', 'action.listRowClick($index, record, $event)')
                         .attr('list-options', '{"rowSelector": true}').attr('ng-row-click', 'action.listRowClick($index, record, $event)');
                     templ = Katrid.Core.$compile(templ)(this.action.scope);
-                    if (this.action && this.action.dataSource)
-                        setTimeout(() => this.action.dataSource.open().finally(() => this.action.scope.$apply()));
                     return templ;
                 }
                 ready() {
@@ -4796,6 +4817,16 @@ var Katrid;
 (function (Katrid) {
     var Services;
     (function (Services) {
+        let $fetch = window.fetch;
+        window.fetch = function () {
+            let ajaxStart = new CustomEvent('ajax.start', { detail: document, 'bubbles': true, 'cancelable': false });
+            let ajaxStop = new CustomEvent('ajax.stop', { detail: document, 'bubbles': true, 'cancelable': false });
+            let promise = $fetch.apply(this, arguments);
+            document.dispatchEvent(ajaxStart);
+            console.log('ajax start');
+            promise.finally(() => document.dispatchEvent(ajaxStop));
+            return promise;
+        };
         class Service {
             constructor(name) {
                 this.name = name;
@@ -4834,7 +4865,7 @@ var Katrid;
                 const rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
                 return $.get(rpcName, params);
             }
-            post(name, data, params) {
+            post(name, data, params, config) {
                 let context;
                 if (Katrid.app)
                     context = Katrid.app.context;
@@ -4846,20 +4877,23 @@ var Katrid;
                     method: name,
                     params: data,
                 };
+                if (!config)
+                    config = {};
+                Object.assign(config, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
                 const methName = this.name ? this.name + '/' : '';
                 let rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
                 if (params) {
                     rpcName += `?${$.param(params)}`;
                 }
                 return new Promise((resolve, reject) => {
-                    fetch(rpcName, {
-                        method: 'POST',
-                        body: JSON.stringify(data),
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        },
-                    })
+                    fetch(rpcName, config)
                         .then(res => res.json())
                         .then(res => {
                         if (res.error)
@@ -5018,19 +5052,19 @@ var Katrid;
                 let kwargs = { name };
                 return this.post('create_name', { kwargs: kwargs });
             }
-            search(data, params) {
-                return this.post('search', { kwargs: data }, params);
+            search(data, params, config) {
+                return this.post('search', { kwargs: data }, params, config);
             }
             destroy(id) {
                 if (!_.isArray(id))
                     id = [id];
                 return this.post('destroy', { kwargs: { ids: id } });
             }
-            getById(id) {
-                return this.post('get', { args: [id] });
+            getById(id, config) {
+                return this.post('get', { args: [id] }, null, config);
             }
-            getDefaults(kwargs) {
-                return this.post('get_defaults', { kwargs });
+            getDefaults(kwargs, config) {
+                return this.post('get_defaults', { kwargs }, null, config);
             }
             copy(id) {
                 return this.post('copy', { args: [id] });
