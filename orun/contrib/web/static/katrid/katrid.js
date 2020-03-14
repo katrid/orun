@@ -1674,7 +1674,6 @@ var Katrid;
                 if (loadDefaults)
                     res = await this.model.getDefaults(kwargs);
                 const urlParams = new URLSearchParams();
-                console.log(urlParams);
                 this.state = DataSourceState.inserting;
                 this.scope.record.record_name = Katrid.i18n.gettext('(New)');
                 let defaults = {};
@@ -1763,6 +1762,7 @@ var Katrid;
             set record(rec) {
                 if (!rec.$record)
                     rec = Katrid.Data.createRecord(rec, this);
+                console.log('parent notification', rec);
                 this.scope.record = rec;
                 this.recordId = rec.id;
                 this._pendingChanges = false;
@@ -1904,8 +1904,11 @@ var Katrid;
                         parentRecord[this.field.name] = res.data;
                         this.state = Katrid.Data.DataSourceState.browsing;
                     }
-                    else
+                    else {
                         parentRecord[this.field.name] = [];
+                        this.action.scope.records = [];
+                    }
+                    this.action.scope.$apply();
                 }, this.refreshInterval);
             }
             destroy() {
