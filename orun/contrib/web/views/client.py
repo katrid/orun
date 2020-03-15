@@ -112,7 +112,7 @@ def upload_file(request, model, meth):
     model = apps[model]
     meth = getattr(model, meth)
     if meth.exposed:
-        res = meth([file for file in request.files.getlist('files')], **request.form)
+        res = meth([file for file in request.FILES.getlist('files')], **request.POST)
         if isinstance(res, dict):
             res = JsonResponse(res)
         return res

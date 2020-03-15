@@ -921,15 +921,13 @@ var Katrid;
                         overlayTimeout = setTimeout(() => {
                             loadingMsg.hide();
                             overlay.show();
-                        }, 3000);
-                        console.log('ajaxstart');
+                        }, 4000);
                     });
                     document.addEventListener('ajax.stop', () => {
                         clearTimeout(loadingTimeout);
                         clearTimeout(overlayTimeout);
                         loadingMsg.hide();
                         overlay.hide();
-                        console.log('ajaxstop');
                     });
                     $(document).ajaxStart(function () {
                         loadingTimeout = setTimeout(() => loadingMsg.show(), 400);
@@ -5031,6 +5029,7 @@ var Katrid;
                 });
             }
         }
+        Services.Upload = Upload;
         Services.data = new Data('');
         function post(url, data) {
             return fetch(url, {
