@@ -915,6 +915,8 @@ var Katrid;
                     let loadingMsg = $('#loading-msg').hide();
                     let overlay = $('#overlay').hide();
                     document.addEventListener('ajax.start', (evt) => {
+                        clearTimeout(loadingTimeout);
+                        clearTimeout(overlayTimeout);
                         loadingTimeout = setTimeout(() => loadingMsg.show(), 400);
                         overlayTimeout = setTimeout(() => {
                             loadingMsg.hide();
