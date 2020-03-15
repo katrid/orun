@@ -4824,7 +4824,10 @@ var Katrid;
             let promise = $fetch.apply(this, arguments);
             document.dispatchEvent(ajaxStart);
             console.log('ajax start');
-            promise.finally(() => document.dispatchEvent(ajaxStop));
+            promise.finally(() => {
+                document.dispatchEvent(ajaxStop);
+                console.log('ajax stop');
+            });
             return promise;
         };
         class Service {
