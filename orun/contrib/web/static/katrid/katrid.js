@@ -919,13 +919,15 @@ var Katrid;
                         overlayTimeout = setTimeout(() => {
                             loadingMsg.hide();
                             overlay.show();
-                        }, 2500);
+                        }, 3000);
+                        console.log('ajaxstart');
                     });
                     document.addEventListener('ajax.stop', () => {
                         clearTimeout(loadingTimeout);
                         clearTimeout(overlayTimeout);
                         loadingMsg.hide();
                         overlay.hide();
+                        console.log('ajaxstop');
                     });
                     $(document).ajaxStart(function () {
                         loadingTimeout = setTimeout(() => loadingMsg.show(), 400);
@@ -933,6 +935,7 @@ var Katrid;
                             loadingMsg.hide();
                             overlay.show();
                         }, 2500);
+                        console.log('ajaxstop');
                     })
                         .ajaxStop(function () {
                         clearTimeout(loadingTimeout);
@@ -4823,10 +4826,8 @@ var Katrid;
             let ajaxStop = new CustomEvent('ajax.stop', { detail: document, 'bubbles': true, 'cancelable': false });
             let promise = $fetch.apply(this, arguments);
             document.dispatchEvent(ajaxStart);
-            console.log('ajax start');
             promise.finally(() => {
                 document.dispatchEvent(ajaxStop);
-                console.log('ajax stop');
             });
             return promise;
         };
