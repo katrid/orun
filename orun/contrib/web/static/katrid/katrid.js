@@ -4746,7 +4746,7 @@ var Katrid;
                     this.dlg = dlg;
                     dlg[0].action = this._action;
                     dlg.find('.modal-body').append(el);
-                    dlg.modal('show');
+                    dlg.modal({ backdrop: 'static' });
                     dlg.on('hidden', () => dlg.data('modal', null));
                     Katrid.Core.$compile(dlg)(this._scope);
                     this._action.form = angular.element(this._action.$form).controller('form');
