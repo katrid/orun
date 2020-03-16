@@ -1,7 +1,7 @@
 import datetime
 import inspect
 import warnings
-from functools import partialmethod
+from functools import partialmethod, reduce
 from itertools import chain
 
 from orun.apps import apps
@@ -20,7 +20,7 @@ from orun.db.models.constants import LOOKUP_SEP
 from orun.db.models.constraints import CheckConstraint, UniqueConstraint
 from orun.db.models.deletion import CASCADE, Collector
 from orun.db.models.fields import BaseField, Field, BigAutoField, CharField, DateTimeField
-from orun.db.models.sql import AND, OR
+from orun.db.models import Q
 from orun.db.models.fields.related import (
     ForeignObjectRel, ForeignKey, OneToOneField, lazy_related_operation, resolve_relation,
 )
@@ -1944,27 +1944,29 @@ class Model(metaclass=ModelBase):
                     qs = qs.filter(**w)
             elif isinstance(where, dict):
                 qs = qs.filter(**where)
+            elif where is not None:
+                qs = qs.filter(where)
         if domain:
             qs = qs.filter(**domain)
         return qs
 
     @api.method
     def search_name(
-            self, name=None, count=None, page=None, label_from_instance=None, name_fields=None, *args, exact=False,
-            **kwargs
+        self, name=None, count=None, page=None, label_from_instance=None, name_fields=None, *args, exact=False,
+        **kwargs
     ):
-        params = kwargs.get('params')
+        where = kwargs.get('params')
         join = []
         if name:
             if name_fields is None:
                 name_fields = chain(*(_resolve_fk_search(f, join) for f in self._meta.get_name_fields()))
             if exact:
-                q = [sa.or_(*[fld.column == name for fld in name_fields])]
+                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f.name}__iexact': name}) for f in name_fields])
             else:
-                q = [sa.or_(*[fld.column.ilike('%' + name + '%') for fld in name_fields])]
-            if params:
-                q.append(params)
-            kwargs = {'params': q}
+                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f.name}__icontains': name}) for f in name_fields])
+            if where:
+                q &= Q(**where)
+            kwargs = {'where': q}
         qs = self._search(*args, **kwargs)
         if count:
             count = qs.count()
@@ -2164,6 +2166,14 @@ def make_foreign_order_accessors(model, related_model):
 ########
 # MISC #
 ########
+
+
+def _resolve_fk_search(field, join_list):
+    if isinstance(field, ForeignKey):
+        rel_model = apps[field.remote_field.model]
+        join_list.append(rel_model)
+        return rel_model._meta.get_name_fields()
+    return [field]
 
 
 def model_unpickle(model_id):
