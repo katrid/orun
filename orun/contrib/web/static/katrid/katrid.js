@@ -4658,6 +4658,7 @@ var Katrid;
                     this._viewMode = this._fieldEl.getAttribute('view-mode') || 'list';
                     this._model = new Katrid.Services.Model(this.field.info.model);
                     this._scope = this.actionView.action.scope.$new(true);
+                    this._scope.model = this._model;
                     this._action = new OneToManyAction(this);
                     let views = {};
                     let template = this._fieldEl.querySelector('template');
@@ -4794,7 +4795,7 @@ var Katrid;
                 async addItem() {
                     this.field.showDialog();
                     await this.field.dataSource.insert();
-                    this.field.dataSource.record[this.field.info.field] = this.field.actionView.action.dataSource.recordId;
+                    this.field.dataSource.record[this.field.field.info.field] = this.field.actionView.action.dataSource.recordId;
                 }
                 editItem(record) {
                     console.log('item click');
@@ -7094,6 +7095,7 @@ var Katrid;
                         };
                         const f = () => {
                             let svc;
+                            console.log('fk scope', scope);
                             if (scope.model)
                                 svc = scope.model.getFieldChoices(field.name, query.term, data.kwargs);
                             else

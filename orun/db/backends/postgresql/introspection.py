@@ -41,11 +41,8 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
 
     def get_schema_list(self, cursor):
         """Return a list of schemas in the current database."""
-        cursor.execute("""
-            SELECT nspname FROM pg_catalog.pg_namespace;
-        """)
+        cursor.execute("""SELECT nspname FROM pg_catalog.pg_namespace;""")
         return [row[0] for row in cursor.fetchall()]
-
 
     def get_table_list(self, cursor):
         """Return a list of table and view names in the current database."""

@@ -5,6 +5,7 @@ from orun.db.utils import InterfaceError
 class DatabaseFeatures(BaseDatabaseFeatures):
     allows_schema = True
     allows_group_by_selected_pks = True
+    can_use_chunked_reads = False
     can_return_id_from_insert = True
     can_return_ids_from_bulk_insert = True
     has_real_datatype = True

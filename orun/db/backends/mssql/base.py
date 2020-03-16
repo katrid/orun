@@ -1,15 +1,20 @@
 import sys
+import logging
+from time import time
 import pyodbc as Database
 
 from orun.db import utils
 from orun.core.exceptions import ImproperlyConfigured
 from orun.db.backends.base.base import BaseDatabaseWrapper
+import orun.db.backends.utils
 from .schema import DatabaseSchemaEditor
 from .client import DatabaseClient
 from .creation import DatabaseCreation
 from .features import DatabaseFeatures
 from .introspection import DatabaseIntrospection
 from .operations import DatabaseOperations
+
+logger = logging.getLogger('orun.db.backends')
 
 
 class DatabaseWrapper(BaseDatabaseWrapper):
@@ -116,12 +121,12 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def get_connection_params(self):
         settings_dict = self.settings_dict
-        if not settings_dict['NAME']:
+        if settings_dict['NAME'] == '':
             raise ImproperlyConfigured(
                 "settings.DATABASES is improperly configured. "
                 "Please supply the NAME value.")
         kwargs = {
-            'database': settings_dict['NAME'],
+            'database': settings_dict['NAME'] or 'master',
             'server': settings_dict['HOST'],
             'uid': settings_dict['USER'],
             'pwd': settings_dict['PASSWORD'],
@@ -137,7 +142,14 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         pass
 
     def create_cursor(self, name=None):
-        return CursorWrapper(self.connection.cursor())
+        return self.connection.cursor()
+
+    def make_cursor(self, cursor):
+        """Create a cursor without debug logging."""
+        return CursorWrapper(cursor, self)
+
+    def make_debug_cursor(self, cursor):
+        return CursorDebugWrapper(cursor, self)
 
     def is_usable(self):
         try:
@@ -148,60 +160,61 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             return True
 
 
-class CursorWrapper:
-    def __init__(self, cursor: Database.Cursor):
-        self.cursor: Database.Cursor = cursor
-        self.last_sql = ''
-        self.last_params = ()
+class CursorWrapper(orun.db.backends.utils.CursorWrapper):
+    def execute(self, sql, params=None):
+        return super().execute(sql.replace('%s', '?'), params)
 
-    def _format_sql(self, sql: str):
-        return sql.replace('%s', '?')
+    def executemany(self, sql, param_list):
+        return super().executemany(sql.replace('%s', '?'), param_list)
 
-    def execute(self, sql: str, params=()):
-        self.last_sql = sql
-        sql = self._format_sql(sql)
-        self.last_params = params
-        try:
-            self.cursor.execute(sql, params)
-        except Database.IntegrityError:
-            e = sys.exc_info()[1]
-            raise utils.IntegrityError(*e.args)
-        except Database.DatabaseError:
-            e = sys.exc_info()[1]
-            raise utils.DatabaseError(*e.args)
+    def _execute(self, sql, params, *ignored_wrapper_args):
+        return super()._execute(sql.replace('%s', '?'), params, *ignored_wrapper_args)
 
-    def executemany(self, sql, params_list):
-        sql = self._format_sql(sql)
-        try:
-            self.cursor.execute(sql, params_list)
-        except Database.IntegrityError:
-            e = sys.exc_info()[1]
-            raise utils.IntegrityError(*e.args)
-        except Database.DatabaseError:
-            e = sys.exc_info()[1]
-            raise utils.DatabaseError(*e.args)
-
-    def fetchone(self):
-        return self.cursor.fetchone()
-
-    def fetchmany(self, size=None):
-        return self.cursor.fetchmany(size)
-
-    @property
-    def rowcount(self):
-        return self.cursor.rowcount
-
-    def __iter__(self):
-        return iter(self.cursor)
-
-    def __enter__(self):
-        return self.cursor
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        return False
+    def _execute_with_wrappers(self, sql, params, many, executor):
+        return super()._execute_with_wrappers(sql.replace('%s', '?'), params, many, executor)
 
     def close(self):
+        pass
+
+
+class CursorDebugWrapper(CursorWrapper):
+
+    # XXX callproc isn't instrumented at this time.
+
+    def execute(self, sql, params=None):
+        start = time()
         try:
-            self.cursor.close()
-        except:
-            pass
+            return super().execute(sql, params)
+        finally:
+            stop = time()
+            duration = stop - start
+            sql = self.db.ops.last_executed_query(self.cursor, sql, params)
+            self.db.queries_log.append({
+                'sql': sql,
+                'time': "%.3f" % duration,
+            })
+            logger.debug(
+                '(%.3f) %s; args=%s', duration, sql, params,
+                extra={'duration': duration, 'sql': sql, 'params': params}
+            )
+
+    def executemany(self, sql, param_list):
+        start = time()
+        try:
+            return super().executemany(sql, param_list)
+        finally:
+            stop = time()
+            duration = stop - start
+            try:
+                times = len(param_list)
+            except TypeError:           # param_list could be an iterator
+                times = '?'
+            self.db.queries_log.append({
+                'sql': '%s times: %s' % (times, sql),
+                'time': "%.3f" % duration,
+            })
+            logger.debug(
+                '(%.3f) %s; args=%s', duration, sql, param_list,
+                extra={'duration': duration, 'sql': sql, 'params': param_list}
+            )
+
