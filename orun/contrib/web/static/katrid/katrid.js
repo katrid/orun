@@ -3037,8 +3037,7 @@ var Katrid;
             class Window extends Dialog {
                 constructor(options) {
                     super(options.scope, options);
-                    this.scope._ = this.scope.$parent._;
-                    this.scope.parentAction = this.scope.action;
+                    this.scope.parentAction = options.action;
                     this.scope.views = {
                         form: options.view
                     };
@@ -3046,8 +3045,13 @@ var Katrid;
                     this.scope.view = this.view = options.view;
                     this.scope.model = options.model;
                     this.options = options;
+                    this.action = {
+                        model: options.model,
+                        context: {},
+                    };
+                    this.scope.action = this.action;
                 }
-                async createNew(config) {
+                async createNew() {
                     let field = this.options.field;
                     this.scope.$setDirty = (field) => {
                         const control = this.scope.form[field];
@@ -3060,18 +3064,19 @@ var Katrid;
                     elScope.views = { form: view };
                     elScope.isDialog = true;
                     let caption = this.dialogTitle;
-                    this.action = this.scope.action = {
-                        scope: this.scope,
-                        context: {},
-                    };
-                    let dataSource = this.action.dataSource = this.scope.dataSource = new Katrid.Data.DataSource(this.scope, this.action);
-                    let formView = new Katrid.Forms.Views.FormView({ action: this.action, viewInfo: this.view, dialog: true, templateUrl: 'view.form.dialog.modal.jinja2' });
-                    let el = formView.render();
+                    let dataSource = this.action.dataSource = this.scope.dataSource =
+                        new Katrid.Data.DataSource({ scope: this.scope, action: this.action, model: this.options.model });
+                    let formView = new Katrid.Forms.Views.FormDialog({ action: this.action, viewInfo: this.view, templateUrl: 'view.form.empty.jinja2' });
+                    let el = formView.prepare();
                     let form = el.find('form:first');
                     elScope.root = form;
                     this.action.$element = form;
                     form.addClass('row');
-                    el.modal('show').on('shown.bs.modal', () => Katrid.UI.uiKatrid.setFocus(el.find('.form-field').first()))
+                    let dlg = $(Katrid.app.getTemplate('view.form.dialog.jinja2', { caption: this.dialogTitle || view.caption }));
+                    dlg[0].action = this.action;
+                    dlg.find('.modal-body').append(el);
+                    Katrid.Core.$compile(dlg)(this.scope);
+                    dlg.modal({ backdrop: 'static' })
                         .on('hidden.bs.modal', function () {
                         $(this).modal('dispose').remove();
                     });
@@ -3096,13 +3101,14 @@ var Katrid;
                     return new Promise(async (resolve, reject) => {
                         setTimeout(async () => {
                             let kwargs, defaultValues;
-                            if (config) {
-                                if (config.creationName)
+                            if (this.options) {
+                                if (this.options.creationName)
                                     kwargs = { creation_name: name };
-                                if (config.defaultValues)
-                                    defaultValues = config.defaultValues;
+                                if (this.options.defaultValues)
+                                    defaultValues = this.options.defaultValues;
                             }
                             await dataSource.insert(true, defaultValues, kwargs);
+                            console.log('inserting', dataSource);
                             this.scope.$apply();
                             resolve(el);
                         });
@@ -7095,7 +7101,6 @@ var Katrid;
                         };
                         const f = () => {
                             let svc;
-                            console.log('fk scope', scope);
                             if (scope.model)
                                 svc = scope.model.getFieldChoices(field.name, query.term, data.kwargs);
                             else
@@ -7177,7 +7182,8 @@ var Katrid;
                 sel = sel.select2(config);
                 let createNew = () => {
                     sel.select2('close');
-                    let service = new Katrid.Services.Model(field.model);
+                    console.log('fk create new', field);
+                    let service = new Katrid.Services.Model(field.info.model);
                     return service.getViewInfo({
                         view_type: "form"
                     }).then(function (res) {
@@ -7189,9 +7195,10 @@ var Katrid;
                             title: title,
                             view: res,
                             model: service,
-                            action: scope.action,
+                            action: scope.$new(),
+                            caption: field.caption,
                         };
-                        let wnd = new Katrid.UI.Dialogs.Window(options);
+                        let wnd = new Katrid.Forms.Dialogs.Window(options);
                         wnd.createNew();
                     });
                 };

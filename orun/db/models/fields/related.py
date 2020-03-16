@@ -895,6 +895,11 @@ class ForeignKey(ForeignObject):
         if value:
             return value._get_instance_label()
 
+    def _formfield(self):
+        res = super()._formfield()
+        res['model'] = self.remote_field.model._meta.name
+        return res
+
 
 class OneToOneField(ForeignKey):
     """
