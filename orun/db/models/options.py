@@ -93,6 +93,7 @@ class Options:
     title_field = None
     status_field = None
     sequence_field: str = None
+    active_field: str = None
     field_groups = None
     log_changes = True
     select_on_save = False
@@ -296,6 +297,8 @@ class Options:
             self.__class__.status_field = field.name
         elif self.sequence_field is None and field.name == 'sequence':
             self.__class__.sequence_field = field.name
+        elif self.active_field is None and field.name == 'active':
+            self.__class__.active_field = field.name
 
         self.fields.append(field)
         if self.pk is None and field.primary_key and field in self.local_fields:
@@ -370,6 +373,17 @@ class Options:
             "managers",
             (m[2] for m in sorted(managers)),
         )
+
+    def get_title_field(self):
+        return self.fields[self.title_field]
+
+    def get_name_fields(self):
+        if self.field_groups and 'name_fields' in self.field_groups:
+            return [self.fields[field_name] for field_name in self.field_groups['name_fields']]
+        return [self.fields[self.title_field]]
+
+    def get_active_field(self):
+        return self.fields[self.active_field]
 
     @cached_property
     def managers_map(self):
@@ -476,6 +490,19 @@ class Options:
             return [self.fields[field_name] for field_name in self.field_groups['form_fields']]
         else:
             return self.editable_fields
+
+    @property
+    def searchable_fields(self):
+        if self.field_groups and 'searchable_fields' in self.field_groups:
+            return [self.fields[field_name] for field_name in self.field_groups['searchable_fields']]
+        elif self.title_field:
+            return [self.get_title_field()]
+        return []
+
+    @property
+    def grouping_fields(self):
+        if self.field_groups and 'grouping_fields' in self.field_groups:
+            return [self.fields[field_name] for field_name in self.field_groups['grouping_fields']]
 
     @cached_property
     def related_objects(self):
