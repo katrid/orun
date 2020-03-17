@@ -73,3 +73,15 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
                 (" ".join(result + ["VALUES (%s)" % ", ".join(p)]), vals)
                 for p, vals in zip(placeholder_rows, param_rows)
             ]
+
+
+class SQLDeleteCompiler(compiler.SQLDeleteCompiler, SQLCompiler):
+    pass
+
+
+class SQLUpdateCompiler(compiler.SQLUpdateCompiler, SQLCompiler):
+    pass
+
+
+class SQLAggregateCompiler(compiler.SQLAggregateCompiler, SQLCompiler):
+    pass
