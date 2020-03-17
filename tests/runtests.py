@@ -69,7 +69,7 @@ ALWAYS_INSTALLED_APPS = [
     'orun.contrib.erp',
     'orun.contrib.web',
     'orun.contrib.mail',
-    # 'orun.contrib.comments',
+    #'orun.contrib.comments',
 ]
 
 ALWAYS_MIDDLEWARE = [
