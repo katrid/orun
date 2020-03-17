@@ -1872,7 +1872,9 @@ class Model(metaclass=ModelBase):
     @api.method
     def get(self, id):
         if id:
-            return self._search().get(pk=id)
+            obj = self._search().get(pk=id)
+            obj.__serialize__ = True
+            return obj
         else:
             raise self.DoesNotExist()
 
