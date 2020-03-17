@@ -1855,6 +1855,21 @@ class Model(metaclass=ModelBase):
         self.delete()
 
     @api.method
+    def field_change_event(cls, field, record, *args, **kwargs):
+        for fn in cls._meta.field_change_event[field]:
+            record = fn(cls, record)
+        return record
+
+    @api.record
+    def _proxy_field_change(self, field):
+        obj = getattr(self, field.proxy_field[0])
+        if obj is not None:
+            obj = getattr(obj, field.proxy_field[1])
+        return {
+            'value': {field.name: obj}
+        }
+
+    @api.method
     def get(self, id):
         if id:
             return self._search().get(pk=id)

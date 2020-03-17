@@ -43,8 +43,12 @@ var Katrid;
                 if (searchParams) {
                     const urlParams = new URLSearchParams(searchParams);
                     for (let [k, v] of urlParams)
-                        if (k.startsWith('default_'))
-                            this._context[k] = v;
+                        if (k.startsWith('default_')) {
+                            if (!this._context.default_values)
+                                this._context.default_values = {};
+                            console.log(k);
+                            this._context.default_values[k.substring(8, k.length)] = v;
+                        }
                 }
                 return this._context;
             }
@@ -2735,6 +2739,10 @@ var Katrid;
                     $('#loading-msg').hide();
                 }
             }
+            class ExceptionDialog {
+                static show(title, msg, traceback) {
+                }
+            }
         })(Dialogs = Forms.Dialogs || (Forms.Dialogs = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -4910,6 +4918,12 @@ var Katrid;
                 }
                 return new Promise((resolve, reject) => {
                     fetch(rpcName, config)
+                        .then(async (res) => {
+                        if (res.status === 500) {
+                            throw Error(await res.text());
+                        }
+                        return res;
+                    })
                         .then(res => res.json())
                         .then(res => {
                         if (res.error)
