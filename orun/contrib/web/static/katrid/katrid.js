@@ -44,10 +44,7 @@ var Katrid;
                     const urlParams = new URLSearchParams(searchParams);
                     for (let [k, v] of urlParams)
                         if (k.startsWith('default_')) {
-                            if (!this._context.default_values)
-                                this._context.default_values = {};
-                            console.log(k);
-                            this._context.default_values[k.substring(8, k.length)] = v;
+                            this._context[k] = v;
                         }
                 }
                 return this._context;
@@ -378,6 +375,7 @@ var Katrid;
             }
             setDirty(field) {
                 const control = this.form[field];
+                console.log(control);
                 if (control) {
                     control.$setDirty();
                 }
@@ -1693,6 +1691,9 @@ var Katrid;
                 for (let child of this.children)
                     child._records = [];
                 if (loadDefaults) {
+                    if (!kwargs)
+                        kwargs = {};
+                    kwargs.context = this.action.context;
                     let controller = new AbortController();
                     this.pendingPromises.push(controller);
                     res = await this.model.getDefaults(kwargs, { signal: controller.signal });
