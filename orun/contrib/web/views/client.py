@@ -11,18 +11,18 @@ View = apps['ui.view']
 
 
 @login_required
-def index(request: HttpRequest):
+def index(request: HttpRequest, template_name='/web/index.jinja2', **context):
     menu = apps['ui.menu']
     menu_items = menu.search_visible_items(request)
     menu_id = menu_items[0]
-    context = {
+    context.update({
         'current_menu': menu_id,
         'root_menu': menu_items,
-    }
+    })
     if settings.USE_I18N:
         from .i18n import javascript_catalog
         context['i18n_js_catalog'] = javascript_catalog(request, packages=apps.addons.keys())
-    return render(request, '/web/index.jinja2', context)
+    return render(request, template_name, context)
 
 
 def company_logo(request):
