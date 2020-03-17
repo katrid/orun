@@ -63,3 +63,15 @@ class DatabaseOperations(BaseDatabaseOperations):
         by the backend driver for datetime columns.
         """
         return value
+
+    def get_db_converters(self, expression):
+        converters = super().get_db_converters(expression)
+        internal_type = expression.output_field.get_internal_type()
+        if internal_type == 'BinaryField':
+            converters.append(self.convert_bynaryfield_value)
+        return converters
+
+    def convert_bynaryfield_value(self, value, expression, connection):
+        return value
+
+

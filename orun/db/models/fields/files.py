@@ -281,7 +281,7 @@ class FileField(Field):
         # Need to convert File objects provided via a form to string for database insertion
         if value is None:
             return None
-        return str(value)
+        return bytes(value)
 
     def pre_save(self, model_instance, add):
         file = super().pre_save(model_instance, add)

@@ -19,7 +19,10 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
         qn = self.connection.ops.quote_name
         opts = self.query.get_meta()
         insert_statement = self.connection.ops.insert_statement(ignore_conflicts=self.query.ignore_conflicts)
-        result = ['%s %s' % (insert_statement, qn(opts.db_table))]
+        result = ['SET NOCOUNT ON;']
+        if self.return_id:
+            result.append('DECLARE @T TABLE(ID BIGINT)')
+        result.append('%s %s' % (insert_statement, qn(opts.db_table)))
         fields = self.query.fields or [opts.pk]
         result.append('(%s)' % ', '.join(qn(f.column) for f in fields))
 
@@ -50,6 +53,7 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
             # 3rd party backends. Refs #19096.
             if r_fmt:
                 result.append(r_fmt % qn(opts.pk.column))
+            result.append('INTO @T')
 
             if self.connection.features.can_return_ids_from_bulk_insert:
                 result.append(self.connection.ops.bulk_insert_sql(fields, placeholder_rows))
@@ -59,6 +63,7 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
                 params = [param_rows[0]]
             if ignore_conflicts_suffix_sql:
                 result.append(ignore_conflicts_suffix_sql)
+            result.append('SELECT ID FROM @T')
             return [(" ".join(result), tuple(chain.from_iterable(params)))]
 
         if can_bulk:

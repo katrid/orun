@@ -2313,6 +2313,7 @@ class BinaryField(Field):
 
     def to_python(self, value):
         # If it's a string, it should be base64-encoded data
+        print('############## bin to python', value)
         if isinstance(value, str):
             return memoryview(b64decode(value.encode('ascii')))
         return value
@@ -2359,6 +2360,10 @@ class UUIDField(Field):
                     params={'value': value},
                 )
         return value
+
+
+class ImageField(BinaryField):
+    pass
 
 
 class ChoiceField(CharField):

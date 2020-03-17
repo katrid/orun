@@ -25,7 +25,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     data_types = {
         'AutoField': 'int',
         'BigAutoField': 'bigint',
-        'BinaryField': 'binary',
+        'BinaryField': 'varbinary',
         'BooleanField': 'bit',
         'CharField': 'varchar(%(max_length)s)',
         'DateField': 'date',
