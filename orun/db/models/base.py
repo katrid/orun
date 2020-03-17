@@ -2126,9 +2126,10 @@ class Model(metaclass=ModelBase):
         defaults = context or {}
         for f in self._meta.fields:
             if 'default_' + f.name in defaults:
-                r[f.name] = defaults['default_' + f.name]
-                continue
-            if f.editable:
+                val = r[f.name] = defaults['default_' + f.name]
+                if val and isinstance(f, ForeignKey):
+                    r[f.name] = [val, str(f.remote_field.model.objects.get(pk=val))]
+            elif f.editable:
                 if f.default is not NOT_PROVIDED:
                     if callable(f.default):
                         r[f.name] = f.default()
