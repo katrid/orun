@@ -85,13 +85,14 @@ class Attachment(models.Model):
         if self.checksum:
             return self.checksum[:2]
 
-    def copy_attachments(self, source, dest):
-        attachments = self.objects.filter(model=source._meta.name, field=None, object_id=source.pk)
+    @classmethod
+    def copy_attachments(cls, source, dest):
+        attachments = cls.objects.filter(model=source._meta.name, field=None, object_id=source.pk)
         for obj in attachments:
             obj.copy_to(dest)
 
     def copy_to(self, dest):
-        self.create(
+        self.objects.create(
             model=dest._meta.name, object_id=dest.pk, name=self.name, file_name=self.file_name, checksum=self.checksum,
             attachment_type=self.attachment_type,
             stored_file_name=self.stored_file_name, file_size=self.file_size, mimetype=self.mimetype,
