@@ -92,7 +92,7 @@ class Attachment(models.Model):
             obj.copy_to(dest)
 
     def copy_to(self, dest):
-        self.objects.create(
+        self.__class__.objects.create(
             model=dest._meta.name, object_id=dest.pk, name=self.name, file_name=self.file_name, checksum=self.checksum,
             attachment_type=self.attachment_type,
             stored_file_name=self.stored_file_name, file_size=self.file_size, mimetype=self.mimetype,
