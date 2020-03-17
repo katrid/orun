@@ -113,6 +113,7 @@ class BaseUserManager(models.Manager):
 class AbstractBaseUser(models.Model):
     password = models.CharField(_('password'), max_length=128)
     last_login = models.DateTimeField(_('last login'), null=True)
+    is_superuser = models.BooleanField(_('Is superuser'), default=False)
 
     is_active = True
 
