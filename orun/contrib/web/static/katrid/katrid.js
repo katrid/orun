@@ -2017,6 +2017,9 @@ var Katrid;
                 }
                 assign(view, el) {
                     let newField = new this.constructor(this.info);
+                    newField.visible = this.visible;
+                    newField.readonly = this.readonly;
+                    newField.domain = this.domain;
                     newField.view = view;
                     newField.fieldEl = el;
                     newField[newField.view.viewType + 'Render'].apply(newField);
@@ -2037,13 +2040,6 @@ var Katrid;
                 formRender(context = {}) {
                     let el = this._fieldEl;
                     let view = this.view;
-                    let widget = el.getAttribute('widget') || this.widget;
-                    if (widget) {
-                        let r = document.createElement(widget + '-field');
-                        r.bind(this);
-                        this.el = r;
-                        return;
-                    }
                     let $el = $(el);
                     let attrs = {};
                     for (let attr of el.attributes) {
@@ -2052,16 +2048,23 @@ var Katrid;
                         if (camelCase !== attr.name)
                             attrs[camelCase] = attr.value;
                     }
+                    if (attrs.visible === 'false')
+                        this.visible = false;
+                    else if (attrs.visible === 'true')
+                        this.visible = true;
+                    let widget = el.getAttribute('widget') || this.widget;
+                    if (widget) {
+                        let r = document.createElement(widget + '-field');
+                        r.bind(this);
+                        this.el = r;
+                        return;
+                    }
                     if (attrs.cols)
                         this.cols = attrs.cols;
                     if (attrs.ngReadonly)
                         this.ngReadonly = attrs.ngReadonly;
                     if (attrs.domain)
                         this.domain = attrs.domain;
-                    if (attrs.visible === 'false')
-                        this.visible = false;
-                    else if (attrs.visible === 'true')
-                        this.visible = true;
                     if (attrs.ngShow)
                         this.ngShow = attrs.ngShow;
                     if (attrs.ngIf)
@@ -4816,6 +4819,8 @@ var Katrid;
                 saveAndClose() {
                     this.field.dlg.modal('hide');
                     this.field.dataSource.flush();
+                    if (!this.scope.records)
+                        this.scope.records = [];
                     this.scope.records.push(this.scope.record);
                 }
             }
@@ -7232,7 +7237,7 @@ var Katrid;
                                 model: service,
                                 action: scope.action,
                             };
-                            let wnd = new Katrid.UI.Dialogs.Window(options);
+                            let wnd = new Katrid.Forms.Dialogs.Window(options);
                             wnd.createNew({ creationName: v.str });
                             sel.select2('data', null);
                         }
