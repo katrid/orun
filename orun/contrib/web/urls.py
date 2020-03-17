@@ -14,6 +14,7 @@ urlpatterns = [
     path('web/data/reorder/', views.client.reorder),
     path('web/image/<model>/<field>/<id>/', views.client.image),
     path('web/company/logo/', views.client.company_logo),
+    path('web/reports/<path:path>', views.client.report),
 
     path('api/rpc/<service>/<meth>/', views.api.rpc),
     path('api/field/choices/<service>/<field>/', views.api.choices),

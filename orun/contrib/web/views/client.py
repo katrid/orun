@@ -1,3 +1,4 @@
+import os
 from orun.shortcuts import render
 from orun.conf import settings
 from orun.utils.translation import gettext
@@ -6,6 +7,7 @@ from orun.contrib import messages
 from orun.contrib.auth.decorators import login_required
 from orun.contrib import auth
 from orun.apps import apps
+from orun.views.static import serve
 
 View = apps['ui.view']
 
@@ -32,6 +34,10 @@ def company_logo(request):
         if company and company.image:
             return HttpResponseRedirect(f'/web/content/{company.image.decode("utf-8")}/?download')
     return HttpResponseRedirect('/static/web/assets/img/katrid-logo.png')
+
+
+def report(request, path):
+    return serve(request, path, document_root=settings.REPORT_PATH)
 
 
 def login(request: HttpRequest):
