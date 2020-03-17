@@ -42,7 +42,8 @@ class Menu(models.Model):
             ]
 
         qs = cls.objects.all()
-        if cls.env.user_id == SUPERUSER or cls.env.user.is_superuser:
+        # if cls.env.user_id == SUPERUSER or cls.env.user.is_superuser:
+        if True: # todo replace by permisson control
             items = qs
         else:
             Group = cls.env['auth.group']
