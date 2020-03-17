@@ -161,22 +161,22 @@ class ApprovalHistory(models.Model):
         log_changes = False
 
 
-def _document_approved(doc, user, level):
+def _document_approved(doc, user, level, **kwargs):
     history = apps['mail.approval.history']
     history.create(model=doc._meta.name, object_id=doc.pk, level_id=level.pk)
     for msg in doc.post_message([doc.pk], gettext('Document has been approved.')):
         send_approved_message.send(doc, msg=msg, user=user, level=level)
 
 
-def _approval_needed(doc, user, level):
+def _approval_needed(doc, user, level, **kwargs):
     for msg in doc.post_message([doc.pk], gettext('Do you confirm this document approval?')):
         send_approval_message.send(doc, msg=msg, user=user, level=level)
 
 
-# document_approved = Signal()
-# approval_needed = Signal()
-# send_approval_message = Signal()
-# send_approved_message = Signal()
+document_approved = Signal()
+approval_needed = Signal()
+send_approval_message = Signal()
+send_approved_message = Signal()
 
-# document_approved.connect(_document_approved)
-# approval_needed.connect(_approval_needed)
+document_approved.connect(_document_approved)
+approval_needed.connect(_approval_needed)

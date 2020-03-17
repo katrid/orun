@@ -8,7 +8,7 @@ VERSION = (1, 0, 0, 'alpha', 0)
 __version__ = get_version(VERSION)
 
 
-def setup(set_prefix=True):
+def setup(set_prefix=True, apps_setup=False):
     """
     Configure the settings (this happens as a side effect of accessing the
     first setting), configure logging and populate the app registry.
@@ -25,3 +25,5 @@ def setup(set_prefix=True):
             '/' if settings.FORCE_SCRIPT_NAME is None else settings.FORCE_SCRIPT_NAME
         )
     apps.populate(settings.INSTALLED_APPS)
+    if apps_setup:
+        apps.setup()

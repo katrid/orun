@@ -1,5 +1,7 @@
 import sys
-from threading import RLock, Event, local
+import asyncio
+import threading
+from threading import RLock, Event, local, Thread
 from collections import Counter, defaultdict, OrderedDict
 import functools
 
@@ -16,6 +18,10 @@ class Registry:
         if installed_apps is None and hasattr(sys.modules[__name__], 'apps'):
             raise RuntimeError("You must supply an installed_apps argument.")
 
+        # set to False if the current process is not the main
+        self.main = True
+        # get a new event loop
+        self.loop = asyncio.new_event_loop()
         self.models = {}
         self.services = {}
         self.addons = {}
@@ -109,7 +115,10 @@ class Registry:
             self.env.setup()
 
     def setup(self):
-        pass
+        for addon in self.addons.values():
+            if hasattr(addon, 'init_app'):
+                addon.init_app(self)
+        Thread(target=self.start_async_loop, args=(self.loop,))
 
     def __getitem__(self, item) -> 'ModelBase':
         if not isinstance(item, str):
@@ -296,6 +305,9 @@ class Registry:
             self.check_apps_ready()
 
         return self.models[name]
+
+    def start_async_loop(self, loop):
+        loop.run_forever()
 
 
 class Context(dict):

@@ -9,5 +9,5 @@ def get_wsgi_application():
     Avoids making orun.core.handlers.WSGIHandler a public API, in case the
     internal WSGI implementation changes or moves in the future.
     """
-    orun.setup(set_prefix=False)
+    orun.setup(set_prefix=False, apps_setup=True)
     return WSGIHandler()
