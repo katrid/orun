@@ -1,0 +1,10 @@
+{% extends "pwa/forms/fields/Field.jinja2" %}
+{% block css_class %}ForeignKey{% endblock %}
+{% block control %}
+  <select class="form-control" ng-model="{{ prefix }}record.{{ field.name }}">
+    <option value=""></option>
+    {% for k, v in choices %}
+      <option value="{{ k }}">{{ v }}</option>
+    {% endfor %}
+  </select>
+{% endblock %}
