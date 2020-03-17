@@ -86,6 +86,8 @@ class OrunJSONEncoder(json.JSONEncoder):
     def default(self, o):
         # See "Date Time String Format" in the ECMA-262 specification.
         if isinstance(o, models.Model):
+            if hasattr(o, '__serialize__'):
+                return o.to_json()
             return o._get_instance_label()
         elif isinstance(o, types.GeneratorType):
             return list(o)
