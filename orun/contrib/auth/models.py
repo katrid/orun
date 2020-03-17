@@ -325,6 +325,7 @@ class AbstractUser(AbstractBaseUser, PermissionsMixin):
         ),
         null=False,
     )
+    is_superuser = models.BooleanField(_('Is superuser'), default=False)
     date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
 
     objects = UserManager()
