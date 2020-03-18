@@ -90,7 +90,7 @@ class DocumentApproval(comment.Comments):
         else:
             Level = apps['mail.approval.level']
             return Level.objects.filter(
-                Level.c.sequence > self.current_approval_level.sequence,
+                sequence__gt=self.current_approval_level.sequence,
                 approval_model=self.current_approval_level.approval_model,
             ).first()
 
