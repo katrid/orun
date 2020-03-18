@@ -171,7 +171,7 @@ class GenericForeignKey(BaseField, FieldCacheMixin):
         elif id is not None:
             return apps[ContentType].objects.db_manager(using).get_for_id(id)
         elif name is not None:
-            return apps[ContentType].objects.db_manager(using).get_for_name(id)
+            return apps[ContentType].objects.db_manager(using).get_for_name(name)
         else:
             # This should never happen. I love comments like this, don't you?
             raise Exception("Impossible arguments to GFK.get_content_type!")
