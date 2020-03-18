@@ -1,4 +1,4 @@
-from orun import g, api
+from orun import g, api, SUPERUSER
 from orun.apps import apps
 from orun.dispatch import Signal
 from orun.utils.translation import gettext_lazy as _, gettext
@@ -41,7 +41,7 @@ class DocumentApproval(comment.Comments):
             setattr(self, self._meta.status_field, level.level)
 
         # send the document_approved signal
-        document_approved.send(self, user=g.user, level=level or self.current_approval_level)
+        document_approved.send(self, user=g.get('user', SUPERUSER), level=level or self.current_approval_level)
         # send the approval_needed signal
         if self.current_approval_level.permission != 'allow' and next_approval:
             approval_needed.send(self, user=g.user, level=self.current_approval_level)
