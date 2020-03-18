@@ -2548,7 +2548,8 @@ var Katrid;
                 this.pending = null;
                 this.modified = false;
                 this.children = [];
-                this.state = state || RecordState.unmodified;
+                if (this.state !== RecordState.created)
+                    this.state = state || RecordState.unmodified;
                 this.submitted = false;
                 data.$record = this;
             }
@@ -2664,8 +2665,10 @@ var Katrid;
                 return new Record(this.pristine);
             }
             serialize() {
-                let data = jQuery.extend({}, this.data);
+                let data = {};
+                Object.assign(data, this.data);
                 for (let child of this.children) {
+                    console.log('state', child.state);
                     if (!(child.dataSource.field.name in data))
                         data[child.dataSource.field.name] = [];
                     if (child.state === RecordState.created)
@@ -2675,6 +2678,7 @@ var Katrid;
                     else if (child.state === RecordState.destroyed)
                         data[child.dataSource.field.name].push({ action: 'DESTROY', id: child.pk });
                 }
+                console.log('serialize', data);
                 if (this.pk)
                     data.id = this.pk;
                 return data;

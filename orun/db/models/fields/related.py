@@ -1569,7 +1569,7 @@ class OneToManyField(RelatedField):
             values = v.get('values')
             action = v['action']
             if action == 'CREATE':
-                values[self.rel.field_name] = instance.pk
+                values[self.remote_field.to_field.name] = instance.pk
                 obj = rel_model.write(values)
                 if instance.pk is None:
                     res.append(obj)
