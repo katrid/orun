@@ -44,7 +44,7 @@ class DocumentApproval(comment.Comments):
         document_approved.send(self, user=g.get('user', SUPERUSER), level=level or self.current_approval_level)
         # send the approval_needed signal
         if self.current_approval_level.permission != 'allow' and next_approval:
-            approval_needed.send(self, user=g.user, level=self.current_approval_level)
+            approval_needed.send(self, user=g.get('user', SUPERUSER), level=self.current_approval_level)
 
     def get_document_level_value(self):
         return getattr(self, self._meta.status_field)
