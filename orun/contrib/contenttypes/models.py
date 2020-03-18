@@ -112,7 +112,7 @@ class ContentTypeManager(models.Manager):
         except KeyError:
             # This could raise a DoesNotExist; that's correct behavior and will
             # make sure that only correct ctypes get stored in the cache dict.
-            ct = self.objects.get(pk=id)
+            ct = self.get(pk=id)
             self._add_to_cache(self.db, ct)
         return ct
 
