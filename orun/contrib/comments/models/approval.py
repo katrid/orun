@@ -21,7 +21,7 @@ class DocumentApproval(comment.Comments):
         next_approval = self.next_approval_level
         if level is None:
             level = self.next_approval_level
-        if g.user and not g.user.is_superuser:
+        if 'user' in g and not g.user.is_superuser:
             l = level or self.current_approval_level
             if l.permission == 'user' and l.user_id != g.user_id:
                 raise PermissionDenied(gettext('Permission denied'))
