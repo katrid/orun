@@ -1660,16 +1660,17 @@ class DecimalField(Field):
     def to_python(self, value):
         if value is None:
             return value
-        if isinstance(value, float):
-            return self.context.create_decimal_from_float(value)
-        try:
-            return decimal.Decimal(value)
-        except decimal.InvalidOperation:
-            raise exceptions.ValidationError(
-                self.error_messages['invalid'],
-                code='invalid',
-                params={'value': value},
-            )
+        # if isinstance(value, float):
+        #     return self.context.create_decimal_from_float(value)
+        if isinstance(value, str):
+            try:
+                return decimal.Decimal(value)
+            except decimal.InvalidOperation:
+                raise exceptions.ValidationError(
+                    self.error_messages['invalid'],
+                    code='invalid',
+                    params={'value': value},
+                )
 
     def get_db_prep_save(self, value, connection):
         return connection.ops.adapt_decimalfield_value(self.to_python(value), self.max_digits, self.decimal_places)
