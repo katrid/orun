@@ -6,7 +6,7 @@ from orun.db import DEFAULT_DB_ALIAS, models, router, transaction
 from orun.db.models import DO_NOTHING
 from orun.db.models.base import ModelBase, make_foreign_order_accessors
 from orun.db.models.fields.mixins import FieldCacheMixin
-from orun.db.models.fields import BaseField
+from orun.db.models.fields import BaseField, CharField
 from orun.db.models.fields.related import (
     ForeignObject, ForeignObjectRel, ReverseManyToOneDescriptor,
     lazy_related_operation,
@@ -164,12 +164,14 @@ class GenericForeignKey(BaseField, FieldCacheMixin):
     def get_cache_name(self):
         return self.name
 
-    def get_content_type(self, obj=None, id=None, using=None):
+    def get_content_type(self, obj=None, id=None, name=None, using=None):
         if obj is not None:
             return apps[ContentType].objects.db_manager(obj._state.db).get_for_model(
                 obj, for_concrete_model=self.for_concrete_model)
         elif id is not None:
             return apps[ContentType].objects.db_manager(using).get_for_id(id)
+        elif name is not None:
+            return apps[ContentType].objects.db_manager(using).get_for_name(id)
         else:
             # This should never happen. I love comments like this, don't you?
             raise Exception("Impossible arguments to GFK.get_content_type!")
@@ -241,7 +243,10 @@ class GenericForeignKey(BaseField, FieldCacheMixin):
             else:
                 rel_obj = None
         if ct_id is not None:
-            ct = self.get_content_type(id=ct_id, using=instance._state.db)
+            if isinstance(f, CharField):
+                ct = self.get_content_type(name=ct_id, using=instance._state.db)
+            else:
+                ct = self.get_content_type(id=ct_id, using=instance._state.db)
             try:
                 rel_obj = ct.get_object_for_this_type(pk=pk_val)
             except ObjectDoesNotExist:

@@ -116,6 +116,20 @@ class ContentTypeManager(models.Manager):
             self._add_to_cache(self.db, ct)
         return ct
 
+    def get_for_name(self, name):
+        """
+        Lookup a ContentType by Name. Use the same shared cache as get_for_model
+        (though ContentTypes are obviously not created on-the-fly by get_by_name).
+        """
+        try:
+            ct = self._cache[self.db][name]
+        except KeyError:
+            # This could raise a DoesNotExist; that's correct behavior and will
+            # make sure that only correct ctypes get stored in the cache dict.
+            ct = self.get(name=name)
+            self._add_to_cache(self.db, ct)
+        return ct
+
     def clear_cache(self):
         """
         Clear out the content-type cache.
