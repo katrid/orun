@@ -85,7 +85,28 @@ class SQLDeleteCompiler(compiler.SQLDeleteCompiler, SQLCompiler):
 
 
 class SQLUpdateCompiler(compiler.SQLUpdateCompiler, SQLCompiler):
-    pass
+    def execute_sql(self, result_type):
+        """
+        Execute the specified update. Return the number of rows affected by
+        the primary update query. The "primary update query" is the first
+        non-empty query that is executed. Row counts for any subsequent,
+        related queries are not available.
+        """
+        cursor = compiler.SQLCompiler.execute_sql(self, result_type)
+        cursor.execute('select @@rowcount')
+        rowcount = cursor.fetchall()[0][0]
+        try:
+            rows = rowcount if cursor else 0
+            is_empty = cursor is None
+        finally:
+            if cursor:
+                cursor.close()
+        for query in self.query.get_related_updates():
+            aux_rows = query.get_compiler(self.using).execute_sql(result_type)
+            if is_empty and aux_rows:
+                rows = aux_rows
+                is_empty = False
+        return rows
 
 
 class SQLAggregateCompiler(compiler.SQLAggregateCompiler, SQLCompiler):
