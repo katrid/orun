@@ -118,7 +118,7 @@ class Registry:
         for addon in self.addons.values():
             if hasattr(addon, 'init_app'):
                 addon.init_app(self)
-        Thread(target=self.start_async_loop, args=(self.loop,))
+        Thread(target=self.start_async_loop, args=(self.loop,), daemon=True).start()
 
     def __getitem__(self, item) -> 'ModelBase':
         if not isinstance(item, str):
@@ -307,6 +307,7 @@ class Registry:
         return self.models[name]
 
     def start_async_loop(self, loop):
+        print('run forever')
         loop.run_forever()
 
 
