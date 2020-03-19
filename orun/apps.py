@@ -307,7 +307,6 @@ class Registry:
         return self.models[name]
 
     def start_async_loop(self, loop):
-        print('run forever')
         loop.run_forever()
 
 
