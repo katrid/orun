@@ -2,12 +2,14 @@ import sys
 import os
 import uuid
 from collections import defaultdict
+from jinja2 import Environment
 
 from orun import api, g
 from orun.apps import apps
 from orun.conf import settings
 from orun.db import models, connection
-# from orun.reports.engines import get_engine, ConnectionProxy
+from orun.reports.engines import get_engine, ConnectionProxy
+from orun.template import loader
 from orun.utils.translation import gettext_lazy as _
 from orun.utils.xml import etree
 from .action import Action
@@ -21,18 +23,18 @@ class ReportAction(Action):
     class Meta:
         name = 'ir.action.report'
 
-    def serialize(self, *args, **kwargs):
-        data = super(ReportAction, self).serialize(*args, **kwargs)
+    def to_json(self, *args, **kwargs):
+        data = super(ReportAction, self).to_json(*args, **kwargs)
         model = None
         if self.model:
-            model = app[self.model]
+            model = apps[self.model]
 
         rep_type = None
         if self.view and self.view.template_name:
             rep_type = self.view.template_name.rsplit('.', 1)[1]
             engine = get_engine(REPORT_ENGINES[rep_type])
             if rep_type == 'jinja2':
-                templ = app.report_env.get_template(self.view.template_name)
+                templ = loader.get_template(self.view.template_name)
                 params = templ.blocks.get('params')
                 if params:
                     ctx = templ.new_context({})
@@ -41,11 +43,11 @@ class ReportAction(Action):
                         xml = etree.fromstring(doc)
                         model_name = xml.attrib.get('model')
                         if model_name:
-                            model = app[model_name]
+                            model = apps[model_name]
                             data['fields'] = model.get_fields_info(xml)
                     data['content'] = doc
             elif rep_type == 'pug':
-                templ = app.report_env.get_template(self.view.template_name)
+                templ = get_template(self.view.template_name)
                 with open(templ.filename, 'r', encoding='utf-8') as f:
                     params = etree.tostring(engine.extract_params(f.read()))
                 if params is not None:
@@ -61,7 +63,7 @@ class ReportAction(Action):
                 if xml.tag == 'report' and 'model' in xml.attrib:
                     params.attrib['model'] = xml.attrib['model']
                     if not model:
-                        model = app[xml.attrib['model']]
+                        model = apps[xml.attrib['model']]
                         data['fields'] = model.get_fields_info(params)
 
                     # model = app[model]
@@ -77,7 +79,7 @@ class ReportAction(Action):
     def _export_report(self, format='pdf', params=None, where=None):
         qs = model = None
         if self.model:
-            model = app[self.model]
+            model = apps[self.model]
             qs = model.objects.all()
         _params = defaultdict(list)
         types = {}
@@ -113,7 +115,7 @@ class ReportAction(Action):
             xml = self.view.get_xml(model)
             report_file = xml.attrib['file']
             if rep_type == 'xml':
-                with open(app.jinja_env.get_or_select_template(report_file).filename, 'rb') as f:
+                with open(loader.get_template(report_file).template.filename, 'rb') as f:
                     xml = f.read()
             rep_type = report_file.rsplit('.', 1)[1]
 
@@ -123,7 +125,8 @@ class ReportAction(Action):
         rep = engine.auto_report(
             xml,
             connection=ConnectionProxy(connection),
-            company=g.user.user_company,
+            # company=g.user.user_company,
+            company=apps['auth.user'].objects.get(pk=1).user_company,
             format=format, model=model, query=qs, report_title=self.name, params=where, types=types, output_file=output_path,
         )
         if rep:
@@ -137,7 +140,9 @@ class ReportAction(Action):
 
     @api.method
     def export_report(cls, id, format='pdf', params=None):
-        rep = cls.objects.get(id)
+        if isinstance(id, list):
+            id = id[0]
+        rep = cls.objects.get(pk=id)
         return rep._export_report(format=format, params=params)
 
 
@@ -160,6 +165,36 @@ class AutoReport(models.Model):
         name = 'ui.report.auto'
 
 
+def create_report_environment():
+    # prepare jinja2 environment
+    from orun.reports.engines.chrome.filters import localize, linebreaks, groupby
+    from orun.reports.engines.chrome.extension import ReportExtension
+    from orun.reports.engines.chrome.utils import avg, total, to_list, COUNT, AVG, SUM
+    env = Environment()
+    env.autoescape = False
+    env.add_extension(ReportExtension)
+    env.finalize = localize
+    # env.undefined = SilentUndefined
+    env.filters['localize'] = localize
+    env.filters['linebreaks'] = linebreaks
+    # env.globals['static_fs'] = self.static_fs
+    env.filters['total'] = total
+    env.globals['avg'] = avg
+    env.globals['sum'] = sum
+    env.globals['count'] = len
+    env.globals['COUNT'] = COUNT
+    env.globals['SUM'] = SUM
+    env.globals['AVG'] = AVG
+    # env.filters['groupby'] = groupby
+    # self._report_env = env
+
+
+report_env = create_report_environment()
+
+
 REPORT_ENGINES = {
     'rep': 'orun.reports.engines.reptile.ReptileEngine',
 }
+
+if hasattr(settings, 'REPORT_ENGINES'):
+    REPORT_ENGINES.update(settings.REPORT_ENGINES)

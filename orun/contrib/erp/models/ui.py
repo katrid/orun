@@ -120,7 +120,7 @@ class View(models.Model):
 
     def compile(self, context, parent=None):
         view_cls = self.__class__
-        children = view_cls.objects.filter(view_cls.c.parent_id == self.pk, view_cls.c.mode == 'extension')
+        children = view_cls.objects.filter(parent_id=self.pk, mode='extension')
         xml = etree.fromstring(self._get_content(context))
         if self.parent and self.mode == 'primary':
             parent_xml = etree.fromstring(self.parent.render(context))
@@ -135,6 +135,7 @@ class View(models.Model):
 
     def _eval_permissions(self, xml):
         _groups = {}
+        return
         user = self.env.user
         if not user.is_superuser:
             objects = self.env['ir.object']
@@ -152,11 +153,12 @@ class View(models.Model):
 
     def _get_content(self, context):
         if self.view_type == 'report':
-            templ = apps.report_env.get_or_select_template(self.template_name.split(':')[-1])
+            from orun.contrib.erp.models.reports import report_env
+            templ = loader.get_template(self.template_name.split(':')[-1])
         else:
             templ = apps.jinja_env.get_or_select_template(self.template_name.split(':')[-1])
             return templ.render(context)
-        res = open(templ.filename, encoding='utf-8').read()
+        res = open(templ.template.filename, encoding='utf-8').read()
         return res
 
     def to_string(self):
