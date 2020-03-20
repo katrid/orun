@@ -1330,6 +1330,8 @@ class DateField(DateTimeCheckMixin, Field):
     def to_python(self, value):
         if value is None:
             return value
+        if isinstance(value, str):
+            return datetime.datetime.strptime(value, '%Y-%m-%d')
         if isinstance(value, datetime.datetime):
             if settings.USE_TZ and timezone.is_aware(value):
                 # Convert aware datetimes to the default time zone

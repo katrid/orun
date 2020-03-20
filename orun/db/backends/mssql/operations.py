@@ -58,10 +58,9 @@ class DatabaseOperations(BaseDatabaseOperations):
         return "ROLLBACK TRANSACTION %s" % sid
 
     def adapt_datetimefield_value(self, value):
-        """
-        Transform a datetime value to an object compatible with what is expected
-        by the backend driver for datetime columns.
-        """
+        return value
+
+    def adapt_datefield_value(self, value):
         return value
 
     def get_db_converters(self, expression):
