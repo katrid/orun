@@ -1173,7 +1173,7 @@ var Katrid;
                 this._masterSource = null;
                 this.masterSource = config.master;
                 this._pageIndex = 0;
-                this.pageLimit = 100;
+                this.pageLimit = config.pageLimit || 100;
                 this.offset = 0;
                 this.offsetLimit = 0;
                 this.requestInterval = DEFAULT_REQUEST_INTERVAL;
@@ -1795,7 +1795,7 @@ var Katrid;
                 if (this.scope.form)
                     this.scope.form.$setPristine();
                 if (this.action && this.action.$element)
-                    this.action.$element[0].dispatchEvent(new CustomEvent('recordLoaded', { 'detail': { rec } }));
+                    this.action.$element[0].dispatchEvent(new CustomEvent('recordLoaded', { 'detail': { record: rec } }));
                 this.childrenNotification(rec);
             }
             set records(recs) {
@@ -4694,6 +4694,7 @@ var Katrid;
                         master: this.actionView.action.dataSource,
                         field: this.field,
                         action: this._action,
+                        pageLimit: this.field.info.page_limit,
                     });
                     this.loadViews(views);
                 }

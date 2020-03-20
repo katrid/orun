@@ -1539,7 +1539,9 @@ class OneToManyField(RelatedField):
     def __init__(self, to, to_fields=None, related_name=None, *args, **kwargs):
         kwargs['rel'] = self.rel_class(self, to, to_fields, related_name=related_name)
         kwargs['concrete'] = False
+        page_limit = kwargs.pop('page_limit', None)
         super().__init__(*args, **kwargs)
+        self.page_limit = page_limit
 
     def contribute_to_class(self, cls, name):
         if self.remote_field.related_name == 'self':
@@ -1554,6 +1556,7 @@ class OneToManyField(RelatedField):
         r = super()._formfield()
         r['field'] = self.remote_field.to_field.name
         r['model'] = self.remote_field.model._meta.name
+        r['page_limit'] = self.page_limit
         return r
 
     def to_json(self, value):

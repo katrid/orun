@@ -1928,6 +1928,10 @@ class Model(metaclass=ModelBase):
         qs = cls._search(fields=fields, **kwargs)
         if count:
             count = qs.count()
+        if limit is None:
+            limite = CHOICES_PAGE_LIMIT
+        elif limit == -1:
+            limit = None
         if page and limit:
             page = int(page)
             limit = int(limit)
