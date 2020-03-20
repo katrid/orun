@@ -2534,10 +2534,10 @@ var Katrid;
     (function (Data) {
         let RecordState;
         (function (RecordState) {
-            RecordState[RecordState["destroyed"] = 0] = "destroyed";
-            RecordState[RecordState["created"] = 1] = "created";
-            RecordState[RecordState["modified"] = 2] = "modified";
-            RecordState[RecordState["unmodified"] = 3] = "unmodified";
+            RecordState[RecordState["unmodified"] = 0] = "unmodified";
+            RecordState[RecordState["destroyed"] = 1] = "destroyed";
+            RecordState[RecordState["created"] = 2] = "created";
+            RecordState[RecordState["modified"] = 3] = "modified";
         })(RecordState = Data.RecordState || (Data.RecordState = {}));
         class Record {
             constructor(data, dataSource, state) {
@@ -2571,11 +2571,16 @@ var Katrid;
                 return rec;
             }
             delete() {
-                this.state = RecordState.destroyed;
-                if (this.state === RecordState.unmodified)
+                console.log(this);
+                if (this.state === RecordState.unmodified) {
                     this.setModified();
-                else if (this.parent.children.indexOf(this) > -1)
+                    if (this.parent.children.indexOf(this) === -1)
+                        this.parent.children.push(this);
+                    this.state = RecordState.destroyed;
+                }
+                else if (this.parent.children.indexOf(this) > -1) {
                     this.parent.children.splice(this.parent.children.indexOf(this), 1);
+                }
             }
             _prepareRecord(rec, parent) {
                 console.log(rec.constructor.name);
@@ -2667,6 +2672,7 @@ var Katrid;
             }
             serialize() {
                 let data = {};
+                console.log('serialize', this);
                 Object.assign(data, this.data);
                 for (let child of this.children) {
                     console.log('state', child.state);
@@ -4737,6 +4743,8 @@ var Katrid;
                     Katrid.Core.$compile(tb)(this._scope);
                     this.appendChild(tb);
                     this.appendChild(elView);
+                    for (let input of elView.querySelectorAll('input[type=checkbox]'))
+                        console.log(input);
                 }
                 renderToolbar() {
                     let tb = document.createElement('div');
@@ -4748,6 +4756,13 @@ var Katrid;
                     btn.setAttribute('ng-show', '$parent.action.dataSource.changing');
                     tb.appendChild(btn);
                     btn.addEventListener('click', () => this._action.addItem());
+                    let btnDelete = document.createElement('button');
+                    btnDelete.setAttribute('type', 'button');
+                    btnDelete.classList.add('btn', 'btn-xs', 'btn-outline-secondary', 'grid-editor-control');
+                    btnDelete.innerText = Katrid.i18n.gettext('Delete selection');
+                    btnDelete.addEventListener('click', () => this._action.deleteSelection());
+                    btnDelete.setAttribute('ng-show', 'action.selection.length && $parent.action.dataSource.changing');
+                    tb.appendChild(btnDelete);
                     return tb;
                 }
                 get viewMode() {
@@ -4809,6 +4824,7 @@ var Katrid;
                 constructor(field) {
                     this.field = field;
                     this.scope = field.scope;
+                    this.selection = [];
                 }
                 get dataSource() {
                     return this.field.dataSource;
@@ -4820,6 +4836,27 @@ var Katrid;
                     this.field.showDialog();
                     await this.field.dataSource.insert();
                     this.field.dataSource.record[this.field.field.info.field] = this.field.actionView.action.dataSource.recordId;
+                }
+                deleteSelection() {
+                    let i = 0;
+                    let recs = [];
+                    for (let checkbox of this.field.querySelectorAll(".list-record-selector input[type='checkbox']")) {
+                        if (checkbox.checked) {
+                            checkbox.closest('tr').remove();
+                            recs.push(angular.element(checkbox).scope().record.$record);
+                        }
+                        i++;
+                    }
+                    for (let rec of recs)
+                        rec.delete();
+                    this.selection = [];
+                }
+                selectToggle(item) {
+                    this.selection = [];
+                    for (let checkbox of item.closest('table').querySelectorAll("input[type='checkbox']"))
+                        if (checkbox.checked)
+                            this.selection.push(checkbox.getAttribute('data-id'));
+                    console.log('selection', this.selection);
                 }
                 editItem(record) {
                     console.log('item click');

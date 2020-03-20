@@ -21,6 +21,9 @@ msgstr "Ação"
 msgid "Delete"
 msgstr "Excluir"
 
+msgid "Delete selection"
+msgstr "Excluir seleção"
+
 msgid "Edit"
 msgstr "Editar"
 
