@@ -1179,7 +1179,6 @@ var Katrid;
                 this.requestInterval = DEFAULT_REQUEST_INTERVAL;
                 this.pendingOperation = null;
                 this.pendingRequest = false;
-                this.fieldName = null;
                 this.children = [];
                 this.modifiedData = null;
                 this.uploading = 0;
@@ -1224,9 +1223,14 @@ var Katrid;
                 this.state = DataSourceState.browsing;
                 this.scope.$emit('afterCancel', this);
             }
+            _createRecord(obj) {
+                let rec = Data.createRecord(obj, this);
+                rec.$record.onFieldChange = this._onFieldChange;
+                return rec;
+            }
             async copy(id) {
                 let res = await this.model.copy(id);
-                this.record = {};
+                this.setRecord({});
                 await this.insert();
                 this.setValues(res);
                 return res;
@@ -1684,7 +1688,7 @@ var Katrid;
                 this._clearTimeout();
                 for (let child of this.children)
                     child._clearTimeout();
-                let rec = Data.createRecord(null, this);
+                let rec = this._createRecord(null, this);
                 let oldRecs = this._records;
                 this.record = rec;
                 this._records = oldRecs;
@@ -1787,7 +1791,7 @@ var Katrid;
             }
             set record(rec) {
                 if (!rec.$record)
-                    rec = Katrid.Data.createRecord(rec, this);
+                    rec = this._createRecord(rec);
                 console.log('parent notification', rec);
                 this.scope.record = rec;
                 this.recordId = rec.id;
@@ -1797,6 +1801,10 @@ var Katrid;
                 if (this.action && this.action.$element)
                     this.action.$element[0].dispatchEvent(new CustomEvent('recordLoaded', { 'detail': { record: rec } }));
                 this.childrenNotification(rec);
+            }
+            setRecord(obj) {
+                obj = this._createRecord(obj);
+                return obj;
             }
             set records(recs) {
                 this._records = recs;
@@ -1951,6 +1959,26 @@ var Katrid;
             }
             discardChanges() {
                 this.record.$record.discard();
+            }
+            encodeObject(obj) {
+                if (_.isArray(obj))
+                    return obj.map((v) => this.encodeObject(v));
+                else if (_.isObject(obj)) {
+                    let r = {};
+                    for (let [k, v] of Object.entries(obj))
+                        if (!k.startsWith('$'))
+                            r[k] = this.encodeObject(v);
+                    return r;
+                }
+                else
+                    return obj;
+            }
+            _onFieldChange(field, newValue, record) {
+                let rec = this.encodeObject(record.data);
+                rec[field.name] = newValue;
+                if (this.parent)
+                    rec[this.field.info.field] = this.encodeObject(this.parent.record);
+                this.dispatchEvent('field_change_event', [field.name, rec]);
             }
         }
         Data.DataSource = DataSource;
@@ -2571,7 +2599,6 @@ var Katrid;
                 return rec;
             }
             delete() {
-                console.log(this);
                 if (this.state === RecordState.unmodified) {
                     this.setModified();
                     if (this.parent.children.indexOf(this) === -1)
@@ -2583,7 +2610,8 @@ var Katrid;
                 }
             }
             _prepareRecord(rec, parent) {
-                console.log(rec.constructor.name);
+                console.log('prepare record');
+                console.trace();
                 return;
                 let getValue = (v) => {
                     if (_.isObject(v))
@@ -2642,40 +2670,20 @@ var Katrid;
                         this.setModified(propKey);
                         this.data[propKey] = value;
                         if (field.onChange) {
-                            let rec = this.$encode(this.pristine);
-                            rec[propKey] = value;
-                            if (this.dataSource.parent && this.dataSource.fieldName) {
-                                let field = this.dataSource.parent.fields[this.dataSource.fieldName]._info.field;
-                                rec[field] = this.$encode(this.dataSource.parent.record);
-                            }
-                            this.dataSource.dispatchEvent('field_change_event', [propKey, rec]);
+                            if (this.onFieldChange)
+                                this.onFieldChange.apply(this.dataSource, [field, value, this]);
                         }
                     }
                 }
                 return true;
-            }
-            $encode(obj) {
-                if (_.isArray(obj))
-                    return obj.map((v) => this.$encode(v));
-                else if (_.isObject(obj)) {
-                    let r = {};
-                    for (let [k, v] of Object.entries(obj))
-                        if (!k.startsWith('$'))
-                            r[k] = this.$encode(v);
-                    return r;
-                }
-                else
-                    return obj;
             }
             $new() {
                 return new Record(this.pristine);
             }
             serialize() {
                 let data = {};
-                console.log('serialize', this);
                 Object.assign(data, this.data);
                 for (let child of this.children) {
-                    console.log('state', child.state);
                     if (!(child.dataSource.field.name in data))
                         data[child.dataSource.field.name] = [];
                     if (child.state === RecordState.created)
@@ -2685,7 +2693,6 @@ var Katrid;
                     else if (child.state === RecordState.destroyed)
                         data[child.dataSource.field.name].push({ action: 'DESTROY', id: child.pk });
                 }
-                console.log('serialize', data);
                 if (this.pk)
                     data.id = this.pk;
                 return data;
@@ -4743,8 +4750,6 @@ var Katrid;
                     Katrid.Core.$compile(tb)(this._scope);
                     this.appendChild(tb);
                     this.appendChild(elView);
-                    for (let input of elView.querySelectorAll('input[type=checkbox]'))
-                        console.log(input);
                 }
                 renderToolbar() {
                     let tb = document.createElement('div');
@@ -7121,7 +7126,6 @@ var Katrid;
                     return value;
                 });
                 controller.$formatters.push(value => {
-                    console.log('formatter', value);
                     if (_.isArray(value))
                         return value[1];
                     return value;
@@ -7246,7 +7250,6 @@ var Katrid;
                 sel = sel.select2(config);
                 let createNew = () => {
                     sel.select2('close');
-                    console.log('fk create new', field);
                     let service = new Katrid.Services.Model(field.info.model);
                     return service.getViewInfo({
                         view_type: "form"
@@ -7271,7 +7274,6 @@ var Katrid;
                         .append(`<div style="padding: 4px;"><button type="button" class="btn btn-link btn-sm">${Katrid.i18n.gettext('Create New...')}</button></div>`)
                         .find('button').click(createNew);
                 sel.on("change", async (e) => {
-                    console.log('on change', e.val);
                     let v = e.added;
                     if (v && v.id === newItem) {
                         let service = new Katrid.Services.Model(field.model);

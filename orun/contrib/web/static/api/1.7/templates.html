@@ -315,7 +315,7 @@
           <div class="content container">
             <div class="card panel-default data-panel browsing"
                  ng-class="{ browsing: dataSource.browsing, editing: dataSource.changing }">
-              <div class="card-body teste">
+              <div class="card-body">
                   <a class="maximize-button" role="button" title="Maximizar" onclick="$(this).closest('div.card.data-panel').toggleClass('box-fullscreen');$(this).find('i').toggleClass('fa-compress fa-expand')">
                     <i class=" fa fa-expand"></i>
                   </a>
@@ -337,12 +337,8 @@
 <templates>
   <script id="view.import" type="text/ng-template">
     <div>
-      <toolbar>
-        teste
-      </toolbar>
-      <form>
-        bla bla bla
-      </form>
+      <toolbar></toolbar>
+      <form></form>
     </div>
   </script>
   <script extends="view.buttons" type="text/ng-template">
@@ -1136,7 +1132,6 @@
         <table class="col-sm-12">
           <tr>
             <td class="col-sm-4">
-              ${ 'teste' }
               <select class="form-control" ng-model="newParam">
                 <option value="">--- {{ _.gettext('FILTERS') }} ---</option>
                 <option ng-repeat="field in report.fields" value="${ field.name }">${ field.label }</option>

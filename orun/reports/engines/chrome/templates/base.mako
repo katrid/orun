@@ -10,7 +10,6 @@
 <html>
   <%block name="head">
     <head>
-      <title>teste</title>
       <meta charset="UTF-8">
       % for ns in list(context.namespaces.values())[::-1]:
         % if hasattr(ns, 'includes'):
