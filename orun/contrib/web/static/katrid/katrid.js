@@ -2841,6 +2841,8 @@ var Katrid;
                     this.destroy();
                 }
                 create() {
+                    let cols = this._field.cols || 12;
+                    this.classList.add('col-md-' + cols.toString());
                 }
                 destroy() {
                 }
