@@ -994,7 +994,21 @@
       <option value="<">${ ::_.gettext('Less-than') }</option>
     </select>
   </script>
+
+  <script id="view.param.ForeignKey" type="text/ng-template">
+    <div class="form-group">
+      <input class="form-control" ng-model="searchValue" ng-change="valueChange(searchValue)" fk-autocomplete="field" model-name="${ $parent.action.model.name }" field="${ fieldName }">
+    </div>
+  </script>
+
+  <script id="view.param.ForeignKey.conditions" type="text/ng-template">
+    <select class="form-control" ng-model="condition" ng-change="conditionChange(condition)">
+      <option value="=">${ ::_.gettext('Is equal') }</option>
+      <option value="!=">${ ::_.gettext('Is different') }</option>
+    </select>
+  </script>
 </templates>
+
 <templates>
   <script id="query.manager.jinja2" type="text/ng-template">
     <form class="col-12 margin-top-16">
@@ -1398,10 +1412,10 @@
               </select>
             </div>
             <div class="form-group">
-              <ng-include src="field.paramTemplate + '.conditions'"/>
+              <ng-include src="field.getParamTemplate() + '.conditions'"/>
             </div>
             <div class="form-group">
-              <ng-include src="field.paramTemplate" ng-show="controlVisible"/>
+              <ng-include src="field.getParamTemplate()" ng-show="controlVisible"/>
             </div>
             <div class="form-group">
               <button class="btn btn-primary" type="button" ng-click="applyFilter(field, condition, searchValue)" ng-show="searchValue!==undefined">

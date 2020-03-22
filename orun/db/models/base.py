@@ -1989,13 +1989,14 @@ class Model(metaclass=ModelBase):
                 q &= Q(**where)
             kwargs = {'where': q}
         qs = self._search(*args, **kwargs)
+        limit = kwargs.get('limit') or 10
         if count:
             count = qs.count()
         if page:
             page = int(page)
-            qs = qs[(page - 1) * CHOICES_PAGE_LIMIT:page * CHOICES_PAGE_LIMIT]
+            qs = qs[(page - 1) * limit:page * limit]
         else:
-            qs = qs[:CHOICES_PAGE_LIMIT]
+            qs = qs[:limit]
         if isinstance(label_from_instance, list):
             label_from_instance = lambda obj, label_from_instance=label_from_instance: (obj.pk, ' - '.join([str(getattr(obj, f, '')) for f in label_from_instance if f in self._meta.fields_dict]))
         if callable(label_from_instance):
@@ -2073,11 +2074,13 @@ class Model(metaclass=ModelBase):
         return data
 
     @api.method
-    def get_field_choices(self, field, q=None, count=False, ids=None, page=None, exact=False, **kwargs):
+    def get_field_choices(self, field, q=None, count=False, ids=None, page=None, exact=False, limit=None, **kwargs):
         field_name = field
         field = self._meta.fields[field_name]
         related_model = apps[field.remote_field.model]
         search_params = {}
+        if limit:
+            search_params['limit'] = limit
         if field.many_to_many:
             field = field.remote_field.target_field
         if ids is None:

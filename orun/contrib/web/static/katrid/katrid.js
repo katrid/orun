@@ -2231,10 +2231,18 @@ var Katrid;
                 get type() {
                     return this.info.type;
                 }
-                get paramTemplate() {
+                getParamTemplate() {
                     return 'view.param.String';
                 }
+                createParamWidget() {
+                    let templ = this.getParamTemplate();
+                    templ = Katrid.app.getTemplate(templ);
+                    return $(templ)[0];
+                }
                 format(value) {
+                    return value.toString();
+                }
+                getParamValue(value) {
                     return value.toString();
                 }
                 toJSON(val) {
@@ -2293,7 +2301,7 @@ var Katrid;
                     this.template.card = 'view.list.boolean-field.jinja2';
                     this.nolabel = true;
                 }
-                get paramTemplate() {
+                getParamTemplate() {
                     return 'view.param.Boolean';
                 }
             }
@@ -2310,7 +2318,7 @@ var Katrid;
                 toJSON(val) {
                     return val;
                 }
-                get paramTemplate() {
+                getParamTemplate() {
                     return 'view.param.Date';
                 }
                 format(value) {
@@ -2332,7 +2340,7 @@ var Katrid;
                     this.template.form = 'view.form.datetime-field.jinja2';
                     this.template.list = 'view.list.datetime-field.jinja2';
                 }
-                get paramTemplate() {
+                getParamTemplate() {
                     return 'view.param.DateTime';
                 }
                 getAttributes(attrs) {
@@ -2382,7 +2390,7 @@ var Katrid;
                         return parseInt(val);
                     return val;
                 }
-                get paramTemplate() {
+                getParamTemplate() {
                     return 'view.param.Integer';
                 }
             }
@@ -2411,6 +2419,23 @@ var Katrid;
                     });
                     if (Katrid.settings.ui.isMobile)
                         this.template.form = 'view.form.autocomplete.jinja2';
+                }
+                getParamTemplate() {
+                    return 'view.param.ForeignKey';
+                }
+                getParamValue(value) {
+                    if (_.isArray(value))
+                        return value[0];
+                    else if (_.isObject(value))
+                        return value.id;
+                    return value;
+                }
+                format(value) {
+                    if (_.isArray(value))
+                        return value[1];
+                    else if (_.isObject(value))
+                        return value.text;
+                    return value;
                 }
                 toJSON(val) {
                     if (_.isArray(val))
@@ -3485,6 +3510,7 @@ var Katrid;
                     this.values = [];
                 }
                 get templateValue() {
+                    console.log(this.values);
                     return (Array.from(this.values).map((s) => s instanceof SearchObject ? s.display : s)).join(this.separator);
                 }
                 template() {
@@ -3850,7 +3876,7 @@ var Katrid;
                 }
                 get value() {
                     let r = {};
-                    r[this.field.name + conditionSuffix[this.condition]] = this._value;
+                    r[this.field.name + conditionSuffix[this.condition]] = this.field.getParamValue(this._value);
                     return r;
                 }
             }
@@ -3866,6 +3892,7 @@ var Katrid;
                         $scope.controlVisible = $scope.field.isControlVisible(condition);
                     };
                     $scope.valueChange = (value) => {
+                        console.log('value change', value);
                         $scope.searchValue = value;
                     };
                     $scope.addCondition = (field, condition, value) => {
@@ -7071,6 +7098,7 @@ var Katrid;
         })]);
 })();
 (function () {
+    const DEFAULT_PAGE_SIZE = 12;
     class Component {
         constructor(el, config) {
             this.config = config;
@@ -7087,21 +7115,34 @@ var Katrid;
             restrict: "A",
             require: "ngModel",
             link(scope, el, attrs, controller) {
-                const field = scope.view.fields[attrs.name];
+                let fieldName = attrs.field;
+                let modelName = attrs.modelName;
+                let field;
+                if (!fieldName) {
+                    field = scope.view.fields[attrs.name];
+                    if (!field)
+                        field = scope.action.fields[attrs.name];
+                }
                 $(el).autocomplete({
                     source: (req, res) => {
-                        let domain = field.domain;
-                        if (domain && _.isString(domain))
-                            domain = scope.$eval(domain);
+                        let domain;
+                        if (field && field.domain) {
+                            domain = field.domain;
+                            if (_.isString(domain))
+                                domain = scope.$eval(domain);
+                        }
                         let data = {
                             args: [req.term],
                             kwargs: {
                                 domain: domain,
+                                limit: DEFAULT_PAGE_SIZE,
                                 name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
                             }
                         };
                         let svc;
-                        if (scope.model)
+                        if (fieldName)
+                            svc = new Katrid.Services.Model(modelName).getFieldChoices(fieldName, req.term, data.kwargs);
+                        else if (scope.model)
                             svc = scope.model.getFieldChoices(field.name, req.term, data.kwargs);
                         else
                             svc = new Katrid.Services.Model(field.model).searchName(data);
@@ -7114,9 +7155,13 @@ var Katrid;
                     },
                     minLength: 1,
                     select: (event, ui) => {
+                        event.preventDefault();
+                        event.stopPropagation();
                         el.val(ui.item.label);
                         scope.$apply(() => {
-                            el.data('value', [ui.item.value, ui.item.label]);
+                            let obj = [ui.item.value, ui.item.label];
+                            el.data('value', obj);
+                            controller.$setViewValue(obj);
                             controller.$setDirty();
                             return false;
                         });
