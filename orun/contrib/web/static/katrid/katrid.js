@@ -5153,9 +5153,8 @@ var Katrid;
     var Services;
     (function (Services) {
         class Model extends Services.Service {
-            searchName(name) {
-                let args = { name };
-                return this.post('search_name', args);
+            searchName(kwargs) {
+                return this.post('search_name', kwargs);
             }
             createName(name) {
                 let kwargs = { name };
