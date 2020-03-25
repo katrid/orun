@@ -1969,6 +1969,8 @@ class Model(metaclass=ModelBase):
                 qs = qs.filter(where)
         if domain:
             qs = qs.filter(**domain)
+        if self._meta.active_field:
+            qs = qs.filter(**{self._meta.active_field: True})
         return qs
 
     @api.method
