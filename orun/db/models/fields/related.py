@@ -851,6 +851,8 @@ class ForeignKey(ForeignObject):
                              (not self.target_field.empty_strings_allowed or
                               connection.features.interprets_empty_strings_as_nulls)):
             return None
+        elif isinstance(value, self.related_model):
+            return value.pk
         else:
             return self.target_field.get_db_prep_save(value, connection=connection)
 

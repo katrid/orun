@@ -1198,12 +1198,11 @@ class CharField(Field):
         return self.to_python(value)
 
     def to_json(self, value):
-        if value is None:
-            value = ''
-        if self.translate:
-            value = gettext(value)
-        else:
-            value = str(value)
+        if value is not None:
+            if self.translate:
+                value = gettext(value)
+            else:
+                value = str(value)
         return value
 
 

@@ -43,10 +43,12 @@ class View(models.Model):
             ('custom', 'Custom'),
         ), null=False
     )
-    mode = models.CharField(16, choices=(
-        ('primary', _('Primary')),
-        ('extension', _('Extension'))
-    ), default='primary', null=False)
+    mode = models.ChoiceField(
+        (
+            ('primary', _('Primary')),
+            ('extension', _('Extension'))
+        ), default='primary', null=False
+    )
     model = models.CharField(128, db_index=True)
     priority = models.IntegerField(_('Priority'), default=99, null=False)
     template_name = models.CharField(max_length=255)

@@ -962,7 +962,7 @@ class BaseDatabaseSchemaEditor:
         if not model._meta.managed:
             return []
         output = []
-        for field in model._meta.local_fields:
+        for field in model._meta.local_concrete_fields:
             output.extend(self._field_indexes_sql(model, field))
 
         for field_names in model._meta.index_together:

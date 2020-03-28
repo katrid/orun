@@ -22,7 +22,7 @@ from orun.db.models.deletion import CASCADE, Collector
 from orun.db.models.fields import BaseField, Field, BigAutoField, CharField, DateTimeField
 from orun.db.models import Q
 from orun.db.models.fields.related import (
-    ForeignObjectRel, ForeignKey, OneToOneField, lazy_related_operation, resolve_relation,
+    ForeignObjectRel, ForeignKey, OneToOneField, lazy_related_operation,
 )
 from orun.db.models.manager import Manager
 from orun.db.models.options import Options
@@ -1969,6 +1969,7 @@ class Model(metaclass=ModelBase):
                 qs = qs.filter(where)
         if domain:
             qs = qs.filter(**domain)
+        # filter active records only
         if self._meta.active_field:
             qs = qs.filter(**{self._meta.active_field: True})
         return qs

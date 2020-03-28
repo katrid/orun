@@ -3,7 +3,6 @@ from orun.db.models import QuerySet
 from orun.conf import settings
 from orun.core.exceptions import MethodNotFound
 from orun.db import models, transaction
-# from orun.contrib.auth.decorators import login_required
 from orun.contrib.auth.decorators import login_required
 from orun.apps import apps
 from orun.http import HttpResponse, JsonResponse, HttpResponseForbidden
@@ -55,7 +54,6 @@ def app_settings(request):
     return {'result': {}}
 
 
-# @cross_domain('*')
 @login_required
 def public_query(request, id=None):
     if settings.PUBLIC_QUERY_ALLOWED:

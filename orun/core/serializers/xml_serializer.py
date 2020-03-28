@@ -239,7 +239,6 @@ class Deserializer(base.Deserializer):
 
     def read_report(self, obj, **attrs):
         model = obj.attrib.get('model')
-        print('model name', model)
         view = {
             'model': 'ui.view',
             'id': obj.attrib.get('view-id'),
