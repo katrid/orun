@@ -197,7 +197,7 @@ class Deserializer:
 
     def create_stream(self):
         if isinstance(self.stream_or_string, Path):
-            return open(str(self.stream_or_string))
+            return open(str(self.stream_or_string), encoding='utf-8')
         elif isinstance(self.stream_or_string, str):
             return StringIO(self.stream_or_string)
         return self.stream_or_string
