@@ -7,7 +7,7 @@ from orun.utils.functional import SimpleLazyObject
 from functools import wraps
 
 
-class RecordsProxy:
+class RecordProxy:
     def __init__(self, model, iterable=None, env=None):
         self.__dict__['env'] = env
         self.__dict__['__model__'] = model
@@ -77,6 +77,8 @@ def records(*args, each=False, **kwargs):
         def wrapped(self, *args, **kwargs):
             ids = None
             kwargs = dict(kwargs)
+            if isinstance(self, list):
+                self = RecordProxy(self)
             if self._state is not None and self.pk:
                 return fn(self, *args, **kwargs)
             elif 'id' in kwargs:

@@ -7857,7 +7857,7 @@ var Katrid;
                         }
                         else {
                             th = '<th></th>';
-                            td = `<td>${fld.html()}</td>`;
+                            td = `<td>${fld.innerHTML}</td>`;
                         }
                         tr.append(td);
                         thead.append(th);
