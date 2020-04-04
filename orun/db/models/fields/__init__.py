@@ -236,6 +236,7 @@ class Field(BaseField):
                  group_choices=None, track_visibility=None,
                  descriptor=None, **kwargs):
         self.name = name
+        verbose_name = verbose_name or kwargs.get('label')
         self.verbose_name = verbose_name  # May be set by set_attributes_from_name
         self._verbose_name = verbose_name  # Store original for deconstruction
         self.primary_key = primary_key
