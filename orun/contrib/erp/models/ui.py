@@ -1,6 +1,7 @@
 import os
 import re
 from jinja2 import Environment, FunctionLoader
+from lxml.html import HTMLParser
 
 from orun import g
 from orun.apps import apps
@@ -77,8 +78,10 @@ class View(models.Model):
         xml = etree.tostring(self.get_xml(model))
         return xml
 
-    def get_xml(self, model):
-        context = {'opts': model._meta if model else None}
+    def get_xml(self, model, context=None):
+        if context is None:
+            context = {}
+        context.update({'opts': model._meta if model else None})
         return self.compile(context)
 
     def xpath(self, source, element):
@@ -123,7 +126,7 @@ class View(models.Model):
     def compile(self, context, parent=None):
         view_cls = self.__class__
         children = view_cls.objects.filter(parent_id=self.pk, mode='extension')
-        xml = etree.fromstring(self._get_content(context))
+        xml = etree.fromstring(self._get_content(context), parser=HTMLParser())
         if self.parent and self.mode == 'primary':
             parent_xml = etree.fromstring(self.parent.render(context))
             self.merge(parent_xml, xml)
@@ -158,7 +161,8 @@ class View(models.Model):
             from orun.contrib.erp.models.reports import report_env
             templ = loader.get_template(self.template_name.split(':')[-1])
         else:
-            templ = apps.jinja_env.get_or_select_template(self.template_name.split(':')[-1])
+            templ = loader.get_template(self.template_name.split(':')[-1])
+            # templ = apps.jinja_env.get_or_select_template(self.template_name.split(':')[-1])
             return templ.render(context)
         res = open(templ.template.filename, encoding='utf-8').read()
         return res
