@@ -2372,7 +2372,10 @@ class ImageField(BinaryField):
 class ChoiceField(CharField):
     def __init__(self, *args, **kwargs):
         if args and isinstance(args[0], (list, tuple, dict)):
-            kwargs['choices'] = args[0]
+            choices = args[0]
+            if isinstance(choices, dict):
+                choices = tuple(choices.items())
+            kwargs['choices'] = choices
         kwargs.setdefault('max_length', 32)
         super(ChoiceField, self).__init__(*args[1:], **kwargs)
 
