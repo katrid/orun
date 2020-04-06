@@ -1,6 +1,7 @@
 import datetime
 import inspect
 import warnings
+import copy
 from functools import partialmethod, reduce
 from itertools import chain
 
@@ -2130,6 +2131,33 @@ class Model(metaclass=ModelBase):
                 'action': [action.to_json() for action in bindings['action'] if view_type == 'list' or not action.multiple],
             }
         return r
+
+    def __copy__(self):
+        new_item = {}
+        for f in self._meta.copyable_fields:
+            if not f.name:
+                continue
+            v = getattr(self, f.name)
+            if self._meta.title_field == f.name:
+                new_item[f.name] = gettext('%s (copy)') % v
+            elif f.one_to_many:
+                values = new_item[f.name] = [
+                    {
+                        'action': 'CREATE',
+                        # remove parent record information
+                        'values': {k: v for k, v in copy.copy(obj).items() if k != f.rel.field_name},
+                    }
+                    for obj in v
+                ]
+            else:
+                new_item[f.name] = f.to_json(v)
+        return new_item
+
+    @api.method
+    def copy(cls, id):
+        # ensure permission
+        instance = cls.get(id)
+        return copy.copy(instance)
 
     @api.method
     def get_defaults(self, context=None, *args, **kwargs):
