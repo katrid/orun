@@ -64,7 +64,7 @@ class View(models.Model):
         if self.parent_id and self.mode is None:
             self.mode = 'extension'
         if self.view_type is None:
-            xml = etree.fromstring(self.render({}), parser=etree.XMLParser(recover=True))
+            xml = etree.fromstring(self.render({}))
             self.view_type = xml.tag
         super(View, self).save(*args, **kwargs)
 
@@ -91,20 +91,20 @@ class View(models.Model):
             target = target.xpath(expr)[0]
         if pos == 'append':
             for child in element:
-                target.append(etree.fromstring(etree.tostring(child), parser=etree.XMLParser(recover=True)))
+                target.append(etree.fromstring(etree.tostring(child)))
         elif pos == 'insert':
             for child in reversed(element):
-                target.insert(0, etree.fromstring(etree.tostring(child), parser=etree.XMLParser(recover=True)))
+                target.insert(0, etree.fromstring(etree.tostring(child)))
         elif pos == 'before':
             parent = target.getparent()
             idx = parent.index(target)
             for child in reversed(element):
-                parent.insert(idx, etree.fromstring(etree.tostring(child), parser=etree.XMLParser(recover=True)))
+                parent.insert(idx, etree.fromstring(etree.tostring(child)))
         elif pos == 'after':
             parent = target.getparent()
             idx = parent.index(target) + 1
             for child in reversed(element):
-                parent.insert(idx, etree.fromstring(etree.tostring(child), parser=etree.XMLParser(recover=True)))
+                parent.insert(idx, etree.fromstring(etree.tostring(child)))
         elif pos == 'attributes':
             for child in element:
                 target.attrib[child.attrib['name']] = child.text
@@ -113,7 +113,7 @@ class View(models.Model):
             idx = p.index(target)
             p.remove(target)
             for child in element:
-                p.insert(idx, etree.fromstring(etree.tostring(child), parser=etree.XMLParser(recover=True)))
+                p.insert(idx, etree.fromstring(etree.tostring(child)))
 
     def merge(self, source, dest):
         for child in dest:
@@ -125,14 +125,14 @@ class View(models.Model):
     def compile(self, context, parent=None):
         view_cls = self.__class__
         children = view_cls.objects.filter(parent_id=self.pk, mode='extension')
-        xml = etree.fromstring(self._get_content(context), parser=etree.XMLParser(recover=True))
+        xml = etree.fromstring(self._get_content(context))
         if self.parent and self.mode == 'primary':
-            parent_xml = etree.fromstring(self.parent.render(context), parser=etree.XMLParser(recover=True))
+            parent_xml = etree.fromstring(self.parent.render(context))
             self.merge(parent_xml, xml)
             xml = parent_xml
 
         for child in children:
-            self.merge(xml, etree.fromstring(child._get_content(context), parser=etree.XMLParser(recover=True)))
+            self.merge(xml, etree.fromstring(child._get_content(context)))
 
         self._eval_permissions(xml)
         return xml
