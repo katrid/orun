@@ -314,6 +314,11 @@ class Field(BaseField):
 
         self.selectable = self.concrete and not descriptor
 
+        if copy is None:
+            self.copy = not self.primary_key and self.concrete and not auto_created
+        else:
+            self.copy = copy
+
     def __str__(self):
         """
         Return "app_label.model_label.field_name" for fields attached to
