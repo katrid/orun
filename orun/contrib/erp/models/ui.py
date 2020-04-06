@@ -65,7 +65,7 @@ class View(models.Model):
         if self.parent_id and self.mode is None:
             self.mode = 'extension'
         if self.view_type is None:
-            xml = etree.fromstring(self.render({}))
+            xml = etree.fromstring(self.render({}), parser=HTMLParser())
             self.view_type = xml.tag
         super(View, self).save(*args, **kwargs)
 
@@ -92,20 +92,20 @@ class View(models.Model):
             target = target.xpath(expr)[0]
         if pos == 'append':
             for child in element:
-                target.append(etree.fromstring(etree.tostring(child)))
+                target.append(etree.fromstring(etree.tostring(child), parser=HTMLParser()))
         elif pos == 'insert':
             for child in reversed(element):
-                target.insert(0, etree.fromstring(etree.tostring(child)))
+                target.insert(0, etree.fromstring(etree.tostring(child), parser=HTMLParser()))
         elif pos == 'before':
             parent = target.getparent()
             idx = parent.index(target)
             for child in reversed(element):
-                parent.insert(idx, etree.fromstring(etree.tostring(child)))
+                parent.insert(idx, etree.fromstring(etree.tostring(child), parser=HTMLParser()))
         elif pos == 'after':
             parent = target.getparent()
             idx = parent.index(target) + 1
             for child in reversed(element):
-                parent.insert(idx, etree.fromstring(etree.tostring(child)))
+                parent.insert(idx, etree.fromstring(etree.tostring(child), parser=HTMLParser()))
         elif pos == 'attributes':
             for child in element:
                 target.attrib[child.attrib['name']] = child.text
@@ -114,7 +114,7 @@ class View(models.Model):
             idx = p.index(target)
             p.remove(target)
             for child in element:
-                p.insert(idx, etree.fromstring(etree.tostring(child)))
+                p.insert(idx, etree.fromstring(etree.tostring(child), parser=HTMLParser()))
 
     def merge(self, source, dest):
         for child in dest:
@@ -128,12 +128,12 @@ class View(models.Model):
         children = view_cls.objects.filter(parent_id=self.pk, mode='extension')
         xml = etree.fromstring(self._get_content(context), parser=HTMLParser())
         if self.parent and self.mode == 'primary':
-            parent_xml = etree.fromstring(self.parent.render(context))
+            parent_xml = etree.fromstring(self.parent.render(context), parser=HTMLParser())
             self.merge(parent_xml, xml)
             xml = parent_xml
 
         for child in children:
-            self.merge(xml, etree.fromstring(child._get_content(context)))
+            self.merge(xml, etree.fromstring(child._get_content(context), parser=HTMLParser()))
 
         self._eval_permissions(xml)
         return xml
