@@ -492,6 +492,10 @@ class Options:
             return self.editable_fields
 
     @property
+    def copyable_fields(self):
+        return [f for f in self.concrete_fields if f.copy]
+
+    @property
     def searchable_fields(self):
         if self.field_groups and 'searchable_fields' in self.field_groups:
             return [self.fields[field_name] for field_name in self.field_groups['searchable_fields']]
