@@ -1,8 +1,5 @@
 <form>
   <xpath position="append">
-    <comments>
-      <field name="message_followers" widget="mailfollowers"/>
-      <field name="messages" widget="mailcomments"/>
-    </comments>
+    <comments></comments>
   </xpath>
 </form>

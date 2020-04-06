@@ -2114,8 +2114,7 @@ class Model(metaclass=ModelBase):
         if view:
             xml_content = view.get_xml(self, {'request': self.env.request})
             r = {
-                'content': etree.tostring(xml_content).decode('utf-8'),
-                # 'content': etree.tostring(xml_content, encoding='utf-8').decode('utf-8'),
+                'content': etree.tostring(xml_content, encoding='utf-8').decode('utf-8'),
                 'fields': self.get_fields_info(view_type=view_type, xml=xml_content)
             }
         else:
