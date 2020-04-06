@@ -1773,7 +1773,7 @@ var Katrid;
             }
             childByName(fieldName) {
                 for (let child of this.children) {
-                    if (child.fieldName === fieldName)
+                    if (child.field.name === fieldName)
                         return child;
                 }
             }
@@ -1841,6 +1841,14 @@ var Katrid;
             }
             get recordIndex() {
                 return this._recordIndex;
+            }
+            addRecord(rec) {
+                let scope = this.scope;
+                let record = Katrid.Data.createRecord({ $loaded: true }, this);
+                for (let [k, v] of Object.entries(rec))
+                    record[k] = v;
+                scope.records.push(record);
+                console.log('add record', record);
             }
             async expandGroup(index, row) {
                 let params = [];
@@ -2469,7 +2477,7 @@ var Katrid;
                                 dataSource.record[this.name] = [];
                             }
                             else if (obj.action === 'CREATE') {
-                                child.scope.addRecord(obj.values);
+                                child.addRecord(obj.values);
                             }
                         });
                         child.scope.$apply();

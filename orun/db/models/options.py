@@ -493,7 +493,7 @@ class Options:
 
     @property
     def copyable_fields(self):
-        return [f for f in self.concrete_fields if f.copy]
+        return [f for f in self.fields if f.copy]
 
     @property
     def searchable_fields(self):
