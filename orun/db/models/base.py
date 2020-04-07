@@ -2028,11 +2028,13 @@ class Model(metaclass=ModelBase):
             else:
                 setattr(instance, k, v)
 
-        instance.full_clean()
+        # todo fix full clean
+        # instance.full_clean()
         if instance.pk:
             flds = data.keys() - [f.name for f in children]
             if flds:
-                instance.save(**kwargs, update_fields=data.keys())
+                # todo optimize update modified fields only
+                instance.save(**kwargs)
         else:
             instance.save(**kwargs)
 
