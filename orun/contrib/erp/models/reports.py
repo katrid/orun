@@ -121,8 +121,7 @@ class ReportAction(Action):
 
         engine = get_engine(REPORT_ENGINES[rep_type])
         fname = uuid.uuid4().hex + '.pdf'
-        output_path = os.path.join(settings.REPORT_PATH, fname).replace('/', '\\')
-        print(output_path)
+        output_path = os.path.join(settings.REPORT_PATH, fname)
         rep = engine.auto_report(
             xml,
             connection=ConnectionProxy(connection),
@@ -134,6 +133,7 @@ class ReportAction(Action):
             if not isinstance(rep, str):
                 rep = rep.export(format=format)
             out_file = '/web/reports/' + os.path.basename(rep)
+            print('outfile', out_file)
             return {
                 'open': out_file,
                 'name': self.name,
