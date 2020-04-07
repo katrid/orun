@@ -121,7 +121,7 @@ class ReportAction(Action):
 
         engine = get_engine(REPORT_ENGINES[rep_type])
         fname = uuid.uuid4().hex + '.pdf'
-        output_path = os.path.join(settings.REPORT_PATH, fname)
+        output_path = os.path.join(settings.REPORT_PATH.replace('/', '\\'), fname)
         rep = engine.auto_report(
             xml,
             connection=ConnectionProxy(connection),
