@@ -35,6 +35,7 @@ var Katrid;
                 return this.info.id;
             }
             get context() {
+                console.log(this.info);
                 if (_.isString(this.info.context))
                     this._context = JSON.parse(this.info.context);
                 else
@@ -1982,11 +1983,16 @@ var Katrid;
                     return obj;
             }
             _onFieldChange(field, newValue, record) {
-                let rec = this.encodeObject(record.data);
-                rec[field.name] = newValue;
-                if (this.parent)
-                    rec[this.field.info.field] = this.encodeObject(this.parent.record);
-                this.dispatchEvent('field_change_event', [field.name, rec]);
+                clearTimeout(this.pendingOperation);
+                let fn = () => {
+                    let rec = this.encodeObject(record.data);
+                    console.log('record changed', rec);
+                    rec[field.name] = newValue;
+                    if (this.parent)
+                        rec[this.field.info.field] = this.encodeObject(this.parent.record);
+                    this.dispatchEvent('field_change_event', [field.name, rec]);
+                };
+                this.pendingOperation = setTimeout(fn, 100);
             }
         }
         Data.DataSource = DataSource;
@@ -2097,9 +2103,11 @@ var Katrid;
                     let widget = el.getAttribute('widget') || this.widget;
                     if (widget) {
                         let r = document.createElement(widget + '-field');
-                        r.bind(this);
-                        this.el = r;
-                        return;
+                        if (r.bind) {
+                            r.bind(this);
+                            this.el = r;
+                            return;
+                        }
                     }
                     if (attrs.cols)
                         this.cols = attrs.cols;
