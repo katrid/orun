@@ -1233,7 +1233,10 @@ var Katrid;
                 let res = await this.model.copy(id);
                 this.setRecord({});
                 await this.insert();
-                this.setValues(res);
+                setTimeout(() => {
+                    clearTimeout(this.pendingOperation);
+                    this.setValues(res);
+                }, 300);
                 return res;
             }
             findById(id) {
@@ -1695,7 +1698,7 @@ var Katrid;
                 this._records = oldRecs;
                 let res;
                 for (let child of this.children)
-                    child._records = [];
+                    child.scope.records = [];
                 if (loadDefaults) {
                     if (!kwargs)
                         kwargs = {};
