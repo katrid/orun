@@ -115,7 +115,8 @@ class Options:
         self.apps = apps
         self.parents = {}
         self._get_fields_cache = {}
-        self.field_change_event = defaultdict(list)
+        if not self.field_change_event:
+            self.__class__.field_change_event = self.field_change_event = defaultdict(list)
         self.local_fields = []
         self.fields: List[Field] = Fields(self)
         self.local_managers = []
@@ -177,7 +178,7 @@ class Options:
         if attrs:
             meta_attrs.update(attrs)
         if meta is not None:
-            meta_attrs.update({k: v for k,v in meta.__dict__.items() if not k.startswith('__')})
+            meta_attrs.update({k: v for k, v in meta.__dict__.items() if not k.startswith('__')})
             # if proxy, generate a new model name
             is_proxy = meta_attrs.get('proxy')
 
