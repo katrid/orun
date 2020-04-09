@@ -1988,6 +1988,7 @@ var Katrid;
                     return obj;
             }
             _onFieldChange(field, newValue, record) {
+                console.log('field change', field.name, rec);
                 if (field.name === this._lastFieldName)
                     clearTimeout(this.pendingOperation);
                 this._lastFieldName = field.name;
@@ -1996,7 +1997,6 @@ var Katrid;
                     rec[field.name] = newValue;
                     if (this.parent)
                         rec[this.field.info.field] = this.encodeObject(this.parent.record);
-                    console.log('field change', field.name, rec);
                     this.dispatchEvent('field_change_event', [field.name, rec]);
                 };
                 this.pendingOperation = setTimeout(fn, 50);
