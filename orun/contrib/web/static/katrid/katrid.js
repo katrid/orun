@@ -1235,8 +1235,9 @@ var Katrid;
                 await this.insert();
                 setTimeout(() => {
                     clearTimeout(this.pendingOperation);
+                    console.log('set value 2');
                     this.setValues(res);
-                }, 300);
+                }, this.requestInterval);
                 return res;
             }
             findById(id) {
@@ -1796,7 +1797,6 @@ var Katrid;
             set record(rec) {
                 if (!rec.$record)
                     rec = this._createRecord(rec);
-                console.log('parent notification', rec);
                 this.scope.record = rec;
                 this.recordId = rec.id;
                 this._pendingChanges = false;
@@ -1848,11 +1848,11 @@ var Katrid;
             }
             addRecord(rec) {
                 let scope = this.scope;
-                let record = Katrid.Data.createRecord({ $loaded: true }, this);
+                let record = Katrid.Data.createRecord(null, this);
                 for (let [k, v] of Object.entries(rec))
                     record[k] = v;
                 scope.records.push(record);
-                console.log('add record', record);
+                this.parent.record.$record.addChild(record.$record);
             }
             async expandGroup(index, row) {
                 let params = [];
@@ -1942,6 +1942,8 @@ var Katrid;
             async parentNotification(parentRecord) {
                 this.records = [];
                 this._clearTimeout();
+                if (!parentRecord || parentRecord.$created)
+                    return;
                 this.pendingOperation = setTimeout(async () => {
                     if (parentRecord.id != null) {
                         let data = {};
@@ -1986,16 +1988,18 @@ var Katrid;
                     return obj;
             }
             _onFieldChange(field, newValue, record) {
-                clearTimeout(this.pendingOperation);
+                if (field.name === this._lastFieldName)
+                    clearTimeout(this.pendingOperation);
+                this._lastFieldName = field.name;
                 let fn = () => {
                     let rec = this.encodeObject(record.data);
-                    console.log('record changed', rec);
                     rec[field.name] = newValue;
                     if (this.parent)
                         rec[this.field.info.field] = this.encodeObject(this.parent.record);
+                    console.log('field change', field.name, rec);
                     this.dispatchEvent('field_change_event', [field.name, rec]);
                 };
-                this.pendingOperation = setTimeout(fn, 100);
+                this.pendingOperation = setTimeout(fn, 50);
             }
         }
         Data.DataSource = DataSource;
