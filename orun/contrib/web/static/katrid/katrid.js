@@ -2718,7 +2718,7 @@ var Katrid;
                         this.setModified(propKey);
                         this.data[propKey] = value;
                         if (field.onChange) {
-                            console.log('set prop key', field.onChange);
+                            console.log('set prop key', field.onChange, this.onFieldChange);
                             if (this.onFieldChange)
                                 this.onFieldChange.apply(this.dataSource, [field, value, this]);
                         }
