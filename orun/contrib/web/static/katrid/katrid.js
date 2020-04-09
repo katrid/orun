@@ -1362,7 +1362,7 @@ var Katrid;
                                 if (this.readonly)
                                     this._records = data;
                                 else
-                                    this._records = data.map((obj) => Katrid.Data.createRecord(obj, this));
+                                    this._records = data.map((obj) => this._createRecord(obj));
                                 this.scope.records = this._records;
                                 if (this.pageIndex === 1) {
                                     return this.offsetLimit = this._records.length;
@@ -1693,7 +1693,7 @@ var Katrid;
                 this._clearTimeout();
                 for (let child of this.children)
                     child._clearTimeout();
-                let rec = this._createRecord(null, this);
+                let rec = this._createRecord(null);
                 let oldRecs = this._records;
                 this.record = rec;
                 this._records = oldRecs;
@@ -1733,9 +1733,6 @@ var Katrid;
                     }
                 this.setValues(defaults);
                 return this.record;
-            }
-            _new() {
-                return Katrid.Data.createRecord({}, this);
             }
             setValues(values) {
                 Object.entries(values).forEach(([k, v]) => {
