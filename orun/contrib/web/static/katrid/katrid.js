@@ -1988,6 +1988,7 @@ var Katrid;
                     return obj;
             }
             _onFieldChange(field, newValue, record) {
+                console.log('on field change', field.name);
                 if (field.name === this._lastFieldName)
                     clearTimeout(this.pendingOperation);
                 this._lastFieldName = field.name;
@@ -2707,7 +2708,6 @@ var Katrid;
                 this.parent.addChild(this);
             }
             set(propKey, value) {
-                console.log('set key', propKey, value);
                 let field = this.dataSource.fieldByName(propKey);
                 if (field) {
                     if (this.state === RecordState.unmodified)
@@ -2718,6 +2718,7 @@ var Katrid;
                         this.setModified(propKey);
                         this.data[propKey] = value;
                         if (field.onChange) {
+                            console.log('set prop key', field.onChange);
                             if (this.onFieldChange)
                                 this.onFieldChange.apply(this.dataSource, [field, value, this]);
                         }
