@@ -1990,7 +1990,8 @@ var Katrid;
                     clearTimeout(this.pendingOperation);
                 this._lastFieldName = field.name;
                 let fn = () => {
-                    let rec = this.encodeObject(record.data);
+                    console.log('rec', record.pristine);
+                    let rec = this.encodeObject(record.pristine);
                     rec[field.name] = newValue;
                     if (this.parent)
                         rec[this.field.info.field] = this.encodeObject(this.parent.record);
@@ -2715,7 +2716,6 @@ var Katrid;
                         this.setModified(propKey);
                         this.data[propKey] = value;
                         if (field.onChange) {
-                            console.log('set prop key', field.onChange, this.onFieldChange);
                             if (this.onFieldChange)
                                 this.onFieldChange.apply(this.dataSource, [field, value, this]);
                         }
