@@ -58,11 +58,15 @@ class Command(BaseCommand):
         corresponding to an application label given on the command line.
         """
         database = options['database']
-        addons = schema or apps.addons.values()
+        if schema:
+            addons = [apps.addons[schema]]
+        else:
+            addons = schema or apps.addons.values()
         for app_config in addons:
             data = getattr(app_config, 'fixtures', None)
             if data:
                 for filename in data:
+                    print('load fixtures', filename)
                     self._load_file(app_config, filename, **options)
             if 'with_demo' in options:
                 demo = getattr(app_config, 'demo', None)
