@@ -252,6 +252,7 @@ class Field(BaseField):
         self.unique_for_date = unique_for_date
         self.unique_for_month = unique_for_month
         self.unique_for_year = unique_for_year
+        self.widget_attrs = widget_attrs
         if isinstance(choices, collections.abc.Iterator):
             choices = list(choices)
         self.choices = choices or []
