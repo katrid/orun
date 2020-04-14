@@ -63,6 +63,9 @@ class DatabaseOperations(BaseDatabaseOperations):
     def adapt_datefield_value(self, value):
         return value
 
+    def adapt_decimalfield_value(self, value, max_digits=None, decimal_places=None):
+        return value
+
     def get_db_converters(self, expression):
         converters = super().get_db_converters(expression)
         internal_type = expression.output_field.get_internal_type()
