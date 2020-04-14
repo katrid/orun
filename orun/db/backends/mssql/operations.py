@@ -1,3 +1,4 @@
+import decimal
 from orun.conf import settings
 from orun.db import NotSupportedError
 from orun.db.backends.base.operations import BaseDatabaseOperations
@@ -64,6 +65,8 @@ class DatabaseOperations(BaseDatabaseOperations):
         return value
 
     def adapt_decimalfield_value(self, value, max_digits=None, decimal_places=None):
+        if isinstance(value, decimal.Decimal):
+            value = decimal.Context(prec=decimal_places).create_decimal(value)
         return value
 
     def get_db_converters(self, expression):
