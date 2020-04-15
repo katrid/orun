@@ -900,6 +900,8 @@ class ForeignKey(ForeignObject):
     def _formfield(self):
         res = super()._formfield()
         res['model'] = self.remote_field.model._meta.name
+        if self.domain:
+            res['domain'] = self.domain
         return res
 
 
