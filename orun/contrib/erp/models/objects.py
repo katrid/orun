@@ -6,11 +6,13 @@ from .contenttype import ContentType
 
 
 class ObjectManager(models.Manager):
-    def get_object(self, name, using=None):
+    def get_by_natural_key(self, name, using=None):
         try:
             return self.using(using).get(name=name)
         except models.ObjectDoesNotExist:
             raise self.model.DoesNotExist('Object "%s" does not exist.' % name)
+
+    get_object = get_by_natural_key
 
     def get_by_object_id(self, model, object_id):
         return self.filter(content_type__name=model, object_id=object_id).first()

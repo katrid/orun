@@ -143,7 +143,10 @@ class ReportAction(Action):
     def export_report(cls, id, format='pdf', params=None):
         if isinstance(id, list):
             id = id[0]
-        rep = cls.objects.get(pk=id)
+        if isinstance(id, models.Model):
+            rep = id
+        else:
+            rep = cls.objects.get(pk=id)
         return rep._export_report(format=format, params=params)
 
 
