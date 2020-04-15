@@ -127,7 +127,8 @@ class ReportAction(Action):
             connection=ConnectionProxy(connection),
             # company=g.user.user_company,
             company=apps['auth.user'].objects.get(pk=1).user_company,
-            format=format, model=model, query=qs, report_title=self.name, params=where, types=types, output_file=output_path,
+            format=format, model=model, query=qs, report_title=self.name, params=where, types=types,
+            output_file=output_path,
         )
         if rep:
             if not isinstance(rep, str):
