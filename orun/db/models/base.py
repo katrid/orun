@@ -1982,6 +1982,7 @@ class Model(metaclass=ModelBase):
     ):
         where = kwargs.get('params')
         join = []
+        q = None
         if name:
             if name_fields is None:
                 name_fields = chain(*(_resolve_fk_search(f, join) for f in self._meta.get_name_fields()))
@@ -1989,8 +1990,12 @@ class Model(metaclass=ModelBase):
                 q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f.name}__iexact': name}) for f in name_fields])
             else:
                 q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f.name}__icontains': name}) for f in name_fields])
-            if where:
+        if where:
+            if q is None:
+                q = Q(**where)
+            else:
                 q &= Q(**where)
+        if q is not None:
             kwargs = {'where': q}
         qs = self._search(*args, **kwargs)
         limit = kwargs.get('limit') or 10
