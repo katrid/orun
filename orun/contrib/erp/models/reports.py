@@ -91,6 +91,12 @@ class ReportAction(Action):
                             v = v.split(',')
                         _params[crit['name']].append(v)
                         types[crit['name']] = crit['type']
+                    elif not isinstance(v, dict):
+                        _params[k].append(v)
+                        if isinstance(v, int):
+                            types[k] = 'IntegerField'
+                        elif isinstance(v, str):
+                            types[k] = 'StringField'
 
             where = {}
             for k, v in _params.items():
