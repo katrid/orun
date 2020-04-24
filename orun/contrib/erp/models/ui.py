@@ -41,7 +41,7 @@ class View(models.Model):
             ('report', 'Report'),
             ('dashboard', 'Dashboard'),
             ('custom', 'Custom'),
-        ), null=False
+        ), default='form', null=False
     )
     mode = models.ChoiceField(
         (
