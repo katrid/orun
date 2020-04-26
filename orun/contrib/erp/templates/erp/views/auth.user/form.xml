@@ -12,7 +12,5 @@
   <field name="user_action"/>
   <field name="date_joined"/>
   <field name="signature"/>
-{#  <field name="groups"/>#}
-{#  <field name="companies"/>#}
   <field name="user_company"/>
 </form>
