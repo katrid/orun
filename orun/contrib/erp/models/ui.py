@@ -92,7 +92,7 @@ class View(models.Model):
         expr = element.attrib.get('expr')
         target = source
         logger.critical('xpath %s %s' % (expr, self.template_name))
-        logger.critical(etree.tostring(source))
+        logger.critical(etree.tostring(element))
         if expr:
             target = target.xpath(expr)[0]
         if pos == 'append':
