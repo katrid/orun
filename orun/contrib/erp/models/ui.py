@@ -13,7 +13,7 @@ from orun.utils.translation import gettext, gettext_lazy as _
 from orun.utils.xml import etree
 
 
-logger = logging.getLogger('orun.db.backends')
+logger = logging.getLogger('orun')
 
 
 def get_template(self, template):
@@ -91,7 +91,7 @@ class View(models.Model):
         pos = element.attrib.get('position')
         expr = element.attrib.get('expr')
         target = source
-        logger.debug('xpath %s' % self.template_name)
+        logger.critical('xpath %s' % self.template_name)
         if expr:
             target = target.xpath(expr)[0]
         if pos == 'append':
