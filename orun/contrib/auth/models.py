@@ -339,7 +339,7 @@ class AbstractUser(AbstractBaseUser, PermissionsMixin):
         verbose_name_plural = _('Users')
 
     def save(self, *args, **kwargs):
-        if self.password is not None and is_password_usable(self.password):
+        if self.password is not None and not is_password_usable(self.password):
             # password_validation.password_changed(self._password, self)
             self.password = make_password(self.password)
         super().save(*args, **kwargs)
