@@ -1,6 +1,7 @@
 import os
 import re
 from jinja2 import Environment, FunctionLoader
+import logging
 
 from orun import g
 from orun.apps import apps
@@ -10,6 +11,9 @@ from orun.conf import settings
 from orun.db import models
 from orun.utils.translation import gettext, gettext_lazy as _
 from orun.utils.xml import etree
+
+
+logger = logging.getLogger('orun.db.backends')
 
 
 def get_template(self, template):
@@ -87,7 +91,7 @@ class View(models.Model):
         pos = element.attrib.get('position')
         expr = element.attrib.get('expr')
         target = source
-        print('xpath', self.template_name)
+        logger.log('xpath %s' % self.template_name)
         if expr:
             target = target.xpath(expr)[0]
         if pos == 'append':
