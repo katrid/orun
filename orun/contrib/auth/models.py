@@ -7,6 +7,7 @@ from orun.db.models.manager import EmptyManager
 from orun.utils import timezone
 from orun.utils.translation import gettext_lazy as _
 from orun.core.mail import send_mail
+from orun.contrib.auth.hashers import is_password_usable, make_password
 
 from .validators import UnicodeUsernameValidator
 
@@ -307,7 +308,7 @@ class AbstractUser(AbstractBaseUser, PermissionsMixin):
             'unique': _("A user with that username already exists."),
         },
     )
-    password = models.CharField(_('password'), max_length=128)
+    password = models.PasswordField(_('password'), max_length=128)
     last_login = models.DateTimeField(_('last login'), null=True)
     # email = models.EmailField(_('email address'))
     is_staff = models.BooleanField(
@@ -339,9 +340,9 @@ class AbstractUser(AbstractBaseUser, PermissionsMixin):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        if self._password is not None:
-            password_validation.password_changed(self._password, self)
-            self._password = None
+        if self.password is not None and is_password_usable(self.password):
+            # password_validation.password_changed(self._password, self)
+            self.password = make_password(self.password)
 
     def clean(self):
         super().clean()
