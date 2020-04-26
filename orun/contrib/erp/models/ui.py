@@ -91,7 +91,7 @@ class View(models.Model):
         pos = element.attrib.get('position')
         expr = element.attrib.get('expr')
         target = source
-        logger.log('xpath %s' % self.template_name)
+        logger.debug('xpath %s' % self.template_name)
         if expr:
             target = target.xpath(expr)[0]
         if pos == 'append':
