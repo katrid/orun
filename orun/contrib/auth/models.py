@@ -288,7 +288,7 @@ class PermissionsMixin(models.Model):
         return _user_has_module_perms(self, app_label)
 
 
-class AbstractUser(AbstractBaseUser, PermissionsMixin):
+class AbstractUser(PermissionsMixin, AbstractBaseUser):
     """
     Users within the Orun authentication system are represented by this
     model.
@@ -337,12 +337,6 @@ class AbstractUser(AbstractBaseUser, PermissionsMixin):
         abstract = True
         verbose_name = _('User')
         verbose_name_plural = _('Users')
-
-    def save(self, *args, **kwargs):
-        if self.password is not None and not is_password_usable(self.password):
-            # password_validation.password_changed(self._password, self)
-            self.password = make_password(self.password)
-        super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()
