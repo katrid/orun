@@ -68,7 +68,7 @@ class Command(BaseCommand):
         if count == MAX_TRIES:
             raise CommandError("Aborting password change for user '%s' after %s attempts" % (u, count))
 
-        u.set_password(p1)
+        u.password = p1
         u.save(update_fields=['password'])
 
         return "Password changed successfully for user '%s'" % u
