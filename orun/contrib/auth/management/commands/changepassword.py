@@ -69,6 +69,6 @@ class Command(BaseCommand):
             raise CommandError("Aborting password change for user '%s' after %s attempts" % (u, count))
 
         u.set_password(p1)
-        u.save(update_fields=['password'])
+        u.save()
 
         return "Password changed successfully for user '%s'" % u
