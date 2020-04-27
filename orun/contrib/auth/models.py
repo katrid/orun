@@ -308,7 +308,6 @@ class AbstractUser(AbstractBaseUser, PermissionsMixin):
             'unique': _("A user with that username already exists."),
         },
     )
-    password = models.PasswordField(_('password'), max_length=128)
     last_login = models.DateTimeField(_('last login'), null=True)
     # email = models.EmailField(_('email address'))
     is_staff = models.BooleanField(
@@ -337,12 +336,6 @@ class AbstractUser(AbstractBaseUser, PermissionsMixin):
         abstract = True
         verbose_name = _('User')
         verbose_name_plural = _('Users')
-
-    def save(self, *args, **kwargs):
-        if self.password is not None and not is_password_usable(self.password):
-            # password_validation.password_changed(self._password, self)
-            self.password = make_password(self.password)
-        super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()
