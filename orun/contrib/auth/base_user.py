@@ -120,6 +120,12 @@ class AbstractBaseUser(models.Model):
     class Meta:
         abstract = True
 
+    def save(self, *args, **kwargs):
+        if self.password is not None and not is_password_usable(self.password):
+            # password_validation.password_changed(self._password, self)
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.get_username()
 
