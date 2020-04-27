@@ -111,16 +111,11 @@ class BaseUserManager(models.Manager):
 
 
 class AbstractBaseUser(models.Model):
-    password = models.PasswordField(_('password'), max_length=128)
     last_login = models.DateTimeField(_('last login'), null=True)
 
     is_active = True
 
     REQUIRED_FIELDS = []
-
-    # Stores the raw password if set_password() is called so that it can
-    # be passed to password_changed() after the model is saved.
-    _password = None
 
     class Meta:
         abstract = True
