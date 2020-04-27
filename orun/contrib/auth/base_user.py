@@ -111,7 +111,7 @@ class BaseUserManager(models.Manager):
 
 
 class AbstractBaseUser(models.Model):
-    password = models.CharField(_('password'), max_length=128)
+    password = models.PasswordField(_('password'), max_length=128)
     last_login = models.DateTimeField(_('last login'), null=True)
 
     is_active = True
@@ -125,14 +125,14 @@ class AbstractBaseUser(models.Model):
     class Meta:
         abstract = True
 
+    def save(self, *args, **kwargs):
+        if self.password is not None and not is_password_usable(self.password):
+            # password_validation.password_changed(self._password, self)
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.get_username()
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        if self._password is not None:
-            password_validation.password_changed(self._password, self)
-            self._password = None
 
     def get_username(self):
         """Return the username for this User."""
