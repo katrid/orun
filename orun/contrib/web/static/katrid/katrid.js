@@ -1089,10 +1089,10 @@ var Katrid;
     (function (Core) {
         _.emptyText = '--';
         class LocalSettings {
-            constructor() {
-            }
             static init() {
                 Katrid.localSettings = new LocalSettings();
+            }
+            constructor() {
             }
             get searchMenuVisible() {
                 return parseInt(localStorage.searchMenuVisible) === 1;
@@ -1294,7 +1294,7 @@ var Katrid;
                 return elfield;
             }
             validate(raiseError = true) {
-                if (this.action.form.$invalid) {
+                if (this.action.form && this.action.form.$invalid) {
                     let elfield;
                     let errors = [];
                     let s = `<span>${Katrid.i18n.gettext('The following fields are invalid:')}</span><hr>`;
@@ -1539,8 +1539,10 @@ var Katrid;
                             .then((res) => {
                             if (this.action && this.action.viewType && (this.action.viewType === 'form'))
                                 Katrid.app.$location.search('id', res[0]);
-                            this.action.form.$setPristine();
-                            this.action.form.$setUntouched();
+                            if (this.action.form) {
+                                this.action.form.$setPristine();
+                                this.action.form.$setUntouched();
+                            }
                             this._pendingChanges = false;
                             this.state = DataSourceState.browsing;
                             if (autoRefresh)
@@ -3126,6 +3128,11 @@ var Katrid;
                     this.action = {
                         model: options.model,
                         context: {},
+                        saveAndClose: async () => {
+                            let data = await this.scope.dataSource.save();
+                            this.dialog.modal('hide');
+                            this.scope.$emit('saveAndClose', this.scope, data);
+                        }
                     };
                     this.scope.action = this.action;
                 }
@@ -3158,15 +3165,17 @@ var Katrid;
                         .on('hidden.bs.modal', function () {
                         $(this).modal('dispose').remove();
                     });
+                    this.dialog = dlg;
                     this.scope.form = form.controller('form');
                     this.scope.formElement = form;
                     if (field) {
                         let evt = this.scope.$on('saveAndClose', async (event, targetScope, data) => {
                             if (this.scope === targetScope) {
-                                if (_.isArray(data) && data.length) {
-                                    data = await this.scope.$parent.model.getFieldChoices(field.name, null, { ids: data });
+                                console.log('save and close', data);
+                                if (data) {
+                                    let d = data = await this.scope.$parent.model.getFieldChoices(field.name, null, { ids: [data.id] });
                                     let vals = {};
-                                    let res = data.items[0];
+                                    let res = d.items[0];
                                     vals[field.name] = res;
                                     this.scope.$parent.action.dataSource.setValues(vals);
                                     if (this.options.sel)
@@ -7329,7 +7338,6 @@ var Katrid;
                             title: title,
                             view: res,
                             model: service,
-                            action: scope.$new(),
                             caption: field.caption,
                         };
                         let wnd = new Katrid.Forms.Dialogs.Window(options);
