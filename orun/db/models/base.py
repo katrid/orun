@@ -1925,6 +1925,21 @@ class Model(metaclass=ModelBase):
         return (self.pk, str(self))
 
     @api.method
+    def get_formview_action(self, id=None):
+        return {
+            'action_type': 'ir.action.window',
+            'model': self._meta.name,
+            'object_id': id,
+            'view_mode': 'form',
+            'view_type': 'form',
+            'target': 'current',
+            'views': {
+                'form': None,
+            },
+            'context': self.env.context,
+        }
+
+    @api.method
     def search(cls, fields=None, count=None, page=None, limit=None, **kwargs):
         qs = cls._search(fields=fields, **kwargs)
         if count:
