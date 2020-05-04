@@ -8,12 +8,12 @@ from collections import OrderedDict
 from orun.apps import apps
 from orun.core.serializers import base
 from orun.db import DEFAULT_DB_ALIAS, models
-from orun.utils.encoding import is_protected_type
+from orun.utils.encoding import force_text, is_protected_type
 
 
 class Serializer(base.Serializer):
     """
-    Serialize a QuerySet to basic Python objects.
+    Serializes a QuerySet to basic Python objects.
     """
 
     internal_use_only = True
@@ -33,21 +33,21 @@ class Serializer(base.Serializer):
         self._current = None
 
     def get_dump_object(self, obj):
-        data = OrderedDict([('model', str(obj._meta))])
+        data = OrderedDict([('model', force_text(obj._meta))])
         if not self.use_natural_primary_keys or not hasattr(obj, 'natural_key'):
-            data["pk"] = self._value_from_field(obj, obj._meta.pk)
+            data["pk"] = force_text(obj._get_pk_val(), strings_only=True)
         data['fields'] = self._current
         return data
 
-    def _value_from_field(self, obj, field):
+    def handle_field(self, obj, field):
         value = field.value_from_object(obj)
         # Protected types (i.e., primitives like None, numbers, dates,
         # and Decimals) are passed through as is. All other values are
         # converted to string first.
-        return value if is_protected_type(value) else field.value_to_string(obj)
-
-    def handle_field(self, obj, field):
-        self._current[field.name] = self._value_from_field(obj, field)
+        if is_protected_type(value):
+            self._current[field.name] = value
+        else:
+            self._current[field.name] = field.value_to_string(obj)
 
     def handle_fk_field(self, obj, field):
         if self.use_natural_foreign_keys and hasattr(field.remote_field.model, 'natural_key'):
@@ -57,7 +57,9 @@ class Serializer(base.Serializer):
             else:
                 value = None
         else:
-            value = self._value_from_field(obj, field)
+            value = getattr(obj, field.get_attname())
+            if not is_protected_type(value):
+                value = field.value_to_string(obj)
         self._current[field.name] = value
 
     def handle_m2m_field(self, obj, field):
@@ -67,7 +69,7 @@ class Serializer(base.Serializer):
                     return value.natural_key()
             else:
                 def m2m_value(value):
-                    return self._value_from_field(value, value._meta.pk)
+                    return force_text(value._get_pk_val(), strings_only=True)
             self._current[field.name] = [
                 m2m_value(related) for related in getattr(obj, field.name).iterator()
             ]
@@ -76,87 +78,85 @@ class Serializer(base.Serializer):
         return self.objects
 
 
-def Deserializer(object_list, *, using=DEFAULT_DB_ALIAS, ignorenonexistent=False, **options):
+def get_prep_value(model, field_name, field, value):
+    if ':' in field_name:
+        field_name = field_name.replace(':', '__')
+    if '__' in field_name:
+        lfield, rfield = field_name.split('__', 1)
+        model_field = model._meta.fields[lfield].remote_field.model
+        obj = model_field.objects.filter(**{rfield: value}).only('pk').first()
+        if not obj:
+            print('Value "%s" not found for "%s"' % (value, field_name))
+        assert obj, 'Value "%s" not found for "%s"' % (value, field_name)
+        return lfield, obj.pk
+    elif field:
+        value = field.to_python(value)
+    return field_name, value
+
+
+def Deserializer(object_list, **options):
     """
     Deserialize simple Python objects back into Orun ORM instances.
 
     It's expected that you pass the Python objects themselves (instead of a
     stream or a string) to the constructor
     """
-    handle_forward_references = options.pop('handle_forward_references', False)
-    field_names_cache = {}  # Model: <list of field_names>
+    db = options.pop('using', DEFAULT_DB_ALIAS)
+    ignore = options.pop('ignorenonexistent', False)
+    val_names_cache = {}
+    model_name = options.get('model')
+    if isinstance(model_name, str):
+        Model = apps[model_name]
+    else:
+        Model = model_name
+    Object = apps['ir.object']
 
-    # Look up the model and starting build a dict of data for it.
-    Model = options["model"]
+    pk = xml_id = None
 
     for d in object_list:
-        data = {}
-        if 'pk' in d:
-            try:
-                data[Model._meta.pk.attname] = Model._meta.pk.to_python(d.get('pk'))
-            except Exception as e:
-                raise base.DeserializationError.WithData(e, d['model'], d.get('pk'), None)
-        m2m_data = {}
-        deferred_fields = {}
-
-        if Model not in field_names_cache:
-            field_names_cache[Model] = {f.name for f in Model._meta.get_fields()}
-        field_names = field_names_cache[Model]
-
-        # Handle each field
-        for (field_name, field_value) in d.items():
-
-            if ignorenonexistent and field_name not in field_names:
-                # skip fields no longer on model
-                continue
-
-            # TODO cache field reference
-            field_ref = None
-            if '__' in field_name:
-                field_name, field_ref = field_name.split('__', 1)
-
-            field = Model._meta.get_field(field_name)
-
-            # Handle M2M relations
-            if field.remote_field and isinstance(field.remote_field, models.ManyToManyRel):
-                try:
-                    values = base.deserialize_m2m_values(field, field_value, using, handle_forward_references)
-                except base.M2MDeserializationError as e:
-                    raise base.DeserializationError.WithData(e.original_exc, d['model'], d.get('pk'), e.pk)
-                if values == base.DEFER_FIELD:
-                    deferred_fields[field] = field_value
-                else:
-                    m2m_data[field.name] = values
-            # Handle FK fields
-            elif field.remote_field and isinstance(field.remote_field, models.ManyToOneRel):
-                if field_ref:
-                    ref_val = field.remote_field.model.objects.filter(**{field_ref: field_value}).first()
-                    data[field.attname] = ref_val.pk
-                else:
-                    if field.attname == field_name:
-                        data[field.attname] = field_value
-                    else:
-                        try:
-                            value = base.deserialize_fk_value(field, field_value, using, handle_forward_references)
-                        except Exception as e:
-                            raise base.DeserializationError.WithData(e, d['model'], d.get('pk'), field_value)
-                        if value == base.DEFER_FIELD:
-                            deferred_fields[field] = field_value
+        vals = d
+        if xml_id is not False:
+            vals = {}
+            for k, v in d.items():
+                # has a field identified
+                field_name = k
+                if ':' in k:
+                    xml_id = True
+                    if v not in val_names_cache:
+                        field_name, f = k.split(':')
+                        # the identified is a xml id
+                        if f == 'id':
+                            v = val_names_cache[v] = Object.get_object(v).object_id
                         else:
-                            data[field.attname] = value
-            # Handle all other fields
-            else:
-                try:
-                    data[field.name] = field.to_python(field_value)
-                except Exception as e:
-                    raise base.DeserializationError.WithData(e, d['model'], d.get('pk'), field_value)
+                            v = get_prep_value(Model, k, None, v)[1]
+                    else:
+                        v = val_names_cache[v]
+                elif field_name == 'pk':
+                    xml_id = True
+                    field_name = Model._meta.pk.name
+                vals[field_name] = v
 
-        obj = base.build_instance(Model, data, using)
-        yield base.DeserializedObject(obj, m2m_data, deferred_fields)
+            # Avoid to check by the xml id again
+            xml_id = bool(xml_id)
+
+        if pk is None:
+            if 'pk' in d:
+                pk = Model._meta.pk
+            else:
+                pk = False
+
+        # Ignore if pk is present and object already exists
+        if not pk or (Model.objects.filter(pk=d['pk']).first() is None):
+            obj = Model()
+            if 'id' in vals:
+                obj.id = vals['id']
+            yield Model._from_json(obj, vals, force_insert=True)
 
 
 def _get_model(model_identifier):
-    """Look up a model from an "app_label.model_name" string."""
+    """
+    Helper to look up a model from an "app_label.model_name" string.
+    """
     try:
         return apps.get_model(model_identifier)
     except (LookupError, TypeError):
