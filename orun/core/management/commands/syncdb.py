@@ -12,6 +12,7 @@ from orun.core.management.sql import (
 )
 from orun.db import DEFAULT_DB_ALIAS, connections, router
 from orun.utils.module_loading import module_has_submodule
+from orun.db.backends.base.base import BaseDatabaseWrapper
 from orun.utils.text import Truncator
 
 
@@ -108,7 +109,7 @@ class Command(BaseCommand):
         #     self.verbosity, self.interactive, connection.alias, apps=post_migrate_apps, plan=plan,
         # )
 
-    def sync_apps(self, connection, app_labels):
+    def sync_apps(self, connection: BaseDatabaseWrapper, app_labels):
         """Run the old syncdb-style operation on a list of app_labels."""
         with connection.cursor() as cursor:
             schemas = connection.introspection.schema_names(cursor)
@@ -150,9 +151,10 @@ class Command(BaseCommand):
                 for model in model_list:
                     # Check if table exists on database
                     if editor.table_exists(tables, model):
-                        # TODO compare table structure
-                        print('need to compare structure')
+                        # Compare and sync the table structure
+                        editor.sync_table_structure(model)
                         continue
+
                     # Never install unmanaged models, etc.
                     if not model._meta.can_migrate(connection):
                         continue
