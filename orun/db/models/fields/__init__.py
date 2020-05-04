@@ -1068,6 +1068,8 @@ class AutoField(Field):
     def to_python(self, value):
         if value is None:
             return value
+        elif value == '':
+            return None
         try:
             return int(value)
         except (TypeError, ValueError):
@@ -1671,6 +1673,7 @@ class DecimalField(Field):
         # if isinstance(value, float):
         #     return self.context.create_decimal_from_float(value)
         if isinstance(value, str):
+            value = value.replace(',', '.')
             try:
                 return decimal.Decimal(value)
             except decimal.InvalidOperation:
