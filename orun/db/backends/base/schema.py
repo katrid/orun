@@ -5,6 +5,8 @@ from orun.db.backends.ddl_references import (
     Columns, ForeignKeyName, IndexName, Statement, Table,
 )
 from orun.db.backends.utils import names_digest, split_identifier
+from orun.db.models.fields import Field
+from orun.db.backends.base.introspection import FieldInfo
 from orun.db.models import Index
 from orun.db.transaction import TransactionManagementError, atomic
 from orun.utils import timezone
@@ -45,6 +47,7 @@ class BaseDatabaseSchemaEditor:
     """
 
     # Overrideable SQL templates
+    sql_create_database = """CREATE DATABASE "%(db)s" ENCODING='UTF-8'"""
     sql_create_table = "CREATE TABLE %(table)s (%(definition)s)"
     sql_create_schema = "CREATE SCHEMA %(table)s"
     sql_rename_table = "ALTER TABLE %(old_table)s RENAME TO %(new_table)s"
@@ -305,7 +308,6 @@ class BaseDatabaseSchemaEditor:
             if tablespace_sql:
                 sql += ' ' + tablespace_sql
         # Prevent using [] as params, in the case a literal '%' is used in the definition
-        print(sql)
         self.execute(sql, params or None)
 
         # Add any field index and index_together's (deferred as SQLite _remake_table needs it)
@@ -1168,6 +1170,12 @@ class BaseDatabaseSchemaEditor:
     def reset_sequence(self, model):
         pass
 
+    def create_database(self, db: str):
+        """
+        Create a database.
+        """
+        self.execute(self.sql_create_database % {'db': db})
+
     def create_schema(self, schema: str):
         """
         Create a database schema.
@@ -1180,3 +1188,33 @@ class BaseDatabaseSchemaEditor:
 
     def table_exists(self, tables: list, model):
         return model._meta.db_table.replace('"', '') in tables
+
+    def sync_table_structure(self, model):
+        fields = self.connection.introspection.get_table_description(model._meta.db_table)
+
+    # FieldInfo = namedtuple('FieldInfo', 'name type_code display_size internal_size precision scale null_ok default')
+    def sync_field(self, field_info: FieldInfo, field: Field):
+        field_type = self.connection.introspection.data_types_reverse[field_info.type_code]
+        internal_type = field.get_internal_type()
+        if field_type != internal_type:
+            # change data type
+            print(field_type)
+        elif internal_type == field_type and field_type == 'CharField' and field.max_length > field_info.internal_size:
+            # increase field size
+            self.change_field_size(field)
+        if field_info.null_ok != field.null and field.null:
+            # drop not null constraint
+            self.remove_not_null_constraint(field)
+
+    def change_field_size(self, field: Field):
+        rel_db_params = field.db_parameters(connection=self.connection)
+        rel_type = rel_db_params['type']
+        sql = self.sql_alter_column_type % {
+            'column': field.column,
+            'type': rel_type,
+        }
+        sql = self.sql_alter_column % {
+            'table': field.model._meta.tablename,
+            'changes': sql,
+        }
+        self.execute(sql)

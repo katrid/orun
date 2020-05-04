@@ -13,6 +13,7 @@ from orun.core.exceptions import ImproperlyConfigured
 from orun.db import DEFAULT_DB_ALIAS
 from orun.db.backends import utils
 from orun.db.backends.base.validation import BaseDatabaseValidation
+from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
 from orun.db.backends.signals import connection_created
 from orun.db.transaction import TransactionManagementError
 from orun.db.utils import DatabaseError, DatabaseErrorWrapper
@@ -620,7 +621,7 @@ class BaseDatabaseWrapper:
         """
         return self.__class__({**self.settings_dict, 'NAME': None}, alias=NO_DB_ALIAS)
 
-    def schema_editor(self, *args, **kwargs):
+    def schema_editor(self, *args, **kwargs) -> BaseDatabaseSchemaEditor:
         """
         Return a new instance of this backend's SchemaEditor.
         """
