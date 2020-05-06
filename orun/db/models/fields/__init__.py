@@ -107,7 +107,7 @@ class Fields(list):
         if item in self._dict:
             return self._dict[item]
         if self._att_dict is None:
-            self._att_dict = {f.attname: f for f in self}
+            self._att_dict = {f.attname: f for f in self if hasattr(f, 'attname')}
         if item in self._att_dict:
             return self._att_dict[item]
 
