@@ -214,11 +214,6 @@ class BaseDatabaseSchemaEditor:
         # This method allows testing its logic without a connection.
         if field.has_default():
             default = field.get_default()
-        elif not field.null and field.blank and field.empty_strings_allowed:
-            if field.get_internal_type() == "BinaryField":
-                default = bytes()
-            else:
-                default = str()
         elif getattr(field, 'auto_now', False) or getattr(field, 'auto_now_add', False):
             default = datetime.now()
             internal_type = field.get_internal_type()
@@ -431,6 +426,9 @@ class BaseDatabaseSchemaEditor:
         Create a field on a model. Usually involves adding a column, but may
         involve adding a table instead (for M2M fields).
         """
+        # Store temporary not null state
+        old_null = field.null
+        field.null = True
         # Special-case implicit M2M tables
         if field.many_to_many and field.remote_field.through._meta.auto_created:
             return self.create_model(field.remote_field.through)
@@ -449,6 +447,8 @@ class BaseDatabaseSchemaEditor:
             "column": self.quote_name(field.column),
             "definition": definition,
         }
+        # Restore not null state
+        field.null = old_null
         self.execute(sql, params)
         # Drop the default if we need to
         # (Orun usually does not use in-database defaults)
@@ -1213,17 +1213,17 @@ class BaseDatabaseSchemaEditor:
         field_type = self.connection.introspection.data_types_reverse[field_info.type_code]
         internal_type = field.get_internal_type()
         internal_type = self.connection.introspection.sync_type_alias.get(internal_type, internal_type)
-        if internal_type != 'ForeignKey':
+        if internal_type not in ('ForeignKey', 'OneToOneField'):
             if field_type != internal_type:
                 # change data type
-                print('Change type needed', field_type, field)
+                print('Change type needed', internal_type, field_type, field)
             elif internal_type == field_type and field_type == 'CharField' and field.max_length > field_info.internal_size and field_info.internal_size > -1:
                 # increase field size
                 self.change_field_size(field)
                 print('Resize char field', field)
             if field_info.null_ok != field.null and field.null:
                 # drop not null constraint
-                self.remove_not_null_constraint(field)
+                # self.remove_not_null_constraint(field)
                 print('Remove null constraint', field)
 
     def change_field_size(self, field: Field):

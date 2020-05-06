@@ -63,7 +63,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         # Query the pg_catalog tables as cursor.description does not reliably
         # return the nullable property and information_schema.columns does not
         # contain details of materialized views.
-        if schema_name is None:
+        if not schema_name:
             schema_name = 'public'
         cursor.execute("""
             SELECT
@@ -240,3 +240,6 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
                     "options": options,
                 }
         return constraints
+
+    def identifier_converter(self, name):
+        return name.replace('"', '')
