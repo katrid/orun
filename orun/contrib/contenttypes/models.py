@@ -53,10 +53,11 @@ class ContentTypeManager(models.Manager):
             # Not found in the database; we proceed to create it. This time
             # use get_or_create to take care of any race conditions.
             ct, created = self.get_or_create(
-                schema=opts.schema,
-                name=opts.name,
-                verbose_name=opts.verbose_name,
-                verbose_name_plural=opts.verbose_name_plural,
+                schema=model._meta.schema,
+                name=model._meta.name,
+                verbose_name=model._meta.verbose_name,
+                verbose_name_plural=model._meta.verbose_name_plural,
+                object_name=model._meta.object_name,
             )
         self._add_to_cache(self.db, ct)
         return ct
