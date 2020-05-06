@@ -134,7 +134,8 @@ class Command(BaseCommand):
             )
 
         manifest = OrderedDict(
-            (app_name, list(filter(model_installed, model_list)))
+            # (app_name, list(filter(model_installed, model_list)))
+            (app_name, model_list)
             for app_name, model_list in all_models
         )
 
@@ -149,15 +150,16 @@ class Command(BaseCommand):
                     editor.create_schema(app.db_schema)
             for app_name, model_list in manifest.items():
                 for model in model_list:
+                    # Never install unmanaged models, etc.
+                    if not model._meta.can_migrate(connection):
+                        continue
+
                     # Check if table exists on database
                     if editor.table_exists(tables, model):
                         # Compare and sync the table structure
                         editor.sync_table_structure(model)
                         continue
 
-                    # Never install unmanaged models, etc.
-                    if not model._meta.can_migrate(connection):
-                        continue
                     if self.verbosity >= 3:
                         self.stdout.write(
                             "    Processing %s.%s model\n" % (app_name, model._meta.object_name)

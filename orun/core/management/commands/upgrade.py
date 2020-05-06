@@ -8,32 +8,6 @@ from orun.conf import settings
 from orun.core.management.commands.loaddata import load_fixture
 
 
-def upgrade(app_labels, database, **options):
-    if database:
-        from sqlalchemy.engine.url import make_url
-        url = make_url(apps.settings['DATABASES'][DEFAULT_DB_ALIAS]['ENGINE'])
-        url.database = database
-        apps.settings['DATABASES'][DEFAULT_DB_ALIAS]['ENGINE'] = str(url)
-
-    if not app_labels:
-        app_labels = apps.addons.keys()
-    all_models = []
-    Model = apps['ir.model']
-    for app_label in app_labels:
-        addon = apps.app_configs[app_label]
-        for model in addon.models.values():
-            if not Model.objects.filter(name=model.Meta.name).first():
-                m = Model.create(name=model.Meta.name, object_name=model.Meta.object_name)
-        cmd = Command()
-        cmd.handle_app_config(addon, **options)
-        all_models.extend(addon.models.keys())
-    all_models = set(all_models)
-    for model in all_models:
-        if model in apps.models and isinstance(model, models.Model):
-            model = apps[model]
-            model.init()
-
-
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
@@ -66,7 +40,6 @@ class Command(BaseCommand):
             data = getattr(app_config, 'fixtures', None)
             if data:
                 for filename in data:
-                    print('load fixtures', filename)
                     self._load_file(app_config, filename, **options)
             if 'with_demo' in options:
                 demo = getattr(app_config, 'demo', None)

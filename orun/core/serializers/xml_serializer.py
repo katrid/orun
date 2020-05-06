@@ -114,6 +114,7 @@ class Deserializer(base.Deserializer):
             else:
                 setattr(instance, k, v)
         instance.save(using=self.database)
+        print(ContentType.objects.get_by_natural_key(instance._meta.name))
         if pk is None:
             obj_id = Object.objects.using(self.database).create(
                 schema=self.addon.schema,

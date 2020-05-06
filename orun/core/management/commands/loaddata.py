@@ -14,7 +14,10 @@ def load_fixture(schema, *filenames, **options):
         addon = schema
     for filename in filenames:
         filename = os.path.join(addon.path, 'fixtures', filename)
-        fmt = filename.rsplit('.', 1)[1]
+        if not os.path.isfile(filename) and os.path.isdir(filename):
+            fmt = 'dir'
+        else:
+            fmt = filename.rsplit('.', 1)[1]
         deserializer = serializers.get_deserializer(fmt)
         d = deserializer(Path(filename), addon=addon, format=fmt, **options)
 
