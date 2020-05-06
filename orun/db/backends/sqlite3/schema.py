@@ -1,10 +1,11 @@
 import copy
 from decimal import Decimal
+import random
 
 from orun.apps import Registry as Apps
 from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
 from orun.db.backends.ddl_references import Statement
-from orun.db.models import UniqueConstraint
+from orun.db.models import UniqueConstraint, Field
 from orun.db.transaction import atomic
 from orun.db.utils import NotSupportedError
 
@@ -411,3 +412,20 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             super().remove_constraint(model, constraint)
         else:
             self._remake_table(model)
+
+    def change_field_size(self, field: Field):
+        old_column = field.column + '_old_' + str(random.randint(1, 99999))
+        sql = self.sql_rename_column % {
+            'table': field.model._meta.db_table,
+            'old_column': field.column,
+            'new_column': old_column,
+        }
+        self.execute(sql)
+        rel_db_params = field.db_parameters(connection=self.connection)
+        sql = self.sql_create_column % {
+            'table': field.model._meta.db_table,
+            'column': field.column,
+            'definition': rel_db_params['type'],
+        }
+        self.execute(sql)
+        self.execute('UPDATE %s SET %s = %s' % (field.model._meta.db_table, field.column, old_column))

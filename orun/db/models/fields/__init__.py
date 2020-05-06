@@ -89,6 +89,7 @@ class Fields(list):
     def __init__(self, meta, *args):
         self.meta = meta
         self._dict = {}
+        self._att_dict = None
         super().__init__(*args)
 
     def insert(self, index: int, object):
@@ -101,6 +102,14 @@ class Fields(list):
 
     def get(self, item):
         return self._dict.get(item)
+
+    def find(self, item):
+        if item in self._dict:
+            return self._dict[item]
+        if self._att_dict is None:
+            self._att_dict = {f.attname: f for f in self}
+        if item in self._att_dict:
+            return self._att_dict[item]
 
     def __getitem__(self, item):
         if isinstance(item, str):

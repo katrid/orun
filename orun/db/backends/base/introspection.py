@@ -10,6 +10,11 @@ FieldInfo = namedtuple('FieldInfo', 'name type_code display_size internal_size p
 class BaseDatabaseIntrospection:
     """Encapsulate backend-specific introspection utilities."""
     data_types_reverse = {}
+    sync_type_alias = {
+        'BigAutoField': 'BigIntegerField',
+        'PositiveSmallIntegerField': 'SmallIntegerField',
+        'PositiveIntegerField': 'IntegerField',
+    }
 
     def __init__(self, connection):
         self.connection = connection

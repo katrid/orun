@@ -300,7 +300,7 @@ class BaseDatabaseSchemaEditor:
         constraints = [constraint.constraint_sql(model, self) for constraint in model._meta.constraints]
         # Make the table
         sql = self.sql_create_table % {
-            "table": self.quote_name(model._meta.db_table),
+            "table": model._meta.db_table,
             "definition": ", ".join(constraint for constraint in (*column_sqls, *constraints) if constraint),
         }
         if model._meta.db_tablespace:
@@ -1187,24 +1187,44 @@ class BaseDatabaseSchemaEditor:
             self.execute(sql, None)
 
     def table_exists(self, tables: list, model):
-        return model._meta.db_table.replace('"', '') in tables
+        return model._meta.qualname in tables
 
     def sync_table_structure(self, model):
-        fields = self.connection.introspection.get_table_description(model._meta.db_table)
+        cursor = self.connection.cursor()
+        fields = self.connection.introspection.get_table_description(cursor, model._meta.db_schema, model._meta.tablename)
+
+        # compare existing fields
+        existing_fields = []
+        for f in fields:
+            existing_fields.append(f.name)
+            field = model._meta.fields.find(f.name)
+            # field is not available on model
+            if field is not None:
+                self.sync_field(f, field)
+
+        # add new fields
+        for f in model._meta.local_concrete_fields:
+            if f.column not in existing_fields:
+                self.add_field(model, f)
+
 
     # FieldInfo = namedtuple('FieldInfo', 'name type_code display_size internal_size precision scale null_ok default')
     def sync_field(self, field_info: FieldInfo, field: Field):
         field_type = self.connection.introspection.data_types_reverse[field_info.type_code]
         internal_type = field.get_internal_type()
-        if field_type != internal_type:
-            # change data type
-            print(field_type)
-        elif internal_type == field_type and field_type == 'CharField' and field.max_length > field_info.internal_size:
-            # increase field size
-            self.change_field_size(field)
-        if field_info.null_ok != field.null and field.null:
-            # drop not null constraint
-            self.remove_not_null_constraint(field)
+        internal_type = self.connection.introspection.sync_type_alias.get(internal_type, internal_type)
+        if internal_type != 'ForeignKey':
+            if field_type != internal_type:
+                # change data type
+                print('Change type needed', field_type, field)
+            elif internal_type == field_type and field_type == 'CharField' and field.max_length > field_info.internal_size and field_info.internal_size > -1:
+                # increase field size
+                self.change_field_size(field)
+                print('Resize char field', field)
+            if field_info.null_ok != field.null and field.null:
+                # drop not null constraint
+                self.remove_not_null_constraint(field)
+                print('Remove null constraint', field)
 
     def change_field_size(self, field: Field):
         rel_db_params = field.db_parameters(connection=self.connection)
@@ -1214,7 +1234,7 @@ class BaseDatabaseSchemaEditor:
             'type': rel_type,
         }
         sql = self.sql_alter_column % {
-            'table': field.model._meta.tablename,
+            'table': field.model._meta.db_table,
             'changes': sql,
         }
         self.execute(sql)

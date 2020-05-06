@@ -6,7 +6,7 @@ from collections import defaultdict
 from orun.apps import apps
 from orun.conf import settings
 from orun.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
-from orun.db import connections
+from orun.db import connections, connection
 from orun.db.models import Manager
 from orun.db.models.fields import AutoField, CharField
 from orun.db.models.fields.proxy import OrderWrt
@@ -71,6 +71,7 @@ class Options:
     db_table: str = None
     db_schema: str = None
     db_tablespace: str = None
+    tablename: str = None
     name: str = None
     override = False
     addon = None
@@ -156,20 +157,20 @@ class Options:
                 cls.name = f'{cls.schema}.{camel_case_to_spaces(cls.object_name).replace(" ", ".")}'
 
             if cls.db_table is None:
-                cls.db_table = cls.name.replace('.', '_').lower()
+                cls.tablename = cls.db_table = cls.name.replace('.', '_').lower()
                 if cls.db_schema is None and cls.addon:
                     cls.db_schema = cls.addon.db_schema or ''
+                cls.qualname = cls.tablename = cls.db_table
                 if cls.db_schema and cls.name.startswith(cls.db_schema + '.'):
-                    cls.db_table = '"{}"."{}"'.format(cls.db_schema, cls.name.split('.', 1)[-1].replace('.', '_'))
+                    cls.tablename = cls.name.split('.', 1)[-1].replace('.', '_')
+                    cls.qualname = '{}.{}'.format(cls.db_schema, cls.tablename)
+                    cls.db_table = '"{}"."{}"'.format(cls.db_schema, cls.tablename)
+            else:
+                cls.qualname = cls.tablename = cls.db_table
 
             if cls.inherited is None:
                 cls.inherited = cls.extension or bool(cls.parents)
             cls.concrete = bool(cls.db_table)
-
-    @property
-    def tablename(self):
-        # TODO get the qualified table name from db backend
-        return '"{}"."{}"'.format(self.db_schema, self.db_table)
 
     @classmethod
     def from_model(cls, meta, model, parents=None, attrs=None):

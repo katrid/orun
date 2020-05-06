@@ -106,7 +106,7 @@ class ModelBase(type):
                 schema = addon.schema
             else:
                 schema = module.split('.', 1)[0]
-                addon = registry[schema]
+                addon = registry.addons[schema]
 
             overriding = getattr(meta, 'overriding', None)
             override = getattr(meta, 'override', bool(overriding))
@@ -175,7 +175,7 @@ class ModelBase(type):
 
             if not opts.inherits and not opts.abstract:
                 # TODO move to auth application
-                if opts.log_changes and False:
+                if opts.log_changes:
                     fields['created_by'] = ForeignKey(
                         'auth.user', verbose_name=_('Created by'),
                         auto_created=True, editable=False, deferred=True, db_index=False, copy=False
@@ -1936,7 +1936,7 @@ class Model(metaclass=ModelBase):
             'views': {
                 'form': None,
             },
-            'context': self.env.context,
+            'context': {},
         }
 
     @api.method
