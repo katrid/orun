@@ -4,6 +4,7 @@ import warnings
 import copy
 from functools import partialmethod, reduce
 from itertools import chain
+from collections import defaultdict
 
 from orun.apps import apps
 from orun import api
@@ -577,6 +578,16 @@ class Model(metaclass=ModelBase):
         return setattr(self, self._meta.pk.attname, value)
 
     pk = property(_get_pk_val, _set_pk_val)
+
+    def _get_pk_vals(self, meta=None):
+        meta = meta or self._meta
+        return [getattr(obj, meta.pk.attname) for obj in self]
+
+    def _get_external_id(self):
+        result = defaultdict(list)
+        for obj in apps['ir.object'].objects.filter(model_name=self._meta.name, object_id__in=self._get_pk_vals()).only('schema', 'name', 'object_id'):
+            result[obj.object_id].append('%s.%s' % (obj.schema, obj.name))
+        return result
 
     def get_deferred_fields(self):
         """
@@ -2072,8 +2083,9 @@ class Model(metaclass=ModelBase):
                 else:
                     child.set(instance, v)
             except ValidationError as e:
-                for k, v in dict(e.error_dict).items():
-                    e.error_dict[f"{child.name}.{k}"] = e.error_dict.pop(k)
+                for k, v in dict(e.message_dict).items():
+                    e.message_dict[k] = e.message_dict.pop(k)
+                    # e.error_dict[f"{child.name}.{k}"] = e.error_dict.pop(k)
                 raise
 
         return instance
@@ -2177,6 +2189,10 @@ class Model(metaclass=ModelBase):
             else:
                 new_item[f.name] = f.to_json(v)
         return new_item
+
+    def __iter__(self):
+        """Emulate the Recordset behavior"""
+        yield self
 
     @api.method
     def copy(cls, id):
