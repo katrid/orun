@@ -9,6 +9,7 @@
     <menuitem id="menu.settings.ui" name="User Interface">
       <menuitem id="menu.settings.ir.action" name="Actions" action="action.view.ir.action">
         <menuitem id="menu.settings.ir.action.window" name="Window Actions" action="action.view.ir.action.window"/>
+        <menuitem id="menu.settings.ir.action.view" name="View Actions" action="action.view.ir.action.view"/>
         <menuitem id="menu.settings.ir.action.client" name="Client Actions" action="action.view.ir.action.client"/>
       </menuitem>
       <menuitem id="menu.settings.ui.menu" name="Menu" action="action.view.ui.menu"/>

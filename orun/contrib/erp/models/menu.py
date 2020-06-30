@@ -13,7 +13,7 @@ class Menu(models.Model):
     parent = models.ForeignKey('self', related_name='children')
     action = models.ForeignKey('ir.action')
     groups = models.ManyToManyField('auth.group')
-    icon = models.CharField(256)
+    icon = models.CharField()
 
     class Meta:
         name = 'ui.menu'

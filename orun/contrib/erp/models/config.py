@@ -5,21 +5,22 @@ from orun.db import models
 
 
 _default_parameters = {
-    "secret_key": lambda: uuid.uuid4().hex,
+    "database.secret": lambda: uuid.uuid4().hex,
     "database.uuid": lambda: uuid.uuid1().hex,
     "database.created": lambda: datetime.datetime.now(),
+    "web.base.url": "http://localhost",
 }
 
 
 class Config(models.Model):
-    key = models.CharField(256, null=False, db_index=True)
+    key = models.CharField(null=False, db_index=True)
     value = models.TextField()
 
     class Meta:
         title_field = 'key'
         name = 'ir.config.parameter'
 
-    def init(self):
+    def _post_create_table(self):
         for k, v in _default_parameters.items():
             self.set_param(k, v())
 

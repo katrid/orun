@@ -8,7 +8,7 @@ from orun.apps import apps
 from orun.shortcuts import render
 from orun.template import loader, Template
 from orun.conf import settings
-from orun.db import models
+from orun.db import models, connection
 from orun.utils.translation import gettext, gettext_lazy as _
 from orun.utils.xml import etree
 
@@ -56,7 +56,7 @@ class View(models.Model):
     model = models.CharField(128, db_index=True)
     priority = models.IntegerField(_('Priority'), default=99, null=False)
     template_name = models.CharField(max_length=255)
-    content = models.XmlField(caption=_('Content'))
+    content = models.TextField(caption=_('Content'))
     ref_id = models.CharField(caption=_('Reference ID'), getter='_get_xml_id')
     children = models.OneToManyField('self', 'parent')
 
@@ -73,7 +73,7 @@ class View(models.Model):
         super(View, self).save(*args, **kwargs)
 
     def _get_xml_id(self):
-        obj = self.env['ir.object'].get_by_object_id(self._meta.name, self.id)
+        obj = apps['ir.object'].objects.get_by_object_id(self._meta.name, self.id)
         if obj:
             return obj.name
 
@@ -178,19 +178,28 @@ class View(models.Model):
             return f.read()
 
     def render(self, context):
+        from jinja2 import Template
+        from orun.template.loader import get_template
         context['_'] = gettext
         if self.view_type in ('dashboard', 'report'):
             context['db'] = {
-                'session': session
+                'connection': connection
             }
         if settings.DEBUG and self.template_name:
             # context['ref'] = g.env.ref
             templ = self.template_name.split(':')[-1]
             if self.view_type in ('dashboard', 'report'):
+                content = get_template(self.template_name)
+                if isinstance(Template, str):
+                    return Template(content).render(context)
+                else:
+                    return content.render(context)
                 return apps.report_env.get_or_select_template(templ).render(**context)
             return loader.get_template(templ).render(context)
-        if self.view_type in ('dashboard', 'report'):
-            return apps.report_env.from_string(self.content).render(**context)
+        if self.view_type in ('dashboard', 'report') and self.template_name:
+            content = get_template(self.template_name)
+            return content.render(context)
+            # return apps.report_env.from_string(self.content).render(**context)
         return Template(self.content).render(context)
 
     @classmethod

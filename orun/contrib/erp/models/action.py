@@ -5,7 +5,7 @@ from orun.apps import apps
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 
-from .contenttype import ContentType
+from orun.contrib.contenttypes.models import ContentType
 #from ..fields import GenericForeignKey
 
 
@@ -14,6 +14,7 @@ class Action(models.Model):
     action_type = models.CharField(32, _('Action Type'), null=False)
     usage = models.TextField(verbose_name=_('Usage'))
     description = models.TextField(verbose_name=_('Description'))
+    external_id = models.CharField(verbose_name=_('External ID'), getter='get_external_id')
     groups = models.ManyToManyField('auth.group')
     binding_model = models.ForeignKey('ir.model', on_delete=models.CASCADE)
     binding_type = models.SelectionField(
@@ -41,6 +42,7 @@ class Action(models.Model):
 
     @api.method
     def load(self, id, context=None):
+        print(id)
         return self.objects.get(pk=id).get_action().to_json()
 
     def execute(self):
@@ -124,7 +126,9 @@ class ViewAction(Action):
 
     @api.method
     def get_view(self, id):
-        obj = app['ui.view'].objects.get(id)
+        if isinstance(id, list):
+            id = id[0]
+        obj = apps['ui.view'].objects.get(pk=id)
         return {
             'content': obj.render({}),
         }

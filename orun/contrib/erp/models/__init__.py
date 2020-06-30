@@ -1,4 +1,4 @@
-from .contenttype import *
+# from .contenttype import *
 from .objects import *
 from .locale import *
 from .company import *
@@ -14,5 +14,5 @@ from .reports import *
 from .config import *
 from .attachment import *
 from .http import *
-# from .dashboard import *
+from .query import *
 from .cron import *

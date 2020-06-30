@@ -73,6 +73,7 @@ class Options:
     db_tablespace: str = None
     tablename: str = None
     name: str = None
+    concrete = None
     override = False
     addon = None
     schema = None
@@ -170,7 +171,10 @@ class Options:
 
             if cls.inherited is None:
                 cls.inherited = cls.extension or bool(cls.parents)
-            cls.concrete = bool(cls.db_table)
+            if cls.concrete is None:
+                cls.concrete = bool(cls.db_table)
+            if not cls.concrete:
+                cls.managed = False
 
     @classmethod
     def from_model(cls, meta, model, parents=None, attrs=None):

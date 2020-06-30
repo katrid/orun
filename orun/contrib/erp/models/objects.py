@@ -2,7 +2,7 @@ from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 
 from orun.contrib.contenttypes.fields import GenericForeignKey
-from .contenttype import ContentType
+from orun.contrib.contenttypes.models import ContentType
 
 
 class ObjectManager(models.Manager):
@@ -15,16 +15,16 @@ class ObjectManager(models.Manager):
     get_object = get_by_natural_key
 
     def get_by_object_id(self, model, object_id):
-        return self.filter(content_type__name=model, object_id=object_id).first()
+        return self.filter(name=model, object_id=object_id).first()
 
 
 class Object(models.Model):
-    name = models.CharField(128, _('Object Name'), null=False)
+    name = models.CharField(verbose_name=_('Object Name'), null=False)
     model = models.ForeignKey('ir.model', null=False)
-    model_name = models.CharField(128, null=False)
+    model_name = models.CharField(null=False)
     object_id = models.BigIntegerField()
     content_object = GenericForeignKey()
-    schema = models.CharField(64, null=False)
+    schema = models.CharField(null=False)
     can_update = models.BooleanField(default=True)
 
     objects = ObjectManager()
@@ -44,9 +44,6 @@ class Object(models.Model):
     @classmethod
     def get_by_natural_key(cls, name):
         return cls.get_object(name)
-
-    def get_by_object_id(self, model, object_id):
-        return self.objects.filter(self.c.model == model, self.c.object_id == object_id).first()
 
 
 class Property(models.Model):

@@ -29,6 +29,7 @@ from orun.utils import timezone
 from orun.utils.deprecation import RemovedInOrun30Warning
 from orun.utils.functional import cached_property, partition
 from orun.utils.version import get_version
+from orun.db.models.recordset import RecordSet
 
 # The maximum number of items to display in a QuerySet.__repr__
 REPR_OUTPUT_SIZE = 20
@@ -184,10 +185,11 @@ class FlatValuesListIterable(BaseIterable):
             yield row[0]
 
 
-class QuerySet:
+class QuerySet(RecordSet):
     """Represent a lazy database lookup for a set of objects."""
 
     def __init__(self, model=None, query=None, using=None, hints=None):
+        RecordSet.__init__(self, model, self)
         self.model = model
         self._db = using
         self._hints = hints or {}

@@ -1165,7 +1165,7 @@ class CharField(Field):
             kwargs.setdefault('verbose_name', max_length_or_label)
         elif isinstance(max_length_or_label, int):
             kwargs.setdefault('max_length', max_length_or_label)
-        kwargs.setdefault('max_length', 256)
+        kwargs.setdefault('max_length', 512)
         self.trim = trim
         super().__init__(*args, **kwargs)
         self.validators.append(validators.MaxLengthValidator(self.max_length))

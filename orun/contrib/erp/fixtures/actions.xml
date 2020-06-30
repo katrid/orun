@@ -6,6 +6,9 @@
   <action id="action.view.ir.action.window" type="ir.action.window" name="Window Actions" model="ir.action.window">
     <field name="view_mode">list,form</field>
   </action>
+  <action id="action.view.ir.action.view" type="ir.action.window" name="View Actions" model="ir.action.view">
+    <field name="view_mode">list,form</field>
+  </action>
   <action id="action.view.ir.model" type="ir.action.window" name="Models" model="ir.model">
     <field name="view_mode">list,form</field>
   </action>
@@ -38,9 +41,6 @@
     <field name="domain">{"is_supplier": 1}</field>
   </action>
   <action id="action.view.ir.action.client" type="ir.action.window" name="Client Actions" model="ir.action.client">
-    <field name="view_mode">list,form</field>
-  </action>
-  <action id="action.view.ir.dashboard.settings" type="ir.action.window" name="Dashboard Settings" model="ir.dashboard.settings">
     <field name="view_mode">list,form</field>
   </action>
   <action id="action.view.ir.query" type="ir.action.window" name="User Queries" model="ir.query">

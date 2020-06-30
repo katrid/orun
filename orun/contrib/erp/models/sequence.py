@@ -3,24 +3,25 @@ from orun.utils.translation import gettext_lazy as _
 
 
 class Sequence(models.Model):
-    name = models.CharField(null=False)
+    name = models.CharField(verbose_name=_('Name'), null=False)
     code = models.CharField(verbose_name=_('Sequence Code'))
-    company = models.ForeignKey('res.company')
+    company = models.ForeignKey('res.company', default=lambda self: self.env.company_id)
     implementation = models.CharField(16, choices=(
         ('standard', _('Standard')),
         ('no gap', _('No gap')),
     ))
     active = models.BooleanField(default=True)
-    prefix = models.CharField()
-    suffix = models.CharField()
+    prefix = models.CharField(trim=False)
+    suffix = models.CharField(trim=False)
     next_id = models.BigIntegerField()
     current_id = models.BigIntegerField()
-    step = models.IntegerField()
-    padding = models.IntegerField()
+    step = models.IntegerField(default=1, null=False)
+    size = models.IntegerField(default=0, null=False)
     use_date_range = models.BooleanField(default=False)
 
     class Meta:
         name = 'ir.sequence'
+        ordering = ('name',)
 
 
 class SequenceDateRange(models.Model):
