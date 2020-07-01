@@ -12249,6 +12249,7 @@ table.grid.inline-editor .grid-field-readonly {
 
 #katrid-action-view {
   height: 100%;
+  overflow: auto;
   display: flex;
   flex: 1 1 auto;
   flex-flow: column nowrap;

@@ -111,6 +111,7 @@ var Katrid;
             }
         }
         ViewAction.actionType = 'ir.action.view';
+        Actions.ViewAction = ViewAction;
         class UrlAction extends Action {
             constructor(info) {
                 super(info);
@@ -202,6 +203,7 @@ var Katrid;
                         this.currentAction.$destroy();
                     let actionInfo = await Katrid.Services.Actions.load(actionId);
                     let scope = this.createScope();
+                    console.log('action type', actionInfo.action_type);
                     action = scope.action = new Katrid.Actions.registry[actionInfo.action_type]({ info: actionInfo, scope, location: params });
                 }
                 await action.onHashChange(params);
@@ -290,6 +292,7 @@ var Katrid;
         ClientAction.actionType = 'ir.action.client';
         ClientAction.registry = {};
         Actions.ClientAction = ClientAction;
+        Actions.registry[ClientAction.actionType] = ClientAction;
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -890,7 +893,9 @@ var Katrid;
                     event.preventDefault();
                     let target = event.target;
                     this.actionClick(target.getAttribute('href'));
-                    target.closest('.dropdown-menu').style.display = 'none';
+                    let dm = target.closest('.dropdown-menu');
+                    if (dm)
+                        dm.style.display = 'none';
                 });
                 $('li.nav-item.dropdown').on('mouseenter', function () {
                     this.querySelectorAll('.dropdown-menu').forEach((el) => el.removeAttribute('style'));
@@ -3213,6 +3218,18 @@ var Katrid;
     (function (Forms) {
         var Views;
         (function (Views) {
+            class CustomView extends HTMLElement {
+            }
+            Views.CustomView = CustomView;
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
             class Card extends Views.WindowView {
                 create() {
                     super.create();
@@ -5292,7 +5309,7 @@ var Katrid;
                 }
                 else
                     id = config;
-                return (new Query()).post('read', { args: [id], kwargs: { with_desc: details, params, as_dict: config.as_dict } });
+                return (new Query()).post('read', { args: [id], kwargs: { with_description: details, params, as_dict: config.as_dict } });
             }
             static all() {
                 return (new Query()).rpc('all');
@@ -6008,6 +6025,18 @@ var Katrid;
         }
         Reports.Report = Report;
     })(Reports = Katrid.Reports || (Katrid.Reports = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        class WebApplication extends HTMLElement {
+            connectedCallback() {
+            }
+        }
+        Forms.WebApplication = WebApplication;
+        Katrid.define('web-application', WebApplication);
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 (function () {
     Katrid.UI.uiKatrid
@@ -8427,6 +8456,70 @@ var Katrid;
     MailComments.initClass();
     Katrid.Forms.Widgets.MailComments = MailComments;
 })();
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Widgets;
+        (function (Widgets) {
+            class PlotlyChart extends HTMLElement {
+                connectedCallback() {
+                    let title = this.getAttribute('data-title');
+                    let layout = {};
+                    if (title)
+                        layout.title = title;
+                    let serviceName = this.getAttribute('data-service');
+                    let url = this.getAttribute('data-url');
+                    let queryId = this.getAttribute('data-query-id');
+                    if (serviceName) {
+                        let method = this.getAttribute('data-method');
+                        let service = new Katrid.Services.Model(serviceName);
+                        service.rpc(method)
+                            .then((res) => {
+                            if (_.isString(res))
+                                res = JSON.parse(res);
+                            Plotly.plot(this, JSON.parse(res), layout, { responsive: true });
+                        });
+                    }
+                    else if (queryId) {
+                        let x = this.getAttribute('data-x');
+                        let y = this.getAttribute('data-y');
+                        let marker = this.getAttribute('data-marker');
+                        if (marker)
+                            marker = JSON.parse(marker);
+                        let fields;
+                        if (!x)
+                            fields = [x, y];
+                        if (!x)
+                            x = 0;
+                        if (!y)
+                            y = 1;
+                        Katrid.Services.Query.read({ id: queryId, as_dict: false, fields })
+                            .then((res) => {
+                            let chartType = this.getAttribute('chart-type');
+                            if (!chartType)
+                                chartType = 'bar';
+                            let axis = this.transformData(res.data, x, y);
+                            let data = { chartType, x: axis.x, y: axis.y, marker };
+                            Plotly.plot(this, data, layout, { responsive: true });
+                        });
+                    }
+                }
+                transformData(data, x, y) {
+                    let rx = [];
+                    let ry = [];
+                    for (let obj of data) {
+                        rx.push(obj[x]);
+                        ry.push(obj[y]);
+                    }
+                    return { x: rx, y: ry };
+                }
+            }
+            Widgets.PlotlyChart = PlotlyChart;
+            Katrid.define('plotly-chart', PlotlyChart);
+        })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
 (function ($) {
     $.fn.tabset = function () {
         this.addClass('col-12');
