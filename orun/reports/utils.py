@@ -15,7 +15,7 @@ def avg(iterable, member=None):
 
 
 def total(iterable, member):
-    return sum([obj[member] or 0 if isinstance(obj, dict) else getattr(obj, member) or 0 for obj in iterable])
+    return sum([obj[member] or 0 for obj in iterable])
 
 
 def COUNT(band):
