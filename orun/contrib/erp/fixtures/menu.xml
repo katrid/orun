@@ -14,7 +14,6 @@
       </menuitem>
       <menuitem id="menu.settings.ui.menu" name="Menu" action="action.view.ui.menu"/>
       <menuitem id="menu.settings.ui.view" name="Views" action="action.view.ui.view"/>
-      <menuitem id="menu.settings.ir.dashboard.settings" name="Dashboard Settings" action="action.view.ir.dashboard.settings"/>
     </menuitem>
     <menuitem id="menu.settings.db" name="Database Dictionary">
       <menuitem id="menu.settings.ir.models" name="Models" action="action.view.ir.model"/>
