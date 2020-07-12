@@ -11896,6 +11896,72 @@ body.container.hide-left-menu #footer.page-footer {
   background: #337ab7;
 }
 
+.k-table {
+  background-color: #ffffff;
+  font-size: 10pt;
+  font-family: "Liberation Sans", "Open Sans", SansSerif, Arial;
+}
+.k-table td, .k-table th {
+  position: relative;
+  border: 1px solid #d9d9d9;
+  cursor: default;
+  padding: 3px;
+  white-space: nowrap;
+  max-width: 100px;
+  overflow-x: hidden;
+}
+.k-table td.selected:not(:focus), .k-table th.selected:not(:focus) {
+  background-color: #e0ecff;
+}
+.k-table td:focus, .k-table th:focus {
+  outline: 1px solid #282828;
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+}
+.k-table td .inplace-editor {
+  border: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  outline: none;
+  padding: 1px 1px 1px 4px;
+}
+.k-table th {
+  background-color: #e3e3e3;
+  text-align: center;
+  border: 1px solid #acacac;
+  padding: 1px 8px;
+}
+.k-table th .col-sizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+}
+.k-table th .col-sizer:hover {
+  background-color: #799ac9;
+}
+.k-table .report-band {
+  font-weight: bold;
+  background-color: #e5e0da;
+  color: #939393;
+}
+.k-table .report-band td {
+  padding-left: 20px;
+}
+.k-table .col-header-band {
+  font-weight: bold;
+  background-color: #fff9f3;
+  color: #939393;
+}
+.k-table .col-header-band td {
+  padding-left: 20px;
+}
+
 html, body {
   font-family: Open Sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }

@@ -2786,6 +2786,84 @@ var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
+        class MenuItem {
+            constructor(menu, text = null) {
+                this.menu = menu;
+                this.text = text;
+                this.el = document.createElement('div');
+            }
+            addEventListener(type, listener, options) {
+                return this.el.addEventListener(type, listener, options);
+            }
+            get index() {
+                return this.menu.items.indexOf(this);
+            }
+        }
+        Forms.MenuItem = MenuItem;
+        class MenuItemSeparator extends MenuItem {
+            constructor(menu) {
+                super(menu, '-');
+            }
+        }
+        Forms.MenuItemSeparator = MenuItemSeparator;
+        class ContextMenu {
+            constructor(container = null) {
+                this.container = container;
+                this.items = [];
+                if (!container)
+                    this.container = document.body;
+            }
+            add(item) {
+                return this.insert(-1, item);
+            }
+            insert(index, item) {
+                let menuItem;
+                if (_.isString(item))
+                    menuItem = new MenuItem(this, item);
+                else if (item instanceof MenuItem)
+                    menuItem = item;
+                if (index === -1)
+                    this.items.push(menuItem);
+                else
+                    this.items.splice(index, 0, menuItem);
+                return menuItem;
+            }
+            addSeparator() {
+                this.items.push(new MenuItemSeparator(this));
+            }
+            destroyElement() {
+                if (this.el)
+                    this.el.remove();
+            }
+            createElement() {
+                this.el = document.createElement('div');
+                this.el.classList.add('k-context-menu');
+            }
+            show(x, y, target = null) {
+                this.destroyElement();
+                this.createElement();
+                this.el.style.left = x + 'px';
+                this.el.style.top = y + 'px';
+                this.target = target;
+                this._visible = true;
+                this._eventHook = () => this.close();
+                document.addEventListener('mousedown', this._eventHook);
+            }
+            close() {
+                document.removeEventListener('mousedown', this._eventHook);
+                this._eventHook = null;
+            }
+            get visible() {
+                return this._visible;
+            }
+        }
+        Forms.ContextMenu = ContextMenu;
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
         var Dialogs;
         (function (Dialogs) {
             class Alerts {
@@ -2816,6 +2894,45 @@ var Katrid;
                 }
             }
         })(Dialogs = Forms.Dialogs || (Forms.Dialogs = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        class BaseField extends HTMLElement {
+        }
+        Forms.BaseField = BaseField;
+        class InputField extends BaseField {
+        }
+        Forms.InputField = InputField;
+        class StringField extends InputField {
+        }
+        Forms.StringField = StringField;
+        class NumericField extends InputField {
+        }
+        Forms.NumericField = NumericField;
+        class BooleanField extends InputField {
+        }
+        Forms.BooleanField = BooleanField;
+        class TextField extends StringField {
+        }
+        Forms.TextField = TextField;
+        class DateField extends InputField {
+        }
+        Forms.DateField = DateField;
+        class DateTimeField extends DateField {
+        }
+        Forms.DateTimeField = DateTimeField;
+        class TimeField extends InputField {
+        }
+        Forms.TimeField = TimeField;
+        class ChoiceField extends InputField {
+        }
+        Forms.ChoiceField = ChoiceField;
+        class AutoCompleteField extends ChoiceField {
+        }
+        Forms.AutoCompleteField = AutoCompleteField;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -4963,6 +5080,501 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    var Grid;
+    (function (Grid) {
+        class TableColumn {
+            constructor(collection, config) {
+                this.width = 100;
+                this._collection = collection;
+                this._table = collection.table;
+                let cfg = { width: this.width };
+                if (config)
+                    Object.assign(cfg, { text: config.caption || config.name });
+                let h = collection.header[0].add(this, cfg);
+                h.resizable = true;
+            }
+            get collection() {
+                return this._collection;
+            }
+            get table() {
+                return this._table;
+            }
+            get index() {
+                return this._collection.indexOf(this);
+            }
+            startSelection() {
+                let x = this.index;
+                let cell = this._table.getCell(x, 0);
+                this._table.startSelection(cell);
+                cell.focus();
+                this._table.endSelection(this._table.getCell(x, -1));
+            }
+        }
+        Grid.TableColumn = TableColumn;
+        class TableColumns extends Array {
+            constructor(table, config) {
+                super();
+                this._table = table;
+                this.header = new TableRowHeader(this);
+                let h = this.header.add();
+                for (let col of config.columns)
+                    this.push(new TableColumn(this, col));
+            }
+            get table() {
+                return this._table;
+            }
+            add(config) {
+                let col = new TableColumn(this, config);
+                this.push(col);
+                return col;
+            }
+        }
+        Grid.TableColumns = TableColumns;
+        class TableRow extends Array {
+            constructor(collection, data) {
+                super();
+                this.setCollection(collection);
+                let items = [];
+                if (_.isArray(data)) {
+                    for (let v of data)
+                        this.push(new TableCell(this, null, { value: v }));
+                }
+                this.header = new TableHeader(this);
+            }
+            render(tbody) {
+                let tr = document.createElement('tr');
+                this.header = new TableHeader(this);
+                if (this._collection.showLineNumbers)
+                    this.header.push(new TableHeaderCell(this, { text: this.index + 1 }));
+                else if (this.key)
+                    this.header.push(new TableHeaderCell(this, { text: this.key }));
+                for (let header of this.header)
+                    header.render(tr);
+                for (let cell of this)
+                    cell.render(tr);
+                tbody.appendChild(tr);
+                return tr;
+            }
+            get collection() {
+                return this._collection;
+            }
+            setCollection(value) {
+                this._collection = value;
+                this.table = value.table;
+            }
+            get index() {
+                return this._collection.indexOf(this);
+            }
+        }
+        class TableCell {
+            constructor(row, col, config) {
+                this.tag = 'td';
+                this.allowFocus = true;
+                this.row = row;
+                if (row)
+                    this._table = row.table;
+                else if (col)
+                    this._table = col.table;
+                this.value = config.value;
+                this.text = config.text;
+            }
+            render(tr) {
+                if (!this.childMerged) {
+                    let el = document.createElement(this.tag);
+                    this.el = el;
+                    if (this.allowFocus) {
+                        this.el.tabIndex = 9999;
+                        this.el.onpointerdown = (evt) => {
+                            this.focus();
+                            evt.stopPropagation();
+                            evt.preventDefault();
+                            this._table.isSelecting = true;
+                            this._table.startSelection(this);
+                        };
+                        this.el.onpointerup = (evt) => {
+                            evt.stopPropagation();
+                            this._table.isSelecting = false;
+                        };
+                        this.el.onpointerenter = () => {
+                            if (this._table.isSelecting) {
+                                this.focus();
+                                this._table.endSelection(this);
+                            }
+                        };
+                        this.el.ondblclick = () => {
+                            this.startEdit();
+                        };
+                    }
+                    if (this.value)
+                        this.text = this.value.toString();
+                    el.innerHTML = this.text;
+                    if (this.merged) {
+                        if (this.colsMerged)
+                            el.setAttribute('colspan', this.colsMerged.length.toString());
+                        if (this.rowsMerged)
+                            el.setAttribute('rowspan', this.rowsMerged.length.toString());
+                    }
+                    tr.appendChild(el);
+                    return el;
+                }
+            }
+            focus() {
+                this.el.focus();
+            }
+            createInplaceEditor() {
+                let ed = document.createElement('input');
+                ed.classList.add('inplace-editor');
+                this.el.appendChild(ed);
+                ed.style.width = this.el.clientWidth + 'px';
+                ed.onkeydown = (evt) => {
+                    evt.stopPropagation();
+                    if (evt.code === 'Enter' || evt.code === 'Tab') {
+                        this.stopEdit(true);
+                        this.next();
+                        evt.preventDefault();
+                    }
+                    else if (evt.code === 'Escape') {
+                        evt.preventDefault();
+                        this.stopEdit(false);
+                    }
+                };
+                ed.value = this.text;
+                ed.focus();
+                this.editor = ed;
+            }
+            destroyInplaceEditor(commit) {
+                if (commit)
+                    this.setText(this.editor.value);
+                this.editor.remove();
+                this.editor = null;
+            }
+            setText(v) {
+                this.text = v;
+                this.el.innerText = v;
+            }
+            startEdit() {
+                this._editing = true;
+                this.createInplaceEditor();
+            }
+            stopEdit(commit) {
+                this.destroyInplaceEditor(commit);
+                this._editing = false;
+                this.focus();
+            }
+            next() {
+                this._table.moveBy(1, 0);
+            }
+            get x() {
+                return this.row.indexOf(this);
+            }
+            get y() {
+                return this.row.index;
+            }
+            get selected() {
+                return this._selected;
+            }
+            get editing() {
+                return this._editing;
+            }
+            set selected(value) {
+                this._selected = value;
+                if (value)
+                    this.el.classList.add('selected');
+                else
+                    this.el.classList.remove('selected');
+            }
+        }
+        Grid.TableCell = TableCell;
+        class ColSizer {
+            constructor(th) {
+                this._th = th;
+                this.createElement();
+            }
+            createElement() {
+                this._el = document.createElement('div');
+                this._el.classList.add('col-sizer');
+                this._th.appendChild(this._el);
+                this._el.onpointerdown = (evt) => {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    let x = evt.clientX;
+                    let w = this._th.clientWidth;
+                    let l = this._el.clientLeft;
+                    this._el.onpointermove = (evt) => {
+                        let diff = evt.clientX - x;
+                        this._th.style.maxWidth = w + diff + 'px';
+                        this._th.style.width = this._th.style.maxWidth;
+                        this._el.style.transform = `transform(${diff})px`;
+                    };
+                    this._el.setPointerCapture(evt.pointerId);
+                };
+                this._el.onpointerup = (evt) => {
+                    this._el.onpointermove = null;
+                    this._el.releasePointerCapture(evt.pointerId);
+                };
+            }
+            destroyElement() {
+                this._el.remove();
+                delete this._el;
+            }
+        }
+        class TableHeaderCell extends TableCell {
+            constructor(axis, config) {
+                super(axis, null, config);
+                this.tag = 'th';
+                this.allowFocus = false;
+                this.axis = axis;
+                this._table = axis.table;
+                this.width = config.width;
+            }
+            render(tr) {
+                let el = super.render(tr);
+                el.style.width = this.width + 'px';
+                if (el) {
+                    if (this.resizable)
+                        this.sizer = new ColSizer(el);
+                    el.onpointerdown = (evt) => {
+                        evt.stopPropagation();
+                        evt.preventDefault();
+                        this.axis.startSelection();
+                    };
+                    return el;
+                }
+            }
+        }
+        Grid.TableHeaderCell = TableHeaderCell;
+        class TableRows extends Array {
+            constructor(table) {
+                super();
+                this.showLineNumbers = true;
+                this.table = table;
+            }
+            render(tbody) {
+                for (let row of this)
+                    row.render(tbody);
+                let tr = document.createElement('tr');
+                tr.classList.add('report-band');
+                let td = document.createElement('td');
+                tr.appendChild(td);
+                td.setAttribute('colspan', (this.table.columns.length + 1).toString());
+                td.innerText = 'DATA(QUERY1): SELECT * FROM TABLE1';
+                tbody.insertBefore(tr, tbody.querySelector('tr:last-child'));
+                let tr2 = document.createElement('tr');
+                tr2.classList.add('col-header-band');
+                td = document.createElement('td');
+                tr2.appendChild(td);
+                td.setAttribute('colspan', (this.table.columns.length + 1).toString());
+                td.innerText = 'COL HEADER';
+                tbody.insertBefore(tr2, tr.previousSibling);
+                tr = document.createElement('tr');
+                tr.classList.add('report-band');
+                td = document.createElement('td');
+                tr.appendChild(td);
+                td.setAttribute('colspan', (this.table.columns.length + 1).toString());
+                td.innerText = 'END DATA';
+                tbody.appendChild(tr);
+            }
+            loadData(data) {
+                for (let obj of data)
+                    this.addRow(obj);
+            }
+            addRow(data, caption) {
+                let row = new TableRow(this, data);
+                this.push(row);
+                if (!this.table.isLoading)
+                    row.render(this.tbody);
+                return row;
+            }
+        }
+        Grid.TableRows = TableRows;
+        class TableHeader extends Array {
+            constructor(axis) {
+                super();
+                this.collection = axis;
+                this._table = axis.table;
+            }
+            render(thead) {
+                let tr = document.createElement('tr');
+                for (let col of this)
+                    col.render(tr);
+                thead.appendChild(tr);
+                return tr;
+            }
+            get table() {
+                return this._table;
+            }
+            add(column, config) {
+                let h = new TableHeaderCell(column, config);
+                this.push(h);
+                return h;
+            }
+        }
+        Grid.TableHeader = TableHeader;
+        class TableRowHeader extends Array {
+            constructor(collection, ...items) {
+                super(...items);
+                this._collection = collection;
+                this._table = collection.table;
+            }
+            render(table) {
+                if (this.length) {
+                    let thead = document.createElement('thead');
+                    let c = 0;
+                    for (let row of this) {
+                        let tr = row.render(thead);
+                        if (!c) {
+                            let th = document.createElement('th');
+                            tr.insertBefore(th, tr.firstChild);
+                        }
+                        c++;
+                    }
+                    table.appendChild(thead);
+                    return thead;
+                }
+            }
+            add(config) {
+                let h = new TableHeader(this);
+                this.push(h);
+                return h;
+            }
+            get collection() {
+                return this._collection;
+            }
+            get table() {
+                return this._table;
+            }
+        }
+        Grid.TableRowHeader = TableRowHeader;
+        class CustomTable {
+            constructor(config) {
+                this._isLoading = true;
+                this._columns = new TableColumns(this, config);
+                this._rows = new TableRows(this);
+                this._rows.table = this;
+                if (config.data)
+                    this._rows.loadData(config.data);
+                this._config = config;
+                let el = config.el;
+                let dom = config.dom;
+                if (el)
+                    dom = document.querySelector(el);
+                this._el = dom;
+                this._isLoading = false;
+                this.render();
+            }
+            insertRow(index) {
+            }
+            moveBy(x, y) {
+                let cx = this.cellEnd.x + x;
+                let cy = this.cellEnd.y + y;
+                if (cy > -1 && cy < this._rows.length) {
+                    let row = this._rows[cy];
+                    if (cx > -1 && cx < row.length) {
+                        let cell = row[cx];
+                        this.startSelection(cell);
+                        cell.focus();
+                    }
+                }
+            }
+            getCell(x, y) {
+                if (y === -1)
+                    y = this._rows.length - 1;
+                if (x === -1)
+                    x = this._columns.length - 1;
+                return this._rows[y][x];
+            }
+            render() {
+                let table = document.createElement('table');
+                document.addEventListener('pointerup', () => this.isSelecting = false);
+                table.classList.add('k-table');
+                table.onkeydown = (evt) => {
+                    switch (evt.code) {
+                        case 'ArrowUp':
+                            this.moveBy(0, -1);
+                            break;
+                        case 'ArrowLeft':
+                            this.moveBy(-1, 0);
+                            break;
+                        case 'ArrowDown':
+                            this.moveBy(0, 1);
+                            break;
+                        case 'ArrowRight':
+                            this.moveBy(1, 0);
+                            break;
+                        case 'F2':
+                            this.cell.startEdit();
+                            break;
+                        default:
+                            if (/^[\w\d=*\/\-+,.]$/.test(evt.key)) {
+                                this.cell.text = '';
+                                this.cell.startEdit();
+                            }
+                    }
+                };
+                this._columns.header.render(table);
+                let tbody = document.createElement('tbody');
+                this._rows.render(tbody);
+                table.appendChild(tbody);
+                this._el.appendChild(table);
+                return table;
+            }
+            get cell() {
+                return this.cellBegin;
+            }
+            startSelection(cell) {
+                this.clearSelection();
+                this.cellBegin = cell;
+                this.endSelection(cell);
+            }
+            endSelection(cell) {
+                this.clearSelection();
+                console.log('end selection');
+                this.cellEnd = cell;
+                this.updateSelection();
+            }
+            updateSelection() {
+                let cells = [];
+                let x1 = this.cellBegin.x;
+                let x2 = this.cellEnd.x;
+                let y1 = this.cellBegin.y;
+                let y2 = this.cellEnd.y;
+                if (x2 < x1) {
+                    let t = x2;
+                    x2 = x1;
+                    x1 = t;
+                }
+                if (y2 < y1) {
+                    let t = y2;
+                    y2 = y1;
+                    y1 = t;
+                }
+                for (let y = y1; y <= y2; y++)
+                    for (let x = x1; x <= x2; x++) {
+                        let cell = this._rows[y][x];
+                        cells.push(cell);
+                        cell.selected = true;
+                    }
+                this._selection = cells;
+            }
+            clearSelection() {
+                if (this.cell && this.cell.editing)
+                    this.cell.stopEdit(true);
+                if (this._selection)
+                    for (let cell of this._selection)
+                        cell.selected = false;
+            }
+            get columns() {
+                return this._columns;
+            }
+            get isLoading() {
+                return this._isLoading;
+            }
+        }
+        Grid.CustomTable = CustomTable;
+    })(Grid = Katrid.Grid || (Katrid.Grid = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
     var Services;
     (function (Services) {
         let $fetch = window.fetch;
@@ -5309,7 +5921,12 @@ var Katrid;
                 }
                 else
                     id = config;
-                return (new Query()).post('read', { args: [id], kwargs: { with_description: details, params, as_dict: config.as_dict } });
+                return (new Query()).post('read', {
+                    args: [id],
+                    kwargs: {
+                        with_description: details, params, as_dict: config.as_dict
+                    }
+                });
             }
             static all() {
                 return (new Query()).rpc('all');
@@ -7118,7 +7735,10 @@ var Katrid;
                 el.on('focus', () => el.select());
                 controller.$render = function () {
                     if (controller.$modelValue) {
-                        calendar.datetimepicker('date', moment.utc(controller.$modelValue));
+                        if (format === 'L')
+                            calendar.datetimepicker('date', Date.parse(controller.$modelValue));
+                        else
+                            calendar.datetimepicker('date', moment.utc(controller.$modelValue));
                     }
                     else
                         el.val('');
