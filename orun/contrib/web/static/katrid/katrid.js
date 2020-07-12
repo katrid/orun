@@ -7735,10 +7735,7 @@ var Katrid;
                 el.on('focus', () => el.select());
                 controller.$render = function () {
                     if (controller.$modelValue) {
-                        if (format === 'L')
-                            calendar.datetimepicker('date', Date.parse(controller.$modelValue));
-                        else
-                            calendar.datetimepicker('date', moment.utc(controller.$modelValue));
+                        calendar.datetimepicker('date', moment.utc(controller.$modelValue));
                     }
                     else
                         el.val('');
