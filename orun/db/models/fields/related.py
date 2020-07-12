@@ -809,13 +809,14 @@ class ForeignKey(ForeignObject):
         )]
 
     def validate(self, value, model_instance):
-        return True
         if self.remote_field.parent_link:
             return
         super().validate(value, model_instance)
         if value is None:
             return
 
+        # todo check fk integrity
+        return
         using = router.db_for_read(self.remote_field.model, instance=model_instance)
         qs = self.remote_field.model._default_manager.using(using).filter(
             **{self.remote_field.field_name: value}
@@ -894,7 +895,8 @@ class ForeignKey(ForeignObject):
         return super().get_col(alias, output_field)
 
     def to_json(self, value):
-        if value:
+        from orun.db.models import Model
+        if isinstance(value, Model):
             return value._get_instance_label()
 
     def _formfield(self):

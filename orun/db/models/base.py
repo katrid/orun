@@ -2060,7 +2060,7 @@ class Model(metaclass=ModelBase):
                 setattr(instance, k, v)
 
         # todo fix full clean
-        # instance.full_clean()
+        instance.full_clean()
         if instance.pk:
             flds = data.keys() - [f.name for f in children]
             if flds:
