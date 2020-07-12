@@ -2212,9 +2212,9 @@ class Model(metaclass=ModelBase):
             elif f.editable:
                 if f.default is not NOT_PROVIDED:
                     if callable(f.default):
-                        r[f.name] = f.default()
+                        r[f.name] = f.to_json(f.default())
                     else:
-                        r[f.name] = f.default
+                        r[f.name] = f.to_json(f.default)
                 elif isinstance(f, BooleanField):
                     r[f.name] = False
         if 'creation_name' in kwargs and self._meta.title_field:
