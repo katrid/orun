@@ -1267,6 +1267,8 @@ var Katrid;
             }
             refresh(data) {
                 let r;
+                if (data === undefined)
+                    data = true;
                 if (data === true)
                     r = this.search(this._params, this._page);
                 else if (data) {
@@ -1275,8 +1277,6 @@ var Katrid;
                 else if (this.record && this.record.id) {
                     r = this.get(this.record.id);
                 }
-                r.then(() => {
-                });
                 return r;
             }
             _validateForm(elForm, form, errorMsgs) {
@@ -3046,7 +3046,7 @@ var Katrid;
                         }
                         else {
                             let idSendFile = `__send_file_${++sendFileCounter}`;
-                            container.append(`<input id="${idSendFile}" type="file" style="display: none" onchange="Katrid.Services.Upload.sendFile('${$btn.attr('name')}', this)"/>`);
+                            $btn.parent().append(`<input id="${idSendFile}" type="file" style="display: none" onchange="Katrid.Services.Upload.sendFile('${$btn.attr('name')}', this)"/>`);
                             $btn.attr('send-file', $btn.attr('name'));
                             $btn.attr('onclick', `$('#${idSendFile}').trigger('click')`);
                         }
