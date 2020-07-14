@@ -134,9 +134,10 @@ class Collector:
         skipping parent -> child -> parent chain preventing fast delete of
         the child.
         """
+        from orun.db.models import Model
         if from_field and from_field.remote_field.on_delete is not CASCADE:
             return False
-        if hasattr(objs, '_meta'):
+        if isinstance(objs, Model):
             model = type(objs)
         elif hasattr(objs, 'model') and hasattr(objs, '_raw_delete'):
             model = objs.model
