@@ -10861,7 +10861,7 @@ header.content-container-heading {
   background-color: #f8f9fa;
 }
 header.content-container-heading > .btn {
-  padding: 3px 12px;
+  margin: 3px 12px;
 }
 header.content-container-heading:empty {
   display: none;
@@ -10896,8 +10896,6 @@ header.content-container-heading:empty {
   display: -webkit-box;
   display: -webkit-flex;
   display: flex;
-  -ms-flex-flow: row wrap;
-  -moz-flex-flow: row wrap;
   -webkit-flex-flow: row wrap;
   flex-flow: row wrap;
   -webkit-align-items: flex-end;
@@ -10919,7 +10917,6 @@ header.content-container-heading:empty {
   width: 100px;
   min-height: 22px;
   -ms-flex: 1 0 auto;
-  -moz-flex: 1 0 auto;
   -webkit-box-flex: 1;
   -webkit-flex: 1 0 auto;
   flex: 1 0 auto;
@@ -10937,7 +10934,6 @@ header.content-container-heading:empty {
   position: relative;
   margin: 1px 3px 0 0;
   -ms-flex: 0 0 auto;
-  -moz-flex: 0 0 auto;
   -webkit-box-flex: 0;
   -webkit-flex: 0 0 auto;
   flex: 0 0 auto;
@@ -10949,7 +10945,6 @@ header.content-container-heading:empty {
 .search-area .facet-view .facet-label {
   background-color: #777777;
   -ms-flex: 0 0 auto;
-  -moz-flex: 0 0 auto;
   -webkit-box-flex: 0;
   -webkit-flex: 0 0 auto;
   flex: 0 0 auto;

@@ -475,12 +475,10 @@
 
         </div>
         <div class="col-sm-6">
-
           <ng-include src="'view.search.buttons'"></ng-include>
-
           <div class="float-right">
             <div class="btn-group pagination-area">
-              <span ng-show="action.dataSource.pendingRequest">Carregando...</span>
+              <span ng-show="action.dataSource.pendingRequest">Carregando... {{action.dataSource.pendingRequest}}</span>
               <div ng-show="!action.dataSource.pendingRequest">
                 <span class="paginator">{{dataSource.offset|number}} - {{dataSource.offsetLimit|number}}</span> /
                 <span class="total-pages">{{dataSource.recordCount|number}}</span>
