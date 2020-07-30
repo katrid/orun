@@ -2060,7 +2060,7 @@ class Model(metaclass=ModelBase):
                 setattr(instance, k, v)
 
         # todo fix full clean
-        instance.full_clean()
+        instance.full_clean(validate_unique=False)
         if instance.pk:
             flds = data.keys() - [f.name for f in children]
             if flds:
@@ -2075,11 +2075,12 @@ class Model(metaclass=ModelBase):
                     v = v or []
                     if v:
                         v = list(
-                            child.remote_field.model.objects.only('pk').filter(
+                            child.remote_field.model.objects.db_manager(using=kwargs.get('using', DEFAULT_DB_ALIAS)).only('pk').filter(
                                 **{'%s__in' % child.remote_field.model._meta.pk.name: v}
                             )
                         )
-                    setattr(instance, child.name, v)
+                    getattr(instance, child.name).set(v)
+                    #setattr(instance, child.name, v)
                 else:
                     child.set(instance, v)
             except ValidationError as e:
