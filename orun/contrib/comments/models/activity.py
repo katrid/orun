@@ -33,7 +33,7 @@ class ActivityType(models.Model):
         help_text="Change the background color of the related activities of this type."
     )
     res_model_id = models.ForeignKey(
-        'ir.model', 'Model', index=True,
+        'content.type', 'Model', index=True,
         domain=['&', ('is_mail_thread', '=', True), ('transient', '=', False)],
         help_text='Specify a model if the activity should be specific to a model'
                   ' and not available when managing activities for other models.'
@@ -62,7 +62,7 @@ class ActivityType(models.Model):
 
     # Fields for display purpose only
     initial_res_model_id = models.ForeignKey(
-        'ir.model', 'Initial model', compute="_compute_initial_res_model_id", store=False,
+        'content.type', 'Initial model', compute="_compute_initial_res_model_id", store=False,
         help_text='Technical field to keep trace of the model at the beginning of the edition for UX related behaviour'
     )
     model_has_change = models.BooleanField(
@@ -80,7 +80,7 @@ class ActivityType(models.Model):
 class Activity(models.Model):
     object_id = models.IntegerField('Related Document ID', index=True, null=False)
     model = models.ForeignKey(
-        'ir.model', 'Content Type',
+        'content.type', 'Content Type',
         index=True, ondelete=models.CASCADE, null=False)
     model_name = models.CharField(
         'Related Document Model',

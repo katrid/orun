@@ -70,7 +70,7 @@ class GenericForeignKey(BaseField, FieldCacheMixin):
         """See corresponding method on RelatedField"""
         return {
             self.fk_field: obj.pk,
-            self.ct_field: self.model._meta.apps['ir.model'].objects.get_for_model(obj).pk,
+            self.ct_field: self.model._meta.apps['content.type'].objects.get_for_model(obj).pk,
         }
 
     def __str__(self):
@@ -487,7 +487,7 @@ class GenericRelation(ForeignObject):
         Return all objects related to ``objs`` via this ``GenericRelation``.
         """
         return self.remote_field.model._base_manager.db_manager(using).filter(**{
-            "%s__pk" % self.content_type_field_name: apps['ir.model'].objects.db_manager(using).get_for_model(
+            "%s__pk" % self.content_type_field_name: apps['content.type'].objects.db_manager(using).get_for_model(
                 self.model, for_concrete_model=self.for_concrete_model).pk,
             "%s__in" % self.object_id_field_name: [obj.pk for obj in objs]
         })

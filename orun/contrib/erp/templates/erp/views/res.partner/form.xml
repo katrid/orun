@@ -1,7 +1,7 @@
 <form>
   <div class="media">
     <div class="d-flex mr-3">
-      <field name="image" nolabel ng-empty-image="(record.company_type === 'individual' && '/static/web/assets/img/avatar.png') || ('/static/web/assets/img/no-image.png')"/>
+      <field name="image" nolabel ng-empty-image="(record.company_type === 'individual' && '/static/admin/assets/img/avatar.png') || ('/static/admin/assets/img/no-image.png')"/>
     </div>
     <div class="media-body">
       <h3>
@@ -19,7 +19,7 @@
   <fieldset class="col-sm-6">
     <legend><span class="fa fa-map-marker fa-fw"/> {{ _('Address') }}</legend>
     <div class="row">
-      <label class="col-sm-12"><a class="pull-right" href="https://maps.google.com" target="_blank">{{ _('Show on google maps') }}</a></label>
+      <label class="col-sm-12"><a class="float-right" href="https://maps.google.com" target="_blank">{{ _('View on google maps') }}</a></label>
       <field name="address" cols="12" nolabel="placeholder"/>
       <field name="address_2" cols="12" nolabel="placeholder"/>
       <field name="zip" cols="4" nolabel="placeholder"/>

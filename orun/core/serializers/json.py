@@ -9,7 +9,7 @@ import uuid
 import types
 import base64
 
-from orun.core.serializers.base import DeserializationError
+from orun.core.serializers.base import DeserializationError, Deserializer as BaseDeserializer
 from orun.core.serializers.python import (
     Deserializer as PythonDeserializer, Serializer as PythonSerializer,
 )
@@ -17,8 +17,6 @@ from orun.utils.duration import duration_iso_string
 from orun.utils.functional import Promise
 from orun.utils.timezone import is_aware
 from orun.db import models
-from orun.db.models.query import QuerySet
-from orun.core.exceptions import ValidationError
 
 
 class Serializer(PythonSerializer):
@@ -63,19 +61,23 @@ class Serializer(PythonSerializer):
         return super(PythonSerializer, self).getvalue()
 
 
-def Deserializer(stream_or_string, **options):
-    """Deserialize a stream or string of JSON data."""
-    if not isinstance(stream_or_string, (bytes, str)):
-        stream_or_string = stream_or_string.read()
-    if isinstance(stream_or_string, bytes):
-        stream_or_string = stream_or_string.decode()
-    try:
-        objects = json.loads(stream_or_string)
-        yield from PythonDeserializer(objects, **options)
-    except (GeneratorExit, DeserializationError):
-        raise
-    except Exception as exc:
-        raise DeserializationError() from exc
+class Deserializer(BaseDeserializer):
+    def deserialize(self):
+        """Deserialize a stream or string of JSON data."""
+        stream_or_string = self.stream.read()
+        if isinstance(stream_or_string, bytes):
+            stream_or_string = stream_or_string.decode()
+        try:
+            objects = json.loads(stream_or_string)
+            for obj in objects:
+                data = obj['fields']
+                data['pk'] = obj['pk']
+                for new_obj in PythonDeserializer([data], **self.options, model=obj['model']):
+                    pass
+        except (GeneratorExit, DeserializationError):
+            raise
+        except Exception as exc:
+            raise DeserializationError() from exc
 
 
 class OrunJSONEncoder(json.JSONEncoder):

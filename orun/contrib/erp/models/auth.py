@@ -11,7 +11,7 @@ from .partner import Partner
 # class ModelAccess(models.Model):
 #     name = models.CharField(null=False)
 #     active = models.BooleanField(default=True)
-#     model = models.ForeignKey('ir.model', on_delete=models.CASCADE, null=False)
+#     model = models.ForeignKey('content.type', on_delete=models.CASCADE, null=False)
 #     group = models.ForeignKey('auth.group', on_delete=models.CASCADE)
 #     perm_read = models.BooleanField(default=True)
 #     perm_change = models.BooleanField()
@@ -41,7 +41,7 @@ from .partner import Partner
 #         else:
 #             args.append(cls.c.perm_full == True)
 #         User = app['auth.user']
-#         Model = app['ir.model']
+#         Model = app['content.type']
 #         Group = app['auth.group']
 #         # qs = session.query(cls.c.pk).join(Model).outerjoin(Group).filter(
 #         #     Model.c.name == model, cls.c.active == True, *args
@@ -52,12 +52,13 @@ from .partner import Partner
 class User(Partner, AbstractUser):
     # date_joined = models.DateTimeField(_('Date Joined'), auto_now=True)
     signature = models.HtmlField(_('Signature'))
-    user_action = models.ForeignKey('ir.action', verbose_name=_('Home Action'))
+    user_action = models.ForeignKey('ui.action', verbose_name=_('Home Action'))
     user_company = models.ForeignKey('res.company')
     # groups = models.ManyToManyField(Group, verbose_name=_('Groups'))
     companies = models.ManyToManyField('res.company', verbose_name=_('Companies'))
 
     class Meta:
+        schema = 'auth'
         name = 'auth.user'
 
     def set_password(self, password):
@@ -90,11 +91,20 @@ class User(Partner, AbstractUser):
             return self.env.user_id
         raise PermissionDenied(_('Invalid password!'))
 
+    def user_info(self):
+        return {
+            'id': self.pk,
+            'name': self.name,
+            'username': self.username,
+            'last_login': self.__class__._meta.fields['last_login'].value_to_json(self.last_login),
+            'language': self.language and self.language.code,
+        }
+
 
 class Rule(models.Model):
     name = models.CharField()
     active = models.BooleanField(default=True)
-    model = models.ForeignKey('ir.model')
+    model = models.ForeignKey('content.type')
     groups = models.ManyToManyField('auth.group')
     domain = models.TextField()
     can_read = models.BooleanField(default=True)

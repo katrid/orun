@@ -25,7 +25,7 @@ class PermissionManager(models.Manager):
     use_in_migrations = True
 
     def get_by_natural_key(self, codename, app_label, model):
-        ContentType = self.env['ir.model']
+        ContentType = self.env['content.type']
         return self.get(
             codename=codename,
             content_type=ContentType.objects.db_manager(self.db).get_by_natural_key(app_label, model),
@@ -57,7 +57,7 @@ class Permission(models.Model):
     """
     name = models.CharField(_('name'), max_length=255, null=False)
     content_type = models.ForeignKey(
-        'ir.model',
+        'content.type',
         models.CASCADE,
         verbose_name=_('content type'),
         null=False,

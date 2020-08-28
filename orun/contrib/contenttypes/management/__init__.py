@@ -19,7 +19,7 @@ def create_contenttypes(addon, verbosity=2, interactive=True, using=DEFAULT_DB_A
     """
     models = kwargs['models']
     try:
-        ContentType = apps['ir.model']
+        ContentType = apps['content.type']
     except LookupError:
         return
 

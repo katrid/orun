@@ -2,12 +2,12 @@ from orun.shortcuts import render
 from orun.apps import apps
 from orun.http import JsonResponse
 from orun.contrib.auth.decorators import login_required
-import orun.contrib.web.views.client
+import orun.contrib.admin.views.client
 
 
 @login_required
 def index(request):
-    return orun.contrib.web.views.client.index(request, template_name='pwa/index.jinja2', pwa=True)
+    return orun.contrib.admin.views.client.index(request, template_name='pwa/index.jinja2', pwa=True)
 
 
 def service_worker_js(request):

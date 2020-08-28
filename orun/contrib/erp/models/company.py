@@ -34,5 +34,5 @@ class Company(Partner):
     @property
     def base64_logo(self):
         if self.image:
-            att = self.env['ir.attachment'].objects.get(self.image.decode('utf-8'))
+            att = self.env['content.attachment'].objects.get(self.image.decode('utf-8'))
             return f'data:{att.mimetype};base64,' + base64.encodebytes(att.content.read()).decode('utf-8')

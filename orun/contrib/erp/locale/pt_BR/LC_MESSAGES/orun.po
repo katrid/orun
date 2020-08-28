@@ -302,8 +302,8 @@ msgstr "Relatórios"
 msgid "Country Groups"
 msgstr "Grupos de Países"
 
-msgid "Show on google maps"
-msgstr "Mostrar no google maps"
+msgid "View on google maps"
+msgstr "Ver no google maps"
 
 msgid "Additional Data"
 msgstr "Dados Adicionais"
@@ -409,3 +409,6 @@ msgstr "Permissão negada!"
 
 msgid "Login successful, please wait..."
 msgstr "Login realizado com sucesso, por favor aguarde..."
+
+msgid "Contacts"
+msgstr "Contatos"

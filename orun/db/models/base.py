@@ -88,7 +88,7 @@ class ModelBase(type):
         if not bases:
             return super_new(cls, name, bases, attrs)
 
-        meta = attrs.pop('Meta', None)
+        attr_meta = meta = attrs.pop('Meta', None)
         registry = apps
         if meta:
             registry = getattr(meta, 'apps', registry)
@@ -101,8 +101,20 @@ class ModelBase(type):
             new_attrs = {'__module__': module}
 
             # Look for an application configuration to attach the model to.
-            addon = apps.get_containing_app_config(module)
+            app_config = addon = apps.get_containing_app_config(module)
 
+            abstract = getattr(attr_meta, 'abstract', False)
+            if getattr(meta, 'schema', None) is None:
+                if app_config is None:
+                    if not abstract:
+                        raise RuntimeError(
+                            "Model class %s.%s doesn't declare an explicit "
+                            "app_label and isn't in an application in "
+                            "INSTALLED_APPS." % (module, name)
+                        )
+
+                else:
+                    schema = app_config.schema
             if addon:
                 schema = addon.schema
             else:
@@ -521,7 +533,7 @@ class Model(metaclass=ModelBase):
     def __str__(self):
         if self._meta.title_field:
             f = self._meta.fields[self._meta.title_field]
-            v = f.to_json(getattr(self, self._meta.title_field))
+            v = f.value_to_json(getattr(self, self._meta.title_field))
             if not isinstance(v, str):
                 v = str(v)
             return v
@@ -1768,7 +1780,7 @@ class Model(metaclass=ModelBase):
     @api.method
     def load_views(cls, views=None, toolbar=False, **kwargs):
         if views is None and 'action' in kwargs:
-            Action = apps['ir.action.window']
+            Action = apps['ui.action.window']
             action = Action.objects.get(kwargs.get('action'))
             views = {mode: None for mode in action.view_mode.split(',')}
         elif views is None:
@@ -1938,7 +1950,7 @@ class Model(metaclass=ModelBase):
     @api.method
     def get_formview_action(self, id=None):
         return {
-            'action_type': 'ir.action.window',
+            'action_type': 'ui.action.window',
             'model': self._meta.name,
             'object_id': id,
             'view_mode': 'form',
@@ -2107,7 +2119,7 @@ class Model(metaclass=ModelBase):
                 continue
             if exclude and f.name in exclude:
                 continue
-            data[f.name] = f.to_json(getattr(self, f.name, None))
+            data[f.name] = f.value_to_json(getattr(self, f.name, None))
         if 'id' not in data:
             data['id'] = self.pk
         return data
@@ -2141,7 +2153,7 @@ class Model(metaclass=ModelBase):
     @api.method
     def get_view_info(self, view_type, view=None, toolbar=False):
         View = apps['ui.view']
-        model = apps['ir.model']
+        model = apps['content.type']
 
         if view is None:
             view = list(View.objects.filter(mode='primary', view_type=view_type, model=self._meta.name))
@@ -2163,7 +2175,7 @@ class Model(metaclass=ModelBase):
                 'fields': self.get_fields_info(view_type=view_type, xml=content),
             }
         if toolbar and view_type != 'search':
-            bindings = apps['ir.action'].get_bindings(self._meta.name)
+            bindings = apps['ui.action'].get_bindings(self._meta.name)
             r['toolbar'] = {
                 'print': [action.to_json() for action in bindings['print'] if view_type == 'list' or not action.multiple],
                 'action': [action.to_json() for action in bindings['action'] if view_type == 'list' or not action.multiple],
@@ -2213,9 +2225,9 @@ class Model(metaclass=ModelBase):
             elif f.editable:
                 if f.default is not NOT_PROVIDED:
                     if callable(f.default):
-                        r[f.name] = f.to_json(f.default())
+                        r[f.name] = f.value_to_json(f.default())
                     else:
-                        r[f.name] = f.to_json(f.default)
+                        r[f.name] = f.value_to_json(f.default)
                 elif isinstance(f, BooleanField):
                     r[f.name] = False
         if 'creation_name' in kwargs and self._meta.title_field:

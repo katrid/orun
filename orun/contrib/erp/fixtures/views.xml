@@ -13,7 +13,7 @@
   <object id="view.res.partner.card" model="ui.view">
     <field name="name">res.partner.card</field>
     <field name="model">res.partner</field>
-    <field name="template_name">erp/views/res.partner/card.xml</field>
+    <field name="template_name">erp/views/res.partner/card.html</field>
   </object>
   <object id="view.auth.user.form" model="ui.view">
     <field name="name">auth.user.form</field>

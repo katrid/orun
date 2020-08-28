@@ -44,7 +44,7 @@ def create_permissions(addon, verbosity=2, interactive=True, using=DEFAULT_DB_AL
     app_label = addon.schema
     try:
         app_config = apps.addons[app_label]
-        ContentType = apps.get_model('ir.model')
+        ContentType = apps.get_model('content.type')
         Permission = apps.get_model('auth.permission')
     except LookupError:
         return
@@ -68,6 +68,8 @@ def create_permissions(addon, verbosity=2, interactive=True, using=DEFAULT_DB_AL
         for perm in _get_all_permissions(klass._meta):
             searched_perms.append((ctype, perm))
 
+    # TODO fix auth permissions
+    return
     # Find all the Permissions that have a content_type for a model we're
     # looking for.  We don't need to check for codenames since we already have
     # a list of the ones we're going to create.

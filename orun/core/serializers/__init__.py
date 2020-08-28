@@ -32,6 +32,7 @@ BUILTIN_SERIALIZERS = {
     "tsv": "orun.core.serializers.csv",
     "txt": "orun.core.serializers.csv",
     "sql": "orun.core.serializers.sql",
+    "dir": "orun.core.serializers.directory",
 }
 
 _serializers = {}

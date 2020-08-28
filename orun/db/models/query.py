@@ -185,11 +185,11 @@ class FlatValuesListIterable(BaseIterable):
             yield row[0]
 
 
-class QuerySet(RecordSet):
+class QuerySet:
     """Represent a lazy database lookup for a set of objects."""
 
     def __init__(self, model=None, query=None, using=None, hints=None):
-        RecordSet.__init__(self, model, self)
+        # RecordSet.__init__(self, model, self)
         self.model = model
         self._db = using
         self._hints = hints or {}

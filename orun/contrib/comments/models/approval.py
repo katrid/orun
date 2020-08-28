@@ -120,7 +120,7 @@ class DocumentApproval(comment.Comments):
 
 class ApprovalModel(models.Model):
     name = models.CharField(null=False)
-    model = models.ForeignKey('ir.model', null=False)
+    model = models.ForeignKey('content.type', null=False)
     active = models.BooleanField(default=True)
     levels = models.OneToManyField('mail.approval.level')
 

@@ -335,8 +335,8 @@ class RelatedField(FieldCacheMixin, Field):
             self.name or
             (self.remote_field.model._meta.model_name + '_' + self.remote_field.model._meta.pk.name)
         )
-        if self.verbose_name is None:
-            self.verbose_name = self.remote_field.model._meta.verbose_name
+        if self.label is None:
+            self.label = self.remote_field.model._meta.label
         self.remote_field.set_field_name()
 
     def do_related_class(self, other, cls):
@@ -695,8 +695,8 @@ class ForeignKey(ForeignObject):
     description = _("Foreign Key (type determined by related field)")
 
     def __init__(self, to, on_delete=PROTECT, related_name=None, related_query_name=None,
-                 limit_choices_to=None, parent_link=False, to_field=None, name_fields=None, label_from_instance=None,
-                 db_constraint=True, **kwargs):
+                 filter=None, parent_link=False, to_field=None, name_fields=None, label_from_instance=None,
+                 check_company=False, db_constraint=True, **kwargs):
         try:
             to.Meta.name
         except AttributeError:
@@ -717,7 +717,7 @@ class ForeignKey(ForeignObject):
             self, to, to_field,
             related_name=related_name,
             related_query_name=related_query_name,
-            limit_choices_to=limit_choices_to,
+            limit_choices_to=filter,
             parent_link=parent_link,
             on_delete=on_delete,
         )
@@ -894,7 +894,7 @@ class ForeignKey(ForeignObject):
                     raise ValueError('Cannot resolve output_field.')
         return super().get_col(alias, output_field)
 
-    def to_json(self, value):
+    def value_to_json(self, value):
         from orun.db.models import Model
         if isinstance(value, Model):
             return value._get_instance_label()
@@ -1532,7 +1532,7 @@ class ManyToManyField(RelatedField):
     def db_parameters(self, connection):
         return {"type": None, "check": None}
 
-    def to_json(self, value):
+    def value_to_json(self, value):
         for obj in value.all():
             yield obj._get_label_instance()
 
@@ -1565,7 +1565,7 @@ class OneToManyField(RelatedField):
         r['page_limit'] = self.page_limit
         return r
 
-    def to_json(self, value):
+    def value_to_json(self, value):
         # value = value.options(load_only(self.rel.model._meta.pk.column.name)).values(self.rel.model._meta.pk.column.name)
         # return [obj[0] for obj in value]
         return []

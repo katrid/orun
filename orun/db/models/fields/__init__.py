@@ -7,6 +7,7 @@ import uuid
 import warnings
 from base64 import b64decode, b64encode
 from functools import partialmethod, total_ordering
+from typing import Optional, Union, Callable
 
 from orun.apps import apps
 from orun.conf import settings
@@ -138,7 +139,7 @@ class BaseField(RegisterLookupMixin):
     _args = None
     _kwargs = None
     base_field = None
-    verbose_name = None
+    label = None
     help_text = None
     required = False
     null = True
@@ -231,23 +232,26 @@ class Field(BaseField):
         return _('Field of type: %(field_type)s') % {
             'field_type': self.__class__.__name__
         }
+
     description = property(_description)
 
-    def __init__(self, verbose_name: str=None, name: str=None, primary_key=False,
-                 max_length=None, unique=False, null=True, required=None,
+    def __init__(self, label: str = None, name: str = None, primary_key=False,
+                 max_length=None, unique=False, null=True, required: Optional[bool] = None,
                  db_index=False, rel=None, default=NOT_PROVIDED, editable=True,
                  serialize=True, unique_for_date=None, unique_for_month=None,
-                 unique_for_year=None, choices=None, help_text=None,
-                 db_column=None, db_tablespace=None, db_compute=None, db_default=NOT_PROVIDED, db_persisted=None,
+                 unique_for_year=None, choices: Optional[dict] = None, help_text=None,
+                 db_column: Optional[str] = None, db_tablespace=None, db_compute=None, db_default=NOT_PROVIDED,
+                 stored: Optional[bool] = None,
                  translate=None, copy=None, widget_attrs=None, readonly=None,
                  defer=False,
-                 auto_created=False, validators=(), error_messages=None, concrete=None, getter=None, setter=None,
+                 auto_created=False, validators=(), error_messages=None, concrete=None,
+                 getter: Union[str, Callable, None] = None, setter: Union[str, Callable, None] = None,
                  group_choices=None, track_visibility=None,
                  descriptor=None, **kwargs):
         self.name = name
-        verbose_name = verbose_name or kwargs.get('label')
-        self.verbose_name = verbose_name  # May be set by set_attributes_from_name
-        self._verbose_name = verbose_name  # Store original for deconstruction
+        label = label or kwargs.get('label')
+        self.label = label  # May be set by set_attributes_from_name
+        self._label = label  # Store original for deconstruction
         self.primary_key = primary_key
         if primary_key:
             null = False
@@ -267,11 +271,11 @@ class Field(BaseField):
         self.choices = choices or []
         self.help_text = help_text
         self.db_index = db_index
-        self.db_column = db_column
+        self.db_column: str = db_column
         self._db_tablespace = db_tablespace
         self.db_compute = db_compute
         self.db_default = db_default
-        self.db_persisted = db_persisted
+        self.stored = stored
         self.auto_created = auto_created
 
         if getter is not None and descriptor is None:
@@ -415,8 +419,8 @@ class Field(BaseField):
                 break
             try:
                 if not all(
-                    is_value(value) and is_value(human_name)
-                    for value, human_name in group_choices
+                        is_value(value) and is_value(human_name)
+                        for value, human_name in group_choices
                 ):
                     break
             except (TypeError, ValueError):
@@ -581,7 +585,7 @@ class Field(BaseField):
         # Short-form way of fetching all the default parameters
         keywords = {}
         possibles = {
-            "verbose_name": None,
+            "label": None,
             "primary_key": False,
             "max_length": None,
             "unique": False,
@@ -781,7 +785,7 @@ class Field(BaseField):
         except KeyError:
             return None
 
-    def db_type(self, connection):
+    def db_type(self, connection) -> Optional[str]:
         """
         Return the database column data type for this field, for the provided
         connection.
@@ -807,7 +811,7 @@ class Field(BaseField):
         except KeyError:
             return None
 
-    def rel_db_type(self, connection):
+    def rel_db_type(self, connection) -> Optional[str]:
         """
         Return the data type that a related field pointing to this field should
         use. For example, this method is called by ForeignKey and OneToOneField
@@ -857,8 +861,8 @@ class Field(BaseField):
             self.attname, self.column = self.get_attname_column()
         else:
             self.attname = self.column = None
-        if self.verbose_name is None and self.name:
-            self.verbose_name = self.name.replace('_', ' ')
+        if self.label is None and self.name:
+            self.label = self.name.replace('_', ' ')
 
     def contribute_to_class(self, cls, name):
         """
@@ -897,7 +901,7 @@ class Field(BaseField):
         column = self.db_column or attname
         return attname, column
 
-    def get_internal_type(self):
+    def get_internal_type(self) -> str:
         return self.__class__.__name__
 
     def pre_save(self, model_instance, add):
@@ -962,10 +966,9 @@ class Field(BaseField):
             if hasattr(self.remote_field, 'get_related_field')
             else 'pk'
         )
-        return (blank_choice if include_blank else []) + [
-            (choice_func(x), str(x))
-            for x in rel_model._default_manager.complex_filter(limit_choices_to).order_by(*ordering)
-        ]
+        return (blank_choice if include_blank else []) + [(choice_func(x), str(x)) for x in
+                                                          rel_model._default_manager.complex_filter(
+                                                              limit_choices_to).order_by(*ordering)]
 
     def value_to_string(self, obj):
         """
@@ -983,6 +986,7 @@ class Field(BaseField):
             else:
                 flat.append((choice, value))
         return flat
+
     flatchoices = property(_get_flatchoices)
 
     def save_form_data(self, instance, data):
@@ -999,7 +1003,7 @@ class Field(BaseField):
             'readonly': self.readonly,
             'editable': self.editable,
             'type': self.get_type(),
-            'caption': capfirst(self.verbose_name),
+            'caption': capfirst(self.label),
             'choices': choices,
             'onchange': self.name in self.model._meta.field_change_event if self.model else None,
             'attrs': self.widget_attrs,
@@ -1019,7 +1023,7 @@ class Field(BaseField):
         """Return the value of this field in the given model instance."""
         return getattr(obj, self.attname)
 
-    def to_json(self, value):
+    def value_to_json(self, value):
         """
         Converts a python value to a json compatible value.
         """
@@ -1160,13 +1164,13 @@ class BooleanField(Field):
 class CharField(Field):
     description = _("String (up to %(max_length)s)")
 
-    def __init__(self, max_length_or_label=None, trim=True, *args, **kwargs):
+    def __init__(self, max_length_or_label=None, strip=True, *args, **kwargs):
         if isinstance(max_length_or_label, str):
-            kwargs.setdefault('verbose_name', max_length_or_label)
+            kwargs.setdefault('label', max_length_or_label)
         elif isinstance(max_length_or_label, int):
             kwargs.setdefault('max_length', max_length_or_label)
         kwargs.setdefault('max_length', 512)
-        self.trim = trim
+        self.strip = strip
         super().__init__(*args, **kwargs)
         self.validators.append(validators.MaxLengthValidator(self.max_length))
 
@@ -1186,7 +1190,7 @@ class CharField(Field):
                 )
             ]
         elif (not isinstance(self.max_length, int) or isinstance(self.max_length, bool) or
-                self.max_length <= 0):
+              self.max_length <= 0):
             return [
                 checks.Error(
                     "'max_length' must be a positive integer.",
@@ -1215,7 +1219,7 @@ class CharField(Field):
         value = super().get_prep_value(value)
         return self.to_python(value)
 
-    def to_json(self, value):
+    def value_to_json(self, value):
         if value is not None:
             if self.translate:
                 value = gettext(value)
@@ -1282,13 +1286,13 @@ class DateField(DateTimeCheckMixin, Field):
     }
     description = _("Date (without time)")
 
-    def __init__(self, verbose_name=None, name=None, auto_now=False,
+    def __init__(self, label=None, name=None, auto_now=False,
                  auto_now_add=False, **kwargs):
         self.auto_now, self.auto_now_add = auto_now, auto_now_add
         if auto_now or auto_now_add:
             kwargs['editable'] = False
             kwargs['blank'] = True
-        super().__init__(verbose_name, name, **kwargs)
+        super().__init__(label, name, **kwargs)
 
     def _check_fix_default_value(self):
         """
@@ -1410,7 +1414,7 @@ class DateField(DateTimeCheckMixin, Field):
         val = self.value_from_object(obj)
         return '' if val is None else val.isoformat()
 
-    def to_json(self, value):
+    def value_to_json(self, value):
         if value:
             return str(value.strftime('%Y-%m-%d'))
         return value
@@ -1566,7 +1570,7 @@ class DateTimeField(DateField):
         val = self.value_from_object(obj)
         return '' if val is None else val.isoformat()
 
-    def to_json(self, value):
+    def value_to_json(self, value):
         if isinstance(value, datetime.date):
             return str(value.strftime('%Y-%m-%dT%H:%M:%S'))
         return value
@@ -1579,9 +1583,9 @@ class DecimalField(Field):
     }
     description = _("Decimal number")
 
-    def __init__(self, max_digits=29, decimal_places=6, verbose_name=None, name=None, **kwargs):
+    def __init__(self, max_digits=28, decimal_places=10, label=None, name=None, **kwargs):
         self.max_digits, self.decimal_places = max_digits, decimal_places
-        super().__init__(verbose_name, name, **kwargs)
+        super().__init__(label, name, **kwargs)
 
     def check(self, **kwargs):
         errors = super().check(**kwargs)
@@ -1774,12 +1778,12 @@ class EmailField(CharField):
 class FilePathField(Field):
     description = _("File path")
 
-    def __init__(self, verbose_name=None, name=None, path='', match=None,
+    def __init__(self, label=None, name=None, path='', match=None,
                  recursive=False, allow_files=True, allow_folders=False, **kwargs):
         self.path, self.match, self.recursive = path, match, recursive
         self.allow_files, self.allow_folders = allow_files, allow_folders
         kwargs.setdefault('max_length', 100)
-        super().__init__(verbose_name, name, **kwargs)
+        super().__init__(label, name, **kwargs)
 
     def check(self, **kwargs):
         return [
@@ -1886,23 +1890,23 @@ class IntegerField(Field):
         internal_type = self.get_internal_type()
         min_value, max_value = connection.ops.integer_field_range(internal_type)
         if min_value is not None and not any(
-            (
-                isinstance(validator, validators.MinValueValidator) and (
-                    validator.limit_value()
-                    if callable(validator.limit_value)
-                    else validator.limit_value
+                (
+                        isinstance(validator, validators.MinValueValidator) and (
+                        validator.limit_value()
+                        if callable(validator.limit_value)
+                        else validator.limit_value
                 ) >= min_value
-            ) for validator in validators_
+                ) for validator in validators_
         ):
             validators_.append(validators.MinValueValidator(min_value))
         if max_value is not None and not any(
-            (
-                isinstance(validator, validators.MaxValueValidator) and (
-                    validator.limit_value()
-                    if callable(validator.limit_value)
-                    else validator.limit_value
+                (
+                        isinstance(validator, validators.MaxValueValidator) and (
+                        validator.limit_value()
+                        if callable(validator.limit_value)
+                        else validator.limit_value
                 ) <= max_value
-            ) for validator in validators_
+                ) for validator in validators_
         ):
             validators_.append(validators.MaxValueValidator(max_value))
         return validators_
@@ -1973,7 +1977,7 @@ class GenericIPAddressField(Field):
     description = _("IP address")
     default_error_messages = {}
 
-    def __init__(self, verbose_name=None, name=None, protocol='both',
+    def __init__(self, label=None, name=None, protocol='both',
                  unpack_ipv4=False, *args, **kwargs):
         self.unpack_ipv4 = unpack_ipv4
         self.protocol = protocol
@@ -1981,7 +1985,7 @@ class GenericIPAddressField(Field):
             validators.ip_address_validators(protocol, unpack_ipv4)
         self.default_error_messages['invalid'] = invalid_error_message
         kwargs['max_length'] = 39
-        super().__init__(verbose_name, name, *args, **kwargs)
+        super().__init__(label, name, *args, **kwargs)
 
     def check(self, **kwargs):
         return [
@@ -2154,13 +2158,13 @@ class TimeField(DateTimeCheckMixin, Field):
     }
     description = _("Time")
 
-    def __init__(self, verbose_name=None, name=None, auto_now=False,
+    def __init__(self, label=None, name=None, auto_now=False,
                  auto_now_add=False, **kwargs):
         self.auto_now, self.auto_now_add = auto_now, auto_now_add
         if auto_now or auto_now_add:
             kwargs['editable'] = False
             kwargs['blank'] = True
-        super().__init__(verbose_name, name, **kwargs)
+        super().__init__(label, name, **kwargs)
 
     def _check_fix_default_value(self):
         """
@@ -2269,7 +2273,7 @@ class TimeField(DateTimeCheckMixin, Field):
         val = self.value_from_object(obj)
         return '' if val is None else val.isoformat()
 
-    def to_json(self, value):
+    def value_to_json(self, value):
         if isinstance(value, datetime.time):
             return str(value.strftime('%H:%M:%S'))
         return value
@@ -2279,9 +2283,9 @@ class URLField(CharField):
     default_validators = [validators.URLValidator()]
     description = _("URL")
 
-    def __init__(self, verbose_name=None, name=None, **kwargs):
+    def __init__(self, label=None, name=None, **kwargs):
         kwargs.setdefault('max_length', 200)
-        super().__init__(verbose_name, name, **kwargs)
+        super().__init__(label, name, **kwargs)
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
@@ -2348,9 +2352,9 @@ class UUIDField(Field):
     description = _('Universally unique identifier')
     empty_strings_allowed = False
 
-    def __init__(self, verbose_name=None, **kwargs):
+    def __init__(self, label=None, **kwargs):
         kwargs['max_length'] = 32
-        super().__init__(verbose_name, **kwargs)
+        super().__init__(label, **kwargs)
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
@@ -2428,4 +2432,3 @@ class PasswordField(CharField):
         if not is_password_usable(value):
             return make_password(value)
         return value
-

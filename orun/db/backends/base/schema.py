@@ -98,6 +98,7 @@ class BaseDatabaseSchemaEditor:
         if self.collect_sql:
             self.collected_sql = []
         self.atomic_migration = self.connection.features.can_rollback_ddl and atomic
+        self.yes_to_all = False
 
     # State-managing methods
 
@@ -836,7 +837,7 @@ class BaseDatabaseSchemaEditor:
             params,
         )
 
-    def _alter_column_type_sql(self, model, old_field, new_field, new_type):
+    def _alter_column_type_sql(self, model, old_field: FieldInfo, new_field: Field, new_type):
         """
         Hook to specialize column type alteration for different backends,
         for cases when a creation type is different to an alteration type
@@ -1216,8 +1217,20 @@ class BaseDatabaseSchemaEditor:
         if internal_type not in ('ForeignKey', 'OneToOneField'):
             if field_type != internal_type:
                 # change data type
-                print('Change type needed', internal_type, field_type, field)
-            elif internal_type == field_type and field_type == 'CharField' and field.max_length > field_info.internal_size and field_info.internal_size > -1:
+                yes = self.yes_to_all
+                if not yes:
+                    answer = input(f'Do you confirm the modification of field {field.name} at model {field.model._meta.name} from {field_type} to {internal_type}? [y/N]')
+                    if answer == 'Y':
+                        yes = self.yes_to_all = True
+                if yes:
+                    new_db_params = field.db_parameters(connection=self.connection)
+                    new_type = new_db_params['type']
+                    sql = self.sql_alter_column_type % {
+                        "column": self.quote_name(field.column),
+                        "type": new_type,
+                    }
+                    self.execute(self.sql_alter_column % {'table': field.model._meta.qualname, 'changes': sql})
+            elif internal_type == field_type and field_type == 'CharField' and field.max_length > field_info.internal_size and field_info.internal_size > 0:
                 # increase field size
                 self.change_field_size(field)
                 print('Resize char field', field)

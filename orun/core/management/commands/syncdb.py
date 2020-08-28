@@ -57,7 +57,7 @@ class Command(BaseCommand):
 
         # Import the 'management' module within each installed app, to register
         # dispatcher events.
-        for app_config in apps.get_addons():
+        for app_config in apps.get_app_configs():
             if module_has_submodule(app_config.module, "management"):
                 import_module('.management', app_config.name)
 
@@ -121,7 +121,7 @@ class Command(BaseCommand):
                 app_config.schema,
                 router.get_migratable_models(app_config, connection.alias, include_auto_created=False),
             )
-            for app_config in apps.get_addons()
+            for app_config in apps.get_app_configs()
             if app_config.models_module is not None and app_config.schema in app_labels
         ]
 

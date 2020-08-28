@@ -78,13 +78,13 @@ class Serializer(base.Serializer):
         return self.objects
 
 
-def get_prep_value(model, field_name, field, value):
+def get_prep_value(model, field_name, field, value, using):
     if ':' in field_name:
         field_name = field_name.replace(':', '__')
     if '__' in field_name:
         lfield, rfield = field_name.split('__', 1)
         model_field = model._meta.fields[lfield].remote_field.model
-        obj = model_field.objects.filter(**{rfield: value}).only('pk').first()
+        obj = model_field.objects.using(db).filter(**{rfield: value}).only('pk').first()
         if not obj:
             print('Value "%s" not found for "%s"' % (value, field_name))
         assert obj, 'Value "%s" not found for "%s"' % (value, field_name)
@@ -101,7 +101,7 @@ def Deserializer(object_list, **options):
     It's expected that you pass the Python objects themselves (instead of a
     stream or a string) to the constructor
     """
-    db = options.pop('using', DEFAULT_DB_ALIAS)
+    db = options.pop('database', DEFAULT_DB_ALIAS)
     ignore = options.pop('ignorenonexistent', False)
     val_names_cache = {}
     model_name = options.get('model')
@@ -128,12 +128,19 @@ def Deserializer(object_list, **options):
                         if f == 'id':
                             v = val_names_cache[v] = Object.get_object(v).object_id
                         else:
-                            v = get_prep_value(Model, k, None, v)[1]
+                            v = get_prep_value(Model, k, None, v, db)[1]
                     else:
                         v = val_names_cache[v]
                 elif field_name == 'pk':
                     xml_id = True
                     field_name = Model._meta.pk.name
+                elif field_name in Model._meta.fields:
+                    field = Model._meta.fields[field_name]
+                    if isinstance(v, list):
+                        if isinstance(field, models.ManyToManyField):
+                            v = [field.remote_field.model.objects.db_manager(using=db).get_by_natural_key(*obj).pk for obj in v]
+                        elif isinstance(field, models.ForeignKey):
+                            v = field.remote_field.model.objects.db_manager(using=db).get_by_natural_key(*v).pk
                 vals[field_name] = v
 
             # Avoid to check by the xml id again
@@ -146,11 +153,11 @@ def Deserializer(object_list, **options):
                 pk = False
 
         # Ignore if pk is present and object already exists
-        if not pk or (Model.objects.filter(pk=d['pk']).first() is None):
+        if not pk or (Model.objects.using(db).filter(pk=d['pk']).first() is None):
             obj = Model()
             if 'id' in vals:
                 obj.id = vals['id']
-            yield Model._from_json(obj, vals, force_insert=True)
+            yield Model._from_json(obj, vals, using=db, force_insert=True)
 
 
 def _get_model(model_identifier):

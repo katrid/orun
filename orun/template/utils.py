@@ -100,7 +100,7 @@ def get_app_template_dirs(dirname):
     """
     template_dirs = [
         str(Path(app_config.path) / dirname)
-        for app_config in apps.get_addons()
+        for app_config in apps.get_app_configs()
         if app_config.path and (Path(app_config.path) / dirname).is_dir()
     ]
     # Immutable return value because it will be cached and shared by callers.

@@ -145,7 +145,7 @@ class AppDirectoriesFinder(BaseFinder):
         self.apps = []
         # Mapping of app names to storage instances
         self.storages = OrderedDict()
-        app_configs = apps.get_addons()
+        app_configs = apps.get_app_configs()
         if app_names:
             app_names = set(app_names)
             app_configs = [ac for ac in app_configs if ac.name in app_names]
@@ -171,9 +171,17 @@ class AppDirectoriesFinder(BaseFinder):
         """
         Look for files in the app directories.
         """
-        schema, _, path = path.partition(os.path.sep)
-        addon = apps.addons[schema]
-        return os.path.join(addon.path, self.source_dir, path)
+        matches = []
+        for app in self.apps:
+            app_location = self.storages[app].location
+            if app_location not in searched_locations:
+                searched_locations.append(app_location)
+            match = self.find_in_app(app, path)
+            if match:
+                if not all:
+                    return match
+                matches.append(match)
+        return matches
 
     def find_in_app(self, app, path):
         """

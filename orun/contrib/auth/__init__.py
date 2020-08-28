@@ -57,7 +57,7 @@ def _clean_credentials(credentials):
 def _get_user_session_key(request):
     # This value in the session is always serialized to a string, so we need
     # to convert it back to Python whenever we access it.
-    return apps['auth.user']._meta.pk.to_python(request.session[SESSION_KEY])
+    return apps.apps['auth.user']._meta.pk.to_python(request.session[SESSION_KEY])
 
 
 def authenticate(request=None, **credentials):

@@ -1,4 +1,5 @@
 import os
+from itertools import product
 from pathlib import Path
 
 from orun.apps import apps
@@ -14,12 +15,13 @@ def load_fixture(schema, *filenames, **options):
         addon = schema
     for filename in filenames:
         filename = os.path.join(addon.path, 'fixtures', filename)
-        if not os.path.isfile(filename) and os.path.isdir(filename):
-            fmt = 'dir'
-        else:
-            fmt = filename.rsplit('.', 1)[1]
+        fixture, fmt = filename.rsplit('.', 1)
         deserializer = serializers.get_deserializer(fmt)
-        d = deserializer(Path(filename), addon=addon, format=fmt, **options)
+        # find fixture by the database alias
+        fname = f'{fixture}.{options["database"]}.{fmt}'
+        if not os.path.isfile(fname):
+            fname = filename
+        d = deserializer(Path(fname), addon=addon, format=fmt, **options)
 
         with transaction.atomic(options['database']):
             d.deserialize()

@@ -12,7 +12,7 @@ from orun.utils.translation import gettext as _
 from orun.apps import apps
 
 Object = apps['ir.object']
-ContentType = apps['ir.model']
+ContentType = apps['content.type']
 
 
 def ref(xml_id):
@@ -215,19 +215,19 @@ class Deserializer(base.Deserializer):
         return self.read_object(templ)
 
     def read_view(self, obj, **attrs):
+        template_name = obj.attrib.get('template-name') or obj.attrib.get('file')
         view = {
             'model': 'ui.view',
             'id': obj.attrib.get('id'),
             'fields': {
                 'model': obj.attrib.get('model'),
                 'name': obj.attrib.get('name'),
-                'filename': obj.attrib.get('file'),
+                'filename': template_name,
                 'view_type': obj.attrib.get('type'),
             }
         }
         if 'parent' in obj.attrib:
             view['fields']['parent'] = ref(obj.attrib['parent'])
-        template_name = obj.attrib.get('file')
         if template_name:
             view['fields']['template_name'] = template_name
             module = self.addon
@@ -252,7 +252,7 @@ class Deserializer(base.Deserializer):
         }
         view = self.read_object(view)
         report = {
-            'model': 'ir.action.report',
+            'model': 'ui.action.report',
             'id': obj.attrib.get('id'),
             'children': obj.getchildren(),
             'fields': {

@@ -5,7 +5,7 @@ from orun.utils.translation import gettext_lazy as _
 class MailTemplate(models.Model):
     name = models.CharField(verbose_name=_('Name'))
     model = models.ForeignKey(
-        'ir.model', verbose_name=_('Applies to'), help_text="The type of document this template can be used with"
+        'content.type', verbose_name=_('Applies to'), help_text="The type of document this template can be used with"
     )
     model_name = models.CharField(128,
         verbose_name=_('Related Document Model'), related='model_id.model', index=True, store=True,
@@ -58,12 +58,12 @@ class MailTemplate(models.Model):
         help_text="Name to use for the generated report file (may contain placeholders)\n"
                   "The extension can be omitted and will then come from the report type."
     )
-    report_template = models.ForeignKey('ir.action.report', 'Optional report to print and attach')
-    ref_ir_act_window = models.ForeignKey('ir.action.window', 'Sidebar action', readonly=True, copy=False,
+    report_template = models.ForeignKey('ui.action.report', 'Optional report to print and attach')
+    ref_ir_act_window = models.ForeignKey('ui.action.window', 'Sidebar action', readonly=True, copy=False,
                                           help_text="Sidebar action to make this template available on records "
                                                     "of the related document model")
     # attachments = models.ManyToManyField(
-    #     'ir.attachment', 'email_template_attachment_rel', 'email_template_id',
+    #     'content.attachment', 'email_template_attachment_rel', 'email_template_id',
     #     'attachment_id', 'Attachments',
     #     help_text="You may attach files to this template, to be added to all "
     #               "emails created from this template"
@@ -75,18 +75,18 @@ class MailTemplate(models.Model):
 
     # Fake fields used to implement the placeholder assistant
     model_object_field = models.ForeignKey(
-        'ir.model.fields', verbose_name="Field",
+        'content.field', verbose_name="Field",
         help_text="Select target field from the related document model.\n"
                   "If it is a relationship field you will be able to select"
                   "a target field at the destination of the relationship."
     )
     sub_object = models.ForeignKey(
-        'ir.model', verbose_name=_('Sub-model'), readonly=True,
+        'content.type', verbose_name=_('Sub-model'), readonly=True,
         help_text="When a relationship field is selected as first field, "
                   "this field shows the document model the relationship goes to."
     )
     sub_object_field = models.ForeignKey(
-        'ir.model.fields', verbose_name=_('Sub-field'),
+        'content.field', verbose_name=_('Sub-field'),
         help_text="When a relationship field is selected as first field, "
                   "this field lets you select the target field within the "
                   "destination document model (sub-model)."

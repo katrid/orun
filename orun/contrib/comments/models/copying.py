@@ -6,9 +6,9 @@ from orun.utils.translation import gettext_lazy as _
 
 
 class CopyTo(models.Model):
-    source_model = models.ForeignKey('ir.model', null=False, label=_('Source Model'))
-    action = models.ForeignKey('ir.action.window', label=_('Action (Optional)'))
-    dest_model = models.ForeignKey('ir.model', null=False, label=_('Destination Model'))
+    source_model = models.ForeignKey('content.type', null=False, label=_('Source Model'))
+    action = models.ForeignKey('ui.action.window', label=_('Action (Optional)'))
+    dest_model = models.ForeignKey('content.type', null=False, label=_('Destination Model'))
     caption = models.CharField(label=_('Caption'))
     active = models.BooleanField(default=True)
     fields_mapping = models.TextField(label=_('Fields Mapping'), template={'form': 'view.form.code-editor.pug'})
