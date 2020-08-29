@@ -236,7 +236,7 @@ class Field(BaseField):
     description = property(_description)
 
     def __init__(self, label: str = None, name: str = None, primary_key=False,
-                 max_length=None, unique=False, null=True, required: Optional[bool] = None,
+                 max_length: Optional[int] = None, unique=False, null=True, required: Optional[bool] = None,
                  db_index=False, rel=None, default=NOT_PROVIDED, editable=True,
                  serialize=True, unique_for_date=None, unique_for_month=None,
                  unique_for_year=None, choices: Optional[dict] = None, help_text=None,
