@@ -434,7 +434,7 @@ class BaseDatabaseSchemaEditor:
         if field.many_to_many and field.remote_field.through._meta.auto_created:
             return self.create_model(field.remote_field.through)
         # Get the column's definition
-        definition, params = self.column_sql(model, field, include_default=True)
+        definition, params = self.column_sql(model, field, include_default=False)
         # It might not actually have a column behind it
         if definition is None:
             return
@@ -1206,8 +1206,47 @@ class BaseDatabaseSchemaEditor:
         # add new fields
         for f in model._meta.local_concrete_fields:
             if f.column not in existing_fields:
-                self.add_field(model, f)
+                self.add_column(f)
 
+    def add_column(self, field: Field):
+        """
+        Create a field on a model. Usually involves adding a column, but may
+        involve adding a table instead (for M2M fields).
+        """
+        model = field.model
+        # Store temporary not null state
+        old_null = field.null
+        field.null = True
+        # Special-case implicit M2M tables
+        if field.many_to_many and field.remote_field.through._meta.auto_created:
+            return self.create_model(field.remote_field.through)
+        # Get the column's definition
+        definition, params = self.column_sql(model, field, include_default=False)
+        # It might not actually have a column behind it
+        if definition is None:
+            return
+        # Check constraints can go on the column SQL here
+        db_params = field.db_parameters(connection=self.connection)
+        if db_params['check']:
+            definition += " " + self.sql_check_constraint % db_params
+        # Build the SQL and run it
+        sql = self.sql_create_column % {
+            "table": self.quote_name(model._meta.db_table),
+            "column": self.quote_name(field.column),
+            "definition": definition,
+        }
+        # Restore not null state
+        field.null = old_null
+        self.execute(sql, params)
+
+        # Add an index, if required
+        self.deferred_sql.extend(self._field_indexes_sql(model, field))
+        # Add any FK constraints later
+        if field.remote_field and self.connection.features.supports_foreign_keys and field.db_constraint:
+            self.deferred_sql.append(self._create_fk_sql(model, field, "_fk_%(to_table)s_%(to_column)s"))
+        # Reset connection if required
+        if self.connection.features.connection_persists_old_columns:
+            self.connection.close()
 
     # FieldInfo = namedtuple('FieldInfo', 'name type_code display_size internal_size precision scale null_ok default')
     def sync_field(self, field_info: FieldInfo, field: Field):

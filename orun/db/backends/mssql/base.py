@@ -128,8 +128,9 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         kwargs = {
             'database': settings_dict['NAME'] or 'master',
             'server': settings_dict['HOST'],
-            'uid': settings_dict['USER'],
-            'pwd': settings_dict['PASSWORD'],
+            'port': settings_dict['PORT'],
+            'user': settings_dict['USER'],
+            'password': settings_dict['PASSWORD'],
             **settings_dict['OPTIONS'],
         }
         return kwargs

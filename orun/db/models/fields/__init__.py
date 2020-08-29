@@ -255,6 +255,8 @@ class Field(BaseField):
         self.primary_key = primary_key
         if primary_key:
             null = False
+        if max_length:
+            assert isinstance(max_length, int)
         self.max_length, self._unique = max_length, unique
         self.required, self.null = required, null
         self.remote_field = rel

@@ -21,6 +21,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         pyodbc.SQL_WCHAR: 'CharField',
         pyodbc.SQL_TYPE_DATE: 'DateField',
         pyodbc.SQL_TYPE_TIME: 'TimeField',
+        pyodbc.SQL_SS_TIME2: 'TimeField',
         pyodbc.SQL_TYPE_TIMESTAMP: 'DateTimeField',
         pyodbc.SQL_DECIMAL: 'DecimalField',
         pyodbc.SQL_NUMERIC: 'DecimalField',
