@@ -3368,7 +3368,6 @@ var Katrid;
                         title += '<br>' + field.helpText;
                     title += '<br>Field: ' + field.name;
                     title += '<br>${record.' + field.name + '}';
-                    el.setAttribute('title', '${record.' + field.name + '}');
                     el.setAttribute('ui-tooltip', title);
                 }
                 ready() {
@@ -6905,10 +6904,10 @@ var Katrid;
                     for (let item of menu.children) {
                         let li = document.createElement('li');
                         li.classList.add('nav-item', 'dropdown');
+                        li.addEventListener('pointerover', () => li.classList.add('show'));
                         li.addEventListener('pointerout', () => li.classList.remove('show'));
                         let a = document.createElement('a');
                         a.classList.add('nav-link', 'dropdown-link', 'menu-item-action');
-                        a.setAttribute('data-toggle', 'dropdown');
                         a.setAttribute('id', 'ui-menu-' + item.id.toString());
                         a.setAttribute('role', 'button');
                         a.innerText = item.name;
@@ -7647,11 +7646,10 @@ var Katrid;
                 html: true,
                 placement: 'left',
                 title: () => {
-                    attrs.uiTooltip;
-                    console.log('title');
+                    return attrs.uiTooltip;
                 },
                 delay: {
-                    show: 400,
+                    show: 1000,
                 }
             });
         }
