@@ -131,7 +131,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             'port': settings_dict['PORT'],
             'user': settings_dict['USER'],
             'password': settings_dict['PASSWORD'],
-            # **settings_dict['OPTIONS'],
+            **settings_dict['OPTIONS'],
         }
         return kwargs
 
