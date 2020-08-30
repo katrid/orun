@@ -97,6 +97,11 @@ class Deserializer(base.Deserializer):
                 obj_id.can_update = no_update
                 obj_id.save(using=self.database)
             instance = obj_id.content_object
+            if instance is None:
+                answer = input('The object "%s" is defined but not found on module "%s". Do you want to recreate it? [Y/n]' % (obj_name, obj_id.model_name))
+                if answer == 'y' or not answer:
+                    obj_id.delete()
+                    raise ObjectDoesNotExist
             if not no_update:
                 return instance
         except ObjectDoesNotExist:
@@ -114,7 +119,6 @@ class Deserializer(base.Deserializer):
             else:
                 setattr(instance, k, v)
         instance.save(using=self.database)
-        print(ContentType.objects.get_by_natural_key(instance._meta.name))
         if pk is None:
             obj_id = Object.objects.using(self.database).create(
                 schema=self.addon.schema,

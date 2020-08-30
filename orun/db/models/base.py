@@ -2156,11 +2156,9 @@ class Model(metaclass=ModelBase):
         model = apps['content.type']
 
         if view is None:
-            view = list(View.objects.filter(mode='primary', view_type=view_type, model=self._meta.name))
-            if view:
-                view = view[0]
+            view = View.objects.filter(mode='primary', view_type=view_type, model=self._meta.name).first()
         elif isinstance(view, (int, str)):
-            view = View.objects.get(view)
+            view = View.objects.get(pk=view)
 
         if view:
             xml_content = view.get_xml(self, {'request': self.env.request})

@@ -51,7 +51,7 @@ class View(models.Model):
         (
             ('primary', _('Primary')),
             ('extension', _('Extension'))
-        ), default='primary', null=False
+        ), default='extension', null=False
     )
     model = models.CharField(128, db_index=True)
     priority = models.IntegerField(_('Priority'), default=99, null=False)
@@ -132,7 +132,7 @@ class View(models.Model):
         view_cls = self.__class__
         children = view_cls.objects.filter(parent_id=self.pk, mode='extension')
         xml = etree.fromstring(self._get_content(context))
-        if self.parent and self.mode == 'primary':
+        if self.parent:
             parent_xml = etree.fromstring(self.parent.render(context))
             self.merge(parent_xml, xml)
             xml = parent_xml
