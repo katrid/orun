@@ -40,14 +40,7 @@ def report(request, path):
 
 
 def login(request: HttpRequest):
-    from threading import Thread
     from orun.db import connection
-
-    cur = connection.cursor()
-    t = Thread(None, cur.execute, args=("waitfor delay '00:00:10'",))
-    t.start()
-    t.join()
-    print('ok')
 
     if request.method == 'POST':
         if request.is_json():
