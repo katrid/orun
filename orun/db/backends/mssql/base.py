@@ -1,7 +1,7 @@
 import sys
 import logging
 from time import time
-import pyodbc as Database
+import pytds as Database
 
 from orun.db import utils
 from orun.core.exceptions import ImproperlyConfigured
@@ -131,7 +131,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             'port': settings_dict['PORT'],
             'user': settings_dict['USER'],
             'password': settings_dict['PASSWORD'],
-            **settings_dict['OPTIONS'],
+            # **settings_dict['OPTIONS'],
         }
         return kwargs
 
@@ -145,12 +145,12 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     def create_cursor(self, name=None):
         return self.connection.cursor()
 
-    def make_cursor(self, cursor):
-        """Create a cursor without debug logging."""
-        return CursorWrapper(cursor, self)
+    # def make_cursor(self, cursor):
+    #     """Create a cursor without debug logging."""
+    #     return CursorWrapper(cursor, self)
 
-    def make_debug_cursor(self, cursor):
-        return CursorDebugWrapper(cursor, self)
+    # def make_debug_cursor(self, cursor):
+    #     return CursorDebugWrapper(cursor, self)
 
     def is_usable(self):
         try:
