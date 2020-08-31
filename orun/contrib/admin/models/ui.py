@@ -65,8 +65,8 @@ class View(models.Model):
         ordering = ('name', 'priority')
 
     def save(self, *args, **kwargs):
-        if self.parent_id and self.mode is None:
-            self.mode = 'extension'
+        if self.parent_id is None:
+            self.mode = 'primary'
         if self.view_type is None:
             xml = etree.fromstring(self.render({}))
             self.view_type = xml.tag
@@ -95,6 +95,9 @@ class View(models.Model):
         logger.critical(etree.tostring(element))
         if expr:
             target = target.xpath(expr)[0]
+        self._merge(target, pos, element)
+
+    def _merge(self, target: etree.HtmlElement, pos: str, element: etree.HtmlElement):
         if pos == 'append':
             for child in element:
                 target.append(etree.fromstring(etree.tostring(child)))
@@ -121,12 +124,14 @@ class View(models.Model):
             for child in element:
                 p.insert(idx, etree.fromstring(etree.tostring(child)))
 
-    def merge(self, source, dest):
-        for child in dest:
+    def merge(self, target: etree.HtmlElement, element):
+        for child in element:
             if child.tag == 'xpath':
-                self.xpath(source, child)
-        for k, v in dest.attrib.items():
-            source.attrib[k] = v
+                self.xpath(target, child)
+            elif child.tag == 'insert' or child.tag == 'append':
+                self._merge(target, child.tag, child)
+        for k, v in element.attrib.items():
+            target.attrib[k] = v
 
     def compile(self, context, parent=None):
         view_cls = self.__class__
@@ -141,7 +146,25 @@ class View(models.Model):
             self.merge(xml, etree.fromstring(child._get_content(context)))
 
         self._eval_permissions(xml)
+        self._resolve_refs(xml)
+        print(etree.tostring(xml))
         return xml
+
+    def _resolve_refs(self, xml: etree.HtmlElement):
+        # find action refs
+        actions = xml.xpath('//action[@ref]')
+        for action in actions:
+            ref = action.attrib['ref']
+            obj = apps['ir.object'].objects.get_by_natural_key(ref).content_object
+            if obj:
+                action.attrib['data-action'] = str(obj.pk)
+                action.attrib['data-action-type'] = obj.action_type
+                if not action.text:
+                    action.text = obj.name
+                action.attrib.pop('ref')
+            else:
+                raise apps['ui.action'].ObjectDoesNotExists
+        pass
 
     def _eval_permissions(self, xml):
         _groups = {}
@@ -163,7 +186,6 @@ class View(models.Model):
 
     def _get_content(self, context):
         if self.view_type == 'report':
-            from orun.contrib.erp.models.reports import report_env
             templ = loader.get_template(self.template_name.split(':')[-1])
         else:
             templ = loader.get_template(self.template_name.split(':')[-1])

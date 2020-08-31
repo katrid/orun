@@ -148,6 +148,7 @@ class ReportAction(Action):
 
     @api.method
     def export_report(cls, id, format='pdf', params=None):
+        # TODO check permission
         if isinstance(id, list):
             id = id[0]
         if isinstance(id, models.Model):
@@ -155,6 +156,15 @@ class ReportAction(Action):
         else:
             rep = cls.objects.get(pk=id)
         return rep._export_report(format=format, params=params)
+
+    @api.method
+    def on_execute_action(cls, action_id, context):
+        fmt = context.pop('format', 'pdf')
+        params = context.pop('params', None)
+        if params is None:
+            if 'current_id' in context:
+                params = {'id', context['active_id']}
+        return cls.export_report(action_id, fmt, params)
 
 
 class UserReport(models.Model):
