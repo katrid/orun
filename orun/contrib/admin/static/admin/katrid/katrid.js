@@ -53,6 +53,11 @@ var Katrid;
                 let type = act.type || act.action_type;
                 return Actions.registry[type].dispatchAction(this, act);
             }
+            onActionLink(actionId, actionType, context) {
+                if (!context)
+                    context = this.getContext();
+                Katrid.Services.Actions.onExecuteAction(actionId, actionType, context);
+            }
             openObject(evt) {
                 evt.preventDefault();
                 evt.stopPropagation();
@@ -3332,7 +3337,10 @@ var Katrid;
                     let content = this.viewInfo.content;
                     if (content instanceof HTMLElement)
                         content = content.cloneNode(true);
-                    return $(content)[0];
+                    let templ = $(content)[0];
+                    this.templateView = templ;
+                    this.beforeRender(templ);
+                    return templ;
                 }
                 render(el) {
                     return;
@@ -3340,6 +3348,7 @@ var Katrid;
                 renderTo(container) {
                     this.el = this.render(container);
                     container.append(this.el);
+                    this.afterRender(this.el[0]);
                 }
                 get fields() {
                     return this.viewInfo.fields;
@@ -3369,6 +3378,21 @@ var Katrid;
                     title += '<br>Field: ' + field.name;
                     title += '<br>${record.' + field.name + '}';
                     el.setAttribute('ui-tooltip', title);
+                }
+                beforeRender(template) {
+                    for (let customTag of Object.values(Views.customTagRegistry))
+                        new customTag(template, this);
+                }
+                afterRender(container) {
+                }
+                prepareActions(actionsList) {
+                    for (let actions of actionsList) {
+                        for (let action of actions)
+                            this.prepareAction(action);
+                    }
+                }
+                prepareAction(action) {
+                    console.log('prepare action', action);
                 }
                 ready() {
                 }
@@ -3401,6 +3425,67 @@ var Katrid;
                     }
                 }
             }));
+            Views.customTagRegistry = {};
+            class CustomTag {
+                constructor(template, view) {
+                    this.view = view;
+                    let elements = template.querySelectorAll(this.selector());
+                    if (elements.length)
+                        this.prepare(elements);
+                }
+                selector() {
+                    return ':scope > actions';
+                }
+                prepare(elements) {
+                }
+                assign(source, dest) {
+                    dest.innerHTML = source.innerHTML;
+                    for (let attr of source.attributes)
+                        dest.setAttribute(attr.name, attr.value);
+                }
+            }
+            Views.CustomTag = CustomTag;
+            class ActionsTag extends CustomTag {
+                prepare(elements) {
+                    console.log(this.view.action);
+                    let atts = this.view.action.$element.find('.toolbar-action-buttons');
+                    for (let actions of elements) {
+                        let actionsButton = document.createElement('div');
+                        actionsButton.classList.add('btn-group');
+                        actionsButton.innerHTML = '<div class="dropdown"><button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown"></button><div class="dropdown-menu custom-actions"></div></div>';
+                        let dropdownMenu = actionsButton.querySelector('.dropdown-menu');
+                        for (let action of actions.querySelectorAll('action')) {
+                            dropdownMenu.append(this.prepareAction(action));
+                            action.remove();
+                        }
+                        let btn = actionsButton.querySelector('button');
+                        let caption = actions.getAttribute('caption');
+                        if (caption)
+                            btn.innerHTML = caption + ' ';
+                        else
+                            btn.innerHTML = actions.innerHTML;
+                        actionsButton.setAttribute('ng-if', `action.viewType === '${this.view.viewType}'`);
+                        console.log('insert el', atts);
+                        atts.append(actionsButton);
+                    }
+                }
+                prepareAction(action) {
+                    let el = document.createElement('a');
+                    el.classList.add('dropdown-item');
+                    this.assign(action, el);
+                    el.addEventListener('click', evt => {
+                        evt.preventDefault();
+                        this.view.action.onActionLink(action.getAttribute('data-action'), action.getAttribute('data-action-type'), {});
+                    });
+                    return el;
+                }
+            }
+            Views.ActionsTag = ActionsTag;
+            function registerCustomTag(tagName, customTag) {
+                Views.customTagRegistry[tagName] = customTag;
+            }
+            Views.registerCustomTag = registerCustomTag;
+            registerCustomTag(':scope > actions', ActionsTag);
             Views.searchModes = ['list', 'card'];
             Views.registry = {};
         })(Views = Forms.Views || (Forms.Views = {}));
@@ -6143,6 +6228,10 @@ var Katrid;
                 let svc = new Model('ui.action');
                 return svc.post('load', { args: [action] });
             }
+            static onExecuteAction(action, actionType, context) {
+                let svc = new Model(actionType);
+                return svc.post('on_execute_action', { args: [action], kwargs: { context } });
+            }
         }
         Services.Actions = Actions;
     })(Services = Katrid.Services || (Katrid.Services = {}));
@@ -7651,6 +7740,14 @@ var Katrid;
                 delay: {
                     show: 1000,
                 }
+            });
+        }
+    }));
+    uiKatrid.directive('actionLink', () => ({
+        restrict: 'A',
+        link: (scope, el, attrs) => {
+            el[0].addEventListener('click', () => {
+                console.log('do click');
             });
         }
     }));
