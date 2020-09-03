@@ -32,7 +32,7 @@ BUILTIN_SERIALIZERS = {
     "tsv": "orun.core.serializers.csv",
     "txt": "orun.core.serializers.csv",
     "sql": "orun.core.serializers.sql",
-    "dir": "orun.core.serializers.directory",
+    "jinja2": "orun.core.serializers.jinja2",
 }
 
 _serializers = {}
@@ -96,7 +96,7 @@ def unregister_serializer(format):
     del _serializers[format]
 
 
-def get_serializer(format):
+def get_serializer(format) -> base.Deserializer:
     if not _serializers:
         _load_serializers()
     if format not in _serializers:

@@ -21,7 +21,7 @@ def load_fixture(schema, *filenames, **options):
         fname = f'{fixture}.{options["database"]}.{fmt}'
         if not os.path.isfile(fname):
             fname = filename
-        d = deserializer(Path(fname), addon=addon, format=fmt, **options)
+        d = deserializer(Path(fname), addon=addon, format=fmt, filename=filename, **options)
 
         with transaction.atomic(options['database']):
             d.deserialize()
