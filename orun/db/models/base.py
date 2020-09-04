@@ -1851,13 +1851,20 @@ class Model(metaclass=ModelBase):
         res = []
         for row in data:
             pk = row.pop('id', None)
+            state = None
             if pk:
                 #_cache_change = _cache_change or cls.check_permission('change')
                 obj = self.get(pk)
+                state = 'update'
             else:
                 #_cache_create = _cache_create or cls.check_permission('create')
                 obj = self()
+                state = 'insert'
+            if state == 'insert' and hasattr(self, 'before_insert') and callable(self.before_insert):
+                self.before_insert()
             self._from_json(obj, row)
+            if state == 'insert' and hasattr(self, 'after_insert') and callable(self.after_insert):
+                self.after_insert()
             res.append(obj.pk)
         return res
 
@@ -2100,7 +2107,7 @@ class Model(metaclass=ModelBase):
                     e.message_dict[k] = e.message_dict.pop(k)
                     # e.error_dict[f"{child.name}.{k}"] = e.error_dict.pop(k)
                 raise
-
+        self._after_insert()
         return instance
 
     def to_json(self, fields=None, exclude=None, view_type=None):
@@ -2198,7 +2205,7 @@ class Model(metaclass=ModelBase):
                     for obj in v
                 ]
             else:
-                new_item[f.name] = f.to_json(v)
+                new_item[f.name] = f.value_to_json(v)
         return new_item
 
     def __iter__(self):
