@@ -1989,7 +1989,7 @@ class Model(metaclass=ModelBase):
         }
 
     @classmethod
-    def _search(self, where=None, fields=None, domain=None, join=None, **kwargs):
+    def _search(self, where=None, fields=None, filter=None, join=None, **kwargs):
         # self.check_permission('read')
         qs = self.objects.all()
         # load only selected fields
@@ -2013,8 +2013,8 @@ class Model(metaclass=ModelBase):
                 qs = qs.filter(**where)
             elif where is not None:
                 qs = qs.filter(where)
-        if domain:
-            qs = qs.filter(**domain)
+        if filter:
+            qs = qs.filter(**filter)
         # filter active records only
         if self._meta.active_field:
             qs = qs.filter(**{self._meta.active_field: True})
@@ -2145,9 +2145,9 @@ class Model(metaclass=ModelBase):
             search_params['name'] = q
             search_params['page'] = page
             search_params['count'] = count
-            domain = kwargs.get('domain', field.domain)
-            if domain:
-                search_params['params'] = domain
+            filter = kwargs.get('filter', field.filter)
+            if filter:
+                search_params['params'] = filter
         else:
             if isinstance(ids, (list, tuple)):
                 search_params['params'] = {'pk__in': ids}

@@ -394,14 +394,14 @@ class ForeignObject(RelatedField):
     rel_class = ForeignObjectRel
 
     def __init__(self, to, on_delete, from_fields, to_fields, rel=None, related_name=None,
-                 related_query_name=None, domain=None, parent_link=False, **kwargs):
+                 related_query_name=None, filter=None, parent_link=False, **kwargs):
 
         if rel is None:
             rel = self.rel_class(
                 self, to,
                 related_name=related_name,
                 related_query_name=related_query_name,
-                limit_choices_to=domain,
+                limit_choices_to=filter,
                 parent_link=parent_link,
                 on_delete=on_delete,
             )
@@ -410,7 +410,7 @@ class ForeignObject(RelatedField):
 
         self.from_fields = from_fields
         self.to_fields = to_fields
-        self.domain = domain
+        self.filter = filter
 
     def check(self, **kwargs):
         return [
@@ -723,7 +723,7 @@ class ForeignKey(ForeignObject):
         )
         kwargs.setdefault('db_index', False)
 
-        super().__init__(to, on_delete, from_fields=['self'], to_fields=[to_field], **kwargs)
+        super().__init__(to, on_delete, from_fields=['self'], to_fields=[to_field], filter=filter, **kwargs)
 
         self.db_constraint = db_constraint
         self.name_fields = name_fields
@@ -902,8 +902,8 @@ class ForeignKey(ForeignObject):
     def _formfield(self):
         res = super()._formfield()
         res['model'] = self.remote_field.model._meta.name
-        if self.domain:
-            res['domain'] = self.domain
+        if self.filter:
+            res['filter'] = self.filter
         return res
 
 
