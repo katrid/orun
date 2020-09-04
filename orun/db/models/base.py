@@ -2107,7 +2107,6 @@ class Model(metaclass=ModelBase):
                     e.message_dict[k] = e.message_dict.pop(k)
                     # e.error_dict[f"{child.name}.{k}"] = e.error_dict.pop(k)
                 raise
-        self._after_insert()
         return instance
 
     def to_json(self, fields=None, exclude=None, view_type=None):
