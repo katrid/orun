@@ -1860,11 +1860,11 @@ class Model(metaclass=ModelBase):
                 #_cache_create = _cache_create or cls.check_permission('create')
                 obj = self()
                 state = 'insert'
-            if state == 'insert' and hasattr(self, 'before_insert') and callable(self.before_insert):
-                self.before_insert()
+            if state == 'insert' and hasattr(obj, 'before_insert') and callable(obj.before_insert):
+                obj.before_insert()
             self._from_json(obj, row)
-            if state == 'insert' and hasattr(self, 'after_insert') and callable(self.after_insert):
-                self.after_insert()
+            if state == 'insert' and hasattr(obj, 'after_insert') and callable(obj.after_insert):
+                obj.after_insert()
             res.append(obj.pk)
         return res
 
