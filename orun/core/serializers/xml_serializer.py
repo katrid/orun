@@ -251,7 +251,7 @@ class Deserializer(base.Deserializer):
                 'view_type': 'report',
                 'template_name': obj.attrib.get('template'),
                 'name': obj.attrib.get('view-id'),
-                'model': model and ContentType.objects.only('pk').get(name=model) or None,
+                'model': (model and ContentType.objects.only('pk').get(name=model)) or None,
             },
         }
         view = self.read_object(view)
