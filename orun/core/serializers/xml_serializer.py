@@ -35,11 +35,15 @@ class Deserializer(base.Deserializer):
         lst = []
         trans = data.attrib.get('translate')
         for el in data:
-            obj = self.TAGS[el.tag](self, el, translate=trans)
-            if isinstance(obj, list):
-                lst.extend(obj)
-            elif obj:
-                lst.append(obj)
+            try:
+                obj = self.TAGS[el.tag](self, el, translate=trans)
+                if isinstance(obj, list):
+                    lst.extend(obj)
+                elif obj:
+                    lst.append(obj)
+            except:
+                print('Error loading object: ', el.attrib.get('id'))
+                raise
         return lst
 
     def read_object(self, obj, trans=False, **attrs):
