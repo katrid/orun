@@ -1971,7 +1971,7 @@ class Model(metaclass=ModelBase):
 
     @api.method
     def search(cls, fields=None, count=None, page=None, limit=None, **kwargs):
-        qs = cls._search(fields=fields, **kwargs)
+        qs = cls._search(fields=fields, filter=kwargs.get('domain'), **kwargs)
         if count:
             count = qs.count()
         if limit is None:
