@@ -6813,7 +6813,7 @@ var Katrid;
                     format = localStorage.katridReportViewer || 'pdf';
                 const params = this.getUserParams();
                 console.log('send params', params);
-                const svc = new Katrid.Services.Model('ir.action.report');
+                const svc = new Katrid.Services.Model('ui.action.report');
                 svc.post('export_report', { args: [this.info.id], kwargs: { format, params } })
                     .then(function (res) {
                     if (res.open) {
