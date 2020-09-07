@@ -344,7 +344,7 @@ var Katrid;
                 if (sel)
                     sel = sel.join(',');
                 let params = { data: [{ name: 'id', value: sel }] };
-                let svc = new Katrid.Services.Model('ir.action.report');
+                let svc = new Katrid.Services.Model('ui.action.report');
                 let res = await svc.post('export_report', { args: [action.id], kwargs: { format, params } });
                 if (res.open)
                     return window.open(res.open);
@@ -361,7 +361,7 @@ var Katrid;
                 console.log('report hash change', params);
                 this.userReport.id = params.user_report;
                 if (this.userReport.id) {
-                    let svc = new Katrid.Services.Model('ir.action.report');
+                    let svc = new Katrid.Services.Model('ui.action.report');
                     let res = await svc.post('load_user_report', { kwargs: { user_report: this.userReport.id } });
                     this.userReport.params = res.result;
                 }
@@ -373,10 +373,10 @@ var Katrid;
                 $('#action-view').empty().append(templ);
             }
         }
-        ReportAction.actionType = 'ir.action.report';
+        ReportAction.actionType = 'ui.action.report';
         Actions.ReportAction = ReportAction;
         Katrid.Actions.registry[ReportAction.actionType] = ReportAction;
-        console.log('katrid report actions');
+        console.log('katrid report actions', ReportAction.actionType);
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
