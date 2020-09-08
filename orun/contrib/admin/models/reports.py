@@ -162,11 +162,10 @@ class ReportAction(Action):
         fmt = context.pop('format', 'pdf')
         params = context.pop('params', None)
         if params is None:
-            if 'current_id' in context:
+            if 'active_id' in context:
                 params = {
-                    'data': {'id', context['active_id']}
+                    'data': {'pk', context['active_id']}
                 }
-        print(context)
         return cls.export_report(action_id, fmt, params)
 
 
