@@ -469,6 +469,7 @@ var Katrid;
             }
             getContext() {
                 let ctx = super.getContext();
+                console.log('get context', ctx);
                 let sel = this.selection;
                 if (sel && sel.length) {
                     ctx.active_id = sel[0];
