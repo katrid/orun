@@ -54,11 +54,11 @@ var Katrid;
                 return Actions.registry[type].dispatchAction(this, act);
             }
             onActionLink(actionId, actionType, context) {
-                if (!context) {
-                    context = this.getContext();
-                    console.log('on action link', context);
-                }
-                Katrid.Services.Actions.onExecuteAction(actionId, actionType, context);
+                let ctx = {};
+                if (context)
+                    Object.assign(ctx, context);
+                Object.assign(ctx, this.getContext());
+                Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx);
             }
             openObject(evt) {
                 evt.preventDefault();
