@@ -58,7 +58,12 @@ var Katrid;
                 if (context)
                     Object.assign(ctx, context);
                 Object.assign(ctx, this.getContext());
-                Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx);
+                Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx)
+                    .then(res => {
+                    if (res.open)
+                        window.open(res.open);
+                    return res;
+                });
             }
             openObject(evt) {
                 evt.preventDefault();
@@ -720,7 +725,7 @@ var Katrid;
                 this.selection;
                 Katrid.Services.Actions.load($(evt.currentTarget).data('id'))
                     .then((action) => {
-                    if (action.action_type === 'ir.action.report')
+                    if (action.action_type === 'ui.action.report')
                         Katrid.Actions.ReportAction.dispatchBindingAction(this, action);
                 });
             }
