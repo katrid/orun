@@ -166,6 +166,7 @@ class ReportAction(Action):
                 params = {
                     'data': {'id', context['active_id']}
                 }
+        print(params)
         return cls.export_report(action_id, fmt, params)
 
 
