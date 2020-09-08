@@ -502,7 +502,6 @@ var Katrid;
                     ((sel.length > 1) && confirm(Katrid.i18n.gettext('Confirm delete records?')))) {
                     await this.dataSource.delete(sel);
                     if (backToSearch) {
-                        this.app.actionManager.backTo(-1);
                         this.dataSource.refresh();
                     }
                     else
@@ -527,7 +526,8 @@ var Katrid;
                     let model = new Katrid.Services.Model(res.model);
                     let views = await model.getViewInfo({ view_type: 'form' });
                     let wnd = new Katrid.Forms.Dialogs.Window({ scope: this.scope, view: views, model });
-                    wnd.createNew({ defaultValues: res.value });
+                    let defs = { defaultValues: res.value };
+                    wnd.createNew();
                 }
             }
             makeUrl(viewType) {
@@ -769,7 +769,6 @@ var Katrid;
                 this.selectionLength = this._selection.length;
             }
             get selection() {
-                console.log('get selection', this.scope.recordId);
                 if (this.viewType === 'form') {
                     if (this.scope.recordId)
                         return [this.scope.recordId];
