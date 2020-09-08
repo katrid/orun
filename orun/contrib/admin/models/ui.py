@@ -147,7 +147,6 @@ class View(models.Model):
 
         self._eval_permissions(xml)
         self._resolve_refs(xml)
-        print(etree.tostring(xml))
         return xml
 
     def _resolve_refs(self, xml: etree.HtmlElement):
@@ -244,7 +243,7 @@ class View(models.Model):
         children = list(self.objects.filter(mode='primary', parent=templ.id))
         if children:
             for child in children:
-                print(child)
+                pass
         else:
             views_env.from_string
 
