@@ -40,8 +40,6 @@ def report(request, path):
 
 
 def login(request: HttpRequest):
-    from orun.db import connection
-
     if request.method == 'POST':
         if request.is_json():
             data = request.json
