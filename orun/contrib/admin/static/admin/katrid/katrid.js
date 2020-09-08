@@ -16,6 +16,7 @@ var Katrid;
                 this.$parent = $container;
             }
             getContext() {
+                console.log('get context');
                 return {};
             }
             getBreadcrumb() {
