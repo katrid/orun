@@ -56,6 +56,7 @@ var Katrid;
             onActionLink(actionId, actionType, context) {
                 if (!context)
                     context = this.getContext();
+                console.log('on action link', context);
                 Katrid.Services.Actions.onExecuteAction(actionId, actionType, context);
             }
             openObject(evt) {
