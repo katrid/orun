@@ -769,7 +769,7 @@ var Katrid;
                 this.selectionLength = this._selection.length;
             }
             get selection() {
-                console.log(this.scope.recordId);
+                console.log('get selection', this.scope.recordId);
                 if (this.viewType === 'form') {
                     if (this.scope.recordId)
                         return [this.scope.recordId];
