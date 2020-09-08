@@ -12790,7 +12790,7 @@ body {
 }
 
 .table td, .table th {
-  padding: 4px;
+  padding: 2px 4px 4px 4px;
 }
 
 .table td.BooleanField {
@@ -12959,10 +12959,6 @@ select.form-control {
   top: 2px;
   right: 8px;
   padding: 4px;
-}
-
-td.ForeignKey, th.ForeignKey {
-  width: 25%;
 }
 
 #main-content ui-view ui-view > div {

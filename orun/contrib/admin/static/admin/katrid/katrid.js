@@ -769,6 +769,7 @@ var Katrid;
                 this.selectionLength = this._selection.length;
             }
             get selection() {
+                console.log(this.scope.recordId);
                 if (this.viewType === 'form') {
                     if (this.scope.recordId)
                         return [this.scope.recordId];
@@ -3376,7 +3377,6 @@ var Katrid;
                     if (field.helpText)
                         title += '<br>' + field.helpText;
                     title += '<br>Field: ' + field.name;
-                    title += '<br>${record.' + field.name + '}';
                     el.setAttribute('ui-tooltip', title);
                 }
                 beforeRender(template) {
