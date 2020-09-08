@@ -1275,13 +1275,26 @@ class BaseDatabaseSchemaEditor:
                 print('Resize char field', field)
             if field_info.null_ok != field.null and field.null:
                 # drop not null constraint
-                # self.remove_not_null_constraint(field)
+                self.remove_not_null_constraint(field)
                 print('Remove null constraint', field)
 
     def change_field_size(self, field: Field):
         rel_db_params = field.db_parameters(connection=self.connection)
         rel_type = rel_db_params['type']
         sql = self.sql_alter_column_type % {
+            'column': field.column,
+            'type': rel_type,
+        }
+        sql = self.sql_alter_column % {
+            'table': field.model._meta.db_table,
+            'changes': sql,
+        }
+        self.execute(sql)
+
+    def remove_not_null_constraint(self, field: Field):
+        rel_db_params = field.db_parameters(connection=self.connection)
+        rel_type = rel_db_params['type']
+        sql = self.sql_alter_column_null % {
             'column': field.column,
             'type': rel_type,
         }
