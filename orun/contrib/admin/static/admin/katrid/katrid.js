@@ -16,7 +16,6 @@ var Katrid;
                 this.$parent = $container;
             }
             getContext() {
-                console.log('get context');
                 return {};
             }
             getBreadcrumb() {
@@ -55,9 +54,10 @@ var Katrid;
                 return Actions.registry[type].dispatchAction(this, act);
             }
             onActionLink(actionId, actionType, context) {
-                if (!context)
+                if (!context) {
                     context = this.getContext();
-                console.log('on action link', context);
+                    console.log('on action link', context);
+                }
                 Katrid.Services.Actions.onExecuteAction(actionId, actionType, context);
             }
             openObject(evt) {
