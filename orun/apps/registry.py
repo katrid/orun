@@ -65,13 +65,13 @@ class Registry:
             for addon in installed_apps:
                 if isinstance(addon, str):
                     addon = AppConfig.create(addon, self)
-                if addon.schema in self.app_configs:
+                if addon.name in self.app_configs:
                     continue
                     # raise ImproperlyConfigured(
                     #     "Application schema aren't unique, "
                     #     "duplicates: %s" % addon.schema)
 
-                self.app_configs[addon.schema] = addon
+                self.app_configs[addon.name] = addon
                 addon.app = self
 
             # Check for duplicate app names.
