@@ -20,7 +20,6 @@ class Registry:
         # set to False if the current process is not the main
         self.main = True
         # get a new event loop
-        # self.loop = asyncio.new_event_loop()
         self.models = {}
         self.services = {}
         self.app_configs = self.addons = {}
@@ -115,8 +114,8 @@ class Registry:
             self.env.setup()
 
     def setup_loop(self):
-        from asyncio import get_event_loop
-        self.loop = get_event_loop()
+        import asyncio
+        self.loop = asyncio.new_event_loop()
         for addon in self.app_configs.values():
             if hasattr(addon, 'init_app'):
                 addon.init_app(self)
