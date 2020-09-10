@@ -114,7 +114,9 @@ class Registry:
             self.ready_event.set()
             self.env.setup()
 
-    def setup(self):
+    def setup_loop(self):
+        from asyncio import get_event_loop
+        self.loop = get_event_loop()
         for addon in self.app_configs.values():
             if hasattr(addon, 'init_app'):
                 addon.init_app(self)
