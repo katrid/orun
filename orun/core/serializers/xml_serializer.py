@@ -42,8 +42,7 @@ class Deserializer(base.Deserializer):
                 elif obj:
                     lst.append(obj)
             except:
-                print('Error loading object: ', el.attrib.get('id'))
-                raise
+                pass
         return lst
 
     def read_object(self, obj, trans=False, **attrs):
@@ -192,9 +191,10 @@ class Deserializer(base.Deserializer):
         return self.read_object(action, **attrs)
 
     def delete_object(self, obj, **attrs):
+        Object = apps['ir.object']
         try:
-            xml_obj = Object.get_object(obj.attrib['id'])
-            obj = xml_obj.object
+            xml_obj = Object.objects.get_object(obj.attrib['id'])
+            obj = xml_obj.content_object
             obj.delete()
             xml_obj.delete()
         except:
