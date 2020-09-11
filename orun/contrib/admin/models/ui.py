@@ -65,7 +65,7 @@ class View(models.Model):
         ordering = ('name', 'priority')
 
     def save(self, *args, **kwargs):
-        if self.parent_id is None:
+        if self.parent_id is None and self.mode is None:
             self.mode = 'primary'
         if self.view_type is None:
             xml = etree.fromstring(self.render({}))
