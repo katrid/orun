@@ -1907,7 +1907,7 @@
             </div>
             <div class="float-right" ng-if="action.viewType === 'form'">
               <div class="btn-group pagination-area">
-              <span ng-show="records.length">
+              <span ng-if="action.dataSource.records.length">
                 ${ action.dataSource.recordIndex + 1 } / ${ records.length }
               </span>
               </div>

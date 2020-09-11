@@ -207,8 +207,8 @@ var Katrid;
                     i++;
                     while (this.actions.length > i)
                         this.actions.pop().$destroy();
-                    this.currentAction = action;
                 }
+                this.currentAction = action;
             }
             clear() {
                 for (let action of this.actions)
@@ -224,10 +224,13 @@ var Katrid;
             }
             async onHashChange(params, reset) {
                 let actionId = params.action;
-                if (reset)
-                    this.clear();
                 let oldAction, action;
                 action = oldAction = this.currentAction;
+                let oldActionId;
+                if (oldAction)
+                    oldActionId = oldAction.info.id;
+                if (reset && !(oldActionId == params.action))
+                    this.clear();
                 if (actionId in this.$cachedActions) {
                     let actionInfo = this.$cachedActions[actionId];
                     let scope = this.createScope();
@@ -461,6 +464,7 @@ var Katrid;
                 }
                 if (this.params.id && (this.dataSource.recordId != this.params.id))
                     await this.dataSource.get(this.params.id);
+                console.log(this.dataSource.records);
             }
             rpc(method, data, event) {
                 if (event)
@@ -737,6 +741,7 @@ var Katrid;
                     let search = {
                         id: row.id,
                         action: this.info.id,
+                        model: this.info.model,
                         view_type: 'form',
                         menu_id: Katrid.app.currentMenu.id,
                     };
