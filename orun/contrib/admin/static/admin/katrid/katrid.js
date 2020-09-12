@@ -6063,7 +6063,7 @@ var Katrid;
                     contentType: false,
                     type: 'POST',
                     success: (data) => {
-                        dataSource.refresh();
+                        scope.$apply(() => dataSource.refresh());
                         Katrid.Forms.Dialogs.Alerts.success('Operação realizada com sucesso.');
                     }
                 });
