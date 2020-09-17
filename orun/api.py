@@ -61,7 +61,7 @@ class Environment(Mapping):
         return self['ir.object'].get_object(name).object_id
 
 
-def method(fn):
+def method(fn) -> classmethod:
     fn.exposed = True
     fn = classmethod(fn)
     return fn
