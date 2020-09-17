@@ -1587,6 +1587,9 @@ class DecimalField(Field):
 
     def __init__(self, max_digits=28, decimal_places=10, label=None, name=None, **kwargs):
         self.max_digits, self.decimal_places = max_digits, decimal_places
+        kwargs.setdefault('null', False)
+        kwargs.setdefault('default', 0)
+        kwargs.setdefault('db_default', 0)
         super().__init__(label, name, **kwargs)
 
     def check(self, **kwargs):
@@ -1684,6 +1687,8 @@ class DecimalField(Field):
 
     def to_python(self, value):
         if value is None:
+            if self.required:
+                return 0
             return value
         # if isinstance(value, float):
         #     return self.context.create_decimal_from_float(value)
