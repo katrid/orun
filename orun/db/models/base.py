@@ -5,6 +5,7 @@ import copy
 from functools import partialmethod, reduce
 from itertools import chain
 from collections import defaultdict
+from typing import Type
 
 from orun.apps import apps
 from orun import api
@@ -32,6 +33,8 @@ from orun.db.models.query import Q
 from orun.db.models.aggregates import Count
 from orun.db.models.signals import (
     class_prepared, post_init, post_save, pre_init, pre_save,
+    before_insert, before_update, before_delete,
+    after_insert, after_update, after_delete,
 )
 from orun.utils.encoding import force_str
 from orun.utils.text import capfirst, get_text_list
@@ -402,7 +405,12 @@ class ModelState:
     # explicit (non-auto) PKs. This impacts validation only; it has no effect
     # on the actual save.
     adding = True
+    loading = False
     fields_cache = ModelStateFieldsCacheDescriptor()
+    update_fields: dict = None
+
+    def __init__(self, loading=False):
+        self.loading = loading
 
 
 class Model(metaclass=ModelBase):
@@ -420,7 +428,10 @@ class Model(metaclass=ModelBase):
         pre_init.send(sender=cls, args=args, kwargs=kwargs)
 
         # Set up the storage for instance state
-        self._state = ModelState()
+        if '_state' in kwargs:
+            self._state = kwargs.pop('_state')
+        else:
+            self._state = ModelState()
 
         # There is a rather weird disparity here; if kwargs, it's set, then args
         # overrides it. It should be one or the other; don't duplicate the work
@@ -522,7 +533,8 @@ class Model(metaclass=ModelBase):
                 next(values_iter) if f.attname in field_names else DEFERRED
                 for f in cls._meta.concrete_fields
             ]
-        new = cls(*values)
+        new = cls(*values, _state=ModelState(loading=True))
+        new._state.loading = False
         new._state.adding = False
         new._state.db = db
         return new
@@ -698,6 +710,7 @@ class Model(metaclass=ModelBase):
         that the "save" must be an SQL insert or update (or equivalent for
         non-SQL backends), respectively. Normally, they should not be set.
         """
+
         # Ensure that a model instance without a PK hasn't been assigned to
         # a ForeignKey or OneToOneField on this model. If the field is
         # nullable, allowing the save() would result in silent data loss.
@@ -1845,26 +1858,37 @@ class Model(metaclass=ModelBase):
         pass
 
     @api.method
-    def write(self, data):
+    def write(cls: Type['Model'], data):
         if isinstance(data, dict):
             data = [data]
         res = []
         for row in data:
             pk = row.pop('id', None)
-            state = None
             if pk:
                 #_cache_change = _cache_change or cls.check_permission('change')
-                obj = self.get(pk)
-                state = 'update'
+                obj = cls.get(pk)
             else:
                 #_cache_create = _cache_create or cls.check_permission('create')
-                obj = self()
-                state = 'insert'
-            if state == 'insert' and hasattr(obj, 'before_insert') and callable(obj.before_insert):
-                obj.before_insert()
-            self._from_json(obj, row)
-            if state == 'insert' and hasattr(obj, 'after_insert') and callable(obj.after_insert):
-                obj.after_insert()
+                obj = cls()
+
+            # dispatch events
+            if obj._state.adding:
+                if hasattr(obj, 'before_insert') and callable(obj.before_insert):
+                    obj.before_insert()
+                before_insert.send(cls._meta.name, old=None, new=obj)
+            elif cls._meta.name in before_update.models:
+                # make a copy of old data
+                old = copy.deepcopy(obj)
+                cls._from_json(obj, row)
+                before_update.send(cls._meta.name, old=obj, new=obj)
+            if obj._state.adding:
+                cls._from_json(obj, row)
+            if obj._state.adding:
+                if hasattr(obj, 'after_insert') and callable(obj.after_insert):
+                    obj.after_insert()
+                if cls._meta.name in after_insert.models:
+                    after_insert.send(cls._meta.name, old=None, new=obj)
+
             res.append(obj.pk)
         return res
 
@@ -1877,13 +1901,10 @@ class Model(metaclass=ModelBase):
             raise ObjectDoesNotExist()
         for obj in ids:
             r.append(obj.pk)
-            obj._destroy()
+            obj.delete()
         return {
             'ids': r,
         }
-
-    def _destroy(self):
-        self.delete()
 
     @api.method
     def field_change_event(cls, field, record, *args, **kwargs):
@@ -2063,11 +2084,11 @@ class Model(metaclass=ModelBase):
         }
 
     @classmethod
-    def _from_json(self, instance, data, **kwargs):
+    def _from_json(cls, instance, data, **kwargs):
         data.pop('id', None)
         children = {}
         for k, v in data.items():
-            field = instance.__class__._meta.fields[k]
+            field = cls._meta.fields[k]
             v = field.to_python(v)
             if field.one_to_many or field.many_to_many:
                 children[field] = v
@@ -2185,6 +2206,13 @@ class Model(metaclass=ModelBase):
                 'action': [action.to_json() for action in bindings['action'] if view_type == 'list' or not action.multiple],
             }
         return r
+
+    def __setattr__(self, key, value):
+        super().__setattr__(key, value)
+        if not self._state.loading and key in self._meta.fields:
+            if self._state.update_fields is None:
+                self._state.update_fields = {}
+            self._state.update_fields[key] = value
 
     def __copy__(self):
         new_item = {}
