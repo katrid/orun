@@ -5979,16 +5979,21 @@ var Katrid;
                                         Katrid.Forms.Dialogs.Alerts.error(msg.message);
                                 });
                             }
+                            res = res.result;
                             if (res && res.open)
                                 window.open(res.open);
-                            if (res.result.download) {
+                            if (res.download) {
+                                console.log(res.result);
                                 let a = document.createElement('a');
                                 a.href = res.download;
+                                a.target = '_blank';
                                 a.click();
                                 return;
                             }
-                            resolve(res.result);
+                            resolve(res);
                         }
+                    })
+                        .then(res => {
                     })
                         .catch(res => reject(res));
                 });
