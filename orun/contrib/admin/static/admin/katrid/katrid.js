@@ -477,6 +477,12 @@ var Katrid;
                     data = { args: [data] };
                 this.model.rpc(method, data.args, data.kwargs);
             }
+            refresh() {
+                if (this.viewType === 'form')
+                    this.dataSource.get(this.params.id);
+                else
+                    this.dataSource.refresh();
+            }
             getContext() {
                 let ctx = super.getContext();
                 console.log('get context', ctx);
@@ -708,15 +714,7 @@ var Katrid;
                 }
             }
             async formButtonClick(id, meth, self) {
-                const res = await this.scope.model.rpc(meth, [id]);
-                if (res.open)
-                    return window.open(res.open);
-                if (res.download) {
-                    let a = document.createElement('a');
-                    a.href = res.download;
-                    a.click();
-                    return;
-                }
+                const res = await this.model.rpc(meth, [id], null, this);
                 if (res.tag === 'refresh')
                     this.dataSource.refresh();
                 if (res.type) {
@@ -5948,11 +5946,10 @@ var Katrid;
                     fetch(rpcName, config)
                         .then(async (res) => {
                         if (res.status === 500) {
-                            throw Error(await res.text());
+                            reject(await res.json());
                         }
-                        return res;
+                        return res.json();
                     })
-                        .then(res => res.json())
                         .then(res => {
                         if (res.error)
                             reject(res.error);
@@ -5981,6 +5978,14 @@ var Katrid;
                                     else if ((msg.type === 'error') || (msg.type === 'danger'))
                                         Katrid.Forms.Dialogs.Alerts.error(msg.message);
                                 });
+                            }
+                            if (res && res.open)
+                                window.open(res.open);
+                            if (res.result.download) {
+                                let a = document.createElement('a');
+                                a.href = res.download;
+                                a.click();
+                                return;
                             }
                             resolve(res.result);
                         }
@@ -6166,8 +6171,12 @@ var Katrid;
                         .catch(res => {
                         if ((res.status === 500) && res.responseText)
                             alert(res.responseText);
-                        else
+                        else {
                             Katrid.Forms.Dialogs.Alerts.error(Katrid.i18n.gettext('Error saving record changes'));
+                            console.log('error', res);
+                            if (res.error)
+                                Katrid.Forms.Dialogs.Alerts.error(res.error);
+                        }
                         reject(res);
                     });
                 });
@@ -6178,13 +6187,12 @@ var Katrid;
             autoReport() {
                 return this.post('auto_report', { kwargs: {} });
             }
-            rpc(meth, args, kwargs) {
+            rpc(meth, args, kwargs, action) {
                 return new Promise((resolve, reject) => {
                     this.post(meth, { args: args, kwargs: kwargs })
-                        .then((res) => {
-                        if (res && res.open)
-                            window.open(res.open);
-                        resolve(res);
+                        .then(res => {
+                        if ((res.tag === 'refresh') && action)
+                            action.refresh();
                     })
                         .catch(res => {
                         if (res.messages && _.isObject(res.messages)) {

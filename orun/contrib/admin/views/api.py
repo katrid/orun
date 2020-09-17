@@ -24,8 +24,8 @@ def rpc(request, service, meth, params):
         if getattr(meth, 'exposed', None):
             qs = kwargs
 
-            args = params.get('args', ())
-            kwargs = params.get('kwargs', {})
+            args = params.get('args') or ()
+            kwargs = params.get('kwargs') or {}
             r = meth(*args, **kwargs)
 
             if isinstance(r, QuerySet):
