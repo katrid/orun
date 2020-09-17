@@ -6198,6 +6198,7 @@ var Katrid;
                         .then(res => {
                         if ((res.tag === 'refresh') && action)
                             action.refresh();
+                        resolve(res);
                     })
                         .catch(res => {
                         if (res.messages && _.isObject(res.messages)) {
