@@ -100,7 +100,7 @@ class View(models.Model):
     def _merge(self, target: etree.HtmlElement, pos: str, element: etree.HtmlElement):
         if pos == 'append':
             for child in element:
-                target.append(etree.fromstring(etree.tostring(child)))
+                target.append(child)
         elif pos == 'insert':
             for child in reversed(element):
                 target.insert(0, etree.fromstring(etree.tostring(child)))
