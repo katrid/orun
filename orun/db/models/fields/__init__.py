@@ -41,6 +41,7 @@ __all__ = [
     'PositiveSmallIntegerField', 'SlugField', 'SmallIntegerField', 'TextField',
     'TimeField', 'URLField', 'UUIDField', 'ChoiceField', 'SelectionField',
     'XmlField', 'HtmlField', 'PasswordField',
+    'NotNullIntegerField',
 ]
 
 
@@ -1579,18 +1580,16 @@ class DateTimeField(DateField):
 
 
 class DecimalField(Field):
-    empty_strings_allowed = False
     default_error_messages = {
         'invalid': _("'%(value)s' value must be a decimal number."),
     }
     description = _("Decimal number")
 
-    def __init__(self, max_digits=28, decimal_places=10, label=None, name=None, **kwargs):
+    def __init__(self, max_digits=28, decimal_places=10, label=None, name=None, null=False, **kwargs):
         self.max_digits, self.decimal_places = max_digits, decimal_places
-        kwargs.setdefault('null', False)
         kwargs.setdefault('default', 0)
         kwargs.setdefault('db_default', 0)
-        super().__init__(label, name, **kwargs)
+        super().__init__(label, name, null=null, **kwargs)
 
     def check(self, **kwargs):
         errors = super().check(**kwargs)
@@ -1865,7 +1864,6 @@ class FloatField(Field):
 
 
 class IntegerField(Field):
-    empty_strings_allowed = False
     default_error_messages = {
         'invalid': _("'%(value)s' value must be an integer."),
     }
@@ -2397,6 +2395,14 @@ class UUIDField(Field):
 
 class ImageField(BinaryField):
     pass
+
+
+class NotNullIntegerField(Field):
+    def __init__(self, *args, **kwargs):
+        kwargs['null'] = False
+        kwargs.setdefault('default', 0)
+        kwargs.setdefault('db_default', 0)
+        super().__init__(*args, **kwargs)
 
 
 class ChoiceField(CharField):
