@@ -1881,6 +1881,8 @@ class Model(metaclass=ModelBase):
                 old = copy.deepcopy(obj)
                 cls._from_json(obj, row)
                 before_update.send(cls._meta.name, old=obj, new=obj)
+            else:
+                cls._from_json(obj, row)
             if obj._state.adding:
                 cls._from_json(obj, row)
             if obj._state.adding:
