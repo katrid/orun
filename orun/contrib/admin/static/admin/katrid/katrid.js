@@ -16,7 +16,7 @@ var Katrid;
                 this.$parent = $container;
             }
             getContext() {
-                return {};
+                return this._context;
             }
             getBreadcrumb() {
             }
@@ -43,9 +43,10 @@ var Katrid;
                 if (searchParams) {
                     const urlParams = new URLSearchParams(searchParams);
                     for (let [k, v] of urlParams)
-                        if (k.startsWith('default_')) {
+                        if (k.startsWith('default_'))
                             this._context[k] = v;
-                        }
+                        else if (k === 'filter')
+                            this._context[k] = v;
                 }
                 return this._context;
             }
@@ -142,6 +143,7 @@ var Katrid;
                 return li;
             }
         }
+        Action._context = {};
         Actions.Action = Action;
         class ViewAction extends Action {
             async onHashChange(params) {
@@ -1552,7 +1554,7 @@ var Katrid;
                 return new Promise((resolve, reject) => {
                     let controller = new AbortController();
                     let req = () => {
-                        this.model.search(params, null, { signal: controller.signal })
+                        this.model.search(params, null, { signal: controller.signal }, this.action.context)
                             .catch((res) => {
                             return reject(res);
                         })
@@ -5915,9 +5917,8 @@ var Katrid;
                 const rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
                 return $.get(rpcName, params);
             }
-            post(name, data, params, config) {
-                let context;
-                if (Katrid.app)
+            post(name, data, params, config, context) {
+                if (!context && Katrid.app)
                     context = Katrid.app.context;
                 if (!data)
                     data = {};
@@ -6120,8 +6121,8 @@ var Katrid;
                 let kwargs = { name };
                 return this.post('create_name', { kwargs: kwargs });
             }
-            search(data, params, config) {
-                return this.post('search', { kwargs: data }, params, config);
+            search(data, params, config, context) {
+                return this.post('search', { kwargs: data }, params, config, context);
             }
             destroy(id) {
                 if (!_.isArray(id))
