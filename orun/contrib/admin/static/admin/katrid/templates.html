@@ -855,7 +855,7 @@
         <div class="clearfix"></div>
         {% if header %}
         <header class="content-container-heading">
-          <div class="header-buttons">
+          <div class="header-buttons" ng-show="!action.dataSource.editing">
             {{ header }}
           </div>
         </header>
