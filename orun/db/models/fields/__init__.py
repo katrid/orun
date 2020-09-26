@@ -2397,12 +2397,11 @@ class ImageField(BinaryField):
     pass
 
 
-class NotNullIntegerField(Field):
-    def __init__(self, *args, **kwargs):
-        kwargs['null'] = False
-        kwargs.setdefault('default', 0)
-        kwargs.setdefault('db_default', 0)
-        super().__init__(*args, **kwargs)
+def NotNullIntegerField(*args, **kwargs):
+    kwargs['null'] = False
+    kwargs.setdefault('default', 0)
+    kwargs.setdefault('db_default', 0)
+    return IntegerField(*args, **kwargs)
 
 
 class ChoiceField(CharField):
