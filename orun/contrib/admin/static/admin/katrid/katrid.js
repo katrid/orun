@@ -59,12 +59,7 @@ var Katrid;
                 if (context)
                     Object.assign(ctx, context);
                 Object.assign(ctx, this.getContext());
-                Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx)
-                    .then(res => {
-                    if (res.open)
-                        window.open(res.open);
-                    return res;
-                });
+                Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx);
             }
             openObject(evt) {
                 evt.preventDefault();
