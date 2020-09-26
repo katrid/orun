@@ -2355,7 +2355,7 @@ var Katrid;
                     let newField = new this.constructor(this.info);
                     newField.visible = this.visible;
                     newField.readonly = this.readonly;
-                    newField.domain = this.domain;
+                    newField.filter = this.filter;
                     newField.fieldEl = el;
                     return newField;
                 }
@@ -2406,7 +2406,9 @@ var Katrid;
                     if (attrs.ngReadonly)
                         this.ngReadonly = attrs.ngReadonly;
                     if (attrs.domain)
-                        this.domain = attrs.domain;
+                        this.filter = attrs.domain;
+                    if (attrs.filter)
+                        this.filter = attrs.filter;
                     if (attrs.ngShow)
                         this.ngShow = attrs.ngShow;
                     if (attrs.ngIf)
@@ -2459,8 +2461,6 @@ var Katrid;
                         this.cols = attrs.cols;
                     if (attrs.ngReadonly)
                         this.ngReadonly = attrs.ngReadonly;
-                    if (attrs.domain)
-                        this.domain = attrs.domain;
                     if (attrs.visible === 'false')
                         this.visible = false;
                     else if (attrs.visible === 'true')
@@ -2505,7 +2505,9 @@ var Katrid;
                     if (attrs.ngReadonly)
                         this.ngReadonly = attrs.ngReadonly;
                     if (attrs.domain)
-                        this.domain = attrs.domain;
+                        this.filter = attrs.domain;
+                    if (attrs.filter)
+                        this.filter = attrs.filter;
                     if (attrs.visible === 'false')
                         this.visible = false;
                     else if (attrs.visible === 'true')
@@ -2768,7 +2770,7 @@ var Katrid;
             class ForeignKey extends Field {
                 constructor(info) {
                     super(info);
-                    this.domain = info.domain;
+                    this.filter = info.filter;
                     Object.assign(this.template, {
                         list: 'view.list.foreignkey.jinja2',
                         card: 'view.list.foreignkey.jinja2',
@@ -4445,7 +4447,6 @@ var Katrid;
                     return '<span class="fa fa-filter"></span>';
                 }
                 _refresh() {
-                    console.log(this.view);
                     if (this._selection.length) {
                         if (this.view.facets.indexOf(this._facet) === -1)
                             this.view.facets.push(this._facet);
@@ -7297,6 +7298,7 @@ var Katrid;
             }
             loadModules(items) {
                 this.nav = document.querySelector('#navbar');
+                this.navMenu = document.querySelector('#navbar-menu');
                 let menu = document.querySelector('.apps-menu');
                 for (let item of items) {
                     this._rootItem = item;
@@ -7322,7 +7324,7 @@ var Katrid;
                 module.append(h3);
                 module.setAttribute('data-toggle', 'dropdown');
                 dropdown.append(module);
-                this.insertBefore(dropdown, this.nav.previousElementSibling);
+                this.insertBefore(dropdown, this.navMenu);
                 dropdown.setAttribute('data-menu-id', menu.id.toString());
                 if (Katrid.isMobile) {
                     module.classList.add('dropdown-toggle');
@@ -7337,7 +7339,7 @@ var Katrid;
                     ul.classList.add('navbar-nav', 'navbar-menu-group', 'mr-auto');
                     ul.style.display = 'none';
                     ul.setAttribute('data-parent-id', menu.id.toString());
-                    this.nav.insertBefore(ul, this.nav.firstChild);
+                    this.navMenu.append(ul);
                     for (let item of menu.children) {
                         let li = document.createElement('li');
                         li.classList.add('nav-item', 'dropdown');
