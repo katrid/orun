@@ -3631,7 +3631,6 @@ var Katrid;
             Views.CustomTag = CustomTag;
             class ActionsTag extends CustomTag {
                 prepare(elements) {
-                    console.log(this.view.action);
                     let atts = this.view.action.$element.find('.toolbar-action-buttons');
                     for (let actions of elements) {
                         let actionsButton = document.createElement('div');
@@ -3653,6 +3652,7 @@ var Katrid;
                         if (ngShow)
                             actionsButton.setAttribute('ng-show', ngShow);
                         atts.append(actionsButton);
+                        Katrid.Core.$compile(actionsButton)(this.view.action.scope);
                     }
                 }
                 prepareAction(action) {
