@@ -2813,6 +2813,12 @@ var Katrid;
                 get validAttributes() {
                     return super.validAttributes.concat(['domain']);
                 }
+                formRender(context = {}) {
+                    let el = super.formRender(context);
+                    if (this.el && this.filter)
+                        this.el.querySelector('input').setAttribute('data-filter', this.filter);
+                    return el;
+                }
             }
             Fields.ForeignKey = ForeignKey;
             class OneToManyField extends Field {
@@ -8907,7 +8913,7 @@ var Katrid;
                 let config = {
                     allowClear: true,
                     query(query) {
-                        let domain = field.domain;
+                        let domain = attrs.filter || field.filter;
                         if (domain && _.isString(domain))
                             domain = scope.$eval(domain);
                         let data = {
@@ -8915,10 +8921,11 @@ var Katrid;
                             kwargs: {
                                 count: 1,
                                 page: query.page,
-                                domain: domain,
+                                filter: domain,
                                 name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
                             }
                         };
+                        console.log('data', data);
                         const f = () => {
                             let svc;
                             if (scope.model)
