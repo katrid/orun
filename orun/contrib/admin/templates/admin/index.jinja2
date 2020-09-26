@@ -18,8 +18,9 @@
           <span class="navbar-toggler-icon"></span>
         </button>
       </nav>
-      <div id="navbar" class="collapse navbar-collapse">
-        <div class="navbar-search d-none d-xl-block">
+      <div id="navbar-menu" class="mr-auto"></div>
+      <div id="navbar" class="collapse navbar-collapse navbar-tools">
+        <div class="navbar-search">
           <i class="fa fw fa-search"></i>
           <input id="navbar-search" type="text" class="form-control form-control-dark typeahead"
                  placeholder="{{ _('Find resources here...') }}">
@@ -68,7 +69,10 @@
     </app-header>
 
 
+
+
     <div id="main-content" role="main">
+
       <div id="action-view" ng-controller="AppController"></div>
       {#    <div ui-view id="katrid-action-view">#}
       {#      <h4 id="h-loading" class="ajax-loading-animation"><i class="fa fa-refresh fa-spin"></i> <span ng-bind="::_.gettext('Loading...')"></span></h4>#}
