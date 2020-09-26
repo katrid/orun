@@ -2061,10 +2061,12 @@ class Model(metaclass=ModelBase):
         if name:
             if name_fields is None:
                 name_fields = chain(*(_resolve_fk_search(f, join) for f in self._meta.get_name_fields()))
-            if exact:
-                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f.name}__iexact': name}) for f in name_fields])
             else:
-                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f.name}__icontains': name}) for f in name_fields])
+                name_fields = [f.name for f in name_fields]
+            if exact:
+                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f}__iexact': name}) for f in name_fields])
+            else:
+                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f}__icontains': name}) for f in name_fields])
         if where:
             if q is None:
                 q = Q(**where)
@@ -2318,12 +2320,15 @@ def make_foreign_order_accessors(model, related_model):
 ########
 
 
-def _resolve_fk_search(field, join_list):
+def _resolve_fk_search(field: Field, join_list):
     if isinstance(field, ForeignKey):
         rel_model = apps[field.remote_field.model]
         join_list.append(rel_model)
-        return rel_model._meta.get_name_fields()
-    return [field]
+        name_fields = field.name_fields
+        if not name_fields:
+            name_fields = [f.name for f in rel_model._meta.get_name_fields()]
+        return [f'{field.name}__{f}' for f in name_fields]
+    return [field.name]
 
 
 def model_unpickle(model_id):
