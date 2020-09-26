@@ -3659,10 +3659,7 @@ var Katrid;
                     let el = document.createElement('a');
                     el.classList.add('dropdown-item');
                     this.assign(action, el);
-                    el.addEventListener('click', evt => {
-                        evt.preventDefault();
-                        this.view.action.onActionLink(action.getAttribute('data-action'), action.getAttribute('data-action-type'), {});
-                    });
+                    el.setAttribute('ng-click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
                     return el;
                 }
             }
