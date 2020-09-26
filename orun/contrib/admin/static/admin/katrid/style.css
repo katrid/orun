@@ -11523,6 +11523,11 @@ h3.popover-title {
 
 .dropdown-menu .dropdown-item {
   cursor: pointer;
+  user-select: none;
+}
+
+.context-menu .fa {
+  color: #898989;
 }
 
 #left-menu .menu-item > a li.nav-link li.menu-item {
@@ -12058,6 +12063,29 @@ body.container.hide-left-menu #footer.page-footer {
   padding-left: 20px;
 }
 
+.table thead tr th {
+  padding: 2px 4px 4px 4px;
+}
+.table tbody tr {
+  box-shadow: inset 0 -1px 0 0 rgba(100, 121, 143, 0.122);
+  border-collapse: collapse;
+}
+.table tbody tr th, .table tbody tr td {
+  padding: 4px 4px 2px 4px;
+  border: none;
+}
+.table tbody tr.selected {
+  background-color: #d7e6fc;
+}
+.table tbody tr:hover {
+  background-color: #bdd7fd;
+  z-index: 1;
+}
+
+list-view .table {
+  user-select: none;
+}
+
 .dropdown-menu {
   box-shadow: 0 0 16px -2px rgba(0, 0, 0, 0.3);
 }
@@ -12286,10 +12314,6 @@ section div.checkbox {
 .table .row-group-header span.fas {
   display: inline-block !important;
   margin-right: 5px;
-}
-
-.dataTable.table > tbody > tr {
-  cursor: pointer;
 }
 
 .table-success > td {
@@ -12573,12 +12597,30 @@ table.grid.inline-editor .grid-field-readonly {
   display: none;
 }
 
-list {
+list-view {
   min-width: 100%;
+}
+list-view > .table > tbody > tr {
+  cursor: pointer;
+}
+list-view .list-record-star {
+  width: 1px;
+  color: #8d8d8d;
+}
+list-view .list-record-star:hover {
+  color: #2b2b2b;
 }
 
 .btn-toolbar {
   display: inline;
+}
+
+.toolbar .toolbtn {
+  color: #8d8d8d;
+  font-size: 16px;
+}
+.toolbar .toolbtn:hover {
+  color: #2b2b2b;
 }
 
 .grid-toolbar {
@@ -12787,10 +12829,6 @@ list {
 
 body {
   font-size: 12px;
-}
-
-.table td, .table th {
-  padding: 2px 4px 4px 4px;
 }
 
 .table td.BooleanField {

@@ -99,7 +99,15 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     ops_class = DatabaseOperations
 
     def get_new_connection(self, conn_params):
-        connection = Database.connect(**conn_params)
+        options = self.settings_dict['OPTIONS']
+        if options['driver'] == 'pytds':
+            import pytds
+            connection = pytds.connect(
+                server=conn_params['server'], database=conn_params['database'], port=conn_params['port'],
+                user=conn_params['user'], password=conn_params['password'], timeout=1000, login_timeout=100,
+            )
+        else:
+            connection = Database.connect(**conn_params)
 
         # self.isolation_level must be set:
         # - after connecting to the database in order to obtain the database's
@@ -147,9 +155,13 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def make_cursor(self, cursor):
         """Create a cursor without debug logging."""
+        if self.settings_dict['OPTIONS']['driver'] == 'pytds':
+            return super().make_cursor(cursor)
         return CursorWrapper(cursor, self)
 
     def make_debug_cursor(self, cursor):
+        if self.settings_dict['OPTIONS']['driver'] == 'pytds':
+            return super().make_debug_cursor(cursor)
         return CursorDebugWrapper(cursor, self)
 
     def is_usable(self):

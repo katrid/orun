@@ -88,7 +88,7 @@ class ModelBase(type):
     def __new__(cls, name, bases, attrs):
         super_new = super().__new__
 
-        if not bases:
+        if not bases or 'env' in attrs:
             return super_new(cls, name, bases, attrs)
 
         attr_meta = meta = attrs.pop('Meta', None)
@@ -387,6 +387,13 @@ class ModelBase(type):
     @property
     def _default_manager(cls):
         return cls._meta.default_manager
+
+    @property
+    def env(cls):
+        return apps.env
+        from orun.api import get_context
+        ctx = get_context()
+        return ctx.env
 
 
 class ModelStateFieldsCacheDescriptor:

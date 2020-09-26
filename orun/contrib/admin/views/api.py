@@ -1,3 +1,6 @@
+from threading import local
+
+
 from orun import api
 from orun.db.models import QuerySet
 from orun.conf import settings
@@ -26,6 +29,7 @@ def rpc(request, service, meth, params):
 
             args = params.get('args') or ()
             kwargs = params.get('kwargs') or {}
+            # with Environment(request, data.get('context')):
             r = meth(*args, **kwargs)
 
             if isinstance(r, QuerySet):

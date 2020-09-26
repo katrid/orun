@@ -2012,9 +2012,12 @@
 
     <div class="btn-group">
       <div class="dropdown">
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown"
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" ng-show="action.selectionLength"
                 aria-haspopup="true">
           {{ _.gettext('Action') }} <span class="caret"></span>
+        </button>
+        <button type="button" class="btn toolbtn" ng-if="!action.dataSource.editing" ng-click="action.refresh()" title="Atualizar">
+          <i class="fa fa-fw fa-redo-alt"></i>
         </button>
         <div class="dropdown-menu dropdown-menu-actions">
           <a class="dropdown-item" ng-click="action.deleteSelection()">
@@ -2127,7 +2130,7 @@
       <header class="content-container-heading"></header>
       <div class="panel-default data-panel">
         <div class="panel-body no-padding">
-          <div class="form-inline dt-bootstrap no-footer template-placeholder"></div>
+          <div class="form-inline footer template-placeholder"></div>
         </div>
       </div>
     </div>
@@ -2149,8 +2152,8 @@
 
   <script id="view.list.th.selector.jinja2" type="text/ng-template">
     <th class="list-record-selector">
-      <input type="checkbox" ng-click="action.selectToggle($event.currentTarget)"
-             onclick="$(this).closest('table').find('td.list-record-selector input').prop('checked', $(this).prop('checked'))">
+        <input type="checkbox" class="dropdown-toggle" ng-click="action.selectToggle($event.currentTarget)" data-toggle="dropdown"
+               onclick="$(this).closest('table').find('td.list-record-selector input').prop('checked', $(this).prop('checked'))">
     </th>
   </script>
 

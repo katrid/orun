@@ -1,6 +1,6 @@
 import os
 import re
-from jinja2 import Environment, FunctionLoader
+from jinja2 import Environment, FunctionLoader, Template
 import logging
 
 from orun import g
@@ -85,6 +85,7 @@ class View(models.Model):
         if context is None:
             context = {}
         context.update({'opts': model._meta if model else None})
+        context['env'] = apps
         return self.compile(context)
 
     def xpath(self, source, element):
@@ -199,8 +200,8 @@ class View(models.Model):
             return f.read()
 
     def render(self, context):
-        from jinja2 import Template
         from orun.template.loader import get_template
+        context['env'] = apps
         context['_'] = gettext
         if self.view_type in ('dashboard', 'report'):
             context['db'] = {

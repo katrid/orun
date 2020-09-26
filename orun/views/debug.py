@@ -5,7 +5,7 @@ import types
 from pathlib import Path
 
 from orun.conf import settings
-from orun.http import HttpResponse, HttpResponseNotFound
+from orun.http import HttpResponse, HttpResponseNotFound, JsonResponse
 from orun.template import Context, Engine, TemplateDoesNotExist
 from orun.template.defaultfilters import pprint
 from orun.urls import Resolver404, resolve
@@ -87,7 +87,10 @@ def technical_500_response(request, exc_type, exc_value, tb, status_code=500):
     the values returned from sys.exc_info() and friends.
     """
     reporter = ExceptionReporter(request, exc_type, exc_value, tb)
-    if request.is_ajax():
+    if request.is_json():
+        data = reporter.get_traceback_data()
+        return JsonResponse({'error': f'{exc_value}'}, status=status_code)
+    elif request.is_ajax():
         text = reporter.get_traceback_text()
         return HttpResponse(text, status=status_code, content_type='text/plain; charset=utf-8')
     else:

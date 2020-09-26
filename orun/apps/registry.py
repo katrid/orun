@@ -1,5 +1,5 @@
 import sys
-import threading
+from typing import TYPE_CHECKING
 from threading import RLock, Event, local, Thread
 from collections import Counter, defaultdict, OrderedDict
 import functools
@@ -7,6 +7,8 @@ import functools
 from orun.utils.functional import SimpleLazyObject
 from orun.apps import AppConfig
 from orun.core.exceptions import ImproperlyConfigured, AppRegistryNotReady
+if TYPE_CHECKING:
+    from orun.db.models import Model
 
 
 class Registry:
@@ -311,104 +313,8 @@ class Registry:
         loop.run_forever()
 
 
-class Context(dict):
-    def __init__(self, apps, old_context=None, *args, **kwargs):
-        self.apps = apps
-        self._old_context = old_context
-        base_dict = {}
-        if old_context:
-            base_dict = dict(old_context)
-        if args:
-            base_dict.update(args[0])
-            args = (base_dict,)
-        elif base_dict:
-            args = (base_dict,)
-        super().__init__(*args, **kwargs)
-        if self._old_context and self['user_id'] != self._old_context['user_id'] and '_cached_user' in self:
-            del self['_cached_user']
-        if self._old_context and self['request'] != self._old_context['request']:
-            self['user_id'] = None
-
-    def clone(self):
-        return self.__class__(self.apps, old_context=self.apps._local_env._context)
-
-    def __enter__(self):
-        from orun.utils import translation
-        self.apps._local_env._context = self
-        if self._old_context['language_code'] != self['language_code']:
-            translation.activate(self['language_code'])
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        from orun.utils import translation
-        # restore the context state
-        if self._old_context['language_code'] != self['language_code']:
-            translation.activate(self._old_context['language_code'])
-        self.apps._local_env._context = self._old_context
-
-
-def _get_user_id(context):
-    user_id = context['user_id']
-    if user_id is None and 'request' in context:
-        user_id = context['user_id'] = context['request'].user_id
-    return user_id
-
-
-def _get_user(context):
-    if '_cached_user' not in context:
-        context['_cached_user'] = apps['auth.user'].objects.get(pk=context['user_id'])
-    return context['_cached_user']
-
-
-class Environment:
-    context_cls = Context
-
-    def __init__(self, apps):
-        self.apps = apps
-
-    @property
-    def user_id(self):
-        return _get_user_id(self.apps._local_env._context)
-
-    @property
-    def user(self):
-        return _get_user(self.apps._local_env._context)
-
-    @property
-    def context(self):
-        return self.apps._local_env._context
-
-    def __call__(self, *args, **kwargs):
-        return self.context_cls(self.apps, self.apps._local_env._context, *args, **kwargs)
-
-    def sudo(self, *args, **kwargs):
-        from orun.conf import settings
-        kwargs.setdefault('user_id', settings.SUPER_USER_ID)
-        return self(**kwargs)
-
-    def __getitem__(self, item):
-        return self.apps._local_env._context[item]
-
-    def __setitem__(self, key, value):
-        self.apps._local_env._context[key] = value
-
-    def __getattr__(self, item):
-        return self.apps._local_env._context[item]
-
-    def __len__(self):
-        return 0
-
-    def setup(self):
-        from orun.conf import settings
-
-        if not hasattr(self.apps._local_env, '_context'):
-            self.apps._local_env._context = Context(apps, None, {'user_id': None, 'request': None})
-            self.apps._local_env._context['language_code'] = settings.LANGUAGE_CODE
-            self.apps._local_env._context['user_id'] = settings.SUPER_USER_ID
-
-
+from .context import Environment
 apps = Registry()
-
 
 def get_dependencies(addon, registry):
     r = []

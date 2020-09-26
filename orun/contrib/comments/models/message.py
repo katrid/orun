@@ -66,9 +66,12 @@ class Message(models.Model):
             'attachments': [{'id': f.pk, 'name': f.file_name, 'mimetype': f.mimetype} for f in self.attachments],
         }
 
-    @api.records
-    def get_messages(self, *args, **kwargs):
-        for r in self:
+    @api.method
+    def get_messages(cls, ids, *args, **kwargs):
+        # TODO fix
+        return {}
+        for r in ids:
+            r = cls.objects.get(pk=r)
             yield r.get_message()
 
 

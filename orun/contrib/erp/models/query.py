@@ -1,3 +1,5 @@
+from jinja2 import Template
+
 from orun import api
 from orun.db import models, connection
 from orun.utils.translation import gettext_lazy as _
@@ -85,11 +87,10 @@ class Query(models.Model):
         if (fields):
             sql = 'SELECT top 100 %s FROM (%s) as __q' % (', '.join(fields))
 
+        sql = Template(sql).render(**params)
+
         cur = connection.cursor()
-        if params:
-            cur.execute(sql, params)
-        else:
-            cur.execute(sql)
+        cur.execute(sql)
         rows = cur.fetchall()
         desc = cur.cursor.description
         if with_description:

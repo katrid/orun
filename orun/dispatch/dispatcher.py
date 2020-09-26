@@ -91,6 +91,8 @@ class Signal:
 
         if dispatch_uid:
             lookup_key = (dispatch_uid, _make_id(sender))
+        elif isinstance(sender, str):
+            lookup_key = (_make_id(receiver), sender)
         else:
             lookup_key = (_make_id(receiver), _make_id(sender))
 
@@ -237,7 +239,10 @@ class Signal:
         if receivers is None:
             with self.lock:
                 self._clear_dead_receivers()
-                senderkey = _make_id(sender)
+                if isinstance(sender, str):
+                    senderkey = sender
+                else:
+                    senderkey = _make_id(sender)
                 receivers = []
                 for (receiverkey, r_senderkey), receiver in self.receivers:
                     if r_senderkey == NONE_ID or r_senderkey == senderkey:

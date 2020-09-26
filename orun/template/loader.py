@@ -1,5 +1,28 @@
+import os
+
+from orun.core.exceptions import SuspiciousFileOperation
+from orun.utils._os import safe_join
 from . import engines
+from .utils import get_app_template_dirs
 from .exceptions import TemplateDoesNotExist
+
+
+def find_template(template_name: str) -> str:
+    """
+    Load and return a template for the given name.
+
+    return None if not found
+    """
+    dirs = get_app_template_dirs('templates')
+    for template_dir in dirs:
+        try:
+            name = safe_join(template_dir, template_name)
+        except SuspiciousFileOperation:
+            # The joined path was located outside of this template_dir
+            # (it might be inside another one, so this isn't fatal).
+            continue
+        if os.path.isfile(name):
+            return name
 
 
 def get_template(template_name, using=None):

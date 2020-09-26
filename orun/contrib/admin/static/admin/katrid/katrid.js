@@ -183,10 +183,9 @@ var Katrid;
                     this.action = this.actions[this.length - 2];
                 action.$attach();
                 this.action.refreshBreadcrumb();
-                if (Katrid.isString(url))
-                    Katrid.app.loadPage(url);
-                else if (url)
-                    Katrid.app.$search(url);
+                if (!Katrid.isString(url))
+                    url = '#/app/?' + $.param(url);
+                Katrid.app.loadPage(url, false);
             }
             remove(action) {
                 this.actions.splice(this.actions.indexOf(action), this.length);
@@ -213,6 +212,7 @@ var Katrid;
                 this.currentAction = action;
             }
             clear() {
+                Katrid.app.$element.empty();
                 for (let action of this.actions)
                     action.$destroy();
                 this.actions.length = 0;
@@ -398,7 +398,9 @@ var Katrid;
         class WindowAction extends Katrid.Actions.Action {
             constructor(config) {
                 super(config);
+                this.allSelected = false;
                 this._cachedViews = {};
+                this._selection = [];
                 this.model = config.scope.model;
                 this.viewMode = config.info.view_mode;
                 this.viewModes = this.viewMode.split(',');
@@ -447,7 +449,7 @@ var Katrid;
                 if (this.params.view_type === 'form')
                     allowedParams.splice(0, 0, 'id');
                 for (let k of Object.keys(this.params))
-                    if (!allowedParams.includes(k) && !k.startsWith('default_')) {
+                    if (!allowedParams.includes(k) && !k.startsWith('default_') && !(k === 'filter')) {
                         invalidate = true;
                     }
                 if (invalidate) {
@@ -609,7 +611,6 @@ var Katrid;
                 }
                 let firstTime = false;
                 if (this.view) {
-                    console.log('cached', this.view.el);
                     this._cachedViews[this.view.viewType] = this.view;
                     this.view.el.detach();
                 }
@@ -620,11 +621,12 @@ var Katrid;
                 this.scope.view = this.views[this.viewType];
                 let view;
                 if (this.viewType in this._cachedViews) {
-                    view = this._cachedViews[this.viewType];
+                    this.view = view = this._cachedViews[this.viewType];
                     this.$container.append(view.el);
                 }
                 else {
                     view = new Katrid.Forms.Views.registry[this.viewType]({ action: this, viewInfo: this.scope.view });
+                    this.view = view;
                     view.renderTo(this.$container);
                     view.ready();
                 }
@@ -668,7 +670,7 @@ var Katrid;
             async setSearchParams(params) {
                 let p = {};
                 if (this.info.domain)
-                    p = $.parseJSON(this.info.domain);
+                    p = JSON.parse(this.info.domain);
                 for (let [k, v] of Object.entries(p)) {
                     let arg = {};
                     arg[k] = v;
@@ -718,8 +720,8 @@ var Katrid;
             async formButtonClick(id, meth, self) {
                 const res = await this.model.rpc(meth, [id], null, this);
                 if (res.tag === 'refresh')
-                    this.dataSource.refresh();
-                if (res.type) {
+                    this.refresh();
+                else if (res.type) {
                     const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
                     act.execute();
                 }
@@ -746,10 +748,12 @@ var Katrid;
                         menu_id: Katrid.app.currentMenu.id,
                     };
                     if (evt.ctrlKey) {
+                        const url = '#/app/?' + $.param(search);
+                        window.open(url);
                         return;
                     }
                     else
-                        Katrid.app.$location.search(search);
+                        Katrid.app.loadPage('#/app/?' + $.param(search), false);
                     this.dataSource.recordIndex = index;
                 }
             }
@@ -777,9 +781,35 @@ var Katrid;
             }
             showDefaultValueDialog() {
             }
-            selectToggle(el) {
-                this._selection = $(el).closest('table').find('td.list-record-selector :checkbox').filter(':checked');
+            selectToggle(record) {
+                record.$selected = !record.$selected;
+            }
+            selectRecord(record) {
+                $(this.view.element).find(`tr[data-id=${record.id}]`).addClass('selected');
+                this._selection.push(record);
                 this.selectionLength = this._selection.length;
+            }
+            toggleAll() {
+                this.allSelected = !this.allSelected;
+                for (let rec of this.dataSource.records)
+                    rec.$selected = this.allSelected;
+                if (!this.allSelected)
+                    this._selection = [];
+                this.selectionLength = this._selection.length;
+            }
+            unselectRecord(record) {
+                $(this.view.element).find(`tr.selected[data-id=${record.id}]`).removeClass('selected');
+                this._selection.splice(this._selection.indexOf(record), 1);
+                this.selectionLength = this._selection.length;
+                this.allSelected = false;
+            }
+            unselectAll() {
+                for (let sel of this._selection) {
+                    $(this.view.element).find(`tr.selected[data-id=${sel.id}]`).removeClass('selected');
+                    sel.$selected = false;
+                }
+                this._selection = [];
+                this.selectionLength = 0;
             }
             get selection() {
                 if (this.viewType === 'form') {
@@ -801,11 +831,52 @@ var Katrid;
                     Katrid.Services.Attachments.destroy(att.id);
                 }
             }
+            markStar(record) {
+                console.log('mark star', record);
+            }
+            filterByField(field, value) {
+                this.searchView.clear();
+                this.addFilter(field, value);
+            }
+            addFilter(field, value) {
+                let f = this.view.fields[field];
+                this.searchView.addCustomFilter(f, value);
+            }
         }
         WindowAction.actionType = 'ui.action.window';
         Actions.WindowAction = WindowAction;
         Katrid.Actions.registry[WindowAction.actionType] = WindowAction;
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    class WebComponent extends HTMLElement {
+        constructor() {
+            super(...arguments);
+            this._created = false;
+        }
+        connectedCallback() {
+            if (!this._created) {
+                this.create();
+                this._created = true;
+            }
+        }
+        create() {
+            this.actionView = this.closest('action-view');
+        }
+        disconnectedCallback() {
+            this.destroy();
+        }
+        destroy() {
+        }
+    }
+    Katrid.WebComponent = WebComponent;
+    function assignElement(target, source) {
+        for (let attr of source.attributes) {
+            target.setAttribute(attr.name, attr.value);
+        }
+    }
+    Katrid.assignElement = assignElement;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -1179,7 +1250,7 @@ var Katrid;
             set currentMenu(value) {
                 this._currentMenu = value;
                 if (value) {
-                    $(`app-header>.dropdown[data-menu-id]`).hide();
+                    $(`app-header > .dropdown[data-menu-id]`).hide();
                     $(`app-header>.dropdown[data-menu-id="${value.id}"]`).show();
                     $(`app-header .navbar-menu-group[data-parent-id]`).hide();
                     $(`app-header .navbar-menu-group[data-parent-id="${value.id}"]`).show();
@@ -1203,12 +1274,14 @@ var Katrid;
                 return app;
             }
             async loadPage(hash, reset = true) {
-                if (hash.startsWith('#/app/?'))
-                    hash = hash.split('#/app/?')[1];
+                if (hash.indexOf('?') > -1)
+                    hash = hash.substring(hash.indexOf('?') + 1, hash.length);
                 let _hash = new URLSearchParams(hash);
                 let params = {};
                 for (let [k, v] of _hash.entries())
                     params[k] = v;
+                this.$location.$$url = hash;
+                this.$location.$$search = params;
                 if (!this.currentMenu || (params.menu_id && (this.currentMenu.id != params.menu_id))) {
                     this.currentMenu = {
                         id: params.menu_id,
@@ -1228,6 +1301,10 @@ var Katrid;
             $search(params) {
                 this.$location.search(params);
                 window.location.href = '#' + this.$location.$$url;
+            }
+            changeUrl(paramName, paramValue) {
+                this.$location.$$search[paramName] = paramValue;
+                history.replaceState(null, null, '#/app/?' + $.param(this.$location.$$search));
             }
             setContent(html, scope) {
                 this.$element.empty();
@@ -1749,7 +1826,7 @@ var Katrid;
                         return this.model.write([data])
                             .then((res) => {
                             if (this.action && this.action.viewType && (this.action.viewType === 'form'))
-                                Katrid.app.$location.search('id', res[0]);
+                                Katrid.app.changeUrl('id', res[0]);
                             if (this.action.form) {
                                 this.action.form.$setPristine();
                                 this.action.form.$setUntouched();
@@ -2049,7 +2126,7 @@ var Katrid;
                 this._recordIndex = index;
                 this.scope.record = this._records[index];
                 if (!this.parent)
-                    Katrid.app.$location.search('id', this.scope.record.id);
+                    Katrid.app.changeUrl('id', this.scope.record.id);
                 this.scope.recordId = null;
             }
             get recordIndex() {
@@ -2279,13 +2356,17 @@ var Katrid;
                     if ('visible' in info)
                         this.visible = info.visible;
                 }
-                assign(view, el) {
+                clone(el) {
                     let newField = new this.constructor(this.info);
                     newField.visible = this.visible;
                     newField.readonly = this.readonly;
                     newField.domain = this.domain;
-                    newField.view = view;
                     newField.fieldEl = el;
+                    return newField;
+                }
+                assign(view, el) {
+                    let newField = this.clone(el);
+                    newField.view = view;
                     newField[newField.view.viewType + 'Render'].apply(newField);
                     return newField;
                 }
@@ -2342,6 +2423,25 @@ var Katrid;
                     context['attrs'] = attrs;
                     context['html'] = $el.html();
                     this.el = $(Katrid.app.getTemplate(this.template[view.viewType], context))[0];
+                }
+                listCreate(view) {
+                    let td = document.createElement('td');
+                    if (this.cssClass)
+                        td.classList.add(this.cssClass);
+                    td.innerHTML = this.listSpanTemplate();
+                    td.setAttribute('data-name', this.name);
+                    view.tRow.append(td);
+                    let th = document.createElement('th');
+                    th.innerHTML = `<span>${this.caption}</span>`;
+                    view.tHeadRow.append(th);
+                }
+                formSpanTemplate() {
+                    if (this.hasChoices)
+                        return `\${ view.fields['${this.name}'].displayChoices[record.${this.name}] || '${this.emptyText}' }`;
+                    return `<span>\${ record.${this.name} }</span>`;
+                }
+                listSpanTemplate() {
+                    return this.formSpanTemplate();
                 }
                 listRender() {
                     let el = this._fieldEl;
@@ -2521,6 +2621,9 @@ var Katrid;
                         info.template.list = 'view.list.password.jinja2';
                     super(info);
                 }
+                create() {
+                    super.create();
+                }
             }
             Fields.PasswordField = PasswordField;
             class BooleanField extends Field {
@@ -2532,6 +2635,12 @@ var Katrid;
                     this.template.list = 'view.list.boolean-field.jinja2';
                     this.template.card = 'view.list.boolean-field.jinja2';
                     this.nolabel = true;
+                }
+                formSpanTemplate() {
+                    return `\${ record.${this.name} ? '${_.gettext('yes')}' : '${_.gettext('no')}' }`;
+                }
+                create() {
+                    super.create();
                 }
                 getParamTemplate() {
                     return 'view.param.Boolean';
@@ -2546,6 +2655,12 @@ var Katrid;
                     this.template.form = 'view.form.date-field.jinja2';
                     this.template.list = 'view.list.date-field.jinja2';
                     this.template.card = 'view.list.date-field.jinja2';
+                }
+                formSpanTemplate() {
+                    return `\${ (record.${this.name}|date:'shortDate') || '${this.emptyText}' }`;
+                }
+                create() {
+                    super.create();
                 }
                 toJSON(val) {
                     return val;
@@ -2572,6 +2687,12 @@ var Katrid;
                     this.template.form = 'view.form.datetime-field.jinja2';
                     this.template.list = 'view.list.datetime-field.jinja2';
                 }
+                formSpanTemplate() {
+                    return `\${ (record.${this.name}|date:'short') || '${this.emptyText}' }`;
+                }
+                create() {
+                    super.create();
+                }
                 getParamTemplate() {
                     return 'view.param.DateTime';
                 }
@@ -2589,6 +2710,9 @@ var Katrid;
                     this.template.form = 'view.form.time-field.jinja2';
                     this.template.list = 'view.list.time-field.jinja2';
                 }
+                create() {
+                    super.create();
+                }
             }
             Fields.TimeField = TimeField;
             class NumericField extends Field {
@@ -2598,6 +2722,9 @@ var Katrid;
                     super(info);
                     this.template.form = 'view.form.decimal-field.jinja2';
                     this.template.list = 'view.list.decimal-field.jinja2';
+                }
+                create() {
+                    super.create();
                 }
                 fromJSON(value, dataSource) {
                     dataSource.record[this.name] = parseFloat(value);
@@ -2616,6 +2743,9 @@ var Katrid;
                     super(info);
                     this.template.form = 'view.form.numeric-field.jinja2';
                     this.template.list = 'view.list.numeric-field.jinja2';
+                }
+                create() {
+                    super.create();
                 }
                 toJSON(val) {
                     if (val && _.isString(val))
@@ -2652,6 +2782,15 @@ var Katrid;
                     if (Katrid.settings.ui.isMobile)
                         this.template.form = 'view.form.autocomplete.jinja2';
                 }
+                listSpanTemplate() {
+                    return `<a>\${ record.${this.name}[1]||'${this.emptyText}' } </a>`;
+                }
+                formSpanTemplate() {
+                    return `<a href="#/app/?menu_id=\${ ::action.params.menu_id }&model=${this.model}&view_type=form&id=\${ record.${this.name}[0] }">\${ record.${this.name}[1]||'${this.emptyText}' } </a>`;
+                }
+                create() {
+                    super.create();
+                }
                 getParamTemplate() {
                     return 'view.param.ForeignKey';
                 }
@@ -2682,8 +2821,8 @@ var Katrid;
             class OneToManyField extends Field {
                 create() {
                     super.create();
-                    this.template.form = 'view.form.grid.jinja2';
                     this.widget = 'onetomany';
+                    this.template.form = 'view.form.grid.jinja2';
                     this.cols = 12;
                 }
                 get field() {
@@ -2729,6 +2868,9 @@ var Katrid;
                     super(info);
                     if (!info.template || (info.template && !info.template.form))
                         this.template.form = 'view.form.text-field.jinja2';
+                }
+                create() {
+                    super.create();
                 }
             }
             Fields.TextField = TextField;
@@ -2867,8 +3009,6 @@ var Katrid;
                 }
             }
             _prepareRecord(rec, parent) {
-                console.log('prepare record');
-                console.trace();
                 return;
                 let getValue = (v) => {
                     if (_.isObject(v))
@@ -2972,7 +3112,13 @@ var Katrid;
                 rec = record.pristine;
             return new Proxy(rec, {
                 set(target, propKey, value, receiver) {
-                    if (!propKey.startsWith('$$')) {
+                    if (propKey === '$selected') {
+                        if (value)
+                            dataSource.action.selectRecord(rec);
+                        else
+                            dataSource.action.unselectRecord(rec);
+                    }
+                    else if (!propKey.startsWith('$$')) {
                         let scope = dataSource.scope;
                         let field = dataSource.fieldByName(propKey);
                         if (!propKey.startsWith('$') && scope && field && !(field instanceof Katrid.Data.Fields.OneToManyField)) {
@@ -2994,7 +3140,15 @@ var Katrid;
             constructor(menu, text = null) {
                 this.menu = menu;
                 this.text = text;
-                this.el = document.createElement('div');
+                if (text === '-') {
+                    this.el = document.createElement('div');
+                    this.el.classList.add('dropdown-divider');
+                }
+                else {
+                    this.el = document.createElement('a');
+                    this.el.classList.add('dropdown-item');
+                }
+                this.el.innerHTML = text;
             }
             addEventListener(type, listener, options) {
                 return this.el.addEventListener(type, listener, options);
@@ -3017,8 +3171,16 @@ var Katrid;
                 if (!container)
                     this.container = document.body;
             }
-            add(item) {
-                return this.insert(-1, item);
+            add(item, clickCallback) {
+                let menuItem = this.insert(-1, item);
+                if (menuItem.text !== '-')
+                    menuItem.addEventListener('mouseup', event => {
+                        this.close();
+                        if (clickCallback)
+                            clickCallback(event, menuItem);
+                    });
+                menuItem.addEventListener('mousedown', event => event.stopPropagation());
+                return menuItem;
             }
             insert(index, item) {
                 let menuItem;
@@ -3041,7 +3203,9 @@ var Katrid;
             }
             createElement() {
                 this.el = document.createElement('div');
-                this.el.classList.add('k-context-menu');
+                this.el.classList.add('dropdown-menu', 'context-menu');
+                for (let item of this.items)
+                    this.el.append(item.el);
             }
             show(x, y, target = null) {
                 this.destroyElement();
@@ -3050,11 +3214,25 @@ var Katrid;
                 this.el.style.top = y + 'px';
                 this.target = target;
                 this._visible = true;
-                this._eventHook = () => this.close();
+                this._eventHook = event => {
+                    if (event.target.parentElement !== this.el)
+                        this.close();
+                };
+                this._eventKeyDownHook = event => {
+                    if (event.keyCode === 27)
+                        this.close();
+                };
                 document.addEventListener('mousedown', this._eventHook);
+                document.addEventListener('wheel', this._eventHook);
+                document.addEventListener('keydown', this._eventKeyDownHook);
+                document.body.append(this.el);
+                $(this.el).show();
             }
             close() {
                 document.removeEventListener('mousedown', this._eventHook);
+                document.removeEventListener('wheel', this._eventHook);
+                document.removeEventListener('keydown', this._eventKeyDownHook);
+                this.el.remove();
                 this._eventHook = null;
             }
             get visible() {
@@ -3189,11 +3367,7 @@ var Katrid;
             }
             Widgets.Component = Component;
             let ID = 0;
-            function genId() {
-                return ++ID;
-            }
-            Widgets.genId = genId;
-            class FieldWidget extends HTMLElement {
+            class FieldWidget extends Katrid.WebComponent {
                 get field() {
                     return this._field;
                 }
@@ -3206,25 +3380,20 @@ var Katrid;
                 bind(field) {
                     this.field = field;
                 }
-                connectedCallback() {
-                    this.actionView = this.closest('action-view');
-                    this._id = ++ID;
-                    this.create();
-                }
-                disconnectedCallback() {
-                    this.destroy();
-                }
                 create() {
+                    super.create();
+                    this._id = ++ID;
                     let cols = this._field.cols || 12;
                     this.classList.add('col-md-' + cols.toString());
-                }
-                destroy() {
                 }
             }
             Widgets.FieldWidget = FieldWidget;
             class InputField extends FieldWidget {
             }
             Widgets.InputField = InputField;
+            class StringField extends InputField {
+            }
+            Widgets.StringField = StringField;
             Widgets.registry = {};
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -3346,8 +3515,11 @@ var Katrid;
                     if (this.config.templateUrl)
                         this.templateUrl = this.config.templateUrl;
                 }
+                get content() {
+                    return this.viewInfo.content;
+                }
                 template() {
-                    let content = this.viewInfo.content;
+                    let content = this.content;
                     if (content instanceof HTMLElement)
                         content = content.cloneNode(true);
                     let templ = $(content)[0];
@@ -3477,7 +3649,9 @@ var Katrid;
                         else
                             btn.innerHTML = actions.innerHTML;
                         actionsButton.setAttribute('ng-if', `action.viewType === '${this.view.viewType}'`);
-                        console.log('insert el', atts);
+                        let ngShow = actions.getAttribute('ng-show');
+                        if (ngShow)
+                            actionsButton.setAttribute('ng-show', ngShow);
                         atts.append(actionsButton);
                     }
                 }
@@ -3498,6 +3672,25 @@ var Katrid;
             }
             Views.registerCustomTag = registerCustomTag;
             registerCustomTag(':scope > actions', ActionsTag);
+            class ViewElement extends Katrid.WebComponent {
+                get action() {
+                    return this._action;
+                }
+                set action(value) {
+                    this._action = value;
+                }
+            }
+            Views.ViewElement = ViewElement;
+            class WindowElement extends ViewElement {
+                setView(view) {
+                    this._view = view;
+                    this._action = view.action;
+                }
+                get action() {
+                    return this._action;
+                }
+            }
+            Views.WindowElement = WindowElement;
             Views.searchModes = ['list', 'card'];
             Views.registry = {};
         })(Views = Forms.Views || (Forms.Views = {}));
@@ -3741,12 +3934,17 @@ var Katrid;
     (function (Forms) {
         var Views;
         (function (Views) {
-            class List extends Views.WindowView {
+            class ListView extends Views.WindowView {
                 create() {
                     super.create();
                     this.viewType = 'list';
                     this.templateUrl = 'view.list.html';
                     this.action.view = this;
+                }
+                get content() {
+                    return super.content
+                        .replace('<list', '<list-view')
+                        .replace('</list', '</list-view');
                 }
                 render(container) {
                     let list = this.template();
@@ -3754,19 +3952,144 @@ var Katrid;
                     Object.assign(context, this.context);
                     let header = this.createHeader(list);
                     let templ = $(Katrid.app.getTemplate(this.templateUrl));
+                    console.log('set view');
+                    list.setView(this);
+                    this.element = list;
                     templ.find('header:first').append($(header));
                     templ.find('.template-placeholder').append(list);
                     templ.find('list')
                         .attr('ng-row-click', 'action.listRowClick($index, record, $event)')
-                        .attr('list-options', '{"rowSelector": true}').attr('ng-row-click', 'action.listRowClick($index, record, $event)');
+                        .attr('list-options', '{"rowSelector": true}');
                     templ = Katrid.Core.$compile(templ)(this.action.scope);
                     return templ;
                 }
                 ready() {
                 }
             }
-            Views.List = List;
-            Views.registry['list'] = List;
+            Views.ListView = ListView;
+            class ListViewElement extends Views.WindowElement {
+                constructor() {
+                    super(...arguments);
+                    this.hasTotal = false;
+                    this.totals = [];
+                }
+                create() {
+                    super.create();
+                    let options = { rowSelector: true, showStar: true };
+                    let _options = this.getAttribute('data-options');
+                    if (_options) {
+                        _options = JSON.parse(_options);
+                        Object.assign(options, _options);
+                    }
+                    let table = document.createElement('table');
+                    table.classList.add('table');
+                    this.tHead = document.createElement('thead');
+                    this.tHeadRow = document.createElement('tr');
+                    this.tBody = document.createElement('tbody');
+                    this.tRow = document.createElement('tr');
+                    if (options.rowSelector) {
+                        this.tHeadRow.innerHTML = `<th class="list-record-selector">
+        <input type="checkbox" ng-model="action.allSelected" ng-click="action.toggleAll()" onclick="event.stopPropagation()">
+          </th>`;
+                        this.tRow.innerHTML = `<th class="list-record-selector" ng-if="::!record.$hasChildren" onclick="event.stopPropagation()" ng-click="action.selectToggle(record)">
+        <input type="checkbox" ng-model="record.$selected">
+          </th>`;
+                    }
+                    if (options.showStar) {
+                        let th = document.createElement('th');
+                        th.classList.add('list-record-star');
+                        this.tHeadRow.append(th);
+                        let td = document.createElement('th');
+                        td.classList.add('list-record-star');
+                        td.title = 'Mark with star';
+                        td.setAttribute('ng-click', '$event.stopPropagation();action.markStar(record);');
+                        td.innerHTML = `<i class="far fa-fw fa-star"></i>`;
+                        this.tRow.append(td);
+                    }
+                    for (let f of this.querySelectorAll(':scope > field')) {
+                        this.addField(f);
+                        f.remove();
+                    }
+                    this.tRow.setAttribute('data-id', '${ ::record.id }');
+                    this.tRow.setAttribute('ng-repeat', 'record in records');
+                    this.tRow.setAttribute('ng-click', 'action.listRowClick($index, record, $event)');
+                    this.tHead.append(this.tHeadRow);
+                    this.tBody.append(this.tRow);
+                    table.append(this.tHead);
+                    table.append(this.tBody);
+                    this.append(table);
+                    let el = Katrid.Core.$compile(this)(this.action.scope);
+                    el.find('tr')[0].addEventListener('contextmenu', () => console.log('context'));
+                    this.table = table;
+                    this.createContextMenu();
+                }
+                addField(fld) {
+                    let fieldName = fld.getAttribute('name');
+                    let field = this._view.fields[fieldName];
+                    if (field) {
+                        field = field.clone(fld);
+                        field.view = this._view;
+                        field.listCreate(this);
+                    }
+                    else {
+                        let td = document.createElement('td');
+                        let th = document.createElement('th');
+                        th.innerText = fld.getAttribute('header');
+                        td.innerHTML = fld.innerHTML;
+                    }
+                }
+                createContextMenu() {
+                    this.addEventListener('contextmenu', event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        let scope = angular.element(event.target).scope();
+                        let rec = scope.record;
+                        if (!rec.$selected) {
+                            this._action.unselectAll();
+                            rec.$selected = true;
+                        }
+                        scope.$apply();
+                        let td = event.target;
+                        if (td.tagName !== 'TD')
+                            td = $(td).closest('td')[0];
+                        let menu = new Forms.ContextMenu();
+                        menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => this.copyClick());
+                        menu.addSeparator();
+                        menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => this.filterByFieldContent(td, rec));
+                        menu.addSeparator();
+                        menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteRow());
+                        menu.show(event.pageX, event.pageY);
+                    });
+                }
+                copyClick() {
+                    navigator.clipboard.writeText(tableToText(this.table));
+                }
+                deleteRow() {
+                    console.log('delete selected rorw');
+                }
+                filterByFieldContent(td, record) {
+                    let name = td.getAttribute('data-name');
+                    console.log('field name', td);
+                    if (name) {
+                        let val = record[name];
+                        this._action.addFilter(name, val);
+                    }
+                }
+            }
+            Views.ListViewElement = ListViewElement;
+            function tableToText(table) {
+                let output = [];
+                for (let tr of table.querySelectorAll('tr')) {
+                    let row = [];
+                    for (let td of tr.children)
+                        if (td.tagName === 'TD')
+                            row.push(td.innerText);
+                    output.push(row.join('\t'));
+                }
+                return output.join('\n');
+            }
+            Katrid.define('list-view', ListViewElement);
+            Views.registry['list'] = ListView;
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -4585,7 +4908,15 @@ var Katrid;
                         if (i && i.children && i.children.length)
                             i.expanded = false;
                 }
+                clear() {
+                }
+                addCustomFilter(field, value) {
+                    let filters = new SearchFilters(this);
+                    filters.push(new CustomFilterItem(this, field, '=', value, filters));
+                    filters.selectAll();
+                }
             }
+            Views.SearchView = SearchView;
             class SearchViewComponent {
                 constructor() {
                     this.restrict = 'E';
@@ -5348,14 +5679,12 @@ var Katrid;
                     console.log('selection', this.selection);
                 }
                 editItem(record) {
-                    console.log('item click');
                     this.field.scope.record = record;
                     if (this.field.actionView.action.dataSource.changing)
                         this.field.dataSource.edit();
                     this.field.showDialog();
                 }
                 setDirty() {
-                    console.log('set dirty');
                 }
                 saveAndClose() {
                     this.field.dlg.modal('hide');
