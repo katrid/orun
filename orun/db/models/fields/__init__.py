@@ -1710,6 +1710,9 @@ class DecimalField(Field):
         value = super().get_prep_value(value)
         return self.to_python(value)
 
+    def value_to_json(self, value):
+        return float(value)
+
 
 class DurationField(Field):
     """
@@ -2303,9 +2306,9 @@ class BinaryField(Field):
     description = _("Raw binary data")
     empty_values = [None, b'']
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, is_attachment=None, *args, **kwargs):
         kwargs.setdefault('editable', False)
-        kwargs.setdefault('defer', True)
+        kwargs.setdefault('defer', not is_attachment)
         super().__init__(*args, **kwargs)
         if self.max_length is not None:
             self.validators.append(validators.MaxLengthValidator(self.max_length))
@@ -2391,10 +2394,6 @@ class UUIDField(Field):
                     params={'value': value},
                 )
         return value
-
-
-class ImageField(BinaryField):
-    pass
 
 
 def NotNullIntegerField(*args, **kwargs):
