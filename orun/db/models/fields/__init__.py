@@ -1585,7 +1585,7 @@ class DecimalField(Field):
     }
     description = _("Decimal number")
 
-    def __init__(self, max_digits=28, decimal_places=10, label=None, name=None, null=False, **kwargs):
+    def __init__(self, max_digits=28, decimal_places=8, label=None, name=None, null=False, **kwargs):
         self.max_digits, self.decimal_places = max_digits, decimal_places
         kwargs.setdefault('default', 0)
         kwargs.setdefault('db_default', 0)
