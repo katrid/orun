@@ -1711,7 +1711,8 @@ class DecimalField(Field):
         return self.to_python(value)
 
     def value_to_json(self, value):
-        return float(value)
+        if value is not None:
+            return float(value)
 
 
 class DurationField(Field):

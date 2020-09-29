@@ -14,8 +14,7 @@ from orun.db.models.expressions import (
 )
 from orun.db.models.fields import *  # NOQA
 from orun.db.models.fields import __all__ as fields_all
-# from orun.db.models.fields.files import FileField, ImageField
-from orun.db.models.fields import ImageField
+from orun.db.models.fields.files import FileField, ImageField
 from orun.db.models.fields.proxy import OrderWrt, ProxyField
 from orun.db.models.indexes import *  # NOQA
 from orun.db.models.indexes import __all__ as indexes_all

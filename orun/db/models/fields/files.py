@@ -1,10 +1,12 @@
 import datetime
 import posixpath
+import base64
+import mimetypes
 
 from orun.core import checks
-from orun.core.files.base import File
+from orun.core.files.base import File, ContentFile
 from orun.core.files.images import ImageFile
-from orun.core.files.storage import default_storage
+from orun.core.files.storage import default_storage, checksum
 from orun.db.models import signals
 from orun.db.models.fields import Field
 from orun.utils.translation import gettext_lazy as _
@@ -128,9 +130,6 @@ class FieldFile(File):
         # be restored later, by FileDescriptor below.
         return {'name': self.name, 'closed': False, '_committed': True, '_file': None}
 
-    def to_json(self, value):
-        return
-
 
 class FileDescriptor:
     """
@@ -222,14 +221,14 @@ class FileField(Field):
 
     description = _("File")
 
-    def __init__(self, verbose_name=None, name=None, upload_to='', storage=None, **kwargs):
+    def __init__(self, label=None, name=None, upload_to='', storage=None, **kwargs):
         self._primary_key_set_explicitly = 'primary_key' in kwargs
 
         self.storage = storage or default_storage
         self.upload_to = upload_to
 
-        kwargs.setdefault('max_length', 100)
-        super().__init__(verbose_name, name, **kwargs)
+        kwargs.setdefault('max_length', 250)
+        super().__init__(label, name, **kwargs)
 
     def check(self, **kwargs):
         return [
@@ -266,7 +265,7 @@ class FileField(Field):
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
-        if kwargs.get("max_length") == 100:
+        if kwargs.get("max_length") == 250:
             del kwargs["max_length"]
         kwargs['upload_to'] = self.upload_to
         if self.storage is not default_storage:
@@ -281,7 +280,7 @@ class FileField(Field):
         # Need to convert File objects provided via a form to string for database insertion
         if value is None:
             return None
-        return bytes(value)
+        return value.name
 
     def pre_save(self, model_instance, add):
         file = super().pre_save(model_instance, add)
@@ -316,7 +315,31 @@ class FileField(Field):
         if data is not None:
             # This value will be converted to str and stored in the
             # database, so leaving False as-is is not acceptable.
-            setattr(instance, self.name, data or '')
+
+            # check if value is base64 encoded
+            if isinstance(data, str) and data.startswith('data:'):
+                data = data.split('data:', 1)[1]
+                mime, data = data.split(';', 1)
+                data = data.split('base64,', 1)[1]
+                data = base64.decodebytes(data.encode('utf-8'))
+                file = getattr(instance, self.name)
+                # checksum based file name
+                name = checksum(data)
+                ext = mimetypes.guess_extension(mime)
+                if ext:
+                    name += ext
+                if not self.storage.exists(name):
+                    file.save(name, ContentFile(data), save=False)
+                data = name
+
+            setattr(instance, self.name, data)
+
+    def value_to_json(self, value):
+        if isinstance(value, FieldFile):
+            if value.name:
+                return value.url
+            return
+        return value
 
 
 class ImageFileDescriptor(FileDescriptor):
@@ -357,9 +380,10 @@ class ImageField(FileField):
     descriptor_class = ImageFileDescriptor
     description = _("Image")
 
-    def __init__(self, verbose_name=None, name=None, width_field=None, height_field=None, **kwargs):
+    def __init__(self, label=None, name=None, width_field=None, height_field=None, max_width=None, max_height=None, **kwargs):
         self.width_field, self.height_field = width_field, height_field
-        super().__init__(verbose_name, name, **kwargs)
+        self.max_width, self.max_height = max_width, max_height
+        super().__init__(label, name, **kwargs)
 
     def check(self, **kwargs):
         return [
@@ -368,20 +392,20 @@ class ImageField(FileField):
         ]
 
     def _check_image_library_installed(self):
-        try:
-            from PIL import Image  # NOQA
-        except ImportError:
-            return [
-                checks.Error(
-                    'Cannot use ImageField because Pillow is not installed.',
-                    hint=('Get Pillow at https://pypi.org/project/Pillow/ '
-                          'or run command "pip install Pillow".'),
-                    obj=self,
-                    id='fields.E210',
-                )
-            ]
-        else:
-            return []
+        if self.max_width or self.max_height:
+            try:
+                from PIL import Image  # NOQA
+            except ImportError:
+                return [
+                    checks.Error(
+                        'Cannot use ImageField because Pillow is not installed.',
+                        hint=('Get Pillow at https://pypi.org/project/Pillow/ '
+                              'or run command "pip install Pillow".'),
+                        obj=self,
+                        id='fields.E210',
+                    )
+                ]
+        return []
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
@@ -397,7 +421,7 @@ class ImageField(FileField):
         # after their corresponding image field don't stay cleared by
         # Model.__init__, see bug #11196.
         # Only run post-initialization dimension update on non-abstract models
-        if not cls._meta.abstract:
+        if not cls._meta.abstract and (self.width_field or self.height_field):
             signals.post_init.connect(self.update_dimension_fields, sender=cls)
 
     def update_dimension_fields(self, instance, force=False, *args, **kwargs):

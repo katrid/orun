@@ -2105,10 +2105,7 @@ class Model(metaclass=ModelBase):
                 children[field] = v
             elif field.many_to_one and isinstance(v, (str, int)):
                 setattr(instance, field.attname, v)
-            elif field.set:
-                field.set(instance, v)
-            else:
-                setattr(instance, k, v)
+            field.save_form_data(instance, v)
 
         # todo fix full clean
         # instance.full_clean(validate_unique=False)

@@ -899,6 +899,9 @@ class ForeignKey(ForeignObject):
         if isinstance(value, Model):
             return value._get_instance_label()
 
+    def save_form_data(self, instance, data):
+        setattr(instance, self.attname, data)
+
     def _formfield(self):
         res = super()._formfield()
         res['model'] = self.remote_field.model._meta.name
