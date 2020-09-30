@@ -2530,6 +2530,9 @@ var Katrid;
                         this.decimalPlaces = this.info.attrs.decimal_places || 2;
                     }
                 }
+                listSpanTemplate() {
+                    return `\${ (record.${this.name}|number:${this.decimalPlaces || 0}) || '${this.emptyText}' }`;
+                }
             }
             Fields.DecimalField = DecimalField;
             class ForeignKey extends Field {
