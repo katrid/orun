@@ -116,18 +116,22 @@ var Katrid;
             createBreadcrumb() {
                 let ol = document.createElement('ol');
                 ol.classList.add('breadcrumb');
-                for (let b of this.app.actionManager.breadcrumb)
-                    ol.append(this.createBreadcrumbItem(b));
+                for (let i = 0; i < this.app.actionManager.breadcrumb.length; i++)
+                    ol.append(this.createBreadcrumbItem(this.app.actionManager.breadcrumb[i], i));
                 return ol;
             }
-            createBreadcrumbItem(item) {
+            createBreadcrumbItem(item, index) {
                 let li = document.createElement('li');
                 li.classList.add('breadcrumb-item');
                 if (item.isLeaf)
                     li.innerText = item.text;
                 else {
                     let a = document.createElement('a');
-                    a.innerText = item.text;
+                    if (index === 0)
+                        a.innerHTML = '<i class="fa fa-chevron-left"></i> ';
+                    let txt = document.createElement('span');
+                    txt.innerText = item.text;
+                    a.append(txt);
                     a.setAttribute('href', '#');
                     a.addEventListener('click', (evt) => {
                         evt.preventDefault();
@@ -713,7 +717,7 @@ var Katrid;
                 }
             }
             async formButtonClick(id, meth, self) {
-                const res = await this.model.rpc(meth, [id], null, this);
+                let res = await this.model.rpc(meth, [id], null, this);
                 if (res.tag === 'refresh')
                     this.refresh();
                 else if (res.type) {
@@ -875,284 +879,6 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
-    class Component {
-        constructor(el, config) {
-            if (typeof el === 'string')
-                this.el = document.querySelector(el);
-            else if (el)
-                this.el = el;
-            this.config = config;
-            if (el)
-                this.mount(this.el);
-        }
-        mount(el) {
-            if (this.el)
-                this.vm = new Katrid.ViewModel(this, this.config.data);
-        }
-    }
-    Katrid.Component = Component;
-    function mount(el, config) {
-        return new Component(el, config);
-    }
-    Katrid.mount = mount;
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    class Watcher {
-        constructor(name, callback) {
-            this.name = name;
-            this.listeners = [];
-            this.children = {};
-            this.listeners.push(callback);
-        }
-        trigger(oldValue, newValue) {
-            if (oldValue !== newValue) {
-                this.value = newValue;
-                for (let callback of this.listeners)
-                    callback(oldValue, newValue);
-                if (this.parent)
-                    this.parent.emit(this, oldValue, newValue);
-            }
-        }
-        emit(watcher, oldValue, newValue) {
-            if (this.parent)
-                this.parent.emit(watcher, oldValue, newValue);
-        }
-        addListener(callback) {
-            if (!this.listeners.includes(callback))
-                this.listeners.push(callback);
-        }
-    }
-    Katrid.Watcher = Watcher;
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    let dataContext = function (watcher) {
-        return {
-            get: function (target, key) {
-                let obj = Reflect.get(target, key);
-                if ((typeof obj === 'object') && (key in watcher))
-                    obj = new Proxy(obj, dataContext(watcher[key].children));
-                return obj;
-            },
-            set: function (target, key, value) {
-                let oldValue = target[key];
-                target[key] = value;
-                if (key in watcher)
-                    watcher[key].trigger(oldValue, value);
-            }
-        };
-    };
-    class ViewModel {
-        constructor(comp, data) {
-            this.comp = comp;
-            this.watcher = {};
-            this.el = comp.el;
-            if (!data)
-                data = {};
-            this.data = data;
-        }
-        get data() {
-            return this._data;
-        }
-        set data(value) {
-            if (value) {
-                value = new Proxy(value, dataContext(this.watcher));
-                this._data = value;
-            }
-        }
-        addWatcher(path, callback) {
-            this.mountWatcher(path, callback);
-        }
-        mountWatcher(path, callback, parent) {
-            let names, name;
-            let idx = path.indexOf('.');
-            if (idx > -1) {
-                name = path.split('.', 1)[0];
-                names = path.substr(path.indexOf('.') + 1, path.length);
-            }
-            else
-                name = path;
-            let watchers = (parent && parent.children) || this.watcher;
-            if (!(name in watchers))
-                watchers[name] = new Katrid.Watcher(name, callback);
-            let watcher = watchers[name];
-            if (names)
-                this.mountWatcher(names, callback, watcher);
-            else
-                watcher.addListener(callback);
-        }
-    }
-    Katrid.ViewModel = ViewModel;
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    Katrid.customDirectivesRegistry = {};
-    function directive(name, cls) {
-        Katrid.customDirectivesRegistry[name] = cls;
-    }
-    Katrid.directive = directive;
-})(Katrid || (Katrid = {}));
-(function (Katrid) {
-    var directives;
-    (function (directives) {
-        class Directive {
-            constructor(el) {
-                this.el = el;
-                let parent = el;
-                while (parent) {
-                    if (parent.$katrid && parent.$katrid.component)
-                        break;
-                    parent = el.parentElement;
-                }
-                if (parent) {
-                    this.vm = parent.$katrid.vm;
-                    this.data = this.vm.data;
-                }
-            }
-        }
-        directives.Directive = Directive;
-    })(directives = Katrid.directives || (Katrid.directives = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var directives;
-    (function (directives) {
-        class Model extends directives.Directive {
-            bind() {
-                let modelName = this.el.getAttribute('v-model');
-            }
-            addWatcher(name) {
-                let proxy = new Proxy();
-            }
-        }
-    })(directives = Katrid.directives || (Katrid.directives = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    Katrid.isMobile = (() => {
-        var check = false;
-        (function (a) {
-            if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a) || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0, 4)))
-                check = true;
-        })(navigator.userAgent || navigator.vendor);
-        return check;
-    })();
-    Katrid.settings = {
-        additionalModules: [],
-        server: '',
-        ui: {
-            isMobile: Katrid.isMobile,
-            dateInputMask: true,
-            defaultView: 'list',
-            goToDefaultViewAfterCancelInsert: true,
-            goToDefaultViewAfterCancelEdit: false,
-            horizontalForms: true
-        },
-        services: {
-            choicesPageLimit: 10
-        },
-        speech: {
-            enabled: false
-        }
-    };
-    if (Katrid.isMobile)
-        document.body.classList.add('mobile');
-    else
-        document.body.classList.add('desktop');
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Forms;
-    (function (Forms) {
-        class Loader {
-            constructor(templateCache) {
-                this.$cache = templateCache;
-            }
-            getSource(name) {
-                return {
-                    src: this.$cache.get(name),
-                    path: name,
-                    noCache: false,
-                };
-            }
-        }
-        Forms.Loader = Loader;
-        class Templates {
-            constructor(app, templates) {
-                this.app = app;
-                Templates.env = new nunjucks.Environment(new Loader(app.$templateCache), { autoescape: false });
-                let oldGet = app.$templateCache.get;
-                app.$templateCache.get = (name) => {
-                    return this.prepare(name, oldGet.call(this, name));
-                };
-                this.loadTemplates(app.$templateCache, templates);
-                for (let [k, v] of Object.entries(Templates.PRE_LOADED_TEMPLATES))
-                    app.$templateCache.put(k, v);
-            }
-            prepare(name, templ) {
-                if (_.isUndefined(templ))
-                    throw Error('Template not found: ' + name);
-                if (templ.tagName === 'SCRIPT')
-                    return templ.innerHTML;
-                return templ;
-            }
-            compileTemplate(base, templ) {
-                let el = $(base);
-                templ = $(templ.innerHTML);
-                for (let child of Array.from(templ))
-                    if (child.tagName === 'JQUERY') {
-                        let $child = $(child);
-                        let sel = $child.attr('selector');
-                        let op = $child.attr('operation');
-                        if (sel)
-                            sel = el.find(sel);
-                        else
-                            sel = el;
-                        sel[op]($child[0].innerHTML);
-                    }
-                return el[0].innerHTML;
-            }
-            loadTemplates(templateCache, res) {
-                let templateLst = {};
-                let readTemplates = (el) => {
-                    if (el.tagName === 'TEMPLATES')
-                        Array.from(el.children).map(readTemplates);
-                    else if (el.tagName === 'SCRIPT') {
-                        templateLst[el.id] = el.innerHTML;
-                    }
-                };
-                let preProcess = (el) => {
-                    if (el.tagName === 'TEMPLATES')
-                        Array.from(el.children).map(preProcess);
-                    else if (el.tagName === 'SCRIPT') {
-                        let base = el.getAttribute('extends');
-                        let id = el.getAttribute('id') || base;
-                        if (base) {
-                            el = templateLst[base] + el;
-                        }
-                        else
-                            id = el.id;
-                        templateCache.put(id, el);
-                    }
-                };
-                let parser = new DOMParser();
-                let doc = parser.parseFromString(res, 'text/html');
-                let root = doc.firstChild.childNodes[1].firstChild;
-                readTemplates(root);
-                preProcess(root);
-            }
-        }
-        Templates.PRE_LOADED_TEMPLATES = {};
-        Forms.Templates = Templates;
-        function registerTemplate(name, tmpl) {
-            Templates.PRE_LOADED_TEMPLATES[name] = tmpl;
-        }
-        Forms.registerTemplate = registerTemplate;
-    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
     var Core;
     (function (Core) {
         class WebApplication {
@@ -1256,8 +982,12 @@ var Katrid;
             }
             set userInfo(value) {
                 this._userInfo = value;
-                if (value)
-                    $('.user-menu').find('a.nav-link span').text(value.name);
+                if (value) {
+                    let userMenu = document.querySelector('.user-menu');
+                    userMenu.querySelector('a.nav-link span').innerText = value.name;
+                    if (value.avatar)
+                        userMenu.querySelector('.user-avatar').src = value.avatar;
+                }
             }
             static bootstrap(opts) {
                 let app = new WebApplication(opts);
@@ -1351,6 +1081,39 @@ var Katrid;
     })(Core = Katrid.Core || (Katrid.Core = {}));
 })(Katrid || (Katrid = {}));
 (function (Katrid) {
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    Katrid.isMobile = (() => {
+        var check = false;
+        (function (a) {
+            if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a) || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0, 4)))
+                check = true;
+        })(navigator.userAgent || navigator.vendor);
+        return check;
+    })();
+    Katrid.settings = {
+        additionalModules: [],
+        server: '',
+        ui: {
+            isMobile: Katrid.isMobile,
+            dateInputMask: true,
+            defaultView: 'list',
+            goToDefaultViewAfterCancelInsert: true,
+            goToDefaultViewAfterCancelEdit: false,
+            horizontalForms: true
+        },
+        services: {
+            choicesPageLimit: 10
+        },
+        speech: {
+            enabled: false
+        }
+    };
+    if (Katrid.isMobile)
+        document.body.classList.add('mobile');
+    else
+        document.body.classList.add('desktop');
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -1577,7 +1340,8 @@ var Katrid;
                 return elfield;
             }
             validate(raiseError = true) {
-                if (this.action.form && this.action.form.$invalid) {
+                let action = this.action;
+                if (action.form && action.form.$invalid) {
                     let elfield;
                     let errors = [];
                     let s = `<span>${Katrid.i18n.gettext('The following fields are invalid:')}</span><hr>`;
@@ -3278,6 +3042,33 @@ var Katrid;
                 static show(title, msg, traceback) {
                 }
             }
+            function toast(message) {
+                let el = $(`<div role="alert" aria-live="assertive" aria-atomic="true" class="toast" data-autohide="false">
+  <div class="toast-header">
+    <img class="rounded mr-2">
+    <strong class="mr-auto">Bootstrap</strong>
+    <small>11 mins ago</small>
+    <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="toast-body">
+    Hello, world! This is a toast message.
+  </div>
+</div>`);
+                console.log(el[0]);
+                document.body.append(el[0]);
+                el.toast({ autohide: false });
+            }
+            Dialogs.toast = toast;
+            function alert(message, title, icon) {
+                Swal.fire({
+                    title,
+                    text: message,
+                    icon,
+                });
+            }
+            Dialogs.alert = alert;
         })(Dialogs = Forms.Dialogs || (Forms.Dialogs = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -3318,6 +3109,96 @@ var Katrid;
         class AutoCompleteField extends ChoiceField {
         }
         Forms.AutoCompleteField = AutoCompleteField;
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        class Loader {
+            constructor(templateCache) {
+                this.$cache = templateCache;
+            }
+            getSource(name) {
+                return {
+                    src: this.$cache.get(name),
+                    path: name,
+                    noCache: false,
+                };
+            }
+        }
+        Forms.Loader = Loader;
+        class Templates {
+            constructor(app, templates) {
+                this.app = app;
+                Templates.env = new nunjucks.Environment(new Loader(app.$templateCache), { autoescape: false });
+                let oldGet = app.$templateCache.get;
+                app.$templateCache.get = (name) => {
+                    return this.prepare(name, oldGet.call(this, name));
+                };
+                this.loadTemplates(app.$templateCache, templates);
+                for (let [k, v] of Object.entries(Templates.PRE_LOADED_TEMPLATES))
+                    app.$templateCache.put(k, v);
+            }
+            prepare(name, templ) {
+                if (_.isUndefined(templ))
+                    throw Error('Template not found: ' + name);
+                if (templ.tagName === 'SCRIPT')
+                    return templ.innerHTML;
+                return templ;
+            }
+            compileTemplate(base, templ) {
+                let el = $(base);
+                templ = $(templ.innerHTML);
+                for (let child of Array.from(templ))
+                    if (child.tagName === 'JQUERY') {
+                        let $child = $(child);
+                        let sel = $child.attr('selector');
+                        let op = $child.attr('operation');
+                        if (sel)
+                            sel = el.find(sel);
+                        else
+                            sel = el;
+                        sel[op]($child[0].innerHTML);
+                    }
+                return el[0].innerHTML;
+            }
+            loadTemplates(templateCache, res) {
+                let templateLst = {};
+                let readTemplates = (el) => {
+                    if (el.tagName === 'TEMPLATES')
+                        Array.from(el.children).map(readTemplates);
+                    else if (el.tagName === 'SCRIPT') {
+                        templateLst[el.id] = el.innerHTML;
+                    }
+                };
+                let preProcess = (el) => {
+                    if (el.tagName === 'TEMPLATES')
+                        Array.from(el.children).map(preProcess);
+                    else if (el.tagName === 'SCRIPT') {
+                        let base = el.getAttribute('extends');
+                        let id = el.getAttribute('id') || base;
+                        if (base) {
+                            el = templateLst[base] + el;
+                        }
+                        else
+                            id = el.id;
+                        templateCache.put(id, el);
+                    }
+                };
+                let parser = new DOMParser();
+                let doc = parser.parseFromString(res, 'text/html');
+                let root = doc.firstChild.childNodes[1].firstChild;
+                readTemplates(root);
+                preProcess(root);
+            }
+        }
+        Templates.PRE_LOADED_TEMPLATES = {};
+        Forms.Templates = Templates;
+        function registerTemplate(name, tmpl) {
+            Templates.PRE_LOADED_TEMPLATES[name] = tmpl;
+        }
+        Forms.registerTemplate = registerTemplate;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -3709,7 +3590,8 @@ var Katrid;
                     this.scope.isDialog = true;
                 }
                 render() {
-                    return $(Katrid.app.getTemplate(this.templateUrl).replace('<!-- replace-content -->', this.content));
+                    let el = Katrid.app.getTemplate(this.templateUrl).replace('<!-- replace-content -->', this.content);
+                    return $(el);
                 }
                 show() {
                     if (!this.el) {
@@ -6306,6 +6188,10 @@ var Katrid;
                                         Katrid.Forms.Dialogs.Alerts.info(msg.message);
                                     else if ((msg.type === 'error') || (msg.type === 'danger'))
                                         Katrid.Forms.Dialogs.Alerts.error(msg.message);
+                                    else if (msg.type === 'toast')
+                                        Katrid.Forms.Dialogs.toast(msg.message);
+                                    else if (msg.type === 'alert')
+                                        Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
                                 });
                             }
                             res = res.result;
@@ -7958,9 +7844,12 @@ var Katrid;
             if (attrs.accept === 'image/*') {
                 element.tag === 'INPUT';
             }
-            return element.bind('change', function () {
+            return element.bind('change', event => {
                 const reader = new FileReader();
-                reader.onload = event => controller.$setViewValue(event.target.result);
+                reader.onload = event => {
+                    const res = event.target.result;
+                    controller.$setViewValue(res);
+                };
                 return reader.readAsDataURL(event.target.files[0]);
             });
         }

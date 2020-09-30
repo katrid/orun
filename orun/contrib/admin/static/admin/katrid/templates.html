@@ -1834,6 +1834,7 @@
       {% for b in breadcrumb %}
       <li class="breadcrumb-item">
         {% if not b.isLeaf %}<a href="#" ng-click="$event.preventDefault();action.backTo({{ loop.index - 1 }})">{% endif %}
+          <i class="fa fa-fw fa-arrow-left"></i>
         {{ b.text }}
         {% if not b.isLeaf %}</a>{% endif %}
       </li>
