@@ -13,6 +13,7 @@ from .signals import user_logged_in
 class AuthConfig(AppConfig):
     name = 'orun.contrib.auth'
     verbose_name = _("Authentication and Authorization")
+    dependencies = ['orun.contrib.contenttypes']
 
     def ready(self):
         post_migrate.connect(

@@ -49,7 +49,7 @@ class Partner(models.Model):
     mobile = models.CharField(64, label=_('Mobile'))
     birthdate = models.CharField(64, label=_('Birthdate'))
     is_company = models.BooleanField(default=False, label=_('Is a Company'))
-    contact_type = models.SelectionField(
+    contact_type = models.ChoiceField(
         (
             ('contact', _('Contact')),
             ('invoice', _('Invoice address')),
@@ -58,13 +58,15 @@ class Partner(models.Model):
             ('other', _('Other address')),
         ), label=_('Address Type'), default='contact'
     )
-    company_type = models.CharField(16, label=_('Company Type'), choices=(
-        ('individual', 'Individual'),
-        ('company', 'Company'),
-    ))
+    company_type = models.ChoiceField(
+        (
+            ('individual', 'Individual'),
+            ('company', 'Company'),
+        ), label=_('Company Type'),
+    )
     company = models.ForeignKey('res.company', label=_('Company'))
     comments = models.TextField(label=_('Notes'))
-    image = models.ImageField(attachment=True)
+    image = models.ImageField()
     children = models.OneToManyField('self')
     # user password
     site_password = models.PasswordField()

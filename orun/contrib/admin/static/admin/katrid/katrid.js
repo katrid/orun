@@ -811,6 +811,7 @@ var Katrid;
                 this.selectionLength = 0;
             }
             get selection() {
+                console.log(Array.from(this._selection).map(obj => obj.id));
                 if (this.viewType === 'form') {
                     if (this.scope.recordId)
                         return [this.scope.recordId];
@@ -818,7 +819,7 @@ var Katrid;
                         return;
                 }
                 if (this._selection)
-                    return Array.from(this._selection).map((el) => ($(el).data('id')));
+                    return Array.from(this._selection).map(obj => obj.id);
             }
             set attachments(value) {
                 this.scope.$apply(() => this.scope.attachments = value);

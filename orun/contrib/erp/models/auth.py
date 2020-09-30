@@ -95,6 +95,7 @@ class User(Partner, AbstractUser):
         return {
             'id': self.pk,
             'name': self.name,
+            'avatar': (self.image and self.image.url) or None,
             'username': self.username,
             'last_login': self.__class__._meta.fields['last_login'].value_to_json(self.last_login),
             'language': self.language and self.language.code,

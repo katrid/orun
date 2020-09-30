@@ -3,10 +3,11 @@
   <field name="color"/>
   <field name="title"/>
   <field name="email"/>
+  <field name="image"/>
 
   <div>
     <div class="card-image">
-      <img src="/static/admin/assets/img/avatar.png"/>
+      <img ng-src="${record.image || ((record.company_type === 'company' && '/static/admin/assets/img/no-image-company.png') || '/static/admin/assets/img/avatar.png')}"/>
     </div>
     <div class="card-details">
       <strong>
