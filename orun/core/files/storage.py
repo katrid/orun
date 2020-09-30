@@ -359,6 +359,11 @@ class FileSystemStorage(Storage):
         return self._datetime_from_timestamp(os.path.getmtime(self.path(name)))
 
 
+def checksum(data: bytes):
+    import hashlib
+    return hashlib.sha1(data).hexdigest()
+
+
 def get_storage_class(import_path=None):
     return import_string(import_path or settings.DEFAULT_FILE_STORAGE)
 

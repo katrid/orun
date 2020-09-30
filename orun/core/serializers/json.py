@@ -9,6 +9,7 @@ import uuid
 import types
 import base64
 
+from orun.core.files import File
 from orun.core.serializers.base import DeserializationError, Deserializer as BaseDeserializer
 from orun.core.serializers.python import (
     Deserializer as PythonDeserializer, Serializer as PythonSerializer,

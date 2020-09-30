@@ -118,11 +118,11 @@ class Command(BaseCommand):
         # Build the manifest of apps and models that are to be synchronized.
         all_models = [
             (
-                app_config.schema,
+                app_config.name,
                 router.get_migratable_models(app_config, connection.alias, include_auto_created=False),
             )
             for app_config in apps.get_app_configs()
-            if app_config.models_module is not None and app_config.schema in app_labels
+            if app_config.models_module is not None and app_config.name in app_labels
         ]
 
         def model_installed(model):
@@ -148,6 +148,7 @@ class Command(BaseCommand):
                 app = apps.addons[app_name]
                 if app.db_schema and app.create_schema and app.db_schema not in schemas:
                     editor.create_schema(app.db_schema)
+            # create all tables before additional objects
             for app_name, model_list in manifest.items():
                 for model in model_list:
                     # Never install unmanaged models, etc.
@@ -156,8 +157,6 @@ class Command(BaseCommand):
 
                     # Check if table exists on database
                     if editor.table_exists(tables, model):
-                        # Compare and sync the table structure
-                        editor.sync_table_structure(model)
                         continue
 
                     if self.verbosity >= 3:
@@ -170,6 +169,7 @@ class Command(BaseCommand):
                 post_model_list[app_name] = model_list
 
             for app_name, model_list in post_model_list.items():
+                # emit post migrate signal
                 emit_post_migrate_signal(
                     self.verbosity, self.interactive, connection.alias, addon=apps.addons[app_name], models=model_list
                 )
@@ -177,3 +177,7 @@ class Command(BaseCommand):
             # Deferred SQL is executed when exiting the editor's context.
             if self.verbosity >= 1:
                 self.stdout.write("    Running deferred SQL...\n")
+                # Check by additional sql objects
+                for app_name, model_list in post_model_list.items():
+                    for model in model_list:
+                        editor.sync_model(model)
