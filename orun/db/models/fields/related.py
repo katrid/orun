@@ -909,6 +909,9 @@ class ForeignKey(ForeignObject):
             res['filter'] = self.filter
         return res
 
+    def get_data_type(self) -> str:
+        return self.target_field.get_data_type()
+
 
 class OneToOneField(ForeignKey):
     """
@@ -1539,6 +1542,9 @@ class ManyToManyField(RelatedField):
         for obj in value.all():
             yield obj._get_label_instance()
 
+    def get_data_type(self) -> str:
+        return 'manytomany'
+
 
 class OneToManyField(RelatedField):
     one_to_many = True
@@ -1591,4 +1597,7 @@ class OneToManyField(RelatedField):
                 rel_model.write(values)
         if res:
             setattr(instance, self.name, res)
+
+    def get_data_type(self) -> str:
+        return 'onetomany'
 

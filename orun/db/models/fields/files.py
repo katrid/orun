@@ -272,9 +272,6 @@ class FileField(Field):
             kwargs['storage'] = self.storage
         return name, path, args, kwargs
 
-    def get_internal_type(self):
-        return "FileField"
-
     def get_prep_value(self, value):
         value = super().get_prep_value(value)
         # Need to convert File objects provided via a form to string for database insertion
@@ -333,6 +330,9 @@ class FileField(Field):
                 data = name
 
             setattr(instance, self.name, data)
+
+    def get_data_type(self) -> str:
+        return 'str'
 
     def value_to_json(self, value):
         if isinstance(value, FieldFile):

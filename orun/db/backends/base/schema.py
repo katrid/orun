@@ -5,7 +5,7 @@ from orun.db.backends.ddl_references import (
     Columns, ForeignKeyName, IndexName, Statement, Table,
 )
 from orun.db.backends.utils import names_digest, split_identifier
-from orun.db.models.fields import Field
+from orun.db.models.fields import Field, DecimalField
 from orun.db.backends.base.introspection import FieldInfo
 from orun.db.models import Index
 from orun.db.transaction import TransactionManagementError, atomic
@@ -1269,11 +1269,14 @@ class BaseDatabaseSchemaEditor:
                         "type": new_type,
                     }
                     self.execute(self.sql_alter_column % {'table': field.model._meta.qualname, 'changes': sql})
-            elif internal_type == field_type and field_type == 'CharField' and field.max_length > field_info.internal_size and field_info.internal_size > 0:
-                # increase field size
-                self.change_field_size(field)
-                print('Resize char field', field)
-            if field_info.null_ok != field.null and field.null:
+            elif internal_type == field_type:
+                if field_type == 'CharField' and field.max_length > field_info.internal_size and field_info.internal_size > 0:
+                    # increase field size
+                    self.change_field_size(field)
+                    print('Resize char field', field)
+                elif isinstance(field, DecimalField) and (field.decimal_places != field_info.scale or field.max_digits != field_info.display_size):
+                    self.change_field_size(field)
+            elif field_info.null_ok != field.null and field.null:
                 # drop not null constraint
                 self.remove_not_null_constraint(field)
                 print('Remove null constraint', field)
@@ -1303,3 +1306,63 @@ class BaseDatabaseSchemaEditor:
             'changes': sql,
         }
         self.execute(sql)
+
+    def sync_model(self, model):
+        from orun.apps import apps
+        from orun.db import models
+        print('sync model', model._meta.name)
+        try:
+            content_type = apps['content.type'].objects.get_by_natural_key(model._meta.name)
+        except models.ObjectDoesNotExist:
+            print('Content Type %s does not exists' % model._meta.name)
+            return
+
+
+        def create_field(field: Field, field_info: FieldInfo):
+            from orun.apps import apps
+            # Check if field already exists on database
+            if field_info:
+                # create a temporary field from FieldInfo
+                Field = apps['content.field']
+                old_field = Field()
+                old_field.name = field.name
+                old_field.db_column = field.column
+                old_field.model = content_type
+                data_type = self.connection.introspection.data_types_reverse[field_info.type_code]
+                old_field.data_type = data_type
+                if data_type in ('str', 'bytes'):
+                    old_field.max_length = field_info.display_size
+                elif data_type == 'decimal':
+                    old_field.max_digits = field_info.precision
+                old_field.decimal_places = field_info.scale
+                old_field.save()
+                self.sync_column(field, old_field)
+            else:
+                # Create field on database
+                print('Field must be created', field)
+
+        old_fields = {f.name: f for f in apps['content.field'].objects.filter(model_name=model._meta.name)}
+        new_fields = model._meta.local_concrete_fields
+
+        # Get table structure from database
+        cursor = self.connection.cursor()
+        fields = {f.name: f for f in self.connection.introspection.get_table_description(cursor, model._meta.db_schema, model._meta.tablename)}
+
+        for field in new_fields:
+            if field.name not in old_fields:
+                # add new field
+                create_field(field, fields.get(field.column))
+            else:
+                # compare fields
+                self.sync_column(field, old_fields[field.name])
+
+    def sync_column(self, new_field: Field, old_field):
+        new_type = new_field.get_data_type()
+        old_type = old_field.data_type
+        if new_type != old_type:
+            print('Field %s type must be modified' % new_field.name, new_type, old_type)
+        elif new_field.max_length != old_field.max_length:
+            pass
+        elif isinstance(new_field, DecimalField):
+            if new_field.max_digits != old_field.max_digits or new_field.decimal_places != old_field.decimal_places:
+                print('Field %s type must be modified' % new_field.name, new_type, old_type)

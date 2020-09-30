@@ -593,21 +593,13 @@ class Field(BaseField):
             "max_length": None,
             "unique": False,
             "required": False,
-            "null": False,
+            "null": True,
             "db_index": False,
-            "default": NOT_PROVIDED,
-            "editable": True,
-            "serialize": True,
-            "unique_for_date": None,
-            "unique_for_month": None,
-            "unique_for_year": None,
-            "choices": [],
+            "db_default": NOT_PROVIDED,
             "help_text": '',
             "db_column": None,
             "db_tablespace": None,
             "auto_created": False,
-            "validators": [],
-            "error_messages": None,
         }
         attr_overrides = {
             "unique": "_unique",
@@ -631,14 +623,14 @@ class Field(BaseField):
                     keywords[name] = value
         # Work out path - we shorten it for known Orun core fields
         path = "%s.%s" % (self.__class__.__module__, self.__class__.__qualname__)
-        if path.startswith("orun.db.models.fields.related"):
-            path = path.replace("orun.db.models.fields.related", "orun.db.models")
-        if path.startswith("orun.db.models.fields.files"):
-            path = path.replace("orun.db.models.fields.files", "orun.db.models")
-        if path.startswith("orun.db.models.fields.proxy"):
-            path = path.replace("orun.db.models.fields.proxy", "orun.db.models")
-        if path.startswith("orun.db.models.fields"):
-            path = path.replace("orun.db.models.fields", "orun.db.models")
+        # if path.startswith("orun.db.models.fields.related"):
+        #     path = path.replace("orun.db.models.fields.related", "orun.db.models")
+        # if path.startswith("orun.db.models.fields.files"):
+        #     path = path.replace("orun.db.models.fields.files", "orun.db.models")
+        # if path.startswith("orun.db.models.fields.proxy"):
+        #     path = path.replace("orun.db.models.fields.proxy", "orun.db.models")
+        # if path.startswith("orun.db.models.fields"):
+        #     path = path.replace("orun.db.models.fields", "orun.db.models")
         # Return basic info - other fields should override this.
         return (self.name, path, [], keywords)
 
@@ -907,6 +899,9 @@ class Field(BaseField):
     def get_internal_type(self) -> str:
         return self.__class__.__name__
 
+    def get_data_type(self) -> str:
+        raise NotImplementedError
+
     def pre_save(self, model_instance, add):
         """Return field's value just before saving."""
         return getattr(model_instance, self.attname)
@@ -1081,6 +1076,9 @@ class AutoField(Field):
     def get_internal_type(self):
         return "AutoField"
 
+    def get_data_type(self) -> str:
+        return 'int'
+
     def to_python(self, value):
         if value is None:
             return value
@@ -1126,6 +1124,9 @@ class BigAutoField(AutoField):
     def get_internal_type(self):
         return "BigAutoField"
 
+    def get_data_type(self) -> str:
+        return 'bigint'
+
     def rel_db_type(self, connection):
         return BigIntegerField().db_type(connection=connection)
 
@@ -1140,6 +1141,9 @@ class BooleanField(Field):
 
     def get_internal_type(self):
         return "BooleanField"
+
+    def get_data_type(self) -> str:
+        return 'bool'
 
     def to_python(self, value):
         if self.null and value in self.empty_values:
@@ -1211,6 +1215,9 @@ class CharField(Field):
 
     def get_internal_type(self):
         return "CharField"
+
+    def get_data_type(self) -> str:
+        return 'str'
 
     def to_python(self, value):
         if isinstance(value, str) or value is None:
@@ -1351,6 +1358,9 @@ class DateField(DateTimeCheckMixin, Field):
     def get_internal_type(self):
         return "DateField"
 
+    def get_data_type(self) -> str:
+        return 'date'
+
     def to_python(self, value):
         if value is None:
             return value
@@ -1484,6 +1494,9 @@ class DateTimeField(DateField):
 
     def get_internal_type(self):
         return "DateTimeField"
+
+    def get_data_type(self) -> str:
+        return 'datetime'
 
     def to_python(self, value):
         if value is None:
@@ -1684,6 +1697,9 @@ class DecimalField(Field):
     def get_internal_type(self):
         return "DecimalField"
 
+    def get_data_type(self) -> str:
+        return 'decimal'
+
     def to_python(self, value):
         if value is None:
             if self.required:
@@ -1854,6 +1870,9 @@ class FloatField(Field):
     def get_internal_type(self):
         return "FloatField"
 
+    def get_data_type(self) -> str:
+        return 'float'
+
     def to_python(self, value):
         if value is None:
             return value
@@ -1929,6 +1948,9 @@ class IntegerField(Field):
     def get_internal_type(self):
         return "IntegerField"
 
+    def get_data_type(self) -> str:
+        return 'int'
+
     def to_python(self, value):
         if value is None:
             return value
@@ -1948,6 +1970,9 @@ class BigIntegerField(IntegerField):
 
     def get_internal_type(self):
         return "BigIntegerField"
+
+    def get_data_type(self) -> str:
+        return 'bigint'
 
 
 class IPAddressField(Field):
@@ -2100,7 +2125,17 @@ class PositiveIntegerField(PositiveIntegerRelDbTypeMixin, IntegerField):
         return "PositiveIntegerField"
 
 
-class PositiveSmallIntegerField(PositiveIntegerRelDbTypeMixin, IntegerField):
+class SmallIntegerField(IntegerField):
+    description = _("Small integer")
+
+    def get_internal_type(self):
+        return "SmallIntegerField"
+
+    def get_data_type(self) -> str:
+        return 'smallint'
+
+
+class PositiveSmallIntegerField(PositiveIntegerRelDbTypeMixin, SmallIntegerField):
     description = _("Positive small integer")
 
     def get_internal_type(self):
@@ -2133,13 +2168,6 @@ class SlugField(CharField):
         return "SlugField"
 
 
-class SmallIntegerField(IntegerField):
-    description = _("Small integer")
-
-    def get_internal_type(self):
-        return "SmallIntegerField"
-
-
 class TextField(Field):
     description = _("Text")
 
@@ -2155,6 +2183,9 @@ class TextField(Field):
         value = None if value == '' else value
         value = super().get_prep_value(value)
         return self.to_python(value)
+
+    def get_data_type(self) -> str:
+        return 'text'
 
 
 class TimeField(DateTimeCheckMixin, Field):
@@ -2231,6 +2262,9 @@ class TimeField(DateTimeCheckMixin, Field):
 
     def get_internal_type(self):
         return "TimeField"
+
+    def get_data_type(self) -> str:
+        return 'time'
 
     def to_python(self, value):
         if value is None:
@@ -2325,6 +2359,9 @@ class BinaryField(Field):
     def get_internal_type(self):
         return "BinaryField"
 
+    def get_data_type(self) -> str:
+        return 'bytes'
+
     def get_placeholder(self, value, compiler, connection):
         return connection.ops.binary_placeholder_sql(value)
 
@@ -2372,6 +2409,9 @@ class UUIDField(Field):
 
     def get_internal_type(self):
         return "UUIDField"
+
+    def get_data_type(self) -> str:
+        return 'uuid'
 
     def get_db_prep_value(self, value, connection, prepared=False):
         if value is None:
