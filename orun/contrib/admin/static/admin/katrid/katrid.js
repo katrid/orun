@@ -536,6 +536,9 @@ var Katrid;
                     this.scope.$apply();
                 }
             }
+            get selectionLength() {
+                return this.selection.length;
+            }
             async copy() {
                 this.viewType = 'form';
                 await this.dataSource.copy(this.scope.record.id);
