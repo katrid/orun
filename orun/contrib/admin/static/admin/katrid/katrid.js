@@ -499,6 +499,10 @@ var Katrid;
                 }
                 return super.getCurrentTitle();
             }
+            onLoadRecords(recs) {
+                if (this.selection)
+                    this.selection.clear();
+            }
             switchView(viewType, params) {
                 if (viewType !== this.viewType) {
                     let search = {};
@@ -513,7 +517,7 @@ var Katrid;
                 this.switchView('form', { id: null });
             }
             async deleteSelection(backToSearch) {
-                let sel = this.selection;
+                let sel = this.getSelection();
                 if (!sel)
                     return false;
                 if (((sel.length === 1) && confirm(Katrid.i18n.gettext('Confirm delete record?'))) ||
@@ -1826,6 +1830,7 @@ var Katrid;
             }
             set records(recs) {
                 this._records = recs;
+                this.action.onLoadRecords(recs);
             }
             get records() {
                 return this._records;
@@ -1969,7 +1974,6 @@ var Katrid;
                         parentRecord[this.field.name] = [];
                         this.action.scope.records = [];
                     }
-                    this.action.scope.$broadcast('masterChanged', [this, parentRecord]);
                     this.action.scope.$apply();
                 }, this.refreshInterval);
             }
@@ -5585,9 +5589,10 @@ var Katrid;
                 set dataSource(value) {
                     this._dataSource = value;
                     this.selection.dataSource = this.dataSource;
-                    this.scope.$on('masterChanged', () => {
+                }
+                onLoadRecords(recs) {
+                    if (this.selection)
                         this.selection.clear();
-                    });
                 }
                 listRowClick(index, record, event) {
                     this.editItem(record);
@@ -5599,16 +5604,8 @@ var Katrid;
                 }
                 deleteSelection() {
                     let i = 0;
-                    let recs = [];
-                    for (let checkbox of this.field.querySelectorAll(".list-record-selector input[type='checkbox']")) {
-                        if (checkbox.checked) {
-                            checkbox.closest('tr').remove();
-                            recs.push(angular.element(checkbox).scope().record.$record);
-                        }
-                        i++;
-                    }
-                    for (let rec of recs)
-                        rec.delete();
+                    for (let rec of this.selection)
+                        rec.$record.delete();
                     this.selection.clear();
                 }
                 editItem(record) {
