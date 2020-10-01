@@ -537,7 +537,8 @@ var Katrid;
                 }
             }
             get selectionLength() {
-                return this.selection.length;
+                if (this.selection)
+                    return this.selection.length;
             }
             async copy() {
                 this.viewType = 'form';
@@ -721,6 +722,9 @@ var Katrid;
                 }
             }
             async formButtonClick(id, meth, self) {
+                if (id instanceof Katrid.Forms.Views.SelectionHelper)
+                    id = id.map(obj => obj.id);
+                console.log('form button click', id);
                 let res = await this.model.rpc(meth, [id], null, this);
                 if (res.tag === 'refresh')
                     this.refresh();
@@ -784,6 +788,8 @@ var Katrid;
             showDefaultValueDialog() {
             }
             get selection() {
+                if (!this.view.selection)
+                    return this.getSelection();
                 return this.view.selection;
             }
             getSelection() {
