@@ -1317,7 +1317,6 @@ class BaseDatabaseSchemaEditor:
             print('Content Type %s does not exists' % model._meta.name)
             return
 
-
         def create_field(field: Field, field_info: FieldInfo):
             from orun.apps import apps
             # Check if field already exists on database
@@ -1339,7 +1338,7 @@ class BaseDatabaseSchemaEditor:
                 self.sync_column(field, old_field)
             else:
                 # Create field on database
-                print('Field must be created', field)
+                self.add_column(field)
 
         old_fields = {f.name: f for f in apps['content.field'].objects.filter(model_name=model._meta.name)}
         new_fields = model._meta.local_concrete_fields
