@@ -5498,6 +5498,7 @@ var Katrid;
                     this.querySelector('.content');
                 }
                 render(elView) {
+                    elView.querySelector('list-view').classList.add('table-responsive');
                     let tb = this.renderToolbar();
                     Katrid.Core.$compile(tb)(this._scope);
                     this.appendChild(tb);
