@@ -2161,13 +2161,15 @@ var Katrid;
                 }
                 listCreate(view) {
                     let td = document.createElement('td');
-                    if (this.cssClass)
-                        td.classList.add(this.cssClass);
                     td.innerHTML = this.listSpanTemplate();
                     td.setAttribute('data-name', this.name);
                     view.tRow.append(td);
                     let th = document.createElement('th');
-                    th.innerHTML = `<span>${this.caption}</span>`;
+                    th.innerHTML = this.listCaptionTemplate();
+                    if (this.cssClass) {
+                        td.classList.add(this.cssClass);
+                        th.classList.add(this.cssClass);
+                    }
                     view.tHeadRow.append(th);
                 }
                 formSpanTemplate() {
@@ -2177,6 +2179,9 @@ var Katrid;
                 }
                 listSpanTemplate() {
                     return this.formSpanTemplate();
+                }
+                listCaptionTemplate() {
+                    return `<span>${this.caption}</span>`;
                 }
                 listRender() {
                     let el = this._fieldEl;
