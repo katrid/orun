@@ -788,8 +788,8 @@ var Katrid;
             showDefaultValueDialog() {
             }
             get selection() {
-                if (!this.view.selection)
-                    return this.getSelection();
+                if (this.viewType === 'form')
+                    return [this.scope.recordId];
                 return this.view.selection;
             }
             getSelection() {
