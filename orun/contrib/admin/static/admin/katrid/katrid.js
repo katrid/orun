@@ -8433,9 +8433,9 @@ var Katrid;
                     }
                     let sql = _.sprintf(this.sql, params);
                     res = await Katrid.Services.Query.executeSql(sql);
+                    console.log('execute sql', res);
                 }
                 this.$counter++;
-                console.log(res.data);
                 this.data = res.data;
                 this.$scope.$apply();
                 this.onChange();
