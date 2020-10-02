@@ -8418,7 +8418,6 @@ var Katrid;
                 }
                 else if (this.sql) {
                     let params = this.params;
-                    console.log(params);
                     if (!params)
                         params = this.$scope;
                     else {
@@ -8436,6 +8435,7 @@ var Katrid;
                     res = await Katrid.Services.Query.executeSql(sql);
                 }
                 this.$counter++;
+                console.log(res.data);
                 this.data = res.data;
                 this.$scope.$apply();
                 this.onChange();
