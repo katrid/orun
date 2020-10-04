@@ -7119,12 +7119,7 @@ var Katrid;
                 const params = this.getUserParams();
                 console.log('send params', params);
                 const svc = new Katrid.Services.Model('ui.action.report');
-                svc.post('export_report', { args: [this.info.id], kwargs: { format, params } })
-                    .then(function (res) {
-                    if (res.open) {
-                        return window.open(res.open);
-                    }
-                });
+                svc.post('export_report', { args: [this.info.id], kwargs: { format, params } });
                 return false;
             }
             preview() {
@@ -8437,7 +8432,6 @@ var Katrid;
                 this.$counter++;
                 this.data = res.data;
                 this.$scope.$apply();
-                console.log(res.data);
                 this.onChange();
             }
             finally {
