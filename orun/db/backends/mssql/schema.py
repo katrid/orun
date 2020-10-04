@@ -5,6 +5,7 @@ from orun.db.backends.ddl_references import IndexColumns
 
 class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
 
+    sql_create_database = """CREATE DATABASE "%(db)s" """
     sql_create_column = "ALTER TABLE %(table)s ADD %(column)s %(definition)s"
     sql_alter_column_type = "ALTER COLUMN %(column)s %(type)s"
     sql_set_sequence_max = "DBCC CHECKIDENT('%(table)s')"
