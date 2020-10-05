@@ -36,7 +36,7 @@ class Registry:
         self.stored_apps = []
 
         self.env = Environment(self)
-        self.template_env = self.create_template_env()
+        # self.template_env = self.create_template_env()
         self._local_env = local()
 
     def create_template_env(self):
