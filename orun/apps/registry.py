@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from threading import RLock, Event, local, Thread
 from collections import Counter, defaultdict, OrderedDict
 import functools
+import jinja2
 
 from orun.utils.functional import SimpleLazyObject
 from orun.apps import AppConfig
@@ -35,7 +36,13 @@ class Registry:
         self.stored_apps = []
 
         self.env = Environment(self)
+        self.template_env = jinja2.Environment()
         self._local_env = local()
+
+    def create_template_env(self):
+        from orun.utils.filters import default_filter
+        env = jinja2.Environment()
+        env.filters['humanize'] = default_filter
 
     def populate(self, installed_apps=None):
         """
