@@ -1869,8 +1869,7 @@ var Katrid;
                 if (!this.parent)
                     Katrid.app.changeUrl('id', this.scope.record.id);
                 this.scope.recordId = null;
-                this.childrenNotification(null);
-                this.get(this._records[index].id);
+                this.get(rec.id);
             }
             get recordIndex() {
                 return this._recordIndex;
@@ -1964,12 +1963,12 @@ var Katrid;
                 this.children = [];
             }
             childrenNotification(record) {
-                console.log('children notification', record);
                 for (let child of this.children)
                     child.parentNotification(record);
             }
             async parentNotification(parentRecord) {
                 this.scope.records = this.records = [];
+                this.action.scope.$apply();
                 this._clearTimeout();
                 if (!parentRecord || parentRecord.$created)
                     return;
@@ -5451,8 +5450,9 @@ var Katrid;
         var Widgets;
         (function (Widgets) {
             class OneToManyWidget extends Widgets.FieldWidget {
-                create() {
-                    super.create();
+                connectedCallback() {
+                    super.connectedCallback();
+                    this.innerHTML = '';
                     this._viewMode = this._fieldEl.getAttribute('view-mode') || 'list';
                     this._model = new Katrid.Services.Model(this.field.info.model);
                     this._scope = this.actionView.action.scope.$new(true);
@@ -5473,6 +5473,9 @@ var Katrid;
                     });
                     this._action.dataSource = this._dataSource;
                     this.loadViews(views);
+                }
+                create() {
+                    super.create();
                 }
                 get dataSource() {
                     return this._dataSource;
