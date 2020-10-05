@@ -465,7 +465,6 @@ var Katrid;
                 }
                 if (this.params.id && (this.dataSource.recordId != this.params.id))
                     await this.dataSource.get(this.params.id);
-                console.log(this.dataSource.records);
             }
             rpc(method, data, event) {
                 if (event)
@@ -1866,10 +1865,11 @@ var Katrid;
             }
             set recordIndex(index) {
                 this._recordIndex = index;
-                this.scope.record = this._records[index];
+                let rec = this.scope.record = this._records[index];
                 if (!this.parent)
                     Katrid.app.changeUrl('id', this.scope.record.id);
                 this.scope.recordId = null;
+                this.childrenNotification(null);
                 this.get(this._records[index].id);
             }
             get recordIndex() {
@@ -1964,11 +1964,12 @@ var Katrid;
                 this.children = [];
             }
             childrenNotification(record) {
+                console.log('children notification', record);
                 for (let child of this.children)
                     child.parentNotification(record);
             }
             async parentNotification(parentRecord) {
-                this.records = [];
+                this.scope.records = this.records = [];
                 this._clearTimeout();
                 if (!parentRecord || parentRecord.$created)
                     return;
