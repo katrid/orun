@@ -3893,7 +3893,6 @@ var Katrid;
                     Object.assign(context, this.context);
                     let header = this.createHeader(list);
                     let templ = $(Katrid.app.getTemplate(this.templateUrl));
-                    console.log('set view');
                     list.setView(this);
                     this.element = list;
                     templ.find('header:first').append($(header));
@@ -3974,6 +3973,8 @@ var Katrid;
                     let fieldName = fld.getAttribute('name');
                     let field = this._view.fields[fieldName];
                     if (field) {
+                        if (!field.visible)
+                            return;
                         field = field.clone(fld);
                         field.view = this._view;
                         field.listCreate(this);
@@ -5512,7 +5513,9 @@ var Katrid;
                     this.querySelector('.content');
                 }
                 render(elView) {
-                    elView.querySelector('list-view').classList.add('table-responsive');
+                    let listView = elView.querySelector('list-view');
+                    listView.classList.add('table-responsive');
+                    listView.setAttribute('data-options', '{"showStar": false}');
                     let tb = this.renderToolbar();
                     Katrid.Core.$compile(tb)(this._scope);
                     this.appendChild(tb);
