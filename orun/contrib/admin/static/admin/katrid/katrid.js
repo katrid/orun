@@ -1870,6 +1870,7 @@ var Katrid;
                 if (!this.parent)
                     Katrid.app.changeUrl('id', this.scope.record.id);
                 this.scope.recordId = null;
+                this.get(this._records[index].id);
             }
             get recordIndex() {
                 return this._recordIndex;
