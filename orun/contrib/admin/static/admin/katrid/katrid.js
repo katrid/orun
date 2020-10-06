@@ -5707,7 +5707,7 @@ var Katrid;
                     this._dataSource = value;
                     this.selection.dataSource = this.dataSource;
                 }
-                onLoadRecords(recs) {
+                onLoadData(recs) {
                     if (this.selection)
                         this.selection.clear();
                 }
