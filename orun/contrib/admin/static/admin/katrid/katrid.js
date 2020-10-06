@@ -3833,7 +3833,7 @@ var Katrid;
                         height: '100%',
                         eventClick: (evt) => {
                             this.action.listRowClick(evt.event.id, this.action.dataSource.records[evt.event.id]);
-                        }
+                        },
                     });
                     this.append(calendarEl);
                     calendar.render();

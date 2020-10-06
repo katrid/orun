@@ -1841,6 +1841,7 @@ class Model(metaclass=ModelBase):
     @classmethod
     def _get_default_view(cls, view_type):
         from orun.template.loader import select_template
+        from orun.contrib.admin.models import ui
         template = select_template(
             [
                 'views/%s/%s.jinja2' % (cls._meta.name, view_type),
@@ -1850,7 +1851,11 @@ class Model(metaclass=ModelBase):
                 'views/%s.jinja2' % view_type,
             ], using='jinja2'
         )
-        return template.render(context=dict(opts=cls._meta, _=gettext))
+        templ = template.render(context=dict(opts=cls._meta, _=gettext))
+        xml = ui.etree.fromstring(templ)
+        ui.resolve_refs(xml)
+        templ = ui.etree.tostring(xml, encoding='utf-8')
+        return templ.decode('utf-8')
 
     @classmethod
     def _get_default_form_view(cls):

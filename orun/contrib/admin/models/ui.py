@@ -147,24 +147,8 @@ class View(models.Model):
             self.merge(xml, etree.fromstring(child._get_content(context)))
 
         self._eval_permissions(xml)
-        self._resolve_refs(xml)
+        resolve_refs(xml)
         return xml
-
-    def _resolve_refs(self, xml: etree.HtmlElement):
-        # find action refs
-        actions = xml.xpath('//action[@ref]')
-        for action in actions:
-            ref = action.attrib['ref']
-            obj = apps['ir.object'].objects.get_by_natural_key(ref).content_object
-            if obj:
-                action.attrib['data-action'] = str(obj.pk)
-                action.attrib['data-action-type'] = obj.action_type
-                if not action.text:
-                    action.text = obj.name
-                action.attrib.pop('ref')
-            else:
-                raise apps['ui.action'].ObjectDoesNotExists
-        pass
 
     def _eval_permissions(self, xml):
         _groups = {}
@@ -273,3 +257,20 @@ class Filter(models.Model):
 
     class Meta:
         name = 'ui.filter'
+
+
+def resolve_refs(xml: etree.HtmlElement):
+    # find action refs
+    actions = xml.xpath('//action[@ref]')
+    for action in actions:
+        ref = action.attrib['ref']
+        obj = apps['ir.object'].objects.get_by_natural_key(ref).content_object
+        if obj:
+            action.attrib['data-action'] = str(obj.pk)
+            action.attrib['data-action-type'] = obj.action_type
+            if not action.text:
+                action.text = obj.name
+            action.attrib.pop('ref')
+        else:
+            raise apps['ui.action'].ObjectDoesNotExists
+    pass

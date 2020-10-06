@@ -154,6 +154,12 @@ class BaseField(RegisterLookupMixin):
     defer = None
     selectable = True
     column = None
+    max_length: int = None
+    _unique = False
+    stored = True
+    db_default = NOT_PROVIDED
+    db_compute = None
+    db_tablespace = None
 
     def __new__(cls, *args, **kwargs):
         field = super().__new__(cls)
@@ -186,6 +192,9 @@ class BaseField(RegisterLookupMixin):
 
     def get_type(self):
         return self.__class__.__name__
+
+    def get_data_type(self) -> str:
+        return
 
     def __set_name__(self, owner, name):
         self.name = name
@@ -898,9 +907,6 @@ class Field(BaseField):
 
     def get_internal_type(self) -> str:
         return self.__class__.__name__
-
-    def get_data_type(self) -> str:
-        raise NotImplementedError
 
     def pre_save(self, model_instance, add):
         """Return field's value just before saving."""

@@ -1340,20 +1340,23 @@ class BaseDatabaseSchemaEditor:
                 # Create field on database
                 self.add_column(field)
 
-        old_fields = {f.name: f for f in apps['content.field'].objects.filter(model_name=model._meta.name)}
-        new_fields = model._meta.local_concrete_fields
+        if model._meta.concrete:
+            old_fields = {f.name: f for f in apps['content.field'].objects.filter(model_name=model._meta.name)}
+            new_fields = model._meta.local_concrete_fields
 
-        # Get table structure from database
-        cursor = self.connection.cursor()
-        fields = {f.name: f for f in self.connection.introspection.get_table_description(cursor, model._meta.db_schema, model._meta.tablename)}
+            # Get table structure from database
+            cursor = self.connection.cursor()
+            fields = None
 
-        for field in new_fields:
-            if field.name not in old_fields:
-                # add new field
-                create_field(field, fields.get(field.column))
-            else:
-                # compare fields
-                self.sync_column(field, old_fields[field.name])
+            for field in new_fields:
+                if field.name not in old_fields:
+                    if not fields:
+                        fields = {f.name: f for f in self.connection.introspection.get_table_description(cursor, model._meta.db_schema, model._meta.tablename)}
+                    # add new field
+                    create_field(field, fields.get(field.column))
+                else:
+                    # compare fields
+                    self.sync_column(field, old_fields[field.name])
 
     def sync_column(self, new_field: Field, old_field):
         new_type = new_field.get_data_type()
