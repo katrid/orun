@@ -36,13 +36,12 @@ class Registry:
         self.stored_apps = []
 
         self.env = Environment(self)
-        # self.template_env = self.create_template_env()
         self._local_env = local()
 
     def create_template_env(self):
         from orun.utils.filters import default_filter
         env = jinja2.Environment()
-        env.filters['humanize'] = default_filter
+        env.filters['defaultformat'] = default_filter
         return env
 
     def populate(self, installed_apps=None):
@@ -122,6 +121,8 @@ class Registry:
             self.ready = True
             self.ready_event.set()
             self.env.setup()
+
+        self.template_env = self.create_template_env()
 
     def setup_loop(self):
         import asyncio
