@@ -513,7 +513,8 @@ var Katrid;
                     this._loadDataCallbacks.push(callback);
             }
             removeLoadDataCallback(callback) {
-                this._loadDataCallbacks.splice(this._loadDataCallbacks.indexOf(callback), 1);
+                if (this._loadDataCallbacks.indexOf(callback) > -1)
+                    this._loadDataCallbacks.splice(this._loadDataCallbacks.indexOf(callback), 1);
             }
             switchView(viewType, params) {
                 if (viewType !== this.viewType) {
@@ -5708,6 +5709,7 @@ var Katrid;
                     this.selection.dataSource = this.dataSource;
                 }
                 onLoadData(recs) {
+                    this.scope.records = recs;
                     if (this.selection)
                         this.selection.clear();
                 }
