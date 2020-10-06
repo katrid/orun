@@ -3813,6 +3813,7 @@ var Katrid;
                     }
                     $(content).find('field').remove();
                     let templ = $(Katrid.app.getTemplate(this.templateUrl));
+                    templ.find('.data-panel').addClass('calendar');
                     content.setView(this);
                     templ.find('.template-placeholder').append(content);
                     return Katrid.Core.$compile(templ)(this.action.scope);

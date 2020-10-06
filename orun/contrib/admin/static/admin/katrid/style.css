@@ -13144,13 +13144,13 @@ hr {
   min-height: 400px;
 }
 
-.data-panel {
+.calendar.data-panel {
   height: 100%;
 }
-.data-panel .panel-body {
+.calendar.data-panel .panel-body {
   height: 100%;
 }
-.data-panel .panel-body .template-placeholder {
+.calendar.data-panel .panel-body .template-placeholder {
   height: 100%;
 }
 
