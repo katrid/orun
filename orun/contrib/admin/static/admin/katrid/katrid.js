@@ -397,6 +397,7 @@ var Katrid;
         class WindowAction extends Katrid.Actions.Action {
             constructor(config) {
                 super(config);
+                this._loadDataCallbacks = [];
                 this._cachedViews = {};
                 this.model = config.scope.model;
                 this.viewMode = config.info.view_mode;
@@ -498,9 +499,21 @@ var Katrid;
                 }
                 return super.getCurrentTitle();
             }
-            onLoadRecords(recs) {
+            onLoadData(recs) {
+                console.log('on load records');
+                this.scope.records = recs;
                 if (this.selection)
                     this.selection.clear();
+                console.log('callbacks', this._loadDataCallbacks);
+                for (let cb of this._loadDataCallbacks)
+                    cb(recs);
+            }
+            addLoadDataCallback(callback) {
+                if (this._loadDataCallbacks.indexOf(callback) === -1)
+                    this._loadDataCallbacks.push(callback);
+            }
+            removeLoadDataCallback(callback) {
+                this._loadDataCallbacks.splice(this._loadDataCallbacks.indexOf(callback), 1);
             }
             switchView(viewType, params) {
                 if (viewType !== this.viewType) {
@@ -752,7 +765,7 @@ var Katrid;
                         view_type: 'form',
                         menu_id: Katrid.app.currentMenu.id,
                     };
-                    if (evt.ctrlKey) {
+                    if (evt && evt.ctrlKey) {
                         const url = '#/app/?' + $.param(search);
                         window.open(url);
                         return;
@@ -1388,10 +1401,9 @@ var Katrid;
                                 let data = res.data;
                                 this.rawData = data;
                                 if (this.readonly)
-                                    this._records = data;
+                                    this.records = data;
                                 else
-                                    this._records = data.map((obj) => this._createRecord(obj));
-                                this.scope.records = this._records;
+                                    this.records = data.map((obj) => this._createRecord(obj));
                                 if (this.pageIndex === 1) {
                                     return this.offsetLimit = this._records.length;
                                 }
@@ -1838,7 +1850,8 @@ var Katrid;
             }
             set records(recs) {
                 this._records = recs;
-                this.action.onLoadRecords(recs);
+                if (('onLoadData' in this.action) && (this.action['onLoadData']))
+                    this.action['onLoadData'](recs);
             }
             get records() {
                 return this._records;
@@ -2429,6 +2442,7 @@ var Katrid;
                     return res;
                 }
             }
+            Fields.DateField = DateField;
             class DateTimeField extends DateField {
                 constructor(info) {
                     if (!info.cols)
@@ -2452,6 +2466,7 @@ var Katrid;
                     return res;
                 }
             }
+            Fields.DateTimeField = DateTimeField;
             class TimeField extends DateTimeField {
                 constructor(info) {
                     if (!info.cols)
@@ -3504,6 +3519,8 @@ var Katrid;
                     if (field.helpText)
                         title += '<br>' + field.helpText;
                     title += '<br>Field: ' + field.name;
+                    if (field.model)
+                        title += '<br>Model: ' + field.model;
                     el.setAttribute('ui-tooltip', title);
                 }
                 beforeRender(template) {
@@ -3767,6 +3784,82 @@ var Katrid;
             class CustomView extends HTMLElement {
             }
             Views.CustomView = CustomView;
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            class CalendarView extends Views.WindowView {
+                create() {
+                    super.create();
+                    this.viewType = 'calendar';
+                    this.templateUrl = 'view.calendar.html';
+                    this.action.view = this;
+                }
+                get content() {
+                    return super.content
+                        .replace('<calendar', '<calendar-view')
+                        .replace('</calendar', '</calendar-view');
+                }
+                render(container) {
+                    let content = this.template();
+                    for (let element of content.querySelectorAll('field')) {
+                        let el = $(element);
+                        el.replaceWith(`\$\{ record.${el.attr('name')} }`);
+                    }
+                    $(content).find('field').remove();
+                    let templ = $(Katrid.app.getTemplate(this.templateUrl));
+                    content.setView(this);
+                    templ.find('.template-placeholder').append(content);
+                    return Katrid.Core.$compile(templ)(this.action.scope);
+                }
+            }
+            Views.CalendarView = CalendarView;
+            class CalendarViewElement extends Views.WindowElement {
+                create() {
+                    super.create();
+                    this.dateStart = this.getAttribute('date-start');
+                    this.dateStop = this.getAttribute('date-stop');
+                    let calendarEl = document.createElement('div');
+                    let calendar = this.calendar = new FullCalendar.Calendar(calendarEl, {
+                        locale: 'pt-br',
+                        initialView: 'dayGridMonth',
+                        height: '100%',
+                        eventClick: (evt) => {
+                            this.action.listRowClick(evt.event.id, this.action.dataSource.records[evt.event.id]);
+                        }
+                    });
+                    this.append(calendarEl);
+                    calendar.render();
+                    this.action.addLoadDataCallback((data) => this.loadData(data));
+                }
+                loadData(data) {
+                    for (let event of this.calendar.getEvents())
+                        event.remove();
+                    for (let i = 0; i < data.length; i++) {
+                        let record = data[i];
+                        let event = {
+                            id: i,
+                            title: record.record_name,
+                            start: record[this.dateStart],
+                        };
+                        this.calendar.addEvent(event);
+                    }
+                }
+                get mode() {
+                    return this.getAttribute('mode');
+                }
+                set mode(value) {
+                    this.setAttribute('mode', value);
+                }
+            }
+            Views.CalendarViewElement = CalendarViewElement;
+            Katrid.define('calendar-view', CalendarViewElement);
+            Views.registry['calendar'] = CalendarView;
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));

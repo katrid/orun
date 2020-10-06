@@ -13144,4 +13144,14 @@ hr {
   min-height: 400px;
 }
 
+.data-panel {
+  height: 100%;
+}
+.data-panel .panel-body {
+  height: 100%;
+}
+.data-panel .panel-body .template-placeholder {
+  height: 100%;
+}
+
 /*# sourceMappingURL=style.css.map */

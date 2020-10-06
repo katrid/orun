@@ -1433,6 +1433,20 @@
 </templates>
 
 <templates>
+  <script id="view.calendar.html" type="text/ng-template">
+    <div class="content no-padding">
+      <div class="clearfix"></div>
+      <header class="content-container-heading"></header>
+      <div class="panel-default data-panel">
+        <div class="panel-body no-padding">
+          <div class="template-placeholder"></div>
+        </div>
+      </div>
+    </div>
+  </script>
+</templates>
+
+<templates>
 
   <script id="view.card.jinja2" type="text/ng-template">
     <div class="content no-padding">
@@ -1894,7 +1908,7 @@
                   </button>
                 {% endif %}
                 {% if action.viewModes.includes('calendar') %}
-                  <button class="btn btn-outline-secondary" type="button" ng-click="action.viewType = 'calendar'">
+                  <button class="btn btn-outline-secondary" type="button" ng-click="action.switchView('calendar')">
                     <i class="fa fa-calendar"></i>
                   </button>
                 {% endif %}
