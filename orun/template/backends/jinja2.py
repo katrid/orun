@@ -32,7 +32,7 @@ class Jinja2(BaseEngine):
         self.env: jinja2.Environment = environment_cls(**options)
         self.env.globals['gettext'] = gettext
         from orun.utils.filters import default_filter
-        self.env.filters['defaultfilter'] = default_filter()
+        self.env.filters['defaultfilter'] = default_filter
         self.env.globals['_'] = gettext
 
     def from_string(self, template_code):
