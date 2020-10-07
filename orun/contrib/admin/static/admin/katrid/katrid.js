@@ -3153,7 +3153,6 @@ var Katrid;
                     record.$selected = !record.$selected;
                 }
                 selectRecord(record) {
-                    console.log('select record', record);
                     $(this._element).find(`tr[data-id=${record.id}]`).addClass('selected');
                     this.push(record);
                 }
