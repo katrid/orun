@@ -2890,9 +2890,9 @@ var Katrid;
                 set(target, propKey, value, receiver) {
                     if (propKey === '$selected') {
                         if (value)
-                            dataSource.action.selection.selectRecord(rec);
+                            dataSource.action.selection.selectRecord(receiver);
                         else
-                            dataSource.action.selection.unselectRecord(rec);
+                            dataSource.action.selection.unselectRecord(receiver);
                     }
                     else if (!propKey.startsWith('$$')) {
                         let scope = dataSource.scope;
@@ -3153,6 +3153,7 @@ var Katrid;
                     record.$selected = !record.$selected;
                 }
                 selectRecord(record) {
+                    console.log('select record', record);
                     $(this._element).find(`tr[data-id=${record.id}]`).addClass('selected');
                     this.push(record);
                 }
@@ -5723,8 +5724,11 @@ var Katrid;
                 }
                 deleteSelection() {
                     let i = 0;
-                    for (let rec of this.selection)
+                    for (let rec of this.selection) {
                         rec.$record.delete();
+                        this.dataSource.records.splice(rec, 1);
+                    }
+                    this.scope.$apply();
                     this.selection.clear();
                 }
                 editItem(record) {
