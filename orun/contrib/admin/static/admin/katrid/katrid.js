@@ -766,6 +766,7 @@ var Katrid;
                         view_type: 'form',
                         menu_id: Katrid.app.currentMenu.id,
                     };
+                    console.log(this.app.$location.$$search);
                     if (evt && evt.ctrlKey) {
                         const url = '#/app/?' + $.param(search);
                         window.open(url);
@@ -3810,7 +3811,6 @@ var Katrid;
                     let content = this.template();
                     for (let element of content.querySelectorAll('field')) {
                         let el = $(element);
-                        el.replaceWith(`\$\{ record.${el.attr('name')} }`);
                     }
                     $(content).find('field').remove();
                     let templ = $(Katrid.app.getTemplate(this.templateUrl));
