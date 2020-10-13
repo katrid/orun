@@ -117,7 +117,7 @@ class Options:
         self.apps = apps
         self.parents = {}
         self._get_fields_cache = {}
-        if not self.field_change_event:
+        if self.field_change_event is None:
             self.__class__.field_change_event = self.field_change_event = defaultdict(list)
         self.local_fields = []
         self.fields: List[Field] = Fields(self)
