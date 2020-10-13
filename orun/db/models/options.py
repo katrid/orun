@@ -1,5 +1,5 @@
 import copy
-from typing import List
+from typing import List, Optional
 import inspect
 from collections import defaultdict
 
@@ -81,7 +81,7 @@ class Options:
     inherited = False
     inherits = None
     object_name: str = None
-    model_name: str = None
+    model_name: Optional[str] = None
     pk: 'Field' = None
     apps = None
     ordering = None
