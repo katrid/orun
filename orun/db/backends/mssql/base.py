@@ -44,7 +44,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'PositiveSmallIntegerField': 'smallint',
         'SlugField': 'varchar(%(max_length)s)',
         'SmallIntegerField': 'smallint',
-        'TextField': 'text',
+        'TextField': 'varchar(max)',
         'TimeField': 'time',
         'UUIDField': 'uniqueidentifier',
     }
