@@ -4054,6 +4054,12 @@ var Katrid;
                     this.tRow.setAttribute('data-id', '${ ::record.id }');
                     this.tRow.setAttribute('ng-repeat', 'record in records');
                     this.tRow.setAttribute('ng-click', 'action.listRowClick($index, record, $event)');
+                    let ngTrClass = this.getAttribute('ng-tr-class');
+                    if (ngTrClass) {
+                        if (!ngTrClass.startsWith('{'))
+                            ngTrClass = '{' + ngTrClass + '}';
+                        this.tRow.setAttribute('ng-class', ngTrClass);
+                    }
                     this.tHead.append(this.tHeadRow);
                     this.tBody.append(this.tRow);
                     table.append(this.tHead);
@@ -4079,6 +4085,8 @@ var Katrid;
                         let th = document.createElement('th');
                         th.innerText = fld.getAttribute('header');
                         td.innerHTML = fld.innerHTML;
+                        this.tHeadRow.append(th);
+                        this.tRow.append(td);
                     }
                 }
                 createContextMenu() {
