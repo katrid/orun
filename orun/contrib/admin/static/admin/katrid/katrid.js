@@ -2011,8 +2011,6 @@ var Katrid;
                     this.validate();
                 this.record.$record.flush();
                 this.state = DataSourceState.browsing;
-                for (let child of this.children)
-                    child.flush();
             }
             discardChanges() {
                 this.record.$record.discard();
@@ -2744,6 +2742,7 @@ var Katrid;
         })(RecordState = Data.RecordState || (Data.RecordState = {}));
         class Record {
             constructor(data, dataSource, state) {
+                this.$loaded = false;
                 if (!data)
                     data = this.newRecord();
                 this.pristine = data;
@@ -2762,6 +2761,24 @@ var Katrid;
             }
             get pk() {
                 return this.pristine.id;
+            }
+            async load(record) {
+                if (this.state === RecordState.unmodified) {
+                    let rec = await this.dataSource.get(this.pristine.id);
+                    if (rec) {
+                        let idx = -1;
+                        for (let obj of this.dataSource.records) {
+                            idx++;
+                            if (obj.$record === this) {
+                                this.dataSource.records[idx] = rec;
+                                break;
+                            }
+                        }
+                        this.$record = rec;
+                        return rec;
+                    }
+                    return record;
+                }
             }
             addChild(child) {
                 if (this.children.indexOf(child) === -1)
@@ -5738,11 +5755,13 @@ var Katrid;
                     this.scope.$apply();
                     this.selection.clear();
                 }
-                editItem(record) {
+                async editItem(record) {
+                    this.field.showDialog();
+                    record = await record.$record.load(record);
                     this.field.scope.record = record;
                     if (this.field.actionView.action.dataSource.changing)
                         this.field.dataSource.edit();
-                    this.field.showDialog();
+                    this.scope.$apply();
                 }
                 setDirty() {
                 }
