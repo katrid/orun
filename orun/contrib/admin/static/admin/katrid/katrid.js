@@ -6374,15 +6374,17 @@ var Katrid;
                                 });
                             }
                             res = res.result;
-                            if (res && res.open)
-                                window.open(res.open);
-                            if (res.download) {
-                                console.log(res.result);
-                                let a = document.createElement('a');
-                                a.href = res.download;
-                                a.target = '_blank';
-                                a.click();
-                                return;
+                            if (res) {
+                                if (res && res.open)
+                                    window.open(res.open);
+                                if (res.download) {
+                                    console.log(res.result);
+                                    let a = document.createElement('a');
+                                    a.href = res.download;
+                                    a.target = '_blank';
+                                    a.click();
+                                    return;
+                                }
                             }
                             resolve(res);
                         }
