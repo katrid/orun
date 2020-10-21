@@ -898,7 +898,6 @@ var Katrid;
                 this.setUserInfo(value);
             }
             setUserInfo(userInfo) {
-                this._userInfo = userInfo;
             }
             appReady() {
                 let loadingTimeout, overlayTimeout;
@@ -1036,7 +1035,6 @@ var Katrid;
                 }
             }
             setUserInfo(value) {
-                this.userInfo = value;
                 if (value) {
                     let userMenu = document.querySelector('.user-menu');
                     userMenu.querySelector('a.nav-link span').innerText = value.name;
