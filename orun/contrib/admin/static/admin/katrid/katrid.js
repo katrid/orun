@@ -877,89 +877,151 @@ var Katrid;
 (function (Katrid) {
     var Core;
     (function (Core) {
-        class WebApplication {
+        class Application {
             constructor(config) {
                 this.config = config;
-                Katrid.app = this;
-                for (let entry of Object.entries(Katrid.customElementsRegistry))
-                    customElements.define(entry[0], entry[1]);
-                this.actionManager = new Katrid.Actions.ActionManager();
-                this.title = config.title;
-                this.userInfo = config.userInfo;
                 this.plugins = [
                     'ui.katrid',
                     'ngSanitize',
                 ];
-                let self = this;
+                Katrid.app = this;
+                this.title = config.title;
+                for (let entry of Object.entries(Katrid.customElementsRegistry))
+                    customElements.define(entry[0], entry[1]);
+                this.userInfo = config.userInfo;
+            }
+            get userInfo() {
+                return this._userInfo;
+            }
+            set userInfo(value) {
+                this._userInfo = value;
+                this.setUserInfo(value);
+            }
+            setUserInfo(userInfo) {
+                this._userInfo = userInfo;
+            }
+            appReady() {
+                let loadingTimeout, overlayTimeout;
+                let loadingMsg = $('#loading-msg').hide();
+                let overlay = $('#overlay').hide();
+                document.addEventListener('ajax.start', (evt) => {
+                    clearTimeout(loadingTimeout);
+                    clearTimeout(overlayTimeout);
+                    loadingTimeout = setTimeout(() => loadingMsg.show(), 400);
+                    overlayTimeout = setTimeout(() => {
+                        loadingMsg.hide();
+                        overlay.show();
+                    }, 4000);
+                });
+                document.addEventListener('ajax.stop', () => {
+                    clearTimeout(loadingTimeout);
+                    clearTimeout(overlayTimeout);
+                    loadingMsg.hide();
+                    overlay.hide();
+                });
+                $(document).ajaxStart(function () {
+                    loadingTimeout = setTimeout(() => loadingMsg.show(), 400);
+                    overlayTimeout = setTimeout(() => {
+                        loadingMsg.hide();
+                        overlay.show();
+                    }, 2500);
+                })
+                    .ajaxStop(function () {
+                    clearTimeout(loadingTimeout);
+                    clearTimeout(overlayTimeout);
+                    loadingMsg.hide();
+                    overlay.hide();
+                });
+            }
+            create() {
                 $(Katrid).on('app.ready', () => {
-                    let loadingTimeout, overlayTimeout;
-                    let loadingMsg = $('#loading-msg').hide();
-                    let overlay = $('#overlay').hide();
-                    document.addEventListener('ajax.start', (evt) => {
-                        clearTimeout(loadingTimeout);
-                        clearTimeout(overlayTimeout);
-                        loadingTimeout = setTimeout(() => loadingMsg.show(), 400);
-                        overlayTimeout = setTimeout(() => {
-                            loadingMsg.hide();
-                            overlay.show();
-                        }, 4000);
-                    });
-                    document.addEventListener('ajax.stop', () => {
-                        clearTimeout(loadingTimeout);
-                        clearTimeout(overlayTimeout);
-                        loadingMsg.hide();
-                        overlay.hide();
-                    });
-                    $(document).ajaxStart(function () {
-                        loadingTimeout = setTimeout(() => loadingMsg.show(), 400);
-                        overlayTimeout = setTimeout(() => {
-                            loadingMsg.hide();
-                            overlay.show();
-                        }, 2500);
-                        console.log('ajaxstop');
-                    })
-                        .ajaxStop(function () {
-                        clearTimeout(loadingTimeout);
-                        clearTimeout(overlayTimeout);
-                        loadingMsg.hide();
-                        overlay.hide();
-                    });
-                    if (location.hash === '')
-                        $('a.module-selector:first').click();
-                    else
-                        this.loadPage(location.hash);
+                    this.appReady();
                 });
-                window.addEventListener('hashchange', (event) => {
-                    this.loadPage(location.hash);
-                });
-                fetch(config.templates || '/web/js/templates/')
+                this.createApp();
+                this.loadTemplates();
+                Katrid.Core.plugins.init(this);
+            }
+            loadPage(hash) {
+            }
+            createApp() {
+                this.ngApp = angular.module('katridApp', this.plugins)
+                    .config(['$locationProvider', '$interpolateProvider', function ($locationProvider, $interpolateProvider) {
+                        $locationProvider.hashPrefix('');
+                        $interpolateProvider.startSymbol('${');
+                        $interpolateProvider.endSymbol('}');
+                    }])
+                    .run(['$templateCache', ($templateCache) => {
+                        this.$templateCache = $templateCache;
+                    }]);
+                this.createControllers(this.ngApp);
+                $(this).trigger('loaded', [Katrid.app]);
+            }
+            createControllers(app) {
+            }
+            loadTemplates() {
+                return fetch(this.config.templates || '/web/js/templates/')
                     .then((res) => res.text())
                     .then((templates) => {
                     if (templates)
                         templates = '<templates>' + templates + '</templates>';
-                    this.ngApp = angular.module('katridApp', this.plugins)
-                        .run(['$templateCache', ($templateCache) => {
-                            this.$templateCache = $templateCache;
-                            Katrid.Forms.templates = new Katrid.Forms.Templates(this, templates);
-                        }])
-                        .config(['$locationProvider', '$interpolateProvider', function ($locationProvider, $interpolateProvider) {
-                            $locationProvider.hashPrefix('');
-                            $interpolateProvider.startSymbol('${');
-                            $interpolateProvider.endSymbol('}');
-                        }]);
-                    this.ngApp.controller('AppController', ['$scope', '$compile', '$location', function ($scope, $compile, $location) {
-                            Katrid.Core.$compile = $compile;
-                            Katrid.app.$scope = $scope;
-                            Katrid.app.$location = $location;
-                            $scope._ = _;
-                            Katrid.app.$element = $('#action-view');
-                            $(Katrid).trigger('app.ready', [Katrid.app]);
-                        }]);
-                    this.ngApp.controller('ActionController', ['$scope', function ($scope) {
-                        }]);
-                    Katrid.Core.plugins.init(this);
-                    $(this).trigger('loaded', [Katrid.app]);
+                    Katrid.Forms.templates = new Katrid.Forms.Templates(this, templates);
                 });
+            }
+            static bootstrap(opts) {
+                let app = new this(opts);
+                $(app).on('loaded', function () {
+                    angular.element(function () {
+                        angular.bootstrap(document, ['katridApp']);
+                    });
+                });
+                app.create();
+                return app;
+            }
+            getTemplate(tpl, context) {
+                let text = this.$templateCache.get(tpl);
+                if (tpl.endsWith('jinja2')) {
+                    let ctx = {
+                        _,
+                        window,
+                    };
+                    if (context)
+                        Object.assign(ctx, context);
+                    return Katrid.Forms.Templates.env.render(tpl, ctx);
+                }
+                else if (tpl.endsWith('pug')) {
+                    text = text(context);
+                }
+                return text;
+            }
+        }
+        Core.Application = Application;
+        class WebApplication extends Application {
+            constructor(config) {
+                super(config);
+                this.actionManager = new Katrid.Actions.ActionManager();
+                window.addEventListener('hashchange', (event) => {
+                    this.loadPage(location.hash);
+                });
+            }
+            appReady() {
+                super.appReady();
+                if (location.hash === '')
+                    $('a.module-selector:first').click();
+                else
+                    this.loadPage(location.hash);
+            }
+            createControllers(app) {
+                app
+                    .controller('AppController', ['$scope', '$compile', '$location', function ($scope, $compile, $location) {
+                        Katrid.Core.$compile = $compile;
+                        Katrid.app.$scope = $scope;
+                        Katrid.app.$location = $location;
+                        $scope._ = _;
+                        Katrid.app.$element = $('#action-view');
+                        $(Katrid).trigger('app.ready', [Katrid.app]);
+                    }])
+                    .controller('ActionController', ['$scope', function ($scope) {
+                    }]);
             }
             get currentMenu() {
                 return this._currentMenu;
@@ -973,26 +1035,14 @@ var Katrid;
                     $(`app-header .navbar-menu-group[data-parent-id="${value.id}"]`).show();
                 }
             }
-            get userInfo() {
-                return this._userInfo;
-            }
-            set userInfo(value) {
-                this._userInfo = value;
+            setUserInfo(value) {
+                this.userInfo = value;
                 if (value) {
                     let userMenu = document.querySelector('.user-menu');
                     userMenu.querySelector('a.nav-link span').innerText = value.name;
                     if (value.avatar)
                         userMenu.querySelector('.user-avatar').src = value.avatar;
                 }
-            }
-            static bootstrap(opts) {
-                let app = new WebApplication(opts);
-                $(app).on('loaded', function () {
-                    angular.element(function () {
-                        angular.bootstrap(document, ['katridApp']);
-                    });
-                });
-                return app;
             }
             async loadPage(hash, reset = true) {
                 if (hash.indexOf('?') > -1)
@@ -1031,22 +1081,6 @@ var Katrid;
                 this.$element.empty();
                 html = Katrid.Core.$compile(html)(scope || this.$scope);
                 this.$element.append(html);
-            }
-            getTemplate(tpl, context) {
-                let text = this.$templateCache.get(tpl);
-                if (tpl.endsWith('jinja2')) {
-                    let ctx = {
-                        _,
-                        window,
-                    };
-                    if (context)
-                        Object.assign(ctx, context);
-                    return Katrid.Forms.Templates.env.render(tpl, ctx);
-                }
-                else if (tpl.endsWith('pug')) {
-                    text = text(context);
-                }
-                return text;
             }
             get context() {
                 return this.actionManager.context;
@@ -6888,6 +6922,267 @@ var Katrid;
         });
     }
 })();
+var Katrid;
+(function (Katrid) {
+    var Pwa;
+    (function (Pwa) {
+        var Data;
+        (function (Data) {
+            class Connection {
+                constructor(scope, dbName) {
+                    this.dbName = dbName;
+                    this.scope = scope;
+                }
+                get db() {
+                    if (!this._db) {
+                        this._db = new Dexie(this.dbName);
+                        this._db.version(1)
+                            .stores({ records: '++$id, service, status, id', });
+                    }
+                    return this._db;
+                }
+                async save(service, data) {
+                    let r;
+                    if (data.$id) {
+                        await this.db.records.update(data.$id, {
+                            $id: data.$id,
+                            service,
+                            data,
+                            status: 'pending',
+                        });
+                        r = data.$id;
+                    }
+                    else {
+                        r = await this.db.records.add({
+                            service,
+                            data,
+                            status: 'pending',
+                        });
+                        data.$id = r;
+                    }
+                    return r;
+                }
+                saveChild(name) {
+                    let child = this.scope['form_' + name];
+                    let record = child.record;
+                    child.$records.push(child.record);
+                    if (!this.scope.record[name])
+                        this.scope.record[name] = [];
+                    record = { action: 'CREATE', values: record };
+                    this.scope.record[name].push(record);
+                    child.record = null;
+                }
+                async getById(service, member, where) {
+                    let model = new Katrid.Services.Model(service);
+                    let res = await model.getById(where);
+                    this.scope[member] = res.data[0];
+                    this.scope.$apply();
+                    return res;
+                }
+                async list(service, where = null) {
+                    return (await this.db.records.where({ service }).toArray()).map(obj => {
+                        let r = obj.data;
+                        r.$id = obj.$id;
+                        return r;
+                    });
+                }
+                async delete(service, id) {
+                    await this.db.records.where({ service, $id: id }).delete();
+                }
+            }
+            Data.Connection = Connection;
+        })(Data = Pwa.Data || (Pwa.Data = {}));
+    })(Pwa = Katrid.Pwa || (Katrid.Pwa = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Pwa;
+    (function (Pwa) {
+        class PwaComponent extends HTMLElement {
+            constructor() {
+                super(...arguments);
+                this._created = false;
+            }
+            connectedCallback() {
+                if (!this._created)
+                    this.create();
+            }
+            create() {
+            }
+        }
+        Pwa.PwaComponent = PwaComponent;
+        class PwaForm extends HTMLElement {
+            constructor() {
+                super(...arguments);
+                this.viewType = 'form';
+            }
+            connectedCallback() {
+                this.classList.add('form-view', 'data-form', 'form-data-changing');
+                let modelInfo = Katrid.Pwa.modelInfo[this.model];
+                this.fields = modelInfo.fields;
+                for (let f of this.querySelectorAll('field')) {
+                    let fieldName = f.getAttribute('name');
+                    let field = modelInfo.fields[fieldName];
+                    if (field)
+                        field = field.assign(this, f);
+                    if (field && field.visible) {
+                        field.formRender();
+                        f.replaceWith(field.el);
+                    }
+                    else {
+                        f.remove();
+                    }
+                }
+                let scope = angular.element(this).scope();
+                scope.view = this;
+            }
+            get model() {
+                return this.getAttribute('data-model');
+            }
+        }
+        Pwa.PwaForm = PwaForm;
+        class PwaAttachments extends PwaComponent {
+            create() {
+                super.create();
+                let input = document.createElement('input');
+                let gallery = document.createElement('div');
+                input.type = 'file';
+                input.accept = 'image/*,video/*';
+                input.multiple = true;
+                input.style.display = 'none';
+                input.addEventListener('change', (evt) => this.addAttachment(evt));
+                let btn = document.createElement('button');
+                btn.classList.add('btn', 'btn-outline-info');
+                btn.innerHTML = 'Adicionar Anexo...';
+                btn.addEventListener('click', () => input.click());
+                let mediaItem = this.createMediaItem('${attachment.url}');
+                mediaItem.setAttribute('ng-repeat', 'attachment in record.$attachments');
+                let row = document.createElement('div');
+                row.classList.add('row');
+                row.append(mediaItem);
+                this.append(row);
+                this.append(btn);
+            }
+            get scope() {
+                return angular.element(this).scope();
+            }
+            addAttachment(evt) {
+                for (let f of evt.target.files) {
+                    let blob = URL.createObjectURL(f);
+                    this.scope.record.$attachments = this.scope.record.$attachments || [];
+                    this.scope.record.$attachments.push({ type: f.type.split('/')[0], mime: f.type, url: blob, data: f });
+                    this.scope.$apply();
+                }
+            }
+            createMediaItem(url) {
+                let div = document.createElement('div');
+                let a = document.createElement('a');
+                let img = document.createElement('img');
+                let video = document.createElement('video');
+                let source = document.createElement('source');
+                video.append(source);
+                source.src = url;
+                source.type = '${attachment.mime}';
+                video.controls = true;
+                video.setAttribute('ng-if', "attachment.type === 'video'");
+                video.style.maxWidth = '100%';
+                video.style.height = 'auto';
+                img.setAttribute('ng-if', "attachment.type === 'image'");
+                img.classList.add('img-fluid', 'img-thumbnail');
+                a.append(img);
+                a.append(video);
+                a.setAttribute('ng-mousedown', "confirm('Deseja remover o anexo?') && deleteAttachment($index)");
+                img.src = url;
+                div.append(a);
+                div.classList.add('col-lg-3', 'col-md-4', 'col-6');
+                a.classList.add('d-block', 'mb-4', 'h-100');
+                return div;
+            }
+        }
+        Katrid.define('pwa-form', PwaForm);
+        Katrid.define('pwa-attachments', PwaAttachments);
+    })(Pwa = Katrid.Pwa || (Katrid.Pwa = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Pwa;
+    (function (Pwa) {
+        Pwa.modelInfo = {};
+        class PwaWindowAction {
+            constructor(scope) {
+                this.scope = scope;
+            }
+        }
+        class Application extends Katrid.Core.Application {
+            createControllers(app) {
+                app.controller('pwaController', function ($scope, $compile) {
+                    Katrid.Core.$compile = $compile;
+                    let connection = new Katrid.Pwa.Data.Connection($scope, 'katrid');
+                    $scope.goto = async (path) => {
+                        let content = $(await fetch(path).then(res => res.text()))[0];
+                        let ngView = document.querySelector('pwa-view');
+                        $(ngView).empty()
+                            .append(content);
+                        $compile(content)($scope);
+                    };
+                    $scope.list = async (service, member = 'records', where = null) => {
+                        let lst = await connection.list(service);
+                        if (!lst)
+                            lst = [];
+                        $scope[member] = lst;
+                        $scope.$apply();
+                    };
+                    $scope.createNew = () => {
+                        $scope.record = {};
+                        $scope.changing = true;
+                    };
+                    $scope.save = async (data, service) => {
+                        if (!service)
+                            service = $scope.view.model;
+                        if (!data.$id)
+                            $scope.records.push(data);
+                        await connection.save(service, data);
+                        $scope.record = null;
+                        $scope.changing = false;
+                        $scope.$apply();
+                    };
+                    $scope.edit = (record) => {
+                        if (record.$attachments)
+                            for (let att of record.$attachments)
+                                if (att.data)
+                                    att.url = URL.createObjectURL(att.data);
+                        $scope.record = record;
+                        $scope.changing = true;
+                    };
+                    $scope.delete = (record, member = 'records', service = null) => {
+                        if (record.$id) {
+                            if (!service)
+                                service = $scope.view.model;
+                            connection.delete(service, record.$id);
+                            $scope[member].splice($scope[member].indexOf(record), 1);
+                        }
+                    };
+                });
+            }
+        }
+        Pwa.Application = Application;
+    })(Pwa = Katrid.Pwa || (Katrid.Pwa = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Pwa;
+    (function (Pwa) {
+        class WindowAction {
+        }
+        Pwa.WindowAction = WindowAction;
+        class WindowView {
+            constructor() {
+                this.fields = [];
+            }
+        }
+        Pwa.WindowView = WindowView;
+    })(Pwa = Katrid.Pwa || (Katrid.Pwa = {}));
+})(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Reports;

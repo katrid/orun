@@ -1619,7 +1619,7 @@
         ${ record.{{ field.name }}[1]||'{{ field.emptyText }}' }
       </a>
     {% endblock %}
-    {% block field_attrs %}input-field fk-autocomplete ng-model-options="{updateOn: 'change'}"{% endblock %}
+    {% block field_attrs %}autocomplete="off" input-field fk-autocomplete ng-model-options="{updateOn: 'change'}"{% endblock %}
   </script>
 
   <script id="view.form.manytomany.jinja2" type="text/ng-template">
