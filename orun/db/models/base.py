@@ -2174,21 +2174,29 @@ class Model(metaclass=ModelBase):
             search_params['limit'] = limit
         if field.many_to_many:
             field = field.remote_field.target_field
-        if ids is None:
-            search_params['name_fields'] = kwargs.get('name_fields', (field.name_fields is not None and [related_model._meta.fields_dict[f] for f in field.name_fields]) or None)
-            search_params['name'] = q
-            search_params['page'] = page
-            search_params['count'] = count
-            filter = kwargs.get('filter', field.filter)
-            if filter:
-                search_params['params'] = filter
-        else:
-            if isinstance(ids, (list, tuple)):
-                search_params['params'] = {'pk__in': ids}
+        if field.many_to_one:
+            if ids is None:
+                search_params['name_fields'] = kwargs.get('name_fields', (field.name_fields is not None and [related_model._meta.fields_dict[f] for f in field.name_fields]) or None)
+                search_params['name'] = q
+                search_params['page'] = page
+                search_params['count'] = count
+                filter = kwargs.get('filter', field.filter)
+                if filter:
+                    search_params['params'] = filter
             else:
-                search_params['params'] = {'pk': ids}
-        label_from_instance = kwargs.get('label_from_instance', field.label_from_instance or kwargs.get('name_fields'))
-        return related_model.search_name(label_from_instance=label_from_instance, exact=exact, **search_params)
+                if isinstance(ids, (list, tuple)):
+                    search_params['params'] = {'pk__in': ids}
+                else:
+                    search_params['params'] = {'pk': ids}
+            label_from_instance = kwargs.get('label_from_instance', field.label_from_instance or kwargs.get('name_fields'))
+            return related_model.search_name(label_from_instance=label_from_instance, exact=exact, **search_params)
+        elif field.one_to_many:
+            where = kwargs['filter']
+            qs = field.get_queryset(where)
+            return {
+                'data': [obj.to_json() for obj in qs],
+                'count': count,
+            }
 
     @api.method
     def get_view_info(self, view_type, view=None, toolbar=False):

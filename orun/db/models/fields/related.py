@@ -1,3 +1,4 @@
+from typing import Optional, Callable
 import functools
 import inspect
 from functools import partial
@@ -1551,9 +1552,10 @@ class OneToManyField(RelatedField):
     nested_data = True
     rel_class = OneToManyRel
 
-    def __init__(self, to, to_fields=None, related_name=None, *args, **kwargs):
+    def __init__(self, to, to_fields=None, related_name=None, queryset: Callable = None, *args, **kwargs):
         kwargs['rel'] = self.rel_class(self, to, to_fields, related_name=related_name)
         kwargs['concrete'] = False
+        self.queryset = queryset
         page_limit = kwargs.pop('page_limit', None)
         super().__init__(*args, **kwargs)
         self.page_limit = page_limit
@@ -1573,6 +1575,13 @@ class OneToManyField(RelatedField):
         r['model'] = self.remote_field.model._meta.name
         r['page_limit'] = self.page_limit
         return r
+
+    def get_queryset(self, where):
+        if self.queryset:
+            qs = self.queryset(where)
+        else:
+            qs = self.related_model.objects.filter(**where)
+        return qs
 
     def value_to_json(self, value):
         # value = value.options(load_only(self.rel.model._meta.pk.column.name)).values(self.rel.model._meta.pk.column.name)
