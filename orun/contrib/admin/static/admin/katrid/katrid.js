@@ -7269,6 +7269,22 @@ var Katrid;
                             $scope[member].splice($scope[member].indexOf(record), 1);
                         }
                     };
+                    $scope.sum = (iterable, member) => {
+                        let res = 0;
+                        for (let obj of iterable)
+                            res += parseFloat(obj[member]) || 0;
+                        console.log('sum', res, member);
+                        return res;
+                    };
+                    $scope.min = (iterable, member) => {
+                        return Math.min(...iterable.map(obj => obj[member]));
+                    };
+                    $scope.avg = (iterable, member) => {
+                        return $scope.sum(iterable, member) / iterable.length;
+                    };
+                    $scope.max = (iterable, member) => {
+                        return Math.max(...iterable.map(obj => obj[member]));
+                    };
                 });
             }
         }
