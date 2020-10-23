@@ -205,50 +205,97 @@ class ContentType(models.Model):
     def natural_key(self):
         return self.name
 
+    @classmethod
+    def get_id_by_natural_key(cls, name: str):
+        return cls.objects.only('pk').get(name=name).pk
+
+    def create_field(self, field):
+        Field = apps['content.field']
+        kwargs = Field.deconstruct(field)
+        Field.objects.create(
+            model=self,
+            model_name=self._meta.name,
+            **kwargs,
+        )
+
+
+
+# class Domain(models.Model):
+#     name = models.CharField(unique=True)
+#     check = models.TextField()
+#     filter = models.TextField()
+#     choices = models.TextField()
+#     display_mask = models.CharField()
+#     edit_mask = models.CharField()
+#     required = models.BooleanField()
+#     nullable = models.BooleanField()
+#
+#     class Meta:
+#         name = 'content.domain'
+
 
 class Field(models.Model):
-    name = models.CharField(128, null=False, verbose_name=_('Name'), default='x_')
-    full_name = models.CharField(256, verbose_name=_('Full Name'))
-    data_type = models.ChoiceField(
+    owner_type = models.ChoiceField(
         (
-            ('StringField', 'StringField'),
-            ('IntegerField', 'IntegerField'),
-            ('BooleanField', 'BooleanField'),
-            ('DecimalField', 'DecimalField'),
-            ('FloatField', 'FloatField'),
-            ('DateField', 'DateField'),
-            ('DateTimeField', 'DateTimeField'),
-            ('TextField', 'TextField'),
-            ('ImageField', 'ImageField'),
-            ('FileField', 'FileField'),
-            ('BinaryField', 'BinaryField'),
-        )
+            ('user', _('User')),
+            ('system', _('System')),
+        ), verbose_name=_('Field Type'), default='user',
+    )
+    name = models.CharField(128, null=False, verbose_name=_('Name'), default='x_')
+    db_column = models.CharField(128, editable=False)
+    # domain = models.ForeignKey(Domain)
+    data_type = models.ChoiceField(
+        # {
+        #     'str',
+        #     'int',
+        #     'bigint',
+        #     'smallint',
+        #     'bool',
+        #     'decimal',
+        #     'float',
+        #     'date',
+        #     'datetime',
+        #     'time',
+        #     'text',
+        #     'image',
+        #     'file',
+        #     'bytes',
+        #     'enum',
+        #     'uuid',
+        #     'onetomany',
+        #     'manytomany',
+        # }
     )
     model = models.ForeignKey(ContentType, null=False, verbose_name=_('Document Model'), on_delete=models.CASCADE)
     model_name = models.CharField()
-    caption = models.TextField(verbose_name=_('Caption'))
+    primary_key = models.BooleanField(default=False, label=_('Primary Key'))
+    related_model = models.ForeignKey(ContentType)
+    full_name = models.CharField(256, verbose_name=_('Full Name'), readonly=True)
+    label = models.TextField(verbose_name=_('Field Label'))
     description = models.TextField(verbose_name=_('Description'))
     help_text = models.TextField(verbose_name=_('Help Text'))
-    copyable = models.BooleanField(default=False, verbose_name=_('Copyable'))
+    copy = models.BooleanField(default=False, verbose_name=_('Copyable'))
     required = models.BooleanField(default=False, verbose_name=_('Required'))
+    nullable = models.BooleanField(default=True, verbose_name=_('Nullable'), help_text=_('Database nullable'))
+    unique = models.BooleanField(default=False, label=_('Unique'))
     readonly = models.BooleanField(default=False, verbose_name=_('Readonly'))
-    index = models.BooleanField(default=False, verbose_name=_('Database Index'))
-    max_length = models.PositiveSmallIntegerField(verbose_name=_('Maximum Length'))
+    db_index = models.BooleanField(default=False, verbose_name=_('DB Index'))
+    # can_migrate = models.BooleanField()
+    max_length = models.PositiveSmallIntegerField(verbose_name=_('Max Length'))
+    max_digits = models.PositiveSmallIntegerField(label=_('Max Digits'))
     decimal_places = models.PositiveSmallIntegerField(verbose_name=_('Decimal Places'))
-    field_type = models.ChoiceField(
-        (
-            ('user', _('User Field')),
-            ('base', _('Base Field')),
-        ), verbose_name=_('Field Type'), default='user',
-    )
-    domain = models.TextField(verbose_name=_('Limit Choices To'))
+    filter = models.TextField(verbose_name=_('Limit Choices To'))
     widget = models.CharField()
-    templates = models.TextField()
+    # templates = models.TextField()
     choices = models.TextField(verbose_name=_('Options List'))
     dependencies = models.TextField()
-    compute = models.TextField()
-    db_compute = models.TextField()
-    store = models.BooleanField(default=True)
+    compute = models.TextField(label=_('App Computed Formula'))
+    db_compute = models.TextField(label=_('DB Computed Formula'))
+    default = models.TextField(label=_('Default Field Value'))
+    db_default = models.TextField(label=_('DB Default Value'))
+    db_tablespace = models.CharField(128)
+    auto_created = models.BooleanField(default=False)
+    stored = models.BooleanField(default=True)
     # groups = models.ManyToManyField('auth.group')
     localize = models.BooleanField(verbose_name=_('Localize'), help_text=_('Field content must be localized'))
 
@@ -257,3 +304,63 @@ class Field(models.Model):
         verbose_name = _('Field')
         verbose_name_plural = _('Fields')
         title_field = 'caption'
+
+    @classmethod
+    def deconstruct(cls, field: models.Field):
+        res = {
+            'label': field.label,
+            'owner_type': 'system',
+            'name': field.name,
+            'full_name': str(field),
+            'db_column': field.column,
+            'data_type': field.get_data_type(),
+            'primary_key': field.primary_key,
+            'max_length': field.max_length,
+            'unique': field._unique,
+            'required': field.required,
+            'nullable': field.null,
+            'stored': field.stored,
+            'db_index': field.db_index,
+            'default': field.default,
+            'db_default': field.db_default,
+            'db_compute': field.db_compute,
+            'max_digits': getattr(field, 'max_digits', None),
+            'decimal_places': getattr(field, 'decimal_places', None),
+            'db_tablespace': field.db_tablespace,
+        }
+        if field.many_to_one and field.related_model:
+            res['related_model_id'] = apps['content.type'].get_id_by_natural_key(field.related_model._meta.name)
+        return res
+
+
+class Constraint(models.Model):
+    content_type = models.ForeignKey(ContentType, null=False)
+    field = models.ForeignKey(Field)
+    name = models.CharField(128, null=False)
+    auto_created = models.BooleanField(default=False)
+    check = models.TextField()
+    fields = models.TextField()
+    deferrable = models.ChoiceField(
+        {
+            'deferred': _('Deferred'),
+            'immediate': _('Immediate'),
+        }
+    )
+
+    class Meta:
+        name = 'content.constraint'
+        verbose_name = _('Model Constraint')
+        title_field = 'name'
+
+
+class Index(models.Model):
+    content_type = models.ForeignKey(ContentType, null=False)
+    field = models.ForeignKey(Field)
+    name = models.CharField(128, null=False)
+    auto_created = models.BooleanField(default=False)
+    fields = models.TextField()
+    condition = models.TextField()
+
+    class Meta:
+        name = 'content.index'
+        verbose_name = _('Model Index')

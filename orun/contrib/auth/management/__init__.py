@@ -32,76 +32,70 @@ def _get_builtin_permissions(opts):
     return perms
 
 
-def create_permissions(addon, verbosity=2, interactive=True, using=DEFAULT_DB_ALIAS, apps=global_apps, **kwargs):
-    if not addon.models_module:
+def create_permissions(app_models, verbosity=2, interactive=True, using=DEFAULT_DB_ALIAS, apps=global_apps, **kwargs):
+    for schema, models in app_models:
+        app_config = apps.app_configs[schema]
+        if not app_config.models_module:
+            return
+
+        try:
+            ContentType = apps.get_model('content.type')
+            Permission = apps.get_model('auth.permission')
+        except LookupError:
+            return
+
+        if not router.allow_migrate_model(using, Permission):
+            return
+
+        # This will hold the permissions we're looking for as
+        # (content_type, (codename, name))
+        searched_perms = []
+        # The codenames and ctypes that should exist.
+        ctypes = set()
+        for klass in models:
+            # Force looking up the content types in the current database
+            # before creating foreign keys to them.
+            klass = apps[klass]
+            ctype = ContentType.objects.db_manager(using).get_for_model(klass, for_concrete_model=False)
+
+            ctypes.add(ctype)
+            for perm in _get_all_permissions(klass._meta):
+                searched_perms.append((ctype, perm))
+
+        # TODO fix auth permissions
         return
+        # Find all the Permissions that have a content_type for a model we're
+        # looking for.  We don't need to check for codenames since we already have
+        # a list of the ones we're going to create.
+        all_perms = set(Permission.objects.using(using).filter(
+            content_type__in=ctypes,
+        ).values_list(
+            "content_type", "codename"
+        ))
 
-    # Ensure that contenttypes are created for this app. Needed if
-    # 'orun.contrib.auth' is in INSTALLED_APPS before
-    # 'orun.contrib.contenttypes'.
-    create_contenttypes(addon, verbosity=verbosity, interactive=interactive, using=using, apps=apps, **kwargs)
-
-    app_label = addon.schema
-    try:
-        app_config = apps.addons[app_label]
-        ContentType = apps.get_model('content.type')
-        Permission = apps.get_model('auth.permission')
-    except LookupError:
-        return
-
-    if not router.allow_migrate_model(using, Permission):
-        return
-
-    # This will hold the permissions we're looking for as
-    # (content_type, (codename, name))
-    searched_perms = []
-    # The codenames and ctypes that should exist.
-    ctypes = set()
-    models = kwargs['models']
-    for klass in models:
-        # Force looking up the content types in the current database
-        # before creating foreign keys to them.
-        klass = apps[klass]
-        ctype = ContentType.objects.db_manager(using).get_for_model(klass, for_concrete_model=False)
-
-        ctypes.add(ctype)
-        for perm in _get_all_permissions(klass._meta):
-            searched_perms.append((ctype, perm))
-
-    # TODO fix auth permissions
-    return
-    # Find all the Permissions that have a content_type for a model we're
-    # looking for.  We don't need to check for codenames since we already have
-    # a list of the ones we're going to create.
-    all_perms = set(Permission.objects.using(using).filter(
-        content_type__in=ctypes,
-    ).values_list(
-        "content_type", "codename"
-    ))
-
-    perms = [
-        Permission(codename=codename, name=name, content_type=ct)
-        for ct, (codename, name) in searched_perms
-        if (ct.pk, codename) not in all_perms
-    ]
-    Permission.objects.using(using).bulk_create(perms)
-    if verbosity >= 2:
-        for perm in perms:
-            print("Adding permission '%s'" % perm)
+        perms = [
+            Permission(codename=codename, name=name, content_type=ct)
+            for ct, (codename, name) in searched_perms
+            if (ct.pk, codename) not in all_perms
+        ]
+        Permission.objects.using(using).bulk_create(perms)
+        if verbosity >= 2:
+            for perm in perms:
+                print("Adding permission '%s'" % perm)
 
 
-def get_system_username():
-    """
-    Return the current system user's username, or an empty string if the
-    username could not be determined.
-    """
-    try:
-        result = getpass.getuser()
-    except (ImportError, KeyError):
-        # KeyError will be raised by os.getpwuid() (called by getuser())
-        # if there is no corresponding entry in the /etc/passwd file
-        # (a very restricted chroot environment, for example).
-        return ''
+    def get_system_username():
+        """
+        Return the current system user's username, or an empty string if the
+        username could not be determined.
+        """
+        try:
+            result = getpass.getuser()
+        except (ImportError, KeyError):
+            # KeyError will be raised by os.getpwuid() (called by getuser())
+            # if there is no corresponding entry in the /etc/passwd file
+            # (a very restricted chroot environment, for example).
+            return ''
     return result
 
 

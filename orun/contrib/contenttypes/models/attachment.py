@@ -41,13 +41,11 @@ class Attachment(models.Model):
 
     @property
     def storage(self):
-        storage_cls = apps['ir.config.parameter'].get_param('content.attachment.storage')
+        storage_cls = getattr(settings, 'ATTACHMENT_FILE_STORAGE', 'db')
         if storage_cls == 'db':
             return None
         try:
-            return get_storage_class(storage_cls)(
-                os.path.join(settings.MEDIA_ROOT, 'files', DEFAULT_DB_ALIAS, self.prefix)
-            )
+            return get_storage_class(storage_cls)(os.path.join(settings.MEDIA_ROOT, 'files', self.prefix))
         except:
             warnings.warn('Invalid attachment filename')
 

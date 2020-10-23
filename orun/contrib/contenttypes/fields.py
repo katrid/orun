@@ -265,6 +265,9 @@ class GenericForeignKey(BaseField, FieldCacheMixin):
         setattr(instance, self.fk_field, fk)
         self.set_cached_value(instance, value)
 
+    def get_data_type(self) -> str:
+        return 'object'
+
 
 class GenericRel(ForeignObjectRel):
     """
