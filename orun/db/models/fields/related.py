@@ -1571,7 +1571,9 @@ class OneToManyField(RelatedField):
 
     def _formfield(self):
         r = super()._formfield()
-        r['field'] = self.remote_field.to_field.name
+        # the field may be virtual
+        if self.remote_field.to_field:
+            r['field'] = self.remote_field.to_field.name
         r['model'] = self.remote_field.model._meta.name
         r['page_limit'] = self.page_limit
         return r

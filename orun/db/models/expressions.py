@@ -373,7 +373,7 @@ class BaseExpression:
         for arg, value in arguments:
             if isinstance(value, fields.Field):
                 if value.name and value.model:
-                    value = (value.model._meta.label, value.name)
+                    value = (value.model._meta.schema, value.name)
                 else:
                     value = type(value)
             else:

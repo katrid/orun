@@ -2191,10 +2191,11 @@ class Model(metaclass=ModelBase):
             label_from_instance = kwargs.get('label_from_instance', field.label_from_instance or kwargs.get('name_fields'))
             return related_model.search_name(label_from_instance=label_from_instance, exact=exact, **search_params)
         elif field.one_to_many:
+            from orun.db.models.query import QuerySet
             where = kwargs['filter']
             qs = field.get_queryset(where)
             return {
-                'data': [obj.to_json() for obj in qs],
+                'data': [obj.to_json() for obj in qs] if isinstance(qs, QuerySet) else qs,
                 'count': count,
             }
 
