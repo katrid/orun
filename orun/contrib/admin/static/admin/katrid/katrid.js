@@ -1,3 +1,4 @@
+"use strict";
 var Katrid;
 (function (Katrid) {
     var Actions;
@@ -61,17 +62,17 @@ var Katrid;
                 Object.assign(ctx, this.getContext());
                 Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx);
             }
-            openObject(evt) {
+            openObject(service, objectId, evt) {
+                console.log('open object');
                 evt.preventDefault();
                 evt.stopPropagation();
-                if (evt.ctrlKey) {
+                let href = evt.target.href;
+                if (!href)
+                    href = `#/app/?menu_id=${this.params.menu_id}&model=${service}&view_type=form&id=${objectId}`;
+                if (evt.ctrlKey)
                     window.open(evt.target.href);
-                    return false;
-                }
-                else {
-                    console.log(evt.target.href);
-                    location.hash = evt.target.href;
-                }
+                else
+                    location.hash = href;
                 return false;
             }
             restore() { }
@@ -890,6 +891,9 @@ var Katrid;
                     customElements.define(entry[0], entry[1]);
                 this.userInfo = config.userInfo;
             }
+            get context() {
+                return;
+            }
             get userInfo() {
                 return this._userInfo;
             }
@@ -940,7 +944,7 @@ var Katrid;
                 this.loadTemplates();
                 Katrid.Core.plugins.init(this);
             }
-            loadPage(hash) {
+            async loadPage(hash, reset = true) {
             }
             createApp() {
                 this.ngApp = angular.module('katridApp', this.plugins)
@@ -1387,6 +1391,68 @@ var Katrid;
             indexOf(obj) {
                 if (this._records)
                     return this._records.indexOf(this.findById(obj.id));
+            }
+            getFieldChoices(where, timeout = 0) {
+                return new Promise((resolve, reject) => {
+                    let controller = new AbortController();
+                    let req = () => {
+                        let args = {
+                            field: this.field.name,
+                            config: { signal: controller.signal },
+                            context: this.action.context,
+                            filter: where,
+                        };
+                        this.parent.model.getFieldChoices(args)
+                            .catch((res) => {
+                            return reject(res);
+                        })
+                            .then((res) => {
+                            if (this.pageIndex > 1) {
+                                this.offset = ((this.pageIndex - 1) * this.pageLimit) + 1;
+                            }
+                            else {
+                                this.offset = 1;
+                            }
+                            this.scope.$apply(() => {
+                                if (res.count != null)
+                                    this.recordCount = res.count;
+                                let data = res.data;
+                                this.rawData = data;
+                                if (this.readonly)
+                                    this.records = data;
+                                else
+                                    this.records = data.map((obj) => this._createRecord(obj));
+                                if (this.pageIndex === 1) {
+                                    return this.offsetLimit = this._records.length;
+                                }
+                                else {
+                                    return this.offsetLimit = (this.offset + this._records.length) - 1;
+                                }
+                            });
+                            return resolve(res);
+                        })
+                            .finally(() => {
+                            this.scope.$apply(() => this.pendingRequest = false);
+                        });
+                    };
+                    this.pendingPromises.push(controller);
+                    timeout = 0;
+                    if (((this.requestInterval > 0) || timeout) && (timeout !== false))
+                        this.pendingOperation = setTimeout(req, timeout || this.requestInterval);
+                    else
+                        req();
+                });
+            }
+            _search(req, timeout) {
+                return new Promise((resolve, reject) => {
+                    let controller = new AbortController();
+                    this.pendingPromises.push(controller);
+                    timeout = 0;
+                    if (((this.requestInterval > 0) || timeout) && (timeout !== false))
+                        this.pendingOperation = setTimeout(req, timeout || this.requestInterval);
+                    else
+                        req();
+                });
             }
             search(params, page, fields, timeout) {
                 let master = this.masterSource;
@@ -2023,7 +2089,8 @@ var Katrid;
                     if (parentRecord.id != null) {
                         let data = {};
                         data[this.field.info.field] = parentRecord.id;
-                        let res = await this.search(data);
+                        console.log(this.field);
+                        let res = await this.getFieldChoices(data);
                         parentRecord[this.field.name] = res.data;
                         this.state = Katrid.Data.DataSourceState.browsing;
                     }
@@ -3096,6 +3163,7 @@ var Katrid;
                     $('#loading-msg').hide();
                 }
             }
+            Dialogs.WaitDialog = WaitDialog;
             class ExceptionDialog {
                 static show(title, msg, traceback) {
                 }
@@ -3386,8 +3454,13 @@ var Katrid;
                 bind(field) {
                     this.field = field;
                 }
+                get name() {
+                    return this.getAttribute('name');
+                }
                 create() {
                     super.create();
+                    if (!this._field)
+                        this.bind(this.actionView.action.view.viewInfo.fields[this.name]);
                     this._id = ++ID;
                     let cols = this._field.cols || 12;
                     this.classList.add('col-md-' + cols.toString());
@@ -3792,7 +3865,7 @@ var Katrid;
                             if (this.scope === targetScope) {
                                 console.log('save and close', data);
                                 if (data) {
-                                    let d = data = await this.scope.$parent.model.getFieldChoices(field.name, null, { ids: [data.id] });
+                                    let d = data = await this.scope.$parent.model.getFieldChoices({ field: field.name, kwargs: { ids: [data.id] } });
                                     let vals = {};
                                     let res = d.items[0];
                                     vals[field.name] = res;
@@ -4658,7 +4731,7 @@ var Katrid;
                 }
                 _loadChildren() {
                     this.loading = true;
-                    this.view.scope.model.getFieldChoices(this.name, this.view.text)
+                    this.view.scope.model.getFieldChoices({ field: this.name, term: this.view.text })
                         .then((res) => {
                         this.children = res.items;
                         let index = this.view.$items.indexOf(this);
@@ -5811,6 +5884,37 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Widgets;
+        (function (Widgets) {
+            class TableField extends Widgets.FieldWidget {
+                connectedCallback() {
+                    super.connectedCallback();
+                    this.querySelector('table').classList.add('table');
+                }
+                create() {
+                    super.create();
+                    this.actionView.action.$element[0].addEventListener('recordLoaded', event => this.recordLoaded(event));
+                }
+                async recordLoaded(event) {
+                    let rec = event.detail.record;
+                    let data = {};
+                    data[this.field.info.field || 'id'] = rec.id;
+                    let res = await this.actionView.action.model.getFieldChoices({ field: this.fieldName, filter: data });
+                    this.actionView.action.scope.record[this.fieldName] = res.data;
+                }
+                get scope() {
+                    return this.actionView.action.scope;
+                }
+            }
+            Widgets.TableField = TableField;
+            Katrid.define('table-field', TableField);
+        })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
     var Grid;
     (function (Grid) {
         class TableColumn {
@@ -6426,7 +6530,7 @@ var Katrid;
                             }
                             res = res.result;
                             if (res) {
-                                if (res && res.open)
+                                if (res.open)
                                     window.open(res.open);
                                 if (res.download) {
                                     console.log(res.result);
@@ -6607,8 +6711,13 @@ var Katrid;
                 return this.post('get_fields_info', { kwargs: data })
                     .then(this.constructor._prepareFields);
             }
-            getFieldChoices(field, term, kwargs) {
-                return this.post('get_field_choices', { args: [field, term], kwargs: kwargs });
+            getFieldChoices(config) {
+                let kwargs = config.kwargs || {};
+                if (config.filter)
+                    kwargs.filter = config.filter;
+                if (config.context)
+                    kwargs.context = config.context;
+                return this.post('get_field_choices', { args: [config.field, config.term], kwargs }, null, config.config);
             }
             doViewAction(data) {
                 return this.post('do_view_action', { kwargs: data });
@@ -6642,7 +6751,7 @@ var Katrid;
             rpc(meth, args, kwargs, action) {
                 return new Promise((resolve, reject) => {
                     this.post(meth, { args: args, kwargs: kwargs })
-                        .then(res => {
+                        .then((res) => {
                         if ((res.tag === 'refresh') && action)
                             action.refresh();
                         resolve(res);
@@ -8217,7 +8326,7 @@ var Katrid;
                         const f = () => {
                             let svc = new Katrid.Services.Model(serviceName);
                             if (field)
-                                svc = svc.getFieldChoices(field, query.term, data.kwargs);
+                                svc = svc.getFieldChoices({ field, term: query.term, kwargs: data.kwargs });
                             else
                                 svc = new Katrid.Services.Model(attrs.modelChoices).searchName(data);
                             svc.then(res => {
@@ -9221,16 +9330,18 @@ var Katrid;
                         let data = {
                             args: [req.term],
                             kwargs: {
-                                domain: domain,
+                                filter: domain,
                                 limit: DEFAULT_PAGE_SIZE,
                                 name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
                             }
                         };
                         let svc;
                         if (fieldName)
-                            svc = new Katrid.Services.Model(modelName).getFieldChoices(fieldName, req.term, data.kwargs);
+                            svc = new Katrid.Services.Model(modelName).getFieldChoices({
+                                field: fieldName, term: req.term, kwargs: data.kwargs
+                            });
                         else if (scope.model)
-                            svc = scope.model.getFieldChoices(field.name, req.term, data.kwargs);
+                            svc = scope.model.getFieldChoices({ field: field.name, term: req.term, kwargs: data.kwargs });
                         else
                             svc = new Katrid.Services.Model(field.model).searchName(data);
                         svc.then(r => {
@@ -9758,7 +9869,7 @@ var Katrid;
                         if (!cache[field.name])
                             cache[field.name] = {};
                         if (cache[field.name][val] === undefined) {
-                            let res = await scope.model.getFieldChoices(field.name, val, { exact: true });
+                            let res = await scope.model.getFieldChoices({ field: field.name, term: val, kwargs: { exact: true } });
                             if (res.items && res.items.length)
                                 cache[field.name][val] = res.items[0];
                             else
