@@ -1,20 +1,20 @@
-{% extends "admin/index.jinja2" %}
+{% extends "admin/base.jinja2" %}
+{% block body_class %}pwa-app{% endblock %}
 {% block extra_head %}
-  <link rel="manifest" href="/pwa/manifest.json">
+  <link rel="manifest" href="{% block manifest %}/pwa/manifest.json{% endblock %}">
+{% endblock %}
+{% block page_loaded %}
+  {{ super() }}
+  <script>
+    let app = Katrid.Pwa.Application.bootstrap({});
+  </script>
 {% endblock %}
 {% block additional_assets %}
   <script>
-    (function() {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/pwa/service-worker.js', { scope: '.' })
-          .then(reg => {
-            console.log('registration', reg);
-            Katrid.serviceWorker = reg;
-          })
-          .catch(e => {
-            console.log('Service worker registration error', e);
-          });
-      }
-    })();
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('{% block service_worker %}/pwa/service-worker.js{% endblock %}');
+      })
+    }
   </script>
 {% endblock %}

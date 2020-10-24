@@ -11,6 +11,7 @@ self.addEventListener('install', function (event) {
         "/static/admin/assets/js/toastr/toastr.min.css",
         "/static/admin/assets/css/bootstrap.min.css",
         "/static/admin/assets/css/fontawesome.css",
+        "/static/admin/assets/webfonts/fa-solid-900.woff2",
         "/static/admin/api/theme/style.css",
         "/static/admin/assets/js/datepicker/bootstrap-datetimepicker.min.css",
         "/static/admin/assets/js/select2/select2.css",
@@ -18,6 +19,7 @@ self.addEventListener('install', function (event) {
         "/static/admin/assets/css/animate.css",
         "/static/admin/assets/js/sweetalert2.css",
         "/static/admin/katrid/style.css",
+        "/web/js/templates/",
 
         "/static/admin/assets/js/jquery.min.js",
         "/static/admin/assets/js/jquery-ui.min.js",

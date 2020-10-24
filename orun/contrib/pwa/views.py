@@ -10,12 +10,12 @@ def index(request):
     return orun.contrib.admin.views.client.index(request, template_name='pwa/index.jinja2', pwa=True)
 
 
-def service_worker_js(request):
-    return render(request, 'pwa/service-worker.js', content_type='application/javascript')
+def service_worker_js(request, template_name='pwa/service-worker.js'):
+    return render(request, template_name, content_type='application/javascript')
 
 
-def manifest_json(request):
-    return render(request, 'pwa/manifest.json', content_type='text/json')
+def manifest_json(request, template_name='pwa/manifest.json'):
+    return render(request, template_name, content_type='text/json')
 
 
 def sync(request):
