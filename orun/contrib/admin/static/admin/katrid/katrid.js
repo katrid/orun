@@ -9428,11 +9428,10 @@ var Katrid;
                                 name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
                             }
                         };
-                        console.log('data', data);
                         const f = () => {
                             let svc;
                             if (scope.model)
-                                svc = scope.model.getFieldChoices(field.name, query.term, data.kwargs);
+                                svc = scope.model.getFieldChoices({ field: field.name, term: query.term, kwargs: data.kwargs });
                             else
                                 svc = new Katrid.Services.Model(field.model).searchName(data);
                             svc.then(res => {
