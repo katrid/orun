@@ -1091,8 +1091,8 @@ var Katrid;
         Core.WebApplication = WebApplication;
         angular.module('basicApp', [])
             .controller('LoginController', ['$scope', function ($scope) {
-                $scope.login = async (username, password, multidb, db) => {
-                    let next = new URLSearchParams(window.location.search).get('next');
+                $scope.login = async (username, password, multidb, db, next) => {
+                    next = next || new URLSearchParams(window.location.search).get('next');
                     let res;
                     if (multidb)
                         res = await Katrid.Services.post('/web/db/', { db });

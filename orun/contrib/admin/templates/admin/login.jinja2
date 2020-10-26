@@ -58,7 +58,7 @@ body {
 {% block content %}
   <div style="width: 100%; max-width: 330px; padding: 15px;margin: 0 auto;" ng-app="basicApp">
     <img class="mb-4" src="/static/admin/assets/img/logo.png" alt="" style="max-height: 80px;">
-    <form class="form-signin" ng-submit="login(username, password{% if config.MULTI_DB == 'COOKIE' %}, true, database{% endif %})" ng-controller="LoginController">
+    <form class="form-signin" ng-submit="login(username, password{% if config.MULTI_DB == 'COOKIE' %}, true, database{% else %}, false, null{% endif %}, '{{ request.GET["next"] }}')" ng-controller="LoginController">
       {% raw %}
       <div class="alert alert-{{ message.type }}" ng-cloak ng-repeat="message in messages">{{ message.message }}</div>
       {% endraw %}

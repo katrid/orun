@@ -39,7 +39,8 @@ def report(request, path):
     return serve(request, path, document_root=settings.REPORT_PATH)
 
 
-def login(request: HttpRequest):
+def login(request: HttpRequest, **kwargs):
+    print(kwargs)
     if request.method == 'POST':
         if request.is_json():
             data = request.json
@@ -47,6 +48,7 @@ def login(request: HttpRequest):
             data = request.POST
         username = data['username']
         password = data['password']
+        next_url = data.get('next', request.GET.get('next', kwargs.get('next', '/web/')))
         # check if db exists
         u = auth.authenticate(username=username, password=password)
         if u and u.is_authenticated:
@@ -55,10 +57,10 @@ def login(request: HttpRequest):
                 return JsonResponse({
                     'ok': True,
                     'user_id': u.id,
-                    'redirect': request.GET.get('next', '/web/'),
+                    'redirect': next_url,
                     'message': gettext('Login successful, please wait...'),
                 })
-            return HttpResponseRedirect(request.GET.get('next', '/web/'))
+            return HttpResponseRedirect(next_url)
         if request.is_json():
             return JsonResponse({
                 'error': True,
