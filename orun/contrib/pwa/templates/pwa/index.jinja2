@@ -5,6 +5,7 @@
 {% endblock %}
 {% block page_loaded %}
   {{ super() }}
+  <script src="/static/pwa/assets/dexie.min.js"></script>
   <script>
     let app = Katrid.Pwa.Application.bootstrap({});
   </script>
