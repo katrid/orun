@@ -39,6 +39,7 @@ self.addEventListener('install', function (event) {
         "/static/admin/assets/js/underscore-min.js",
         "/static/admin/assets/js/c3/d3.v3.min.js",
         "/static/admin/assets/js/c3/c3.min.js",
+        "/static/pwa/assets/dexie.min.js",
 
         "/static/admin/katrid/katrid.js",
 
