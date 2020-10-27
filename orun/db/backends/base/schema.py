@@ -9,6 +9,7 @@ from orun.db.models.fields import Field, DecimalField
 from orun.db.backends.base.introspection import FieldInfo
 from orun.db.models import Index
 from orun.db.transaction import TransactionManagementError, atomic
+from orun.apps import apps
 from orun.utils import timezone
 
 logger = logging.getLogger('orun.db.backends.schema')
@@ -1318,7 +1319,6 @@ class BaseDatabaseSchemaEditor:
             return
 
         def create_field(field: Field, field_info: FieldInfo):
-            from orun.apps import apps
             # Check if field already exists on database
             if field_info:
                 # create a temporary field from FieldInfo

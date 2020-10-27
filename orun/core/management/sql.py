@@ -37,14 +37,12 @@ def emit_pre_migrate_signal(verbosity, interactive, db, **kwargs):
 
 def emit_post_migrate_signal(verbosity, interactive, db, **kwargs):
     # Emit the post_migrate signal for every model
-    if 'addon' in kwargs:
-        addon = kwargs['addon']
-        if verbosity >= 2:
-            print("Running post-migrate handlers for Addon %s" % addon.schema)
-        models.signals.post_migrate.send(
-            sender=addon,
-            verbosity=verbosity,
-            interactive=interactive,
-            using=db,
-            **kwargs
-        )
+    if verbosity >= 2:
+        print("Running post-migrate handlers for addons")
+    models.signals.post_migrate.send(
+        sender=apps,
+        verbosity=verbosity,
+        interactive=interactive,
+        using=db,
+        **kwargs
+    )

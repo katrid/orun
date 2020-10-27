@@ -168,11 +168,10 @@ class Command(BaseCommand):
                     editor.create_model(model)
                 post_model_list[app_name] = model_list
 
-            for app_name, model_list in post_model_list.items():
-                # emit post migrate signal
-                emit_post_migrate_signal(
-                    self.verbosity, self.interactive, connection.alias, addon=apps.addons[app_name], models=model_list
-                )
+            # emit post migrate signal
+            emit_post_migrate_signal(
+                self.verbosity, self.interactive, connection.alias, app_models=post_model_list.items()
+            )
 
             # Deferred SQL is executed when exiting the editor's context.
             if self.verbosity >= 1:
