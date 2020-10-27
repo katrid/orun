@@ -1327,6 +1327,7 @@ class BaseDatabaseSchemaEditor:
                 old_field.name = field.name
                 old_field.db_column = field.column
                 old_field.model = content_type
+                old_field.model_name = field.model._meta.name
                 data_type = self.connection.introspection.data_types_reverse[field_info.type_code]
                 old_field.data_type = data_type
                 if data_type in ('str', 'bytes'):
