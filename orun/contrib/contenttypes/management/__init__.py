@@ -22,6 +22,7 @@ def create_contenttypes(app_models, verbosity=2, interactive=True, using=DEFAULT
         Field = apps['content.field']
     except LookupError:
         return
+    created_models = []
     for schema, models in app_models:
         app_config = apps.app_configs[schema]
 
@@ -39,10 +40,10 @@ def create_contenttypes(app_models, verbosity=2, interactive=True, using=DEFAULT
                 verbose_name_plural=model._meta.verbose_name_plural,
                 object_name=model._meta.object_name,
             )
+            created_models.append(ct)
             if verbosity >= 2:
                 print("Adding content type '%s | %s'" % (app_config.schema, model._meta.name))
-    for schema, models in app_models:
-        for model in models:
-            ct = get_contenttypes_and_models(model, using, ContentType)
-            for f in model._meta.fields:
-                ct.create_field(f)
+    for model in created_models:
+        ct = get_contenttypes_and_models(model, using, ContentType)
+        for f in model._meta.fields:
+            ct.create_field(f)
