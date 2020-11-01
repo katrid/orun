@@ -7043,10 +7043,18 @@ var Katrid;
                 get db() {
                     if (!this._db) {
                         this._db = new Dexie(this.dbName);
-                        this._db.version(1)
-                            .stores({ records: '++$id, service, status, id', });
+                        this._db.version(2)
+                            .stores({ records: '++$id, service, status, id', variables: 'name, value' });
                     }
                     return this._db;
+                }
+                getVar(varName) {
+                    return this.db.variables.get(varName);
+                }
+                setVar(varName, varValue) {
+                    this.db.transaction('rw', this.db.variables, () => {
+                        this.db.variables.where('name').equal(varName).modify({ value: varValue });
+                    });
                 }
                 async save(service, data) {
                     let r;
@@ -7238,6 +7246,29 @@ var Katrid;
                             lst = [];
                         $scope[member] = lst;
                         $scope.$apply();
+                    };
+                    $scope.dbGetVar = async (varName, defaultValue) => {
+                        let value = $scope[varName] = await connection.getVar(varName);
+                        value = value?.value;
+                        console.log('get db var', varName, defaultValue);
+                        if (!value && defaultValue) {
+                            $scope[varName] = defaultValue;
+                            $scope.dbSetVar(varName, defaultValue);
+                        }
+                        $scope.$apply();
+                    };
+                    $scope.getQueryParameter = (paramName) => {
+                        let qs = window.location.href.split('?', 2)[1];
+                        if (qs) {
+                            let params = new URLSearchParams(qs);
+                            console.log(params);
+                            if (params.has(paramName))
+                                return params.get(paramName);
+                        }
+                    };
+                    $scope.dbSetVar = async (varName, varValue) => {
+                        $scope[varName] = varValue;
+                        connection.setVar(varName, varValue);
                     };
                     $scope.createNew = () => {
                         $scope.record = {};
