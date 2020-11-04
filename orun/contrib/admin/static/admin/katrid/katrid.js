@@ -2188,6 +2188,7 @@ var Katrid;
                     this.emptyText = '--';
                     this.cols = 6;
                     this.readonly = false;
+                    this.defaultSearchLookup = '__icontains';
                     if (this.info.choices)
                         this.template = {
                             list: 'view.list.selection-field.jinja2',
@@ -2657,6 +2658,7 @@ var Katrid;
                 }
                 create() {
                     super.create();
+                    this.defaultSearchLookup = '';
                 }
                 getParamTemplate() {
                     return 'view.param.ForeignKey';
@@ -4762,7 +4764,8 @@ var Katrid;
                         return value.value;
                     }
                     else {
-                        r[name + '__icontains'] = value;
+                        r[name + this.field.defaultSearchLookup] = value;
+                        console.log('get param value', this.field);
                     }
                     return r;
                 }
@@ -7952,7 +7955,7 @@ var Katrid;
                     this.input = input;
                     this.options = options;
                     this.template = '<a class="dropdown-item" href="#">${item}</a>';
-                    this.waitTemplate = () => '<div class="dropdown-wait text-muted"><i class="fas fa-spinner fa-spin"></i> Wait...</div>';
+                    this.waitTemplate = () => `<div class="dropdown-wait text-muted"><i class="fas fa-spinner fa-spin"></i> ${_.gettext('Loading...')}}</div>`;
                     this._loading = false;
                     this.delay = 500;
                     this._elements = [];
