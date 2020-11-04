@@ -2050,10 +2050,11 @@ class Model(metaclass=ModelBase):
                         if isinstance(f, ForeignKey):
                             name_fields = list(chain(*(_resolve_fk_search(fk) for fk in f.related_model._meta.get_name_fields())))
                             if len(name_fields) == 1:
-                                q = Q(**{f'{f.name}__{name_fields[0]}__icontains': v})
+                                _args.append(Q(**{f'{f.name}__{name_fields[0]}__icontains': v}))
+                            elif name_fields:
+                                _args.append(reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f.name}__{fk}__icontains': v}) for fk in name_fields]))
                             else:
-                                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f.name}__{fk}__icontains': v}) for fk in name_fields])
-                            _args.append(q)
+                                kwargs[k] = v
                         else:
                             _kwargs[k] = v
                 qs = qs.filter(*_args, **_kwargs)
