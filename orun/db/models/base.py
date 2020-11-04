@@ -2042,8 +2042,21 @@ class Model(metaclass=ModelBase):
 
         if where:
             if isinstance(where, list):
+                _args = []
+                _kwargs = {}
                 for w in where:
-                    qs = qs.filter(**w)
+                    for k, v in w.items():
+                        f = self._meta.fields[k]
+                        if isinstance(f, ForeignKey):
+                            name_fields = list(chain(*(_resolve_fk_search(fk) for fk in f.related_model._meta.get_name_fields())))
+                            if len(name_fields) == 1:
+                                q = Q(**{f'{f.name}__{name_fields[0]}__icontains': v})
+                            else:
+                                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f.name}__{fk}__icontains': v}) for fk in name_fields])
+                            _args.append(q)
+                        else:
+                            _kwargs[k] = v
+                qs = qs.filter(*_args, **_kwargs)
             elif isinstance(where, dict):
                 qs = qs.filter(**where)
             elif where is not None:
@@ -2061,11 +2074,10 @@ class Model(metaclass=ModelBase):
         **kwargs
     ):
         where = kwargs.get('params')
-        join = []
         q = None
         if name:
             if name_fields is None:
-                name_fields = chain(*(_resolve_fk_search(f, join) for f in self._meta.get_name_fields()))
+                name_fields = chain(*(_resolve_fk_search(f) for f in self._meta.get_name_fields()))
             else:
                 name_fields = [f.name for f in name_fields]
             if exact:
@@ -2331,10 +2343,9 @@ def make_foreign_order_accessors(model, related_model):
 ########
 
 
-def _resolve_fk_search(field: Field, join_list):
+def _resolve_fk_search(field: Field):
     if isinstance(field, ForeignKey):
         rel_model = apps[field.remote_field.model]
-        join_list.append(rel_model)
         name_fields = field.name_fields
         if not name_fields:
             name_fields = [f.name for f in rel_model._meta.get_name_fields()]
