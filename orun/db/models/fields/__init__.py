@@ -2323,7 +2323,7 @@ class TimeField(DateTimeCheckMixin, Field):
         return '' if val is None else val.isoformat()
 
     def value_to_json(self, value):
-        if isinstance(value, datetime.time):
+        if isinstance(value, (datetime.datetime, datetime.time)):
             return str(value.strftime('%H:%M:%S'))
         return value
 
