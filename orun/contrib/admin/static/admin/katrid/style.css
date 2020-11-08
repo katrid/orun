@@ -13158,6 +13158,17 @@ hr {
   height: 100%;
 }
 
+dashboard-view {
+  padding: 30px 30px;
+  display: grid;
+  grid-row-gap: 16px;
+  grid-column-gap: 16px;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(2, 100px);
+  background-color: #ffffff;
+  min-height: 100%;
+}
+
 pwa-form {
   border-radius: 8px;
   padding-bottom: 20px;
