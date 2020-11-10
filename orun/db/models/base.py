@@ -2046,6 +2046,9 @@ class Model(metaclass=ModelBase):
                 _kwargs = {}
                 for w in where:
                     for k, v in w.items():
+                        if '__' in k:
+                            _kwargs[k] = v
+                            continue
                         f = self._meta.fields[k]
                         if isinstance(f, ForeignKey):
                             name_fields = list(chain(*(_resolve_fk_search(fk) for fk in f.related_model._meta.get_name_fields())))
