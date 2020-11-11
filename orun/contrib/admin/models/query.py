@@ -40,7 +40,7 @@ class Query(models.Model):
                 for lookup in cond[1:]:
                     # name = 'param_%s' % (len(values) + 1)
                     if lookup == 'icontains':
-                        s = f'{field} like ?'
+                        s = f'"{field}" like ?'
                         v = f'%{v}%'
                     else:
                         s = f'"{field}" = ?'
