@@ -867,6 +867,39 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    Katrid.isMobile = (() => {
+        var check = false;
+        (function (a) {
+            if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a) || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0, 4)))
+                check = true;
+        })(navigator.userAgent || navigator.vendor);
+        return check;
+    })();
+    Katrid.settings = {
+        additionalModules: [],
+        server: '',
+        ui: {
+            isMobile: Katrid.isMobile,
+            dateInputMask: true,
+            defaultView: 'list',
+            goToDefaultViewAfterCancelInsert: true,
+            goToDefaultViewAfterCancelEdit: false,
+            horizontalForms: true
+        },
+        services: {
+            choicesPageLimit: 10
+        },
+        speech: {
+            enabled: false
+        }
+    };
+    if (Katrid.isMobile)
+        document.body.classList.add('mobile');
+    else
+        document.body.classList.add('desktop');
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
     var BI;
     (function (BI) {
         class Component {
@@ -1000,6 +1033,10 @@ var Katrid;
     var BI;
     (function (BI) {
         class Chart extends BI.Widget {
+            load(data) {
+                super.load(data);
+                this.code = data.code;
+            }
             render(container) {
                 if (this.chart) {
                     Plotly.purge(this.chart);
@@ -1007,12 +1044,18 @@ var Katrid;
                     this.chart = null;
                 }
                 super.render(container);
-                return Plotly.newPlot(container, this.getTraces(), {
+                let config = this.getConfig();
+                console.log(config);
+                return Plotly.newPlot(container, config.traces, config.layout || {
                     height: $(this.container).height(), width: $(this.container).width(),
                     title: this.title,
                 }, {
                     responsive: true
                 });
+            }
+            getConfig() {
+                if (this.code)
+                    return getTraces(eval(this.code), this.dashboard);
             }
             setDataView(dataView) {
                 if (this.loaded)
@@ -1037,18 +1080,21 @@ var Katrid;
                 res.labels = this.labels;
                 return res;
             }
-            getTraces() {
+            getConfig() {
+                if (this.code)
+                    return super.getConfig();
                 let values, labels;
                 if (this.datasource) {
                     values = this.datasource.values(this.values);
                     labels = this.datasource.values(this.labels);
                 }
-                console.log(values, labels, this.type);
-                return [{
-                        values: values,
-                        labels: labels,
-                        type: this.type,
-                    }];
+                return {
+                    traces: [{
+                            values: values,
+                            labels: labels,
+                            type: this.type,
+                        }]
+                };
             }
         };
         PieChart.type = 'pie';
@@ -1056,6 +1102,80 @@ var Katrid;
             BI.registerWidget('pie')
         ], PieChart);
         BI.PieChart = PieChart;
+        let BarChart = class BarChart extends Chart {
+            load(obj) {
+                super.load(obj);
+                this.x = obj.x;
+                this.y = obj.y;
+            }
+            dump() {
+                let res = super.dump();
+                res.x = this.x;
+                res.y = this.y;
+                return res;
+            }
+            getConfig() {
+                if (this.code)
+                    return super.getConfig();
+                let y, x;
+                if (this.datasource) {
+                    y = this.datasource.values(this.y);
+                    x = this.datasource.values(this.x);
+                }
+                return {
+                    traces: [{
+                            y,
+                            x,
+                            type: this.type,
+                        }]
+                };
+            }
+        };
+        BarChart.type = 'bar';
+        BarChart = __decorate([
+            BI.registerWidget('bar')
+        ], BarChart);
+        let HBarChart = class HBarChart extends BarChart {
+            getConfig() {
+                let ret = super.getConfig();
+                ret.traces[0].orientation = 'h';
+                return ret;
+            }
+        };
+        HBarChart.type = 'hbar';
+        HBarChart = __decorate([
+            BI.registerWidget('hbar')
+        ], HBarChart);
+        function getTraces(config, dashboard) {
+            let kwargs = ['datasource', 'x', 'y', 'values', 'labels'];
+            if (config.traces instanceof Function) {
+                let traces = [];
+                for (let t of config.traces()) {
+                    let trace = {};
+                    if (typeof t.datasource === 'string') {
+                        console.log(t.datasource);
+                        let ds = dashboard.findComponent(t.datasource);
+                        if (ds.data) {
+                            if (t.x)
+                                trace.x = ds.values(t.x);
+                            if (t.y)
+                                trace.y = ds.values(t.y);
+                            if (t.values)
+                                trace.values = ds.values(t.values);
+                            if (t.labels)
+                                trace.labels = ds.values(t.labels);
+                        }
+                        for (let k of Object.keys(t)) {
+                            if (!kwargs.includes(k))
+                                trace[k] = t[k];
+                        }
+                    }
+                    traces.push(trace);
+                }
+                config.traces = traces;
+            }
+            return config;
+        }
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -1239,72 +1359,13 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
-    var BI;
-    (function (BI) {
-        let Text = class Text extends BI.Widget {
-            load(data) {
-                super.load(data);
-                this.code = data.code;
-            }
-            setDataView(dataView) {
-            }
-            render(container) {
-                super.render(container);
-                console.log('code', this.code);
-                container.innerHTML = this.code;
-                new Vue({
-                    el: this.container,
-                    data: {
-                        dataView: this.datasource?.dataView,
-                    }
-                });
-            }
-        };
-        Text.type = 'text';
-        Text = __decorate([
-            BI.registerWidget('text')
-        ], Text);
-        BI.Text = Text;
-    })(BI = Katrid.BI || (Katrid.BI = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    class WebComponent extends HTMLElement {
-        constructor() {
-            super(...arguments);
-            this._created = false;
-        }
-        connectedCallback() {
-            if (!this._created) {
-                this.create();
-                this._created = true;
-            }
-        }
-        create() {
-            this.actionView = this.closest('action-view');
-        }
-        disconnectedCallback() {
-            this.destroy();
-        }
-        destroy() {
-        }
-    }
-    Katrid.WebComponent = WebComponent;
-    function assignElement(target, source) {
-        for (let attr of source.attributes) {
-            target.setAttribute(attr.name, attr.value);
-        }
-    }
-    Katrid.assignElement = assignElement;
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
     var Core;
     (function (Core) {
         class Application {
             constructor(config) {
                 this.config = config;
-                this.plugins = [
+                this.plugins = [];
+                this.ngModules = [
                     'ui.katrid',
                     'ngSanitize',
                 ];
@@ -1365,12 +1426,12 @@ var Katrid;
                 });
                 this.createApp();
                 this.loadTemplates();
-                Katrid.Core.plugins.init(this);
+                Katrid.Core.plugins.start(this);
             }
             async loadPage(hash, reset = true) {
             }
             createApp() {
-                this.ngApp = angular.module('katridApp', this.plugins)
+                this.ngApp = angular.module('katridApp', this.ngModules)
                     .config(['$locationProvider', '$interpolateProvider', function ($locationProvider, $interpolateProvider) {
                         $locationProvider.hashPrefix('');
                         $interpolateProvider.startSymbol('${');
@@ -1493,6 +1554,10 @@ var Katrid;
                         actionItem = child;
                     actionItem.trigger('click');
                 }
+                for (let plugin of this.plugins) {
+                    if (plugin.hashChange(hash))
+                        break;
+                }
             }
             $search(params) {
                 this.$location.search(params);
@@ -1539,36 +1604,180 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
-    Katrid.isMobile = (() => {
-        var check = false;
-        (function (a) {
-            if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a) || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0, 4)))
-                check = true;
-        })(navigator.userAgent || navigator.vendor);
-        return check;
-    })();
-    Katrid.settings = {
-        additionalModules: [],
-        server: '',
-        ui: {
-            isMobile: Katrid.isMobile,
-            dateInputMask: true,
-            defaultView: 'list',
-            goToDefaultViewAfterCancelInsert: true,
-            goToDefaultViewAfterCancelEdit: false,
-            horizontalForms: true
-        },
-        services: {
-            choicesPageLimit: 10
-        },
-        speech: {
-            enabled: false
+    var Core;
+    (function (Core) {
+        class Plugin {
+            constructor(app) {
+                this.app = app;
+            }
+            hashChange(url) {
+                return false;
+            }
         }
-    };
-    if (Katrid.isMobile)
-        document.body.classList.add('mobile');
-    else
-        document.body.classList.add('desktop');
+        Core.Plugin = Plugin;
+        class Plugins extends Array {
+            start(app) {
+                for (let plugin of this)
+                    app.plugins.push(new plugin(app));
+            }
+        }
+        Core.plugins = new Plugins();
+        function registerPlugin(cls) {
+            Core.plugins.push(cls);
+        }
+        Core.registerPlugin = registerPlugin;
+    })(Core = Katrid.Core || (Katrid.Core = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var BI;
+    (function (BI) {
+        let QueryEditorPlugin = class QueryEditorPlugin extends Katrid.Core.Plugin {
+            hashChange(url) {
+                if (url.startsWith('#/query-viewer/')) {
+                    this.execute();
+                    return true;
+                }
+            }
+            async execute() {
+                let queryViewer = document.createElement('query-viewer');
+                this.app.$element.html(queryViewer);
+            }
+        };
+        QueryEditorPlugin = __decorate([
+            Katrid.Core.registerPlugin
+        ], QueryEditorPlugin);
+        class QueryManager {
+            constructor(app) {
+                this.app = app;
+                this.app = app;
+                this.$scope = app.$scope.$new();
+                this.$scope.queryChange = (query) => this.queryChange(query);
+                this.$scope.search = {};
+                let me = this;
+                this.action = this.$scope.action = {
+                    context: {},
+                    views: {},
+                    async saveSearch(search) {
+                        let svc = new Katrid.Services.Model('ui.filter');
+                        let data = {};
+                        Object.assign(data, search);
+                        data.query = me.$scope.query.id;
+                        if (search.name === null) {
+                            search.name = prompt('Query name', 'current query namne');
+                            search.is_default = false;
+                            search.is_shared = true;
+                        }
+                        if (search.name)
+                            await svc.write([data]);
+                    },
+                    setSearchParams(params) {
+                        me.$scope.search.params = params;
+                        me.refresh(me.query);
+                    },
+                    switchView(viewType) {
+                        console.log('set view type', viewType);
+                    },
+                    orderBy(field) {
+                        if (me.$scope.ordering === field)
+                            me.$scope.reverse = !me.$scope.reverse;
+                        else {
+                            me.$scope.ordering = field;
+                            me.$scope.reverse = false;
+                        }
+                    }
+                };
+            }
+            getFilter(field) {
+                if (field.type === 'DateField')
+                    return "|date:'shortDate'";
+                else if (field.type === 'DateTimeField')
+                    return "|date:'short'";
+                else if (field.type === 'IntegerField')
+                    return "|number:0";
+                return "";
+            }
+            getSearchView(query) {
+                let s;
+                if (query.params)
+                    s = query.params;
+                else {
+                    s = `<search>`;
+                    for (let f of query.fields)
+                        s += `<field name="${f.name}"/>`;
+                    s += '</search>';
+                }
+                let fields = {};
+                for (let f of query.fields)
+                    fields[f.name] = Katrid.Data.Fields.Field.fromInfo(f);
+                this.fields = fields;
+                return { content: s, fields };
+            }
+            async queryChange(query) {
+                this.$scope.search = {
+                    viewMoreButtons: true,
+                };
+                this.query = query;
+                let res = await this.refresh(query);
+                query.fields = res.fields;
+                this.action.search = this.getSearchView(query);
+                this.action.fieldList = Object.values(this.fields);
+                this.$scope.action.views.search = this.$scope.action.search;
+                this.renderSearch();
+                this.renderTable(res);
+                this.$scope.$apply();
+            }
+            async refresh(query) {
+                let res = await Katrid.Services.Query.read({ id: query.id, details: true, params: this.$scope.search.params });
+                for (let f of res.fields)
+                    f.filter = this.getFilter(f);
+                let _toObject = (fields, values) => {
+                    let r = {}, i = 0;
+                    for (let f of fields) {
+                        r[f.name] = values[i];
+                        i++;
+                    }
+                    return r;
+                };
+                this.$scope.records = res.data.map(row => _toObject(res.fields, row));
+                this.$scope.$apply();
+                return res;
+            }
+            renderSearch() {
+                let el = this.app.getTemplate('query.manager.search.jinja2');
+                el = Katrid.Core.$compile(el)(this.$scope);
+                this.$element.find('#query-search-view').html(el);
+            }
+            async render() {
+                let templ = document.createElement('query-editor');
+                templ = Katrid.Core.$compile(templ)(this.$scope);
+                this.$element = templ;
+                let queries = await Katrid.Services.Query.all();
+                this.$scope.queries = queries.data;
+                console.log(templ);
+                this.app.$element.html(templ);
+                this.$scope.$apply();
+            }
+            renderTable(data) {
+                let templ = this.app.getTemplate('query.manager.table.jinja2', {
+                    self: this, query: this.$scope.query, records: this.records, fields: Object.values(this.fields),
+                });
+                templ = Katrid.Core.$compile(templ)(this.$scope);
+                initColumn(templ);
+                this.$element.find('#query-manager-result').html(templ);
+            }
+        }
+        function initColumn(table) {
+        }
+        function reorder(index1, index2) {
+            $('table tr').each(function () {
+                var tr = $(this);
+                var td1 = tr.find(`td:eq(${index1})`);
+                var td2 = tr.find(`td:eq(${index2})`);
+                td1.detach().insertAfter(td2);
+            });
+        }
+    })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -1589,16 +1798,6 @@ var Katrid;
             }
         }
         Core.LocalSettings = LocalSettings;
-        Core.plugins = {
-            callbacks: [],
-            init(app) {
-                for (let cb of this.callbacks)
-                    cb(app);
-            },
-            register(callback) {
-                this.callbacks.push(callback);
-            }
-        };
         function setContent(content, scope) {
         }
         Core.setContent = setContent;
@@ -1624,6 +1823,298 @@ var Katrid;
         Katrid.customElementsRegistry[name] = constructor;
     }
     Katrid.define = define;
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        class MenuItem {
+            constructor(menu, text = null) {
+                this.menu = menu;
+                this.text = text;
+                if (text === '-') {
+                    this.el = document.createElement('div');
+                    this.el.classList.add('dropdown-divider');
+                }
+                else {
+                    this.el = document.createElement('a');
+                    this.el.classList.add('dropdown-item');
+                }
+                this.el.innerHTML = text;
+            }
+            addEventListener(type, listener, options) {
+                return this.el.addEventListener(type, listener, options);
+            }
+            get index() {
+                return this.menu.items.indexOf(this);
+            }
+        }
+        Forms.MenuItem = MenuItem;
+        class MenuItemSeparator extends MenuItem {
+            constructor(menu) {
+                super(menu, '-');
+            }
+        }
+        Forms.MenuItemSeparator = MenuItemSeparator;
+        class ContextMenu {
+            constructor(container = null) {
+                this.container = container;
+                this.items = [];
+                if (!container)
+                    this.container = document.body;
+            }
+            add(item, clickCallback) {
+                let menuItem = this.insert(-1, item);
+                if (menuItem.text !== '-')
+                    menuItem.addEventListener('mouseup', event => {
+                        this.close();
+                        if (clickCallback)
+                            clickCallback(event, menuItem);
+                    });
+                menuItem.addEventListener('mousedown', event => event.stopPropagation());
+                return menuItem;
+            }
+            insert(index, item) {
+                let menuItem;
+                if (_.isString(item))
+                    menuItem = new MenuItem(this, item);
+                else if (item instanceof MenuItem)
+                    menuItem = item;
+                if (index === -1)
+                    this.items.push(menuItem);
+                else
+                    this.items.splice(index, 0, menuItem);
+                return menuItem;
+            }
+            addSeparator() {
+                this.items.push(new MenuItemSeparator(this));
+            }
+            destroyElement() {
+                if (this.el)
+                    this.el.remove();
+            }
+            createElement() {
+                this.el = document.createElement('div');
+                this.el.classList.add('dropdown-menu', 'context-menu');
+                for (let item of this.items)
+                    this.el.append(item.el);
+            }
+            show(x, y, target = null) {
+                this.destroyElement();
+                this.createElement();
+                this.el.style.left = x + 'px';
+                this.el.style.top = y + 'px';
+                this.target = target;
+                this._visible = true;
+                this._eventHook = event => {
+                    if (event.target.parentElement !== this.el)
+                        this.close();
+                };
+                this._eventKeyDownHook = event => {
+                    if (event.keyCode === 27)
+                        this.close();
+                };
+                document.addEventListener('mousedown', this._eventHook);
+                document.addEventListener('wheel', this._eventHook);
+                document.addEventListener('keydown', this._eventKeyDownHook);
+                document.body.append(this.el);
+                $(this.el).show();
+            }
+            close() {
+                document.removeEventListener('mousedown', this._eventHook);
+                document.removeEventListener('wheel', this._eventHook);
+                document.removeEventListener('keydown', this._eventKeyDownHook);
+                this.el.remove();
+                this._eventHook = null;
+            }
+            get visible() {
+                return this._visible;
+            }
+        }
+        Forms.ContextMenu = ContextMenu;
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var BI;
+    (function (BI) {
+        var ContextMenu = Katrid.Forms.ContextMenu;
+        class QueryView extends HTMLElement {
+            get queryId() {
+                return this._queryId;
+            }
+            set queryId(value) {
+                this._queryId = value;
+                if (value) {
+                    this.queryChange(value);
+                }
+            }
+            async queryChange(query) {
+                $(this).empty();
+                this.searchView = document.createElement('search-view');
+                this.searchView.addEventListener('searchUpdate', () => {
+                    this.refresh(query, this.searchView.getParams());
+                });
+                this.append(this.searchView);
+                this.container = document.createElement('div');
+                this.container.classList.add('table-responsive');
+                this.append(this.container);
+                let res = await this.refresh(query);
+            }
+            async refresh(query, params) {
+                $(this.container).empty();
+                let res = await Katrid.Services.Query.read({ id: query, details: true, params });
+                this.fields = res.fields;
+                this.searchView.fields = this.fields = Katrid.Data.Fields.fromArray(res.fields);
+                this.fieldList = Object.values(this.fields);
+                let _toObject = (fields, values) => {
+                    let r = {}, i = 0;
+                    for (let f of fields) {
+                        r[f.name] = values[i];
+                        i++;
+                    }
+                    return r;
+                };
+                let table = this.table = document.createElement('table');
+                table.classList.add('table');
+                let thead = table.createTHead();
+                let thr = thead.insertRow(0);
+                let tbody = table.createTBody();
+                for (let f of this.fieldList) {
+                    let th = document.createElement('th');
+                    th.innerText = f.caption;
+                    thr.append(th);
+                }
+                for (let row of res.data) {
+                    console.log('load table', row);
+                    let tr = document.createElement('tr');
+                    for (let col of row) {
+                        let td = document.createElement('td');
+                        td.innerText = col;
+                        tr.append(td);
+                    }
+                    tbody.append(tr);
+                }
+                this.container.append(table);
+                table.addEventListener('contextmenu', evt => this.contextMenu(evt));
+                this.searchView.render();
+                return res;
+            }
+            contextMenu(evt) {
+                evt.stopPropagation();
+                evt.preventDefault();
+                let menu = new ContextMenu();
+                menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => this.copyToClipboard());
+                menu.show(evt.pageX, evt.pageY);
+            }
+            copyToClipboard() {
+                navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
+            }
+        }
+        BI.QueryView = QueryView;
+        Katrid.define('query-view', QueryView);
+    })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var BI;
+    (function (BI) {
+        class QueryViewer extends HTMLElement {
+            connectedCallback() {
+                this.innerHTML = `<div class="col-12"><h5>Visualizador de Consultas</h5><div class="toolbar"><select id="select-query" class="form-control"></select></div><query-view></query-view></div>`;
+                this.load();
+            }
+            async load() {
+                let sel = this.querySelector('#select-query');
+                this.queryView = this.querySelector('query-view');
+                let res = await Katrid.Services.Query.all();
+                if (res.data) {
+                    let cats = {};
+                    res.data.forEach(obj => (cats[obj.category] = cats[obj.category] || []).push(obj));
+                    for (let [k, v] of Object.entries(cats)) {
+                        let g = document.createElement('optgroup');
+                        g.label = k;
+                        for (let q of v) {
+                            let opt = document.createElement('option');
+                            opt.innerText = q.name;
+                            opt.value = q.id;
+                            g.append(opt);
+                        }
+                        sel.append(g);
+                    }
+                }
+                sel.addEventListener('change', () => this.queryId = sel.value);
+            }
+            set queryId(value) {
+                this.queryView.queryId = value;
+            }
+            get queryId() {
+                return this.queryView.queryId;
+            }
+        }
+        BI.QueryViewer = QueryViewer;
+        Katrid.define('query-viewer', QueryViewer);
+    })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var BI;
+    (function (BI) {
+        let Text = class Text extends BI.Widget {
+            load(data) {
+                super.load(data);
+                this.code = data.code;
+            }
+            setDataView(dataView) {
+            }
+            render(container) {
+                super.render(container);
+                console.log('code', this.code);
+                container.innerHTML = this.code;
+                new Vue({
+                    el: this.container,
+                    data: {
+                        dataView: this.datasource?.dataView,
+                    }
+                });
+            }
+        };
+        Text.type = 'text';
+        Text = __decorate([
+            BI.registerWidget('text')
+        ], Text);
+        BI.Text = Text;
+    })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    class WebComponent extends HTMLElement {
+        constructor() {
+            super(...arguments);
+            this._created = false;
+        }
+        connectedCallback() {
+            if (!this._created) {
+                this.create();
+                this._created = true;
+            }
+        }
+        create() {
+            this.actionView = this.closest('action-view');
+        }
+        disconnectedCallback() {
+            this.destroy();
+        }
+        destroy() {
+        }
+    }
+    Katrid.WebComponent = WebComponent;
+    function assignElement(target, source) {
+        for (let attr of source.attributes) {
+            target.setAttribute(attr.name, attr.value);
+        }
+    }
+    Katrid.assignElement = assignElement;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -2888,6 +3379,14 @@ var Katrid;
                     }
                     return true;
                 }
+                getFilterConditions() {
+                    return [
+                        { name: '=', label: _.gettext('Is equal') },
+                        { name: '!=', label: _.gettext('Is different'), },
+                        { name: 'is not null', label: _.gettext('Is defined'), input: false },
+                        { name: 'is null', label: _.gettext('Is not defined'), input: false },
+                    ];
+                }
             }
             Fields.Field = Field;
             class StringField extends Field {
@@ -2895,6 +3394,13 @@ var Katrid;
                     if (!info.cols)
                         info.cols = 3;
                     super(info);
+                }
+                getFilterConditions() {
+                    let ret = [
+                        { name: '%', label: _.gettext('Contains'), },
+                        { name: '!%', label: _.gettext('Not contains') },
+                    ];
+                    return ret.concat(super.getFilterConditions());
                 }
             }
             class PasswordField extends StringField {
@@ -2930,6 +3436,14 @@ var Katrid;
                 }
                 getParamTemplate() {
                     return 'view.param.Boolean';
+                }
+                getFilterConditions() {
+                    return [
+                        { name: '=', label: _.gettext('Is equal'), options: { 'yes': _.gettext('yes'), 'no': _.gettext('yes') } },
+                        { name: '!=', label: _.gettext('Is different') },
+                        { name: 'is not null', label: _.gettext('Is defined'), input: false },
+                        { name: 'is null', label: _.gettext('Is not defined'), input: false },
+                    ];
                 }
             }
             Fields.BooleanField = BooleanField;
@@ -3227,6 +3741,11 @@ var Katrid;
             Fields.fromInfo = fromInfo;
             function fromArray(fields) {
                 let r = {};
+                if (fields instanceof Array) {
+                    let f = {};
+                    fields.forEach(fld => f[fld.name] = fld);
+                    fields = f;
+                }
                 Object.keys(fields).map((k) => r[k] = fromInfo(fields[k]));
                 return r;
             }
@@ -3448,116 +3967,6 @@ var Katrid;
         }
         Data.createRecord = createRecord;
     })(Data = Katrid.Data || (Katrid.Data = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Forms;
-    (function (Forms) {
-        class MenuItem {
-            constructor(menu, text = null) {
-                this.menu = menu;
-                this.text = text;
-                if (text === '-') {
-                    this.el = document.createElement('div');
-                    this.el.classList.add('dropdown-divider');
-                }
-                else {
-                    this.el = document.createElement('a');
-                    this.el.classList.add('dropdown-item');
-                }
-                this.el.innerHTML = text;
-            }
-            addEventListener(type, listener, options) {
-                return this.el.addEventListener(type, listener, options);
-            }
-            get index() {
-                return this.menu.items.indexOf(this);
-            }
-        }
-        Forms.MenuItem = MenuItem;
-        class MenuItemSeparator extends MenuItem {
-            constructor(menu) {
-                super(menu, '-');
-            }
-        }
-        Forms.MenuItemSeparator = MenuItemSeparator;
-        class ContextMenu {
-            constructor(container = null) {
-                this.container = container;
-                this.items = [];
-                if (!container)
-                    this.container = document.body;
-            }
-            add(item, clickCallback) {
-                let menuItem = this.insert(-1, item);
-                if (menuItem.text !== '-')
-                    menuItem.addEventListener('mouseup', event => {
-                        this.close();
-                        if (clickCallback)
-                            clickCallback(event, menuItem);
-                    });
-                menuItem.addEventListener('mousedown', event => event.stopPropagation());
-                return menuItem;
-            }
-            insert(index, item) {
-                let menuItem;
-                if (_.isString(item))
-                    menuItem = new MenuItem(this, item);
-                else if (item instanceof MenuItem)
-                    menuItem = item;
-                if (index === -1)
-                    this.items.push(menuItem);
-                else
-                    this.items.splice(index, 0, menuItem);
-                return menuItem;
-            }
-            addSeparator() {
-                this.items.push(new MenuItemSeparator(this));
-            }
-            destroyElement() {
-                if (this.el)
-                    this.el.remove();
-            }
-            createElement() {
-                this.el = document.createElement('div');
-                this.el.classList.add('dropdown-menu', 'context-menu');
-                for (let item of this.items)
-                    this.el.append(item.el);
-            }
-            show(x, y, target = null) {
-                this.destroyElement();
-                this.createElement();
-                this.el.style.left = x + 'px';
-                this.el.style.top = y + 'px';
-                this.target = target;
-                this._visible = true;
-                this._eventHook = event => {
-                    if (event.target.parentElement !== this.el)
-                        this.close();
-                };
-                this._eventKeyDownHook = event => {
-                    if (event.keyCode === 27)
-                        this.close();
-                };
-                document.addEventListener('mousedown', this._eventHook);
-                document.addEventListener('wheel', this._eventHook);
-                document.addEventListener('keydown', this._eventKeyDownHook);
-                document.body.append(this.el);
-                $(this.el).show();
-            }
-            close() {
-                document.removeEventListener('mousedown', this._eventHook);
-                document.removeEventListener('wheel', this._eventHook);
-                document.removeEventListener('keydown', this._eventKeyDownHook);
-                this.el.remove();
-                this._eventHook = null;
-            }
-            get visible() {
-                return this._visible;
-            }
-        }
-        Forms.ContextMenu = ContextMenu;
-    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -4660,7 +5069,7 @@ var Katrid;
                     });
                 }
                 copyClick() {
-                    navigator.clipboard.writeText(tableToText(this.table));
+                    navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
                 }
                 deleteRow() {
                     console.log('delete selected rorw');
@@ -4675,19 +5084,26 @@ var Katrid;
                 }
             }
             Views.ListViewElement = ListViewElement;
-            function tableToText(table) {
-                let output = [];
-                for (let tr of table.querySelectorAll('tr')) {
-                    let row = [];
-                    for (let td of tr.children)
-                        if (td.tagName === 'TD')
-                            row.push(td.innerText);
-                    output.push(row.join('\t'));
-                }
-                return output.join('\n');
-            }
             Katrid.define('list-view', ListViewElement);
             Views.registry['list'] = ListView;
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            class ViewInfo {
+                constructor(info) {
+                    this._info = info;
+                    this.fields = info.fields;
+                    this.content = info.content;
+                    this.toolbar = info.toolbar;
+                }
+            }
+            Views.ViewInfo = ViewInfo;
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -4802,555 +5218,828 @@ var Katrid;
     (function (Forms) {
         var Views;
         (function (Views) {
-            let conditionsLabels = {
-                '=': Katrid.i18n.gettext('Is equal'),
-                '!=': Katrid.i18n.gettext('Is different'),
-                '>': Katrid.i18n.gettext('Greater-than'),
-                '<': Katrid.i18n.gettext('Less-than'),
-                'like': Katrid.i18n.gettext('Contains'),
-                'range': Katrid.i18n.gettext('Between'),
-            };
-            let conditionSuffix = {
-                '=': '',
-                '!=': '__isnot',
-                'like': '__icontains',
-                'not like': '__not_icontains',
-                '>': '__gt',
-                '>=': '__gte',
-                '<': '__lt',
-                '<=': '__lte',
-                'in': '__in',
-                'not in': '__not_in',
-                'range': '__range',
-            };
-            class SearchQuery {
-                constructor(searchView) {
-                    this.searchView = searchView;
-                    this.items = [];
-                    this.groups = [];
-                }
-                add(item) {
-                    if (this.items.includes(item)) {
-                        item.facet.addValue(item);
-                        item.facet.refresh();
+            var Search;
+            (function (Search) {
+                Search.conditionsLabels = {
+                    '=': Katrid.i18n.gettext('Is equal'),
+                    '!=': Katrid.i18n.gettext('Is different'),
+                    '>': Katrid.i18n.gettext('Greater-than'),
+                    '<': Katrid.i18n.gettext('Less-than'),
+                    '%': Katrid.i18n.gettext('Contains'),
+                    '!%': Katrid.i18n.gettext('Not contains'),
+                    'range': Katrid.i18n.gettext('Between'),
+                };
+                Search.conditionSuffix = {
+                    '=': '',
+                    '!=': '__isnot',
+                    '%': '__icontains',
+                    '!%': '__not_icontains',
+                    '>': '__gt',
+                    '>=': '__gte',
+                    '<': '__lt',
+                    '<=': '__lte',
+                    'in': '__in',
+                    'not in': '__not_in',
+                    'range': '__range',
+                };
+                class SearchItem {
+                    constructor(view, name, el) {
+                        this.view = view;
+                        this.name = name;
+                        this.el = el;
                     }
-                    else {
-                        this.items.push(item);
-                        this.searchView.renderFacets();
-                    }
-                    if (item instanceof SearchGroup)
-                        this.groups.push(item);
-                    this.searchView.change();
-                }
-                loadItem(item) {
-                    this.items.push(item);
-                    if (item instanceof SearchGroup)
-                        this.groups.push(item);
-                }
-                remove(item) {
-                    this.items.splice(this.items.indexOf(item), 1);
-                    if (item instanceof SearchGroup) {
-                        this.groups.splice(this.groups.indexOf(item), 1);
-                    }
-                    this.searchView.change();
-                }
-                getParams() {
-                    let r = [];
-                    for (let i of this.items)
-                        r = r.concat(i.getParamValues());
-                    return r;
-                }
-            }
-            class FacetView {
-                constructor(item) {
-                    this.item = item;
-                    this.values = [];
-                }
-                get separator() {
-                    return ` <span class="facet-values-separator">${Katrid.i18n.gettext('or')}</span> `;
-                }
-                init(item, values) {
-                    this.item = item;
-                    if (values)
-                        this.values = values;
-                    else
-                        this.values = [{
-                                searchString: this.item.getDisplayValue(), value: this.item.value
-                            }];
-                }
-                addValue(value) {
-                    return this.values.push(value);
-                }
-                get caption() {
-                    return this.item.caption;
-                }
-                clear() {
-                    this.values = [];
-                }
-                get templateValue() {
-                    console.log(this.values);
-                    return (Array.from(this.values).map((s) => s instanceof SearchObject ? s.display : s)).join(this.separator);
-                }
-                template() {
-                    return;
-                }
-                link(searchView) {
-                    const html = $(this.template());
-                    this.item.facet = this;
-                    this.element = html;
-                    const rm = html.find('.facet-remove');
-                    rm.click((evt) => searchView.onRemoveItem(evt, this.item));
-                    return html;
-                }
-                render(el) {
-                }
-                refresh() {
-                    return this.element.find('.facet-value').html(this.templateValue);
-                }
-                load(searchView) {
-                    searchView.query.loadItem(this.item);
-                    this.render(searchView);
-                }
-                destroy() {
-                    this.clear();
-                }
-                getParamValues() {
-                    const r = [];
-                    for (let v of this.values) {
-                        r.push(this.item.getParamValue(v));
-                    }
-                    if (r.length > 1)
-                        return [{ 'OR': r }];
-                    return r;
-                }
-            }
-            class FacetGroup extends FacetView {
-                constructor(...args) {
-                    super(args);
-                    this.grouping = true;
-                }
-                clear() {
-                    let oldValues = this.values;
-                    super.clear();
-                    for (let v of oldValues)
-                        if (v._ref)
-                            v._ref._selected = false;
-                }
-                get separator() {
-                    return ` <span> &gt; </span> `;
-                }
-                get caption() {
-                    return '<span class="fa fa-bars"></span>';
-                }
-            }
-            class SearchItem {
-                constructor(view, name, el) {
-                    this.view = view;
-                    this.name = name;
-                    this.el = el;
-                }
-                getDisplayValue() {
-                    if (this.value) {
-                        return this.value[1];
-                    }
-                    return this.searchString;
-                }
-                getParamValue(name, value) {
-                    let r = {};
-                    if (_.isArray(value)) {
-                        r[name] = value[0];
-                    }
-                    else {
-                        r[name + '__icontains'] = value;
-                    }
-                    return r;
-                }
-                _doChange() {
-                    this.view.update();
-                }
-            }
-            class SearchFilter extends SearchItem {
-                constructor(view, name, caption, domain, group, el) {
-                    super(view, name, el);
-                    this.group = group;
-                    this.caption = caption;
-                    if (_.isString(domain))
-                        domain = JSON.parse(domain.replace(/'/g, '"'));
-                    this.domain = domain;
-                    this._selected = false;
-                }
-                static fromItem(view, el, group) {
-                    return new SearchFilter(view, el.attr('name'), el.attr('caption') || el.attr('label'), el.attr('domain'), group, el);
-                }
-                toString() {
-                    return this.caption;
-                }
-                toggle() {
-                    this.selected = !this.selected;
-                }
-                get selected() {
-                    return this._selected;
-                }
-                set selected(value) {
-                    this._selected = value;
-                    if (value)
-                        this.group.addValue(this);
-                    else
-                        this.group.removeValue(this);
-                    this._doChange();
-                }
-                getDisplayValue() {
-                    return this.caption;
-                }
-                get facet() {
-                    return this.group.facet;
-                }
-                getParamValue() {
-                    return this.domain;
-                }
-                get value() {
-                    return this.domain;
-                }
-            }
-            class SearchFilters extends Array {
-                constructor(view, facet) {
-                    super();
-                    this.view = view;
-                    this._selection = [];
-                    if (!facet)
-                        facet = new FacetView(this);
-                    this._facet = facet;
-                }
-                static fromItem(view, el) {
-                    let group = new SearchFilters(view);
-                    group.push(SearchFilter.fromItem(view, el, group));
-                    return group;
-                }
-                static fromGroup(view, el) {
-                    let group = new SearchFilters(view);
-                    for (let child of el.children())
-                        group.push(SearchFilter.fromItem(view, $(child), group));
-                    return group;
-                }
-                addValue(item) {
-                    this._selection.push(item);
-                    this._facet.values = this._selection.map(item => (new SearchObject(item.toString(), item.value)));
-                    this._refresh();
-                }
-                removeValue(item) {
-                    this._selection.splice(this._selection.indexOf(item), 1);
-                    this._facet.values = this._selection.map(item => ({ searchString: item.getDisplayValue(), value: item.value }));
-                    this._refresh();
-                }
-                selectAll() {
-                    for (let item of this)
-                        this.addValue(item);
-                    this.view.update();
-                }
-                get caption() {
-                    return '<span class="fa fa-filter"></span>';
-                }
-                _refresh() {
-                    if (this._selection.length) {
-                        if (this.view.facets.indexOf(this._facet) === -1)
-                            this.view.facets.push(this._facet);
-                    }
-                    else if (this.view.facets.indexOf(this._facet) > -1)
-                        this.view.facets.splice(this.view.facets.indexOf(this._facet), 1);
-                }
-                getParamValue(v) {
-                    return v.value;
-                }
-                clear() {
-                    this._selection = [];
-                }
-            }
-            class SearchGroups extends SearchFilters {
-                constructor(view, facet) {
-                    if (!facet)
-                        facet = new FacetGroup();
-                    super(view, facet);
-                }
-                static fromGroup(opts) {
-                    let view = opts.view;
-                    let el = opts.el;
-                    let facet = opts.facet || view.facetGrouping;
-                    let group = new SearchGroups(view, facet);
-                    if (el)
-                        for (let child of el.children())
-                            group.push(SearchGroup.fromItem(view, $(child), group));
-                    return group;
-                }
-                addValue(item) {
-                    this.view.groupLength++;
-                    let newItem = new SearchObject(item.toString(), item.value);
-                    newItem._ref = item;
-                    this._facet.values.push(newItem);
-                    this._refresh();
-                }
-                removeValue(item) {
-                    this.view.groupLength--;
-                    for (let i of this._facet.values)
-                        if (i._ref === item) {
-                            this._facet.values.splice(this._facet.values.indexOf(i), 1);
-                            break;
+                    getDisplayValue() {
+                        if (this.value) {
+                            return this.value[1];
                         }
-                    this._refresh();
-                }
-                _refresh() {
-                    if (this._facet.values.length) {
-                        if (this.view.facets.indexOf(this._facet) === -1)
-                            this.view.facets.push(this._facet);
+                        return this.searchString;
                     }
-                    else if (this.view.facets.indexOf(this._facet) > -1)
-                        this.view.facets.splice(this.view.facets.indexOf(this._facet), 1);
-                }
-            }
-            class SearchObject {
-                constructor(display, value) {
-                    this.display = display;
-                    this.value = value;
-                }
-            }
-            class SearchResult {
-                constructor(field, value) {
-                    this.field = field;
-                    this.value = value;
-                    this.text = value[1];
-                    this.indent = true;
-                }
-                select() {
-                    this.field.selectItem(this.value);
-                }
-            }
-            class SearchField extends SearchItem {
-                constructor(view, name, el, field) {
-                    super(view, name, el);
-                    this.field = field;
-                    this._expanded = false;
-                    if (field.type === 'ForeignKey') {
-                        this.expandable = true;
-                        this.children = [];
+                    getParamValue(name, value) {
+                        let r = {};
+                        if (_.isArray(value)) {
+                            r[name] = value[0];
+                        }
+                        else {
+                            r[name + '__icontains'] = value;
+                        }
+                        return r;
                     }
-                    else {
-                        this.expandable = false;
+                    _doChange() {
+                        this.view.update();
                     }
                 }
-                get expanded() {
-                    return this._expanded;
+                Search.SearchItem = SearchItem;
+                class SearchFilter extends SearchItem {
+                    constructor(view, name, caption, domain, group, el) {
+                        super(view, name, el);
+                        this.group = group;
+                        this.caption = caption;
+                        if (_.isString(domain))
+                            domain = JSON.parse(domain.replace(/'/g, '"'));
+                        this.domain = domain;
+                        this._selected = false;
+                    }
+                    static fromItem(view, el, group) {
+                        return new SearchFilter(view, el.attr('name'), el.attr('caption') || el.attr('label'), el.attr('domain'), group, el);
+                    }
+                    toString() {
+                        return this.caption;
+                    }
+                    toggle() {
+                        this.selected = !this.selected;
+                    }
+                    get selected() {
+                        return this._selected;
+                    }
+                    set selected(value) {
+                        this._selected = value;
+                        if (value)
+                            this.group.addValue(this);
+                        else
+                            this.group.removeValue(this);
+                        this._doChange();
+                    }
+                    getDisplayValue() {
+                        return this.caption;
+                    }
+                    get facet() {
+                        return this.group.facet;
+                    }
+                    getParamValue() {
+                        return this.domain;
+                    }
+                    get value() {
+                        return this.domain;
+                    }
                 }
-                set expanded(value) {
-                    this._expanded = value;
-                    if (value)
-                        this._loadChildren();
-                    else {
-                        this.children = [];
-                        if (this.view.$items)
-                            for (let i = this.view.$items.length - 1; i > 0; i--) {
-                                let obj = this.view.$items[i];
-                                if (obj.field === this) {
-                                    this.view.$items.splice(i, 1);
+                Search.SearchFilter = SearchFilter;
+                class SearchFilters {
+                    constructor(view, facet) {
+                        this.items = [];
+                        this.view = view;
+                        this._selection = [];
+                        if (!facet)
+                            facet = new Search.FacetView(this);
+                        this._facet = facet;
+                    }
+                    static fromItem(view, el) {
+                        let group = new SearchFilters(view);
+                        group.push(SearchFilter.fromItem(view, el, group));
+                        return group;
+                    }
+                    static fromGroup(view, el) {
+                        let group = new SearchFilters(view);
+                        for (let child of el.children())
+                            group.push(SearchFilter.fromItem(view, $(child), group));
+                        return group;
+                    }
+                    addValue(item) {
+                        this._selection.push(item);
+                        this._facet.values = this._selection.map(item => (new SearchObject(item.toString(), item.value)));
+                        this._refresh();
+                    }
+                    removeValue(item) {
+                        this._selection.splice(this._selection.indexOf(item), 1);
+                        this._facet.values = this._selection.map(item => ({ searchString: item.getDisplayValue(), value: item.value }));
+                        this._refresh();
+                    }
+                    selectAll() {
+                        for (let item of this.items)
+                            this.addValue(item);
+                        this.view.update();
+                    }
+                    get caption() {
+                        return '<span class="fa fa-filter"></span>';
+                    }
+                    _refresh() {
+                        if (this._selection.length) {
+                            if (this.view.facets.indexOf(this._facet) === -1)
+                                this.view.facets.push(this._facet);
+                        }
+                        else if (this.view.facets.indexOf(this._facet) > -1)
+                            this.view.facets.splice(this.view.facets.indexOf(this._facet), 1);
+                        console.log(this._selection);
+                    }
+                    getParamValue(v) {
+                        return v.value;
+                    }
+                    clear() {
+                        this._selection = [];
+                    }
+                    push(item) {
+                        this.items.push(item);
+                    }
+                }
+                Search.SearchFilters = SearchFilters;
+                class SearchObject {
+                    constructor(display, value) {
+                        this.display = display;
+                        this.value = value;
+                    }
+                }
+                Search.SearchObject = SearchObject;
+                class SearchResult {
+                    constructor(field, value) {
+                        this.field = field;
+                        this.value = value;
+                        this.text = value[1];
+                        this.indent = true;
+                    }
+                    select() {
+                        this.field.selectItem(this.value);
+                    }
+                }
+                Search.SearchResult = SearchResult;
+                class SearchField extends SearchItem {
+                    constructor(view, name, el, field) {
+                        super(view, name, el);
+                        this.field = field;
+                        this._expanded = false;
+                        if (field.type === 'ForeignKey') {
+                            this.expandable = true;
+                            this.children = [];
+                        }
+                        else {
+                            this.expandable = false;
+                        }
+                    }
+                    get expanded() {
+                        return this._expanded;
+                    }
+                    set expanded(value) {
+                        this._expanded = value;
+                        if (value)
+                            this._loadChildren();
+                        else {
+                            this.children = [];
+                            if (this.view.$items)
+                                for (let i = this.view.$items.length - 1; i > 0; i--) {
+                                    let obj = this.view.$items[i];
+                                    if (obj.field === this) {
+                                        this.view.$items.splice(i, 1);
+                                    }
+                                }
+                        }
+                    }
+                    _loadChildren() {
+                        this.loading = true;
+                        this.view.scope.model.getFieldChoices({ field: this.name, term: this.view.text })
+                            .then((res) => {
+                            this.children = res.items;
+                            let index = this.view.$items.indexOf(this);
+                            if (index > -1) {
+                                for (let obj of this.children) {
+                                    index++;
+                                    this.view.$items.splice(index, 0, new SearchResult(this, obj));
                                 }
                             }
-                    }
-                }
-                _loadChildren() {
-                    this.loading = true;
-                    this.view.scope.model.getFieldChoices({ field: this.name, term: this.view.text })
-                        .then((res) => {
-                        this.children = res.items;
-                        let index = this.view.$items.indexOf(this);
-                        if (index > -1) {
-                            for (let obj of this.children) {
-                                index++;
-                                this.view.$items.splice(index, 0, new SearchResult(this, obj));
-                            }
-                        }
-                    })
-                        .finally(() => this.view.scope.$apply(() => this.loading = false));
-                }
-                get facet() {
-                    if (!this._facet)
-                        this._facet = new FacetView(this);
-                    return this._facet;
-                }
-                getDisplayValue() {
-                    return this.value;
-                }
-                getParamValue(value) {
-                    let r = {};
-                    let name = this.name;
-                    if (_.isArray(value)) {
-                        r[name] = value[0];
-                    }
-                    else if (value instanceof SearchObject) {
-                        return value.value;
-                    }
-                    else {
-                        r[name + this.field.defaultSearchLookup] = value;
-                        console.log('get param value', this.field);
-                    }
-                    return r;
-                }
-                get caption() {
-                    return this.field.caption;
-                }
-                get value() {
-                    if (this._value)
-                        return this._value[1];
-                    return this.view.text;
-                }
-                select() {
-                    this.facet.addValue(this.value);
-                    this.view.addFacet(this.facet);
-                    this.view.close();
-                    this.view.update();
-                }
-                selectItem(item) {
-                    let domain = {};
-                    domain[this.field.name] = item[0];
-                    this.facet.addValue(new SearchObject(item[1], domain));
-                    this.view.addFacet(this.facet);
-                    this.view.close();
-                    this.view.update();
-                }
-                static fromField(view, el) {
-                    let field = view.view.fields[el.attr('name')];
-                    return new SearchField(view, field.name, el, field);
-                }
-                get template() {
-                    return _.sprintf(Katrid.i18n.gettext(`Search <i>%(caption)s</i> by: <strong>%(text)s</strong>`), {
-                        caption: this.field.caption,
-                        text: this.view.text,
-                    });
-                }
-            }
-            class SearchGroup extends SearchFilter {
-                constructor(view, name, caption, group, el) {
-                    super(view, name, el);
-                    this.group = group;
-                    this.caption = caption;
-                    this._selected = false;
-                }
-                static fromItem(view, el, group) {
-                    return new SearchGroup(view, el.attr('name'), el.attr('caption'), group, el);
-                }
-                toString() {
-                    return this.caption;
-                }
-            }
-            class CustomFilterItem extends SearchFilter {
-                constructor(view, field, condition, value, group) {
-                    super(view, field.name, field.caption, null, group);
-                    this.field = field;
-                    this.condition = condition;
-                    this._value = value;
-                    this._selected = true;
-                }
-                toString() {
-                    let s = this.field.format(this._value);
-                    return this.field.caption + ' ' + conditionsLabels[this.condition].toLowerCase() + ' "' + s + '"';
-                }
-                get value() {
-                    let r = {};
-                    r[this.field.name + conditionSuffix[this.condition]] = this.field.getParamValue(this._value);
-                    return r;
-                }
-            }
-            Katrid.UI.uiKatrid.controller('CustomFilterController', ['$scope', '$element', '$filter', function ($scope, $element, $filter) {
-                    $scope.tempFilter = null;
-                    $scope.customFilter = [];
-                    $scope.fieldChange = function (field) {
-                        $scope.field = field;
-                        $scope.condition = field.defaultCondition;
-                        $scope.conditionChange($scope.condition);
-                    };
-                    $scope.conditionChange = (condition) => {
-                        $scope.controlVisible = $scope.field.isControlVisible(condition);
-                    };
-                    $scope.valueChange = (value) => {
-                        console.log('value change', value);
-                        $scope.searchValue = value;
-                    };
-                    $scope.addCondition = (field, condition, value) => {
-                        if (!$scope.tempFilter)
-                            $scope.tempFilter = new SearchFilters($scope.$parent.action.searchView);
-                        $scope.tempFilter.push(new CustomFilterItem($scope.$parent.action.searchView, field, condition, value, $scope.tempFilter));
-                        $scope.field = null;
-                        $scope.condition = null;
-                        $scope.controlVisible = false;
-                        $scope.searchValue = undefined;
-                    };
-                    $scope.applyFilter = (field, condition, searchValue) => {
-                        if ($scope.searchValue)
-                            $scope.addCondition(field, condition, searchValue);
-                        $scope.customFilter.push($scope.tempFilter);
-                        $scope.tempFilter.selectAll();
-                        $scope.tempFilter = null;
-                        $scope.customSearchExpanded = false;
-                    };
-                }])
-                .directive('customFilter', () => ({
-                restrict: 'A',
-                scope: {
-                    action: '=',
-                },
-            }));
-            class SearchView {
-                constructor(scope, element, view) {
-                    this.scope = scope;
-                    this.element = element;
-                    this.query = new SearchQuery(this);
-                    this._viewMoreButtons = localStorage.getItem('katrid.search.viewMoreButtons') === 'true';
-                    this.items = [];
-                    this.fields = [];
-                    this.filterGroups = [];
-                    this.groups = [];
-                    this._groupLength = this.groupLength = 0;
-                    this.facets = [];
-                    this.input = element.find('.search-view-input');
-                    this.view = view;
-                    this.$items = null;
-                    this.facetGrouping = new FacetGroup();
-                    if (view) {
-                        this.el = $(view.content);
-                        this.menu = element.find('.search-dropdown-menu.search-view-menu');
-                        for (let child of this.el.children()) {
-                            child = $(child);
-                            let tag = child.prop('tagName');
-                            let obj;
-                            if (tag === 'FILTER') {
-                                obj = SearchFilters.fromItem(this, child);
-                                this.filterGroups.push(obj);
-                            }
-                            else if (tag === 'FILTER-GROUP') {
-                                obj = SearchFilters.fromGroup(this, child);
-                                this.filterGroups.push(obj);
-                                continue;
-                            }
-                            else if (tag === 'GROUP') {
-                                obj = SearchGroup.fromItem({ view: this, el: child });
-                                this.groups.push(obj);
-                                continue;
-                            }
-                            else if (tag === 'FIELD') {
-                                obj = SearchField.fromField(this, child);
-                                this.fields.push(obj);
-                                continue;
-                            }
-                            if (obj)
-                                this.append(obj);
-                        }
-                        this.input
-                            .on('input', (evt) => {
-                            if (this.input.val().length) {
-                                return this.show();
-                            }
-                            else {
-                                return this.close();
-                            }
                         })
-                            .on('keydown', (evt) => {
+                            .finally(() => this.view.scope.$apply(() => this.loading = false));
+                    }
+                    get facet() {
+                        if (!this._facet)
+                            this._facet = new Search.FacetView(this);
+                        return this._facet;
+                    }
+                    getDisplayValue() {
+                        return this.value;
+                    }
+                    getParamValue(value) {
+                        let r = {};
+                        let name = this.name;
+                        if (_.isArray(value)) {
+                            r[name] = value[0];
+                        }
+                        else if (value instanceof SearchObject) {
+                            return value.value;
+                        }
+                        else {
+                            r[name + this.field.defaultSearchLookup] = value;
+                            console.log('get param value', this.field);
+                        }
+                        return r;
+                    }
+                    get caption() {
+                        return this.field.caption;
+                    }
+                    get value() {
+                        if (this._value)
+                            return this._value[1];
+                        return this.view.text;
+                    }
+                    select() {
+                        this.facet.addValue(this.value);
+                        this.view.addFacet(this.facet);
+                        this.view.close();
+                        this.view.update();
+                    }
+                    selectItem(item) {
+                        let domain = {};
+                        domain[this.field.name] = item[0];
+                        this.facet.addValue(new SearchObject(item[1], domain));
+                        this.view.addFacet(this.facet);
+                        this.view.close();
+                        this.view.update();
+                    }
+                    static fromField(view, el) {
+                        let field = view.view.fields[el.attr('name')];
+                        return new SearchField(view, field.name, el, field);
+                    }
+                    get template() {
+                        return _.sprintf(Katrid.i18n.gettext(`Search <i>%(caption)s</i> by: <strong>%(text)s</strong>`), {
+                            caption: this.field.caption,
+                            text: this.view.text,
+                        });
+                    }
+                }
+                Search.SearchField = SearchField;
+            })(Search = Views.Search || (Views.Search = {}));
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            var Search;
+            (function (Search) {
+                class CustomFilterItem extends Search.SearchFilter {
+                    constructor(view, field, condition, value, group) {
+                        super(view, field.name, field.caption, null, group);
+                        this.field = field;
+                        this.condition = condition;
+                        this._value = value;
+                        this._selected = true;
+                    }
+                    toString() {
+                        let s = this.field.format(this._value);
+                        console.log(this.condition);
+                        return this.field.caption + ' ' + Search.conditionsLabels[this.condition].toLowerCase() + ' "' + s + '"';
+                    }
+                    get value() {
+                        let r = {};
+                        r[this.field.name + Search.conditionSuffix[this.condition]] = this.field.getParamValue(this._value);
+                        return r;
+                    }
+                }
+                Search.CustomFilterItem = CustomFilterItem;
+                class CustomFilterHelper {
+                    constructor(searchView, container) {
+                        this.searchView = searchView;
+                        container.innerHTML = `<button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" type="button"
+                aria-expanded="false">
+          <span class="fa fa-filter fa-fw"></span> ${_.gettext('Filters')} <span class="caret"></span>
+        </button>
+
+    <div class="dropdown-menu search-view-filter-menu">
+      <div>
+        <div v-for="group in filterGroups">
+          <a class="dropdown-item" ng-class="{'selected': filter.selected}" v-for="filter in group" ng-click="filter.toggle();$event.stopPropagation();">
+            \${filter.toString()}
+          </a>
+          <div class="dropdown-divider"></div>
+        </div>
+      </div>
+      <div>
+        <div v-for="filter in filters">
+          <a class="dropdown-item" v-bind:class="{'selected': filterItem.selected}"
+             v-on:click.stop.prevent="filterItem.toggle()"
+             v-for="filterItem in filter.items">{{filterItem.toString()}}</a>
+          <div class="dropdown-divider"></div>
+        </div>
+        <a class="dropdown-item dropdown-search-item" v-on:click.stop="expanded=!expanded">
+          <i v-bind:class="{ 'fa-caret-right': !expanded, 'fa-caret-down': expanded }" class="fa expandable"></i>
+          ${_.gettext('Add Custom Filter')}
+        </a>
+
+        <div v-if="expanded" v-on:click.stop.prevent="">
+          <div v-show="tempFilter.length" class="margin-bottom-8">
+            <a href="#" v-on:click.prevent="" class="dropdown-item" v-for="filter in tempFilter" title="${_.gettext('Remove item')}">
+            {{ filter.toString() }}
+            </a>
+          </div>
+          <div class="col-12">
+            <div class="form-group">
+              <select class="form-control" v-model="fieldName" v-on:change="fieldChange(fieldName)">
+                <option value=""></option>
+                <option v-for="field in fieldList" :value="field.name">{{field.caption}}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <select class="form-control" v-model="conditionName" v-if="field" v-on:change="condition=conditions[conditionName]">
+                <option v-bind:value="cond.name" v-for="cond in conditionList">{{ cond.label }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <input class="form-control" v-model="value" v-if="condition.input === 'input'">
+              <select class="form-control" v-model="value" v-if="condition.input === 'select'">
+                <option v-bind:value="value" v-for="(value, name) in condition.options">{{ name }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <button class="btn btn-primary" type="button" v-on:click="applyFilter(field, condition, searchValue)" v-show="conditionName">
+                ${_.gettext('Apply')}
+              </button>
+              <button class="btn btn-outline-secondary" type="button"
+                      v-on:click="addCondition(field, condition, searchValue);fieldName='';" v-show="conditionName">
+                ${_.gettext('Add a condition')}
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+                        new Vue({
+                            el: container,
+                            methods: {
+                                applyFilter: function () {
+                                    if (this.value)
+                                        this.addCondition(this.field, this.conditionName, this.value);
+                                    this.customFilter.push(this.tempFilter);
+                                    this.tempFilter.selectAll();
+                                    this.filters.push(this.tempFilter);
+                                    this.tempFilter = new Search.SearchFilters(searchView);
+                                    this.expanded = false;
+                                },
+                                addCondition: function () {
+                                    this.tempFilter.push(new CustomFilterItem(searchView, this.field, this.conditionName, this.value, this.tempFilter));
+                                    this.field = null;
+                                    this.condition = { input: false };
+                                    this.value = null;
+                                },
+                                fieldChange: function (name) {
+                                    this.condition = { input: false };
+                                    this.conditionName = '';
+                                    this.conditions = {};
+                                    this.field = searchView.fields[name];
+                                    this.conditionList = this.field.getFilterConditions();
+                                    for (let cond of this.conditionList) {
+                                        if (cond.input === undefined)
+                                            cond.input = 'input';
+                                        this.conditions[cond.name] = cond;
+                                    }
+                                },
+                            },
+                            data() {
+                                return {
+                                    value: null,
+                                    conditions: {},
+                                    conditionList: [],
+                                    condition: {
+                                        input: false,
+                                    },
+                                    conditionName: '',
+                                    searchValue: null,
+                                    customFilter: [],
+                                    tempFilter: new Search.SearchFilters(searchView),
+                                    field: null,
+                                    fieldName: '',
+                                    filters: [],
+                                    fieldList: Object.values(searchView.fields),
+                                    fields: searchView.fields,
+                                    filterGroups: searchView.filterGroups,
+                                    expanded: false,
+                                };
+                            }
+                        });
+                    }
+                }
+                Search.CustomFilterHelper = CustomFilterHelper;
+                class GroupFilterHelper {
+                    constructor(searchView, container) {
+                        container.innerHTML = `<button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" type="button">
+          <span class="fa fa-bars fa-fw"></span> ${_.gettext('Group By')} <span class="caret"></span>
+        </button>
+        <div class="dropdown-menu search-view-groups-menu">
+          <div>
+            <div v-for="group in groups">
+              <a class="dropdown-item" ng-class="{'selected': filter.selected}" v-for="filter in group"
+                 v-on:click="filter.toggle();$event.stopPropagation();">
+                \${filter.toString()}
+              </a>
+              <div class="dropdown-divider" v-if="groups.length"></div>
+            </div>
+          </div>
+
+          <a class="dropdown-item dropdown-search-item" v-on:click.stop="expanded=!expanded">
+            <i v-bind:class="{ 'fa-caret-right': !expanded, 'fa-caret-down': expanded }"
+               class="fa expandable"></i>
+            ${_.gettext('Add Custom Group')}
+          </a>
+
+          <div v-if="expanded" v-on:click.stop.prevent="">
+            <div class="col-12">
+              <div class="form-group">
+                <select class="form-control" v-model="fieldName" v-change="fieldChange(fields[fieldName])">
+                  <option value=""></option>
+                  <option v-for="field in fieldList" value="\${field.name}">\${field.caption}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <button class="btn btn-primary" type="button" v-on:click="addCustomGroup(fields[fieldName]);fieldName='';">
+                  ${_.gettext('Apply')}
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>`;
+                        let vm = new Vue({
+                            el: container,
+                            methods: {
+                                fieldChange: () => {
+                                    console.log('field change');
+                                },
+                                addCustomGroup: () => {
+                                    console.log('add group');
+                                },
+                            },
+                            data: {
+                                expanded: false,
+                                groups: searchView.groups,
+                                filter: null,
+                                fieldList: [],
+                                fields: {},
+                                fieldName: '',
+                            }
+                        });
+                    }
+                }
+                Search.GroupFilterHelper = GroupFilterHelper;
+                class SaveFilterHelper {
+                    constructor(searchView, container) {
+                        container.innerHTML = `<button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" type="button"
+                aria-expanded="false">
+          <span class="fa fa-star fa-fw"></span> ${_.gettext('Favorites')} <span class="caret"></span>
+        </button>
+        <div class="dropdown-menu search-favorite-menu" style="min-width: 300px">
+          <a class="dropdown-item dropdown-search-item" v-on:click.stop="expanded=!expanded">
+            <i v-bind:class="{ 'fa-caret-right': !expanded, 'fa-caret-down': expanded }"
+               class="fa expandable"></i>
+            ${_.gettext('Save current search')}
+          </a>
+          <div v-if="expanded" v-on:click.stop>
+            <div class="col-12">
+              <div class="form-group">
+                <input type="text" class="form-control" ng-model="saveSearch.name" placeholder="${_.gettext('Search name')}">
+              </div>
+              <div class="form-group" ng-init="saveSearch.is_default=false;saveSearch.is_shared=true;">
+                <label>
+                  <input type="checkbox" ng-model="saveSearch.is_default" v-on:click.stop="">
+                  ${_.gettext("Use by default")}
+                </label>
+                <label>
+                  <input type="checkbox" ng-model="saveSearch.is_shared">
+                  ${_.gettext("Share with all users")}
+                </label>
+              </div>
+              <div class="form-group">
+                <button class="btn btn-primary" type="button" v-on:click="saveSearch(saveSearch)">
+                  ${_.gettext('Save')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+                        let vm = new Vue({
+                            el: container,
+                            data: {
+                                expanded: false,
+                                saveSearch: {},
+                            },
+                            methods: {
+                                saveSearch: (src) => {
+                                    console.log('save search', src);
+                                }
+                            }
+                        });
+                    }
+                }
+                Search.SaveFilterHelper = SaveFilterHelper;
+            })(Search = Views.Search || (Views.Search = {}));
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            var Search;
+            (function (Search) {
+                class FacetView {
+                    constructor(item) {
+                        this.item = item;
+                        this.values = [];
+                    }
+                    get separator() {
+                        return ` <span class="facet-values-separator">${Katrid.i18n.gettext('or')}</span> `;
+                    }
+                    init(item, values) {
+                        this.item = item;
+                        if (values)
+                            this.values = values;
+                        else
+                            this.values = [{
+                                    searchString: this.item.getDisplayValue(), value: this.item.value
+                                }];
+                    }
+                    addValue(value) {
+                        return this.values.push(value);
+                    }
+                    get caption() {
+                        return this.item.caption;
+                    }
+                    clear() {
+                        this.values = [];
+                    }
+                    get templateValue() {
+                        console.log(this.values);
+                        return (Array.from(this.values).map((s) => s instanceof Search.SearchObject ? s.display : s)).join(this.separator);
+                    }
+                    template() {
+                        return;
+                    }
+                    link(searchView) {
+                        const html = $(this.template());
+                        this.item.facet = this;
+                        this.element = html;
+                        const rm = html.find('.facet-remove');
+                        rm.click((evt) => searchView.onRemoveItem(evt, this.item));
+                        return html;
+                    }
+                    render(el) {
+                    }
+                    refresh() {
+                        return this.element.find('.facet-value').html(this.templateValue);
+                    }
+                    load(searchView) {
+                        searchView.query.loadItem(this.item);
+                        this.render(searchView);
+                    }
+                    destroy() {
+                        this.clear();
+                    }
+                    getParamValues() {
+                        const r = [];
+                        for (let v of this.values) {
+                            r.push(this.item.getParamValue(v));
+                        }
+                        if (r.length > 1)
+                            return [{ 'OR': r }];
+                        return r;
+                    }
+                }
+                Search.FacetView = FacetView;
+            })(Search = Views.Search || (Views.Search = {}));
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            var Search;
+            (function (Search) {
+                class FacetGroup extends Search.FacetView {
+                    constructor(...args) {
+                        super(args);
+                        this.grouping = true;
+                    }
+                    clear() {
+                        let oldValues = this.values;
+                        super.clear();
+                        for (let v of oldValues)
+                            if (v._ref)
+                                v._ref._selected = false;
+                    }
+                    get separator() {
+                        return ` <span> &gt; </span> `;
+                    }
+                    get caption() {
+                        return '<span class="fa fa-bars"></span>';
+                    }
+                }
+                Search.FacetGroup = FacetGroup;
+                class SearchGroups extends Search.SearchFilters {
+                    constructor(view, facet) {
+                        if (!facet)
+                            facet = new FacetGroup();
+                        super(view, facet);
+                    }
+                    static fromGroup(opts) {
+                        let view = opts.view;
+                        let el = opts.el;
+                        let facet = opts.facet || view.facetGrouping;
+                        let group = new SearchGroups(view, facet);
+                        if (el)
+                            for (let child of el.children())
+                                group.push(SearchGroup.fromItem(view, $(child), group));
+                        return group;
+                    }
+                    addValue(item) {
+                        this.view.groupLength++;
+                        let newItem = new Search.SearchObject(item.toString(), item.value);
+                        newItem._ref = item;
+                        this._facet.values.push(newItem);
+                        this._refresh();
+                    }
+                    removeValue(item) {
+                        this.view.groupLength--;
+                        for (let i of this._facet.values)
+                            if (i._ref === item) {
+                                this._facet.values.splice(this._facet.values.indexOf(i), 1);
+                                break;
+                            }
+                        this._refresh();
+                    }
+                    _refresh() {
+                        if (this._facet.values.length) {
+                            if (this.view.facets.indexOf(this._facet) === -1)
+                                this.view.facets.push(this._facet);
+                        }
+                        else if (this.view.facets.indexOf(this._facet) > -1)
+                            this.view.facets.splice(this.view.facets.indexOf(this._facet), 1);
+                    }
+                }
+                Search.SearchGroups = SearchGroups;
+                class SearchGroup extends Search.SearchFilter {
+                    constructor(view, name, caption, group, el) {
+                        super(view, name, el);
+                        this.group = group;
+                        this.caption = caption;
+                        this._selected = false;
+                    }
+                    static fromItem(view, el, group) {
+                        return new SearchGroup(view, el.attr('name'), el.attr('caption'), group, el);
+                    }
+                    toString() {
+                        return this.caption;
+                    }
+                }
+                Search.SearchGroup = SearchGroup;
+            })(Search = Views.Search || (Views.Search = {}));
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            var Search;
+            (function (Search) {
+                class SearchQuery {
+                    constructor(searchView) {
+                        this.searchView = searchView;
+                        this.items = [];
+                        this.groups = [];
+                    }
+                    add(item) {
+                        if (this.items.includes(item)) {
+                            item.facet.addValue(item);
+                            item.facet.refresh();
+                        }
+                        else {
+                            this.items.push(item);
+                            this.searchView.renderFacets();
+                        }
+                        if (item instanceof Search.SearchGroup)
+                            this.groups.push(item);
+                        this.searchView.change();
+                    }
+                    loadItem(item) {
+                        this.items.push(item);
+                        if (item instanceof Search.SearchGroup)
+                            this.groups.push(item);
+                    }
+                    remove(item) {
+                        this.items.splice(this.items.indexOf(item), 1);
+                        if (item instanceof Search.SearchGroup) {
+                            this.groups.splice(this.groups.indexOf(item), 1);
+                        }
+                        this.searchView.change();
+                    }
+                    getParams() {
+                        let r = [];
+                        for (let i of this.items)
+                            r = r.concat(i.getParamValues());
+                        return r;
+                    }
+                }
+                Search.SearchQuery = SearchQuery;
+            })(Search = Views.Search || (Views.Search = {}));
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            var Search;
+            (function (Search) {
+                class SearchViewElement extends HTMLElement {
+                    render() {
+                        this.query = new Search.SearchQuery(this);
+                        this.searchItems = [];
+                        this.searchFields = [];
+                        this.filterGroups = [];
+                        this.groups = [];
+                        this._groupLength = this.groupLength = 0;
+                        this.facets = [];
+                        this.facetGrouping = new Search.FacetGroup();
+                        this.facets = [];
+                        this.query = new Search.SearchQuery(this);
+                        this.innerHTML = `<div search-view-area class="search-area">
+      <div class="search-view">
+        <div class="search-view-facets">
+          <div class="facet-view" v-for="facet in facets">
+            <span class="facet-label" v-html="facet.caption"></span>
+            <span class="facet-value" v-html="facet.templateValue"></span>
+            <span class="fas fa-times facet-remove" v-on:click="removeFacet(facet)"></span>
+          </div>
+        </div>
+        <input class="search-view-input" role="search" v-on:input="setSearchText(searchText)" placeholder="${_.gettext('Search...')}" v-model="searchText">
+      </div>
+      <div class="col-sm-12">
+        <ul class="search-dropdown-menu search-view-menu" role="menu">
+          <li v-for="item in availableItems">
+            <a ng-if="item.expandable" class="expandable" href="#" onclick="event.preventDefault();"
+               ng-mousedown="item.expanded=!item.expanded;$event.preventDefault();$event.stopPropagation();">
+              <i class="fa" ng-class="{'fa-angle-down': item.expanded, 'fa-angle-right': !item.expanded}"></i>
+            </a>
+            <a href="#" class="search-menu-item" ng-mousedown="$event.preventDefault();$event.stopPropagation();"
+               ng-click="item.select();$event.preventDefault();" ng-class="::{'indent': item.indent}">
+              <span ng-if="::!item.indent" ng-bind-html="item.template"></span>
+              <span ng-if="::item.indent">\${ ::item.text }</span>
+            </a>
+            <a ng-if="item.loading" class="search-menu-item"><i>${_.gettext('Loading...')}</i></a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="btn-group search-view-more-area">
+      <div class="btn-group search-filter-button"></div>
+      <div class="btn-group search-groupby-button"></div>
+      <div class="btn-group search-filter-favorites"></div>
+    </div>
+`;
+                        this.menu = $(this).find('.search-dropdown-menu.search-view-menu');
+                        new Search.CustomFilterHelper(this, this.querySelector('.search-filter-button'));
+                        new Search.SaveFilterHelper(this, this.querySelector('.search-filter-favorites'));
+                        new Search.GroupFilterHelper(this, this.querySelector('.search-groupby-button'));
+                        this.input = this.querySelector('.search-view-input');
+                        this.input.addEventListener('keydown', (evt) => {
+                            console.log('key down');
                             switch (evt.which) {
                                 case Katrid.UI.keyCode.DOWN:
                                     this.move(1);
@@ -5361,185 +6050,200 @@ var Katrid;
                                     evt.preventDefault();
                                     break;
                                 case Katrid.UI.keyCode.ENTER:
-                                    this.scope.$apply(() => angular.element(this.menu.find('li.active a.search-menu-item')).scope().item.select(evt));
+                                    this.menu.find('li.active a.search-menu-item').item.select(evt);
                                     break;
                                 case Katrid.UI.keyCode.BACKSPACE:
-                                    if (this.input.val() === '') {
-                                        this.scope.$apply(() => this.facets.splice(this.facets.length - 1, 1).map(facet => facet.clear()));
+                                    if (this.input.value === '') {
+                                        this.facets.splice(this.facets.length - 1, 1).map(facet => facet.clear());
                                         this.update();
                                     }
                                     break;
                             }
-                        })
-                            .on('blur', (evt) => {
-                            this.input.val('');
+                        });
+                        this.input.addEventListener('blur', (evt) => {
+                            this.input.value = '';
                             return this.close();
                         });
-                    }
-                }
-                addCustomGroup(field) {
-                    if (!this.customGroups) {
-                        this.customGroups = new SearchGroups(this, this.facetGrouping);
-                        this.groups.push(this.customGroups);
-                    }
-                    let obj = new SearchGroup(this, field.name, field.caption, this.customGroups);
-                    this.customGroups.push(obj);
-                    obj.selected = true;
-                }
-                set viewMoreButtons(value) {
-                    if (this._viewMoreButtons !== value) {
-                        this._viewMoreButtons = value;
-                        localStorage.setItem('katrid.search.viewMoreButtons', value.toString());
-                    }
-                }
-                get viewMoreButtons() {
-                    return this._viewMoreButtons;
-                }
-                load(filter) {
-                    Object.entries(filter).map((item, idx) => {
-                        let i = this.getByName(item[0]);
-                        if (i)
-                            i.selected = true;
-                    });
-                }
-                getByName(name) {
-                    for (let item of this.filterGroups)
-                        for (let subitem of item)
-                            if (subitem.name === name)
-                                return subitem;
-                    for (let item of this.items)
-                        if (item.name === name)
-                            return item;
-                }
-                append(item) {
-                    this.items.push(item);
-                }
-                addFacet(facet) {
-                    if (!this.facets.includes(facet))
-                        this.facets.push(facet);
-                }
-                first() {
-                    this.menu.find('li.active a.search-menu-item').removeClass('active');
-                    this.menu.find('li:first').addClass('active');
-                }
-                remove(index) {
-                    let facet = this.facets[index];
-                    facet.destroy();
-                    this.facets.splice(index, 1);
-                    this.update();
-                }
-                getParams() {
-                    let r = [];
-                    for (let i of this.facets)
-                        if (!i.grouping)
-                            r = r.concat(i.getParamValues());
-                    return r;
-                }
-                dump() {
-                    let res = [];
-                    for (let i of this.facets)
-                        res.push(i);
-                    return res;
-                }
-                move(distance) {
-                    const fw = distance > 0;
-                    distance = Math.abs(distance);
-                    while (distance !== 0) {
-                        distance--;
-                        let el = this.element.find('.search-view-menu li.active');
-                        if (el.length) {
-                            el.removeClass('active');
-                            if (fw) {
-                                el = el.next();
+                        this.vm = new Vue({
+                            el: this.firstElementChild,
+                            data: {
+                                facets: this.facets,
+                                searchText: '',
+                                availableItems: this._availableItems,
+                            },
+                            methods: {
+                                removeFacet() {
+                                    console.log('remove facet');
+                                },
+                                setSearchText: (text) => {
+                                    this.searchText = text;
+                                    if (text.length) {
+                                        return this.show();
+                                    }
+                                    else {
+                                        return this.close();
+                                    }
+                                },
                             }
-                            else {
-                                el = el.prev();
+                        });
+                    }
+                    get availableItems() {
+                        return this._availableItems;
+                    }
+                    set availableItems(value) {
+                        this._availableItems = value;
+                    }
+                    get schema() {
+                        return this._schema;
+                    }
+                    set schema(value) {
+                        this._schema = value;
+                        if (value)
+                            this.setContent(value);
+                    }
+                    setContent(schema) {
+                        if (schema instanceof HTMLElement) {
+                            for (let child of this.viewContent.children) {
+                                let tag = child.tagName;
+                                let obj;
+                                if (tag === 'FILTER') {
+                                    obj = Search.SearchFilters.fromItem(this, child);
+                                    this.filterGroups.push(obj);
+                                }
+                                else if (tag === 'FILTER-GROUP') {
+                                    obj = Search.SearchFilters.fromGroup(this, child);
+                                    this.filterGroups.push(obj);
+                                    continue;
+                                }
+                                else if (tag === 'GROUP') {
+                                    obj = Search.SearchGroup.fromItem({ view: this, el: child });
+                                    this.groups.push(obj);
+                                    continue;
+                                }
+                                else if (tag === 'FIELD') {
+                                    obj = Search.SearchField.fromField(this, child);
+                                    this.searchFields.push(obj);
+                                    continue;
+                                }
+                                if (obj)
+                                    this.append(obj);
                             }
-                            el.addClass('active');
                         }
                         else {
-                            if (fw) {
-                                el = this.element.find('.search-view-menu > li:first');
+                            for (let item of schema.items) {
                             }
-                            else {
-                                el = this.element.find('.search-view-menu > li:last');
-                            }
-                            el.addClass('active');
                         }
                     }
-                }
-                update() {
-                    if (this.groupLength !== this._groupLength) {
-                        this._groupLength = this.groupLength;
-                        this.scope.action.applyGroups(this.groupBy(), this.getParams());
+                    addItem(item) {
+                        this.searchItems.push(item);
                     }
-                    else
-                        this.scope.action.setSearchParams(this.getParams());
-                }
-                groupBy() {
-                    return this.facetGrouping.values.map(obj => obj._ref.name);
-                }
-                show() {
-                    let shouldApply = false;
-                    if (!this.$items) {
-                        this.$items = [].concat(this.fields);
-                        shouldApply = true;
-                    }
-                    for (let obj of this.$items)
-                        if (obj.expanded) {
-                            obj.expanded = false;
+                    show() {
+                        let shouldApply = false;
+                        if (!this.availableItems) {
+                            this.availableItems = [].concat(this.searchFields);
                             shouldApply = true;
                         }
-                    if (shouldApply)
-                        this.scope.$apply();
-                    this.menu.show();
-                    this.first();
-                }
-                close() {
-                    this.$items = null;
-                    this.menu.hide();
-                    this.reset();
-                    this.input.val('');
-                }
-                reset() {
-                    for (let i of this.fields)
-                        if (i && i.children && i.children.length)
-                            i.expanded = false;
-                }
-                clear() {
-                }
-                addCustomFilter(field, value) {
-                    let filters = new SearchFilters(this);
-                    filters.push(new CustomFilterItem(this, field, '=', value, filters));
-                    filters.selectAll();
-                }
-            }
-            Views.SearchView = SearchView;
-            class SearchViewComponent {
-                constructor() {
-                    this.restrict = 'E';
-                    this.templateUrl = 'view.search.jinja2';
-                    this.replace = true;
-                    this.scope = false;
-                }
-            }
-            class SearchViewArea {
-                constructor() {
-                    this.restrict = 'A';
-                    this.scope = false;
-                }
-                link(scope, el, attrs) {
-                    let view = scope.action.views.search;
-                    scope.action.searchView = new SearchView(scope, el, view);
-                    if (scope.action.context.default_search) {
-                        scope.action.searchView.load(scope.action.context.default_search);
+                        for (let obj of this._availableItems)
+                            if (obj.expanded) {
+                                obj.expanded = false;
+                                shouldApply = true;
+                            }
+                        this.menu.show();
+                        this.first();
+                    }
+                    close() {
+                        this._availableItems = null;
+                        this.menu.hide();
+                        this.reset();
+                        this.input.value = '';
+                    }
+                    reset() {
+                        for (let i of this.searchFields)
+                            if (i && i.children && i.children.length)
+                                i.expanded = false;
+                    }
+                    clear() {
+                    }
+                    addCustomFilter(field, value) {
+                        let filters = new Search.SearchFilters(this);
+                        filters.push(new Search.CustomFilterItem(this, field, '=', value, filters));
+                        filters.selectAll();
+                    }
+                    first() {
+                        this.menu.find('li.active a.search-menu-item').removeClass('active');
+                        this.menu.find('li:first').addClass('active');
+                    }
+                    removeItem(index) {
+                        let facet = this.facets[index];
+                        facet.destroy();
+                        this.facets.splice(index, 1);
+                        this.update();
+                    }
+                    getParams() {
+                        let r = [];
+                        for (let i of this.facets)
+                            if (!i.grouping)
+                                r = r.concat(i.getParamValues());
+                        return r;
+                    }
+                    dump() {
+                        let res = [];
+                        for (let i of this.facets)
+                            res.push(i);
+                        return res;
+                    }
+                    move(distance) {
+                        const fw = distance > 0;
+                        distance = Math.abs(distance);
+                        while (distance !== 0) {
+                            distance--;
+                            let el = $(this).find('.search-view-menu li.active');
+                            if (el.length) {
+                                el.removeClass('active');
+                                if (fw) {
+                                    el = el.next();
+                                }
+                                else {
+                                    el = el.prev();
+                                }
+                                el.addClass('active');
+                            }
+                            else {
+                                if (fw) {
+                                    el = $(this).find('.search-view-menu > li:first');
+                                }
+                                else {
+                                    el = $(this).find('.search-view-menu > li:last');
+                                }
+                                el.addClass('active');
+                            }
+                        }
+                    }
+                    update() {
+                        if (this.groupLength !== this._groupLength) {
+                            this._groupLength = this.groupLength;
+                            this.action.applyGroups(this.groupBy(), this.getParams());
+                        }
+                        else
+                            console.log('notify the action');
+                        this.dispatchEvent(new Event('searchUpdate'));
+                    }
+                    groupBy() {
+                        return this.facetGrouping.values.map(obj => obj._ref.name);
                     }
                 }
-            }
-            Katrid.UI.uiKatrid.controller('SearchMenuController', ['$scope', function ($scope) {
-                }]);
-            Katrid.UI.uiKatrid.directive('searchView', SearchViewComponent);
-            Katrid.UI.uiKatrid.directive('searchViewArea', SearchViewArea);
+                Search.SearchViewElement = SearchViewElement;
+                class SearchViewFacet extends HTMLElement {
+                    connectedCallback() {
+                        this.innerHTML = `<span class="facet-label" ng-bind-html="${this.caption}"></span>
+            <span class="facet-value" ng-bind-html="facet.templateValue"></span>
+            <span class="fas fa-times facet-remove" ng-click="action.searchView.remove($index)">
+        </span>`;
+                    }
+                }
+                Search.SearchViewFacet = SearchViewFacet;
+                Katrid.define('search-view', SearchViewElement);
+            })(Search = Views.Search || (Views.Search = {}));
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -5549,15 +6253,292 @@ var Katrid;
     (function (Forms) {
         var Views;
         (function (Views) {
-            class ViewInfo {
-                constructor(info) {
-                    this._info = info;
-                    this.fields = info.fields;
-                    this.content = info.content;
-                    this.toolbar = info.toolbar;
+            var Search;
+            (function (Search) {
+                Katrid.UI.uiKatrid.controller('CustomFilterController', ['$scope', '$element', '$filter', function ($scope, $element, $filter) {
+                        $scope.tempFilter = null;
+                        $scope.customFilter = [];
+                        $scope.fieldChange = function (field) {
+                            $scope.field = field;
+                            $scope.condition = field.defaultCondition;
+                            $scope.conditionChange($scope.condition);
+                        };
+                        $scope.conditionChange = (condition) => {
+                            $scope.controlVisible = $scope.field.isControlVisible(condition);
+                        };
+                        $scope.valueChange = (value) => {
+                            console.log('value change', value);
+                            $scope.searchValue = value;
+                        };
+                        $scope.addCondition = (field, condition, value) => {
+                            if (!$scope.tempFilter)
+                                $scope.tempFilter = new Search.SearchFilters($scope.$parent.action.searchView);
+                            $scope.tempFilter.push(new Search.CustomFilterItem($scope.$parent.action.searchView, field, condition, value, $scope.tempFilter));
+                            $scope.field = null;
+                            $scope.condition = null;
+                            $scope.controlVisible = false;
+                            $scope.searchValue = undefined;
+                        };
+                        $scope.applyFilter = (field, condition, searchValue) => {
+                            if ($scope.searchValue)
+                                $scope.addCondition(field, condition, searchValue);
+                            $scope.customFilter.push($scope.tempFilter);
+                            $scope.tempFilter.selectAll();
+                            $scope.tempFilter = null;
+                            $scope.customSearchExpanded = false;
+                        };
+                    }])
+                    .directive('customFilter', () => ({
+                    restrict: 'A',
+                    scope: {
+                        action: '=',
+                    },
+                }));
+                class SearchView {
+                    constructor(scope, element, view) {
+                        this.scope = scope;
+                        this.element = element;
+                        this.query = new Search.SearchQuery(this);
+                        this._viewMoreButtons = localStorage.getItem('katrid.search.viewMoreButtons') === 'true';
+                        this.items = [];
+                        this.fields = [];
+                        this.filterGroups = [];
+                        this.groups = [];
+                        this._groupLength = this.groupLength = 0;
+                        this.facets = [];
+                        this.input = element.find('.search-view-input');
+                        this.view = view;
+                        this.$items = null;
+                        this.facetGrouping = new Search.FacetGroup();
+                        if (view) {
+                            this.el = $(view.content);
+                            this.menu = element.find('.search-dropdown-menu.search-view-menu');
+                            for (let child of this.el.children()) {
+                                child = $(child);
+                                let tag = child.prop('tagName');
+                                let obj;
+                                if (tag === 'FILTER') {
+                                    obj = Search.SearchFilters.fromItem(this, child);
+                                    this.filterGroups.push(obj);
+                                }
+                                else if (tag === 'FILTER-GROUP') {
+                                    obj = Search.SearchFilters.fromGroup(this, child);
+                                    this.filterGroups.push(obj);
+                                    continue;
+                                }
+                                else if (tag === 'GROUP') {
+                                    obj = Search.SearchGroup.fromItem({ view: this, el: child });
+                                    this.groups.push(obj);
+                                    continue;
+                                }
+                                else if (tag === 'FIELD') {
+                                    obj = Search.SearchField.fromField(this, child);
+                                    this.fields.push(obj);
+                                    continue;
+                                }
+                                if (obj)
+                                    this.append(obj);
+                            }
+                            this.input
+                                .on('input', (evt) => {
+                                if (this.input.val().length) {
+                                    return this.show();
+                                }
+                                else {
+                                    return this.close();
+                                }
+                            })
+                                .on('keydown', (evt) => {
+                                switch (evt.which) {
+                                    case Katrid.UI.keyCode.DOWN:
+                                        this.move(1);
+                                        evt.preventDefault();
+                                        break;
+                                    case Katrid.UI.keyCode.UP:
+                                        this.move(-1);
+                                        evt.preventDefault();
+                                        break;
+                                    case Katrid.UI.keyCode.ENTER:
+                                        this.scope.$apply(() => angular.element(this.menu.find('li.active a.search-menu-item')).scope().item.select(evt));
+                                        break;
+                                    case Katrid.UI.keyCode.BACKSPACE:
+                                        if (this.input.val() === '') {
+                                            this.scope.$apply(() => this.facets.splice(this.facets.length - 1, 1).map(facet => facet.clear()));
+                                            this.update();
+                                        }
+                                        break;
+                                }
+                            })
+                                .on('blur', (evt) => {
+                                this.input.val('');
+                                return this.close();
+                            });
+                        }
+                    }
+                    addCustomGroup(field) {
+                        if (!this.customGroups) {
+                            this.customGroups = new Search.SearchGroups(this, this.facetGrouping);
+                            this.groups.push(this.customGroups);
+                        }
+                        let obj = new Search.SearchGroup(this, field.name, field.caption, this.customGroups);
+                        this.customGroups.push(obj);
+                        obj.selected = true;
+                    }
+                    set viewMoreButtons(value) {
+                        if (this._viewMoreButtons !== value) {
+                            this._viewMoreButtons = value;
+                            localStorage.setItem('katrid.search.viewMoreButtons', value.toString());
+                        }
+                    }
+                    get viewMoreButtons() {
+                        return this._viewMoreButtons;
+                    }
+                    load(filter) {
+                        Object.entries(filter).map((item, idx) => {
+                            let i = this.getByName(item[0]);
+                            if (i)
+                                i.selected = true;
+                        });
+                    }
+                    getByName(name) {
+                        for (let item of this.filterGroups)
+                            for (let subitem of item)
+                                if (subitem.name === name)
+                                    return subitem;
+                        for (let item of this.items)
+                            if (item.name === name)
+                                return item;
+                    }
+                    append(item) {
+                        this.items.push(item);
+                    }
+                    addFacet(facet) {
+                        if (!this.facets.includes(facet))
+                            this.facets.push(facet);
+                    }
+                    first() {
+                        this.menu.find('li.active a.search-menu-item').removeClass('active');
+                        this.menu.find('li:first').addClass('active');
+                    }
+                    remove(index) {
+                        let facet = this.facets[index];
+                        facet.destroy();
+                        this.facets.splice(index, 1);
+                        this.update();
+                    }
+                    getParams() {
+                        let r = [];
+                        for (let i of this.facets)
+                            if (!i.grouping)
+                                r = r.concat(i.getParamValues());
+                        return r;
+                    }
+                    dump() {
+                        let res = [];
+                        for (let i of this.facets)
+                            res.push(i);
+                        return res;
+                    }
+                    move(distance) {
+                        const fw = distance > 0;
+                        distance = Math.abs(distance);
+                        while (distance !== 0) {
+                            distance--;
+                            let el = this.element.find('.search-view-menu li.active');
+                            if (el.length) {
+                                el.removeClass('active');
+                                if (fw) {
+                                    el = el.next();
+                                }
+                                else {
+                                    el = el.prev();
+                                }
+                                el.addClass('active');
+                            }
+                            else {
+                                if (fw) {
+                                    el = this.element.find('.search-view-menu > li:first');
+                                }
+                                else {
+                                    el = this.element.find('.search-view-menu > li:last');
+                                }
+                                el.addClass('active');
+                            }
+                        }
+                    }
+                    update() {
+                        if (this.groupLength !== this._groupLength) {
+                            this._groupLength = this.groupLength;
+                            this.scope.action.applyGroups(this.groupBy(), this.getParams());
+                        }
+                        else
+                            this.scope.action.setSearchParams(this.getParams());
+                    }
+                    groupBy() {
+                        return this.facetGrouping.values.map(obj => obj._ref.name);
+                    }
+                    show() {
+                        let shouldApply = false;
+                        if (!this.$items) {
+                            this.$items = [].concat(this.fields);
+                            shouldApply = true;
+                        }
+                        for (let obj of this.$items)
+                            if (obj.expanded) {
+                                obj.expanded = false;
+                                shouldApply = true;
+                            }
+                        if (shouldApply)
+                            this.scope.$apply();
+                        this.menu.show();
+                        this.first();
+                    }
+                    close() {
+                        this.$items = null;
+                        this.menu.hide();
+                        this.reset();
+                        this.input.val('');
+                    }
+                    reset() {
+                        for (let i of this.fields)
+                            if (i && i.children && i.children.length)
+                                i.expanded = false;
+                    }
+                    clear() {
+                    }
+                    addCustomFilter(field, value) {
+                        let filters = new Search.SearchFilters(this);
+                        filters.push(new Search.CustomFilterItem(this, field, '=', value, filters));
+                        filters.selectAll();
+                    }
                 }
-            }
-            Views.ViewInfo = ViewInfo;
+                Search.SearchView = SearchView;
+                class SearchViewComponent {
+                    constructor() {
+                        this.restrict = 'E';
+                        this.templateUrl = 'view.search.jinja2';
+                        this.replace = true;
+                        this.scope = false;
+                    }
+                }
+                class SearchViewArea {
+                    constructor() {
+                        this.restrict = 'A';
+                        this.scope = false;
+                    }
+                    link(scope, el, attrs) {
+                        let view = scope.action.views.search;
+                        scope.action.searchView = new SearchView(scope, el, view);
+                        if (scope.action.context.default_search) {
+                            scope.action.searchView.load(scope.action.context.default_search);
+                        }
+                    }
+                }
+                Katrid.UI.uiKatrid.controller('SearchMenuController', ['$scope', function ($scope) {
+                    }]);
+                Katrid.UI.uiKatrid.directive('searchView', SearchViewComponent);
+                Katrid.UI.uiKatrid.directive('searchViewArea', SearchViewArea);
+            })(Search = Views.Search || (Views.Search = {}));
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -7216,7 +8197,7 @@ var Katrid;
                 });
             }
             static all() {
-                return (new Query()).rpc('all');
+                return (new Query()).rpc('list_all');
             }
             static executeSql(sql) {
                 return (new Query()).post('execute_sql', { args: [sql] });
@@ -7313,147 +8294,6 @@ var Katrid;
             };
         }
     }));
-})();
-(function () {
-    class QueryManager {
-        constructor(app) {
-            this.app = app;
-            this.$scope = app.$scope.$new();
-            this.$scope.queryChange = (query) => this.queryChange(query);
-            this.$scope.search = {};
-            let me = this;
-            this.action = this.$scope.action = {
-                context: {},
-                views: {},
-                async saveSearch(search) {
-                    let svc = new Katrid.Services.Model('ui.filter');
-                    let data = {};
-                    Object.assign(data, search);
-                    data.query = me.$scope.query.id;
-                    if (search.name === null) {
-                        search.name = prompt('Query name', 'current query namne');
-                        search.is_default = false;
-                        search.is_shared = true;
-                    }
-                    if (search.name)
-                        await svc.write([data]);
-                },
-                setSearchParams(params) {
-                    me.$scope.search.params = params;
-                    me.refresh(me.query);
-                },
-                switchView(viewType) {
-                    console.log('set view type', viewType);
-                },
-                orderBy(field) {
-                    if (me.$scope.ordering === field)
-                        me.$scope.reverse = !me.$scope.reverse;
-                    else {
-                        me.$scope.ordering = field;
-                        me.$scope.reverse = false;
-                    }
-                }
-            };
-        }
-        getFilter(field) {
-            if (field.type === 'DateField')
-                return "|date:'shortDate'";
-            else if (field.type === 'DateTimeField')
-                return "|date:'short'";
-            else if (field.type === 'IntegerField')
-                return "|number:0";
-            return "";
-        }
-        getSearchView(query) {
-            let s;
-            if (query.params)
-                s = query.params;
-            else {
-                s = `<search>`;
-                for (let f of query.fields)
-                    s += `<field name="${f.name}"/>`;
-                s += '</search>';
-            }
-            let fields = {};
-            for (let f of query.fields)
-                fields[f.name] = Katrid.Data.Fields.Field.fromInfo(f);
-            this.fields = fields;
-            return { content: s, fields };
-        }
-        async queryChange(query) {
-            this.$scope.search = {
-                viewMoreButtons: true,
-            };
-            this.query = query;
-            let res = await this.refresh(query);
-            query.fields = res.fields;
-            this.action.search = this.getSearchView(query);
-            this.action.fieldList = Object.values(this.fields);
-            this.$scope.action.views.search = this.$scope.action.search;
-            this.renderSearch();
-            this.renderTable(res);
-            this.$scope.$apply();
-        }
-        async refresh(query) {
-            let res = await Katrid.Services.Query.read({ id: query.id, details: true, params: this.$scope.search.params });
-            for (let f of res.fields)
-                f.filter = this.getFilter(f);
-            let _toObject = (fields, values) => {
-                let r = {}, i = 0;
-                for (let f of fields) {
-                    r[f.name] = values[i];
-                    i++;
-                }
-                return r;
-            };
-            this.$scope.records = res.data.map(row => _toObject(res.fields, row));
-            this.$scope.$apply();
-            return res;
-        }
-        renderSearch() {
-            let el = this.app.getTemplate('query.manager.search.jinja2');
-            el = Katrid.Core.$compile(el)(this.$scope);
-            this.$element.find('#query-search-view').html(el);
-        }
-        async render() {
-            let templ = this.app.getTemplate('query.manager.jinja2');
-            templ = Katrid.Core.$compile(templ)(this.$scope);
-            this.$element = templ;
-            let queries = await Katrid.Services.Query.all();
-            this.$scope.queries = queries.data;
-            this.app.$element.html(templ);
-            this.$scope.$apply();
-        }
-        renderTable(data) {
-            let templ = this.app.getTemplate('query.manager.table.jinja2', {
-                self: this, query: this.$scope.query, records: this.records, fields: Object.values(this.fields),
-            });
-            templ = Katrid.Core.$compile(templ)(this.$scope);
-            initColumn(templ);
-            this.$element.find('#query-manager-result').html(templ);
-        }
-    }
-    Katrid.Core.plugins.register((app) => {
-        $(app).on('hashchange', (event, hash) => {
-            if (hash.startsWith('#/app/query.manager/')) {
-                event.stopPropagation();
-                event.preventDefault();
-                app.$scope.$parent.currentMenu = { name: 'Query Manager' };
-                let q = new QueryManager(app);
-                q.render();
-            }
-        });
-    });
-    function initColumn(table) {
-    }
-    function reorder(index1, index2) {
-        $('table tr').each(function () {
-            var tr = $(this);
-            var td1 = tr.find(`td:eq(${index1})`);
-            var td2 = tr.find(`td:eq(${index2})`);
-            td1.detach().insertAfter(td2);
-        });
-    }
 })();
 var Katrid;
 (function (Katrid) {
@@ -10576,6 +11416,26 @@ var Katrid;
             Katrid.define('plotly-chart', PlotlyChart);
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var UI;
+    (function (UI) {
+        var Utils;
+        (function (Utils) {
+            function tableToText(table) {
+                let output = [];
+                for (let tr of table.querySelectorAll('tr')) {
+                    let row = [];
+                    for (let td of tr.children)
+                        row.push(td.innerText);
+                    output.push(row.join('\t'));
+                }
+                return output.join('\n');
+            }
+            Utils.tableToText = tableToText;
+        })(Utils = UI.Utils || (UI.Utils = {}));
+    })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
 (function ($) {
     $.fn.tabset = function () {

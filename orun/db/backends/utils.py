@@ -88,6 +88,10 @@ class CursorWrapper:
         with self.db.wrap_database_errors:
             return self.cursor.executemany(sql, param_list)
 
+    def fetchall_dict(self):
+        desc = self.cursor.description
+        return [dict(zip([col[0] for col in desc], row)) for row in self.cursor.fetchall()]
+
 
 class CursorDebugWrapper(CursorWrapper):
 

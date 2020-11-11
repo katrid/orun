@@ -128,9 +128,10 @@ class ViewAction(Action):
     def get_view(self, id):
         if isinstance(id, list):
             id = id[0]
-        obj = apps['ui.view'].objects.get(pk=id)
+        view = apps['ui.view'].objects.get(pk=id)
         return {
-            'content': obj.render({}),
+            'content': view.render({}),
+            'type': view.view_type,
         }
 
 

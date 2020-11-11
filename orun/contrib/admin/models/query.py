@@ -1,3 +1,4 @@
+from decimal import Decimal
 from jinja2 import Template
 
 from orun import api
@@ -16,7 +17,7 @@ class Category(models.Model):
 class Query(models.Model):
     name = models.CharField(label=_('Name'), localize=True)
     category = models.ForeignKey(Category)
-    sql = models.TextField(template={'form': 'view.form.sql-editor.jinja2'})
+    sql = models.TextField()
     context = models.TextField()
     params = models.TextField()
     public = models.BooleanField(default=False, label='Public/External access', help_text='Has public external/anonymous access')
@@ -37,17 +38,18 @@ class Query(models.Model):
             field = cond[0]
             if len(cond) > 1:
                 for lookup in cond[1:]:
-                    name = 'param_%s' % (len(values.values()) + 1)
+                    # name = 'param_%s' % (len(values) + 1)
                     if lookup == 'icontains':
-                        s = f'{field} like :{name}'
+                        s = f'{field} like ?'
                         v = f'%{v}%'
                     else:
-                        s = f'{field} = :{name}'
-                    values[name] = v
+                        s = f'{field} = ?'
+                    values.append(v)
                     sql.append('(%s)' % s)
             else:
-                name = 'param_%s' % (len(values.values()) + 1)
-                s = f'{field} = :{name}'
+                # name = 'param_%s' % (len(values.values()) + 1)
+                values.append(v)
+                s = f'{field} = ?'
                 sql.append('(%s)' % s)
         return '(%s)' % ' OR '.join(sql)
 
@@ -79,9 +81,10 @@ class Query(models.Model):
             params = {}
 
         sql = q.sql
+        values = []
         if 'params' in kwargs:
             # apply query search params
-            sql = q._apply_search(sql, kwargs['params'], params)
+            sql = q._apply_search(sql, kwargs['params'], values)
         if 'filter' in kwargs:
             params.update(kwargs['filter'])
         if (fields):
@@ -90,8 +93,7 @@ class Query(models.Model):
         sql = Template(sql).render(**params)
 
         cur = connection.cursor()
-        cur.execute(sql)
-        rows = cur.fetchall()
+        cur.execute(sql, values)
         desc = cur.cursor.description
         if with_description:
             fields = [
@@ -103,7 +105,7 @@ class Query(models.Model):
 
         return {
             'fields': fields,
-            'data': [dict(zip(fields, row)) for row in rows] if as_dict else [list(row) for row in rows],
+            'data': [[float(col) if isinstance(col, Decimal) else col for col in row] for row in cur.fetchall()],
         }
 
     @api.method

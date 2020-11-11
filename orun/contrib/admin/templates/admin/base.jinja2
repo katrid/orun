@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html {% block html_attrs %}{% endblock %}>
 <head>
   <title>{% block page_title %}AgroMobi Gestão{% endblock %}</title>
   <meta charset="UTF-8">
@@ -21,7 +21,7 @@
   {% block extra_head %}{% endblock %}
   <!-- end extra head -->
 </head>
-<body class="{% block body_class %}{% endblock %}">
+<body class="{% block body_class %}{% endblock %}" {% block body_attrs %}{% endblock %}>
 
 {% block content %}{% endblock %}
 
@@ -48,9 +48,18 @@
   <script src="/static/admin/assets/js/datepicker/bootstrap-datetimepicker.js"></script>
   <script src="/static/admin/assets/js/toastr/toastr.min.js"></script>
   <script src="/static/admin/assets/js/underscore-min.js"></script>
-  <script src="/static/admin/assets/js/c3/d3.v3.min.js"></script>
-  <script src="/static/admin/assets/js/c3/c3.min.js"></script>
+  <script src="/static/admin/vue.min.js"></script>
 
+  <script src="/static/admin/libs/plotly/plotly.min.js"></script>
+  <script src="/static/admin/libs/require.js"></script>
+  <script>
+    require.config({
+      paths: {
+        vs: '/static/bi/monaco-editor/min/vs',
+        plotly: '/static/admin/libs/plotly',
+      }
+    });
+  </script>
   <script src="/static/admin/katrid/katrid.js"></script>
 
 <!-- additional scripts -->
@@ -74,4 +83,5 @@
 {% block additional_assets %}{% endblock %}
 
 </body>
+{% block additional_content %}{% endblock %}
 </html>

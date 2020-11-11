@@ -206,6 +206,8 @@ class View(models.Model):
             content = get_template(self.template_name)
             return content.render(context)
             # return apps.report_env.from_string(self.content).render(**context)
+        if self.view_type == 'dashboard':
+            return self.content
         return Template(self.content).render(context)
 
     @classmethod

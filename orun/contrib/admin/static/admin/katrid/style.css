@@ -13169,6 +13169,13 @@ dashboard-view {
   min-height: 100%;
 }
 
+query-viewer {
+  background-color: #ffffff;
+}
+query-viewer #select-query {
+  margin-bottom: 20px;
+}
+
 pwa-form {
   border-radius: 8px;
   padding-bottom: 20px;
