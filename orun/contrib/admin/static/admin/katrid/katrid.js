@@ -1985,14 +1985,12 @@ var Katrid;
                     th.innerText = f.caption;
                     thr.append(th);
                 }
-                let fmt = new Intl.NumberFormat('pt-BR');
                 for (let row of res.data) {
                     let tr = document.createElement('tr');
                     for (let col of row) {
                         let td = document.createElement('td');
-                        if (_.isNumber(col)) {
-                            col = fmt.format(col);
-                        }
+                        if (_.isNumber(col))
+                            col = Katrid.intl.format(col);
                         td.innerText = col;
                         tr.append(td);
                     }
@@ -5112,6 +5110,7 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    Katrid.intl = new Intl.NumberFormat('pt-BR');
     Katrid.i18n = {
         languageCode: 'pt-BR',
         formats: {},

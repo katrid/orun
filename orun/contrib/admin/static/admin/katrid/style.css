@@ -13175,6 +13175,9 @@ query-viewer {
 query-viewer #select-query {
   margin-bottom: 20px;
 }
+query-viewer .table {
+  margin-top: 16px;
+}
 
 pwa-form {
   border-radius: 8px;
