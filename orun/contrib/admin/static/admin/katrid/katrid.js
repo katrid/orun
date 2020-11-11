@@ -9095,10 +9095,19 @@ var Katrid;
 (function (Katrid) {
     var UI;
     (function (UI) {
+        let MENU_DELAY = 1000;
         class AppHeader extends HTMLElement {
+            constructor() {
+                super(...arguments);
+                this._menuClicked = false;
+            }
             connectedCallback() {
                 this.loadModules(Katrid.app.config.menu);
                 this.createUserMenu();
+                document.addEventListener('click', evt => {
+                    this._menuClicked = false;
+                    this.hideMenu();
+                });
             }
             loadModules(items) {
                 this.nav = document.querySelector('#navbar');
@@ -9144,11 +9153,34 @@ var Katrid;
                     ul.style.display = 'none';
                     ul.setAttribute('data-parent-id', menu.id.toString());
                     this.navMenu.append(ul);
+                    let menuClick = evt => {
+                        evt.stopPropagation();
+                        evt.preventDefault();
+                        this._menuClicked = !this._menuClicked;
+                        if (this._menuClicked)
+                            this.showMenu(evt.target.parentElement);
+                        else
+                            this.hideMenu();
+                    };
+                    let pointerover = evt => {
+                        this.hideMenu();
+                        if (this._menuClicked) {
+                            this.showMenu(evt.target);
+                        }
+                        else
+                            this._timeout = setTimeout(() => this.showMenu(evt.target), MENU_DELAY);
+                    };
+                    let pointerout = () => {
+                        clearTimeout(this._timeout);
+                        if (!this._menuClicked)
+                            this._timeout = setTimeout(() => this.hideMenu(), MENU_DELAY);
+                    };
                     for (let item of menu.children) {
                         let li = document.createElement('li');
                         li.classList.add('nav-item', 'dropdown');
-                        li.addEventListener('pointerover', () => li.classList.add('show'));
-                        li.addEventListener('pointerout', () => li.classList.remove('show'));
+                        li.addEventListener('click', menuClick);
+                        li.addEventListener('pointerenter', pointerover);
+                        li.addEventListener('pointerleave', pointerout);
                         let a = document.createElement('a');
                         a.classList.add('nav-link', 'dropdown-link', 'menu-item-action');
                         a.setAttribute('id', 'ui-menu-' + item.id.toString());
@@ -9163,6 +9195,18 @@ var Katrid;
                     }
                 }
                 return module;
+            }
+            showMenu(li) {
+                clearTimeout(this._timeout);
+                li.classList.add('show');
+                this._currentMenu = li;
+            }
+            hideMenu() {
+                clearTimeout(this._timeout);
+                if (this._currentMenu) {
+                    this._currentMenu.classList.remove('show');
+                    this._currentMenu = null;
+                }
             }
             createDropdownMenu(items) {
                 let dropdownMenu = document.createElement('div');
@@ -9195,8 +9239,13 @@ var Katrid;
                 }
                 else {
                     let menuItem = this.createDropdownItem(item);
-                    if (item.action)
-                        menuItem.setAttribute('href', '#/app/?menu_id=' + this._rootItem.id.toString() + '&action=' + item.action);
+                    if (item.action) {
+                        menuItem.setAttribute('href', '#/app/?menu_id=' + this._rootItem.id + '&action=' + item.action);
+                        menuItem.addEventListener('click', evt => {
+                            evt.stopPropagation();
+                            this.hideMenu();
+                        });
+                    }
                     dropdownMenu.append(menuItem);
                     return menuItem;
                 }
