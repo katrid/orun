@@ -43,13 +43,13 @@ class Query(models.Model):
                         s = f'{field} like ?'
                         v = f'%{v}%'
                     else:
-                        s = f'{field} = ?'
+                        s = f'"{field}" = ?'
                     values.append(v)
                     sql.append('(%s)' % s)
             else:
                 # name = 'param_%s' % (len(values.values()) + 1)
                 values.append(v)
-                s = f'{field} = ?'
+                s = f'"{field}" = ?'
                 sql.append('(%s)' % s)
         return '(%s)' % ' OR '.join(sql)
 
