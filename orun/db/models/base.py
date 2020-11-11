@@ -1965,7 +1965,8 @@ class Model(metaclass=ModelBase):
         cls.objects.bulk_update(objs, [cls._meta.sequence_field])
 
     @api.method
-    def group_by(self, grouping, where):
+    def group_by(self, grouping, params):
+        where = params
         field_name = grouping[0]
         field = self._meta.fields[field_name]
         if field.group_choices:
