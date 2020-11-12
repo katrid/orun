@@ -80,17 +80,15 @@ class Query(models.Model):
         else:
             params = {}
 
-        sql = q.sql
+        if 'filter' in kwargs:
+            params.update(kwargs['filter'])
+        sql = Template(q.sql).render(**params)
         values = []
         if 'params' in kwargs:
             # apply query search params
             sql = q._apply_search(sql, kwargs['params'], values)
-        if 'filter' in kwargs:
-            params.update(kwargs['filter'])
         if (fields):
             sql = 'SELECT top 100 %s FROM (%s) as __q' % (', '.join(fields))
-
-        sql = Template(sql).render(**params)
 
         cur = connection.cursor()
         cur.execute(sql, values)
