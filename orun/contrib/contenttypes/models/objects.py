@@ -45,6 +45,10 @@ class Object(models.Model):
     def get_by_natural_key(cls, name):
         return cls.get_object(name)
 
+    @classmethod
+    def get_ref(cls, ref_id: str):
+        return cls.objects.get(name=ref_id).object_id
+
 
 class Property(models.Model):
     name = models.CharField(128, _('name'), null=False)
