@@ -1,19 +1,30 @@
 import os
+import json
 import re
 from jinja2 import Environment, FunctionLoader, Template
 import logging
 
 from orun import g
 from orun.apps import apps
-from orun.shortcuts import render
+from orun.shortcuts import ref
 from orun.template import loader, Template
 from orun.conf import settings
 from orun.db import models, connection
 from orun.utils.translation import gettext, gettext_lazy as _
 from orun.utils.xml import etree
+from orun.core.serializers.json import OrunJSONEncoder
+from orun.contrib.contenttypes.models import ContentType
 
 
 logger = logging.getLogger('orun')
+
+
+def exec_query(q: str, fmt='json'):
+    cur = connection.cursor()
+    cur.execute(q)
+    res = [list(row) for row in cur.fetchall()]
+    if fmt == 'json':
+        return json.dumps(res, cls=OrunJSONEncoder)
 
 
 def get_template(self, template):
@@ -187,6 +198,8 @@ class View(models.Model):
         from orun.template.loader import get_template
         context['env'] = apps
         context['_'] = gettext
+        context['models'] = apps
+        context['ref'] = ref
         if self.view_type in ('dashboard', 'report'):
             context['db'] = {
                 'connection': connection
