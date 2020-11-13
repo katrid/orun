@@ -9,6 +9,7 @@ from orun.http import (
 from orun.template import loader
 from orun.urls import NoReverseMatch, reverse
 from orun.utils.functional import Promise
+from orun.apps import apps
 
 
 def render(request, template_name, context=None, content_type=None, status=None, using=None):
@@ -139,3 +140,7 @@ def resolve_url(to, *args, **kwargs):
 
     # Finally, fall back and assume it's a URL
     return to
+
+
+def ref(ref_id: str):
+    return apps['ir.object'].get_ref(ref_id)
