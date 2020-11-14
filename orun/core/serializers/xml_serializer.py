@@ -141,6 +141,7 @@ class Deserializer(base.Deserializer):
         lst = []
         action = None
         action_id = obj.attrib.get('action')
+        icon = obj.attrib.get('icon')
         if action_id:
             try:
                 action = Object.objects.get_object(action_id).content_object
@@ -155,6 +156,7 @@ class Deserializer(base.Deserializer):
         fields = {
             'parent_id': parent,
             'action_id': action_id,
+            'icon': icon,
             'name': s,
         }
         if obj.attrib.get('sequence'):
