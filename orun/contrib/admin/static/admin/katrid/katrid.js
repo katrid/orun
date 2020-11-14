@@ -9133,7 +9133,7 @@ var Katrid;
                     menuItem.classList.add('module-selector');
                     menuItem.addEventListener('click', evt => {
                         evt.preventDefault();
-                        Katrid.app.loadPage(evt.target.getAttribute('href'));
+                        Katrid.app.loadPage(menuItem.getAttribute('href'));
                     });
                     this.createMenu(item);
                 }

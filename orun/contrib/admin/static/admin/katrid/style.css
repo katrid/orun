@@ -12165,6 +12165,10 @@ table-field .table tbody tr {
   font-size: 8pt;
 }
 
+.dropdown-item:active {
+  background-color: #f8f8f8;
+}
+
 .nav-item > .dropdown-menu {
   margin: 0;
 }
