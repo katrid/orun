@@ -34,6 +34,7 @@ class Menu(models.Model):
                 {
                     'id': menu_item.pk,
                     'name': gettext(menu_item.name),
+                    'icon': menu_item.icon,
                     'url': menu_item.get_absolute_url(),
                     'action': menu_item.action_id,
                     'children': _iter_item(menu_item.pk)

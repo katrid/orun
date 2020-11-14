@@ -403,8 +403,9 @@ var Katrid;
                         dashboard.load(JSON.parse(content));
                     }
                 }
-                else
+                else {
                     $(Katrid.app.$element).html(Katrid.Core.$compile(content)(this.scope));
+                }
             }
         }
         ViewAction.actionType = 'ui.action.view';
@@ -5110,7 +5111,7 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
-    Katrid.intl = new Intl.NumberFormat('pt-BR');
+    Katrid.intl = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
     Katrid.i18n = {
         languageCode: 'pt-BR',
         formats: {},
@@ -8183,10 +8184,11 @@ var Katrid;
                 super('ir.query');
             }
             static read(config) {
-                let details, id, params;
+                let details, id, params, filter;
                 if (_.isObject(config)) {
                     details = config.details;
                     params = config.params;
+                    filter = config.filter;
                     id = config.id;
                 }
                 else
@@ -8194,7 +8196,7 @@ var Katrid;
                 return (new Query()).post('read', {
                     args: [id],
                     kwargs: {
-                        with_description: details, params, as_dict: config.as_dict
+                        with_description: details, params, as_dict: config.as_dict, filter
                     }
                 });
             }
@@ -9116,6 +9118,16 @@ var Katrid;
                 for (let item of items) {
                     this._rootItem = item;
                     let menuItem = this.createDropdownItem(item);
+                    menuItem.classList.add('text-center');
+                    let imgPath = item.icon;
+                    if (!imgPath)
+                        imgPath = '/static/admin/assets/img/cube.svg';
+                    let img = document.createElement('img');
+                    img.src = imgPath;
+                    menuItem.append(img);
+                    let span = document.createElement('span');
+                    span.innerText = item.name;
+                    menuItem.append(span);
                     menu.append(menuItem);
                     menuItem.setAttribute('href', '#/app/?menu_id=' + item.id);
                     menuItem.classList.add('module-selector');
@@ -9223,7 +9235,6 @@ var Katrid;
                 el.classList.add('dropdown-item');
                 el.setAttribute('id', 'ui-menu-' + item.id.toString());
                 el.setAttribute('data-menu-id', item.id.toString());
-                el.innerText = item.name;
                 if (item.url)
                     el.setAttribute('href', '#/app/?menu_id=' + item.id.toString());
                 return el;
@@ -9239,6 +9250,7 @@ var Katrid;
                 }
                 else {
                     let menuItem = this.createDropdownItem(item);
+                    menuItem.innerText = item.name;
                     if (item.action) {
                         menuItem.setAttribute('href', '#/app/?menu_id=' + this._rootItem.id + '&action=' + item.action);
                         menuItem.addEventListener('click', evt => {
@@ -9762,7 +9774,7 @@ var Katrid;
     class Decimal {
         constructor($filter) {
             this.restrict = 'A';
-            this.require = 'ngModel';
+            this.require = '?ngModel';
             this.$filter = $filter;
         }
         link(scope, element, attrs, controller) {
@@ -9779,17 +9791,19 @@ var Katrid;
             if (decimal)
                 opts.digits = parseInt(decimal);
             element.inputmask(opts);
-            controller.$parsers.push(value => {
-                let v = element.inputmask('unmaskedvalue');
-                return v;
-            });
-            controller.$formatters.push((v) => {
-                if (_.isNumber(v))
-                    v = v.toFixed(opts.digits).replace('.', ',');
-                else if (_.isString(v))
-                    v = v.replace('.', ',');
-                return v;
-            });
+            if (controller && controller.$parsers) {
+                controller.$parsers.push(value => {
+                    let v = element.inputmask('unmaskedvalue');
+                    return v;
+                });
+                controller.$formatters.push((v) => {
+                    if (_.isNumber(v))
+                        v = v.toFixed(opts.digits).replace('.', ',');
+                    else if (_.isString(v))
+                        v = v.replace('.', ',');
+                    return v;
+                });
+            }
         }
     }
     uiKatrid.directive('inputDecimal', ['$filter', Decimal]);
@@ -10470,6 +10484,14 @@ var Katrid;
                 return '';
             return new Intl.NumberFormat('pt-br', { maximumSignificantDigits: maxDigits }).format(value);
         };
+    });
+    Vue.filter('date', function (value, fmt = 'MM/DD/YYYY') {
+        if (value)
+            return moment(value).format(fmt);
+    });
+    Vue.filter('number', function (value, digits) {
+        if (value !== null)
+            return Katrid.intl.format(value);
     });
 })();
 (function () {

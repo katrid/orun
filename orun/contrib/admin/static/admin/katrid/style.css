@@ -11547,6 +11547,25 @@ h3.popover-title {
   color: #5cb85c;
 }
 
+.apps-menu {
+  padding: 8px;
+}
+.apps-menu.show {
+  display: grid;
+  grid-template-columns: repeat(3, 120px);
+}
+.apps-menu .dropdown-item {
+  padding: 8px 2px;
+}
+.apps-menu .dropdown-item span {
+  display: block;
+  font-size: 8pt;
+}
+.apps-menu .dropdown-item img {
+  height: 48px;
+  width: 48px;
+}
+
 #left-menu {
   height: 100%;
 }

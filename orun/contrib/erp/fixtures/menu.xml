@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <data>
-  <menuitem id="menu.settings" name="Settings" sequence="999">
+  <menuitem id="menu.settings" name="Settings" sequence="999" icon="/static/erp/gears.svg">
     <menuitem id="menu.settings.auth" name="Authentication">
       <menuitem id="menu.settings.auth.user" name="Users" action="action.view.auth.user"/>
       <menuitem id="menu.settings.auth.group" name="Groups" action="action.view.auth.group"/>
