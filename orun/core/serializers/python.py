@@ -84,7 +84,7 @@ def get_prep_value(model, field_name, field, value, using):
     if '__' in field_name:
         lfield, rfield = field_name.split('__', 1)
         model_field = model._meta.fields[lfield].remote_field.model
-        obj = model_field.objects.using(db).filter(**{rfield: value}).only('pk').first()
+        obj = model_field.objects.using(using).filter(**{rfield: value}).only('pk').first()
         if not obj:
             print('Value "%s" not found for "%s"' % (value, field_name))
         assert obj, 'Value "%s" not found for "%s"' % (value, field_name)
