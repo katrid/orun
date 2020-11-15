@@ -12173,6 +12173,10 @@ table-field .table tbody tr {
   margin: 0;
 }
 
+calendar-view .fc-header-toolbar {
+  margin: 10px;
+}
+
 html, body {
   font-family: Open Sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
@@ -12726,10 +12730,6 @@ list-view .list-record-star:hover {
 
 .navbar .form-control {
   max-width: 190px;
-}
-
-.login-page {
-  background: linear-gradient(to right bottom, #f7f5fb 50%, #fff 50%);
 }
 
 .form-control-dark {

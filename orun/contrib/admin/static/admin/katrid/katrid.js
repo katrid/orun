@@ -4783,7 +4783,7 @@ var Katrid;
                 create() {
                     super.create();
                     this.dateStart = this.getAttribute('date-start');
-                    this.dateStop = this.getAttribute('date-stop');
+                    this.dateEnd = this.getAttribute('date-end');
                     let calendarEl = document.createElement('div');
                     let calendar = this.calendar = new FullCalendar.Calendar(calendarEl, {
                         locale: 'pt-br',
@@ -4807,6 +4807,9 @@ var Katrid;
                             title: record.record_name,
                             start: record[this.dateStart],
                         };
+                        if (this.dateEnd)
+                            event.end = record[this.dateEnd];
+                        console.log(event);
                         this.calendar.addEvent(event);
                     }
                 }
