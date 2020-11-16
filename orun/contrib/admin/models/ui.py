@@ -27,6 +27,14 @@ def exec_query(q: str, fmt='json'):
         return json.dumps(res, cls=OrunJSONEncoder)
 
 
+def exec_scalar(q: str):
+    cur = connection.cursor()
+    cur.execute(q)
+    row = cur.fetchall()
+    if row:
+        return row[0][0]
+
+
 def get_template(self, template):
     # TODO try to find on db (if not found, try to search on file system)
     app_label = template.split('/', 1)[0]
@@ -198,6 +206,8 @@ class View(models.Model):
         from orun.template.loader import get_template
         context['env'] = apps
         context['_'] = gettext
+        context['exec_query'] = exec_query
+        context['exec_scalar'] = exec_scalar
         context['models'] = apps
         context['ref'] = ref
         if self.view_type in ('dashboard', 'report'):

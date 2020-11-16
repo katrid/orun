@@ -12771,11 +12771,6 @@ list-view .list-record-star:hover {
   vertical-align: 1px;
 }
 
-.dashboard {
-  padding: 15px;
-  background-color: #ffffff;
-}
-
 .sparks {
   list-style: none;
   text-align: right;
@@ -13190,6 +13185,20 @@ dashboard-view {
   grid-template-rows: repeat(2, 100px);
   background-color: #ffffff;
   min-height: 100%;
+}
+
+.dashboard {
+  padding: 15px;
+}
+
+.dashboard-container-widget {
+  padding: 10px;
+}
+.dashboard-container-widget .dashboard-widget {
+  border: 1px solid #e5e5e5;
+  padding: 16px;
+  border-radius: 6px;
+  background-color: #ffffff;
 }
 
 query-viewer {
