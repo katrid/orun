@@ -1560,18 +1560,20 @@
         {% endif %}
     >
       {% block label %}
-        {% if not field.attrs.nolabel %}
+        {% if (not field.attrs.nolabel) and (not field.inplaceEditor) %}
           <label class="form-label">
             {{ field.caption }}
           </label>
         {% endif %}
       {% endblock %}
       {% block span %}
+        {% if not field.inplaceEditor %}
         <span class="form-field-readonly">
         {% block readonly %}
           ${ record.{{ field.name }} || '{{ field.emptyText }}'}
         {% endblock %}
         </span>
+        {% endif %}
       {% endblock %}
       {% block field %}
         <input {% block fields_css %}class="form-field form-control"{% endblock %} {% block input_type %}type="text"{% endblock %} {{ utils.field_attrs(field) }}
@@ -2067,16 +2069,13 @@
       {% if html %}
         {{ html }}
       {% else %}
-          {% if inplaceEditor %}
-          {% else %}
-            {% block span %}
-              <span>
+        {% block span %}
+          <span{% if inplaceEditor %} class="form-field-readonly"{% endif %}>
               {% block span_content %}
                 ${ record.{{ field.name }} }
               {% endblock %}
               </span>
-            {% endblock %}
-          {% endif %}
+        {% endblock %}
       {% endif %}
     </td>
   </script>
@@ -2132,7 +2131,7 @@
   <script id="view.list.boolean-field.jinja2" type="text/ng-template">
     {% extends "view.list.field.jinja2" %}
     {% block span_content %}
-    ${ record.{{ field.name }} ? '{{ _.gettext('yes') }}' : '{{ _.gettext('no') }}' }
+      ${ record.{{ field.name }} ? '{{ _.gettext('yes') }}' : '{{ _.gettext('no') }}' }
     {% endblock %}
   </script>
 
