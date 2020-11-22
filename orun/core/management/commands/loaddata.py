@@ -42,6 +42,14 @@ class Command(BaseCommand):
             help='Nominates a specific database to dump fixtures from. '
                  'Defaults to the "default" database.',
         )
+        parser.add_argument(
+            '-l', '--file-list',
+            help='Specify a file containing a list of fixture files.',
+        )
 
     def handle(self, schema, *filenames, **options):
+        file_list = options.get('file_list')
+        if file_list:
+            with open(file_list, 'r') as f:
+                filenames = f.readlines()
         load_fixture(schema, *filenames, **options)
