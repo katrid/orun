@@ -2,7 +2,7 @@ import copy
 from decimal import Decimal
 import random
 
-from orun.apps import Registry as Apps
+from orun.apps.registry import Registry as Apps
 from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
 from orun.db.backends.ddl_references import Statement
 from orun.db.models import UniqueConstraint, Field

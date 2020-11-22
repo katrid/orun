@@ -101,7 +101,7 @@ class Command(BaseCommand):
         if options['schema']:
             self.sync_apps(connection, [app_label])
         else:
-            self.sync_apps(connection, apps.addons.keys())
+            self.sync_apps(connection, apps.app_configs.keys())
 
         # Send the post_migrate signal, so individual apps can do whatever they need
         # to do at this point.
@@ -145,7 +145,7 @@ class Command(BaseCommand):
         post_model_list = {}
         with connection.schema_editor() as editor:
             for app_name in manifest:
-                app = apps.addons[app_name]
+                app = apps.app_configs[app_name]
                 if app.db_schema and app.create_schema and app.db_schema not in schemas:
                     editor.create_schema(app.db_schema)
             # create all tables before additional objects
