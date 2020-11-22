@@ -31,10 +31,9 @@ class Deserializer(base.Deserializer):
                     cmd = 'sqlcmd'
                 else:
                     cmd = '/opt/mssql-tools/bin/sqlcmd'
-                os.system(
-                    '%s -U %s -P %s -S %s -d %s -i "%s" %s' %
-                    (cmd, user_name, pwd, host, db_name, filename, additional_params)
-                )
+                shcmd = '%s -U %s -P %s -S %s -d %s -i "%s" %s' % (cmd, user_name, pwd, host, db_name, filename, additional_params)
+                print(shcmd)
+                os.system(shcmd)
             else:
                 os.system(
                     'sqlcmd -E -S %s -d %s -i "%s" -f 65001' %
