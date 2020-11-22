@@ -25,7 +25,8 @@ class Registry:
         # get a new event loop
         self.models = {}
         self.services = {}
-        self.app_configs = self.addons = {}
+        self.app_configs: dict[str, AppConfig] = {}
+        self.addons = self.app_configs
         self._lock = RLock()
         self._pending_operations = defaultdict(list)
         self.ready_event = Event()
