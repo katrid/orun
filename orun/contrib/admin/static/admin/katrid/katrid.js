@@ -7118,7 +7118,7 @@ var Katrid;
                     this.inlineEditor = this._fieldEl.getAttribute('inline-editor');
                     if (this.inlineEditor === undefined)
                         this.inlineEditor = false;
-                    else if ((this.inlineEditor === null) || (this.inlineEditor === ''))
+                    else if (this.inlineEditor === '')
                         this.inlineEditor = 'inline';
                     this._model = new Katrid.Services.Model(this.field.info.model);
                     this._scope = this.actionView.action.scope.$new(true);
