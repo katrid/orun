@@ -1,24 +1,24 @@
 <?xml version="1.1" encoding="UTF-8"?>
 <data translate="true">
-  <action id="action.contacts.view.partner" type="ir.action.window" name="Contacts" model="res.partner">
+  <action id="action.contacts.view.partner" type="ui.action.window" name="Contacts" model="res.partner">
     <field name="view_mode">card,list,form</field>
   </action>
-  <action id="action.contacts.view.partner.category" type="ir.action.window" name="Partner Categories" model="res.partner.category">
+  <action id="action.contacts.view.partner.category" type="ui.action.window" name="Partner Categories" model="res.partner.category">
     <field name="view_mode">list,form</field>
   </action>
-  <action id="action.contacts.view.partner.title" type="ir.action.window" name="Partner Titles" model="res.partner.title">
+  <action id="action.contacts.view.partner.title" type="ui.action.window" name="Partner Titles" model="res.partner.title">
     <field name="view_mode">list,form</field>
   </action>
-  <action id="action.contacts.view.country" type="ir.action.window" name="Countries" model="res.country">
+  <action id="action.contacts.view.country" type="ui.action.window" name="Countries" model="res.country">
     <field name="view_mode">list,form</field>
   </action>
-  <action id="action.contacts.view.country.state" type="ir.action.window" name="Countries" model="res.country.state">
+  <action id="action.contacts.view.country.state" type="ui.action.window" name="Countries" model="res.country.state">
     <field name="view_mode">list,form</field>
   </action>
-  <action id="action.contacts.view.city" type="ir.action.window" name="Cities" model="res.city">
+  <action id="action.contacts.view.city" type="ui.action.window" name="Cities" model="res.city">
     <field name="view_mode">list,form</field>
   </action>
-  <action id="action.contacts.view.country.group" type="ir.action.window" name="Country Groups" model="res.country.group">
+  <action id="action.contacts.view.country.group" type="ui.action.window" name="Country Groups" model="res.country.group">
     <field name="view_mode">list,form</field>
   </action>
 </data>
