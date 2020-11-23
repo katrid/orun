@@ -42,7 +42,6 @@ class Deserializer(base.Deserializer):
                 elif obj:
                     lst.append(obj)
             except:
-                raise
                 pass
         return lst
 
