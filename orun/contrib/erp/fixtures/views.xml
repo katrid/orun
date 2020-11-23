@@ -3,12 +3,12 @@
   <object id="view.res.partner.list" model="ui.view">
     <field name="name">res.partner.list</field>
     <field name="model">res.partner</field>
-    <field name="template_name">erp/views/res.partner/list.xml</field>
+    <field name="template_name">erp/views/res.partner/list.html</field>
   </object>
   <object id="view.res.partner.form" model="ui.view">
     <field name="name">res.partner.form</field>
     <field name="model">res.partner</field>
-    <field name="template_name">erp/views/res.partner/form.xml</field>
+    <field name="template_name">erp/views/res.partner/form.html</field>
   </object>
   <object id="view.res.partner.card" model="ui.view">
     <field name="name">res.partner.card</field>
