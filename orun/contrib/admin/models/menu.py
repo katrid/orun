@@ -17,7 +17,7 @@ class Menu(models.Model):
 
     class Meta:
         name = 'ui.menu'
-        ordering = ('sequence',)
+        ordering = ('sequence', 'pk')
         field_groups = {
             'list_fields': ['name', 'sequence', 'parent', 'action']
         }
