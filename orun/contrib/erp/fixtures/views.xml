@@ -3,16 +3,19 @@
   <object id="view.res.partner.list" model="ui.view">
     <field name="name">res.partner.list</field>
     <field name="model">res.partner</field>
+    <field name="view_type">list</field>
     <field name="template_name">erp/views/res.partner/list.html</field>
   </object>
   <object id="view.res.partner.form" model="ui.view">
     <field name="name">res.partner.form</field>
     <field name="model">res.partner</field>
+    <field name="view_type">form</field>
     <field name="template_name">erp/views/res.partner/form.html</field>
   </object>
   <object id="view.res.partner.card" model="ui.view">
     <field name="name">res.partner.card</field>
     <field name="model">res.partner</field>
+    <field name="view_type">card</field>
     <field name="template_name">erp/views/res.partner/card.html</field>
   </object>
   <object id="view.auth.user.form" model="ui.view">
@@ -23,6 +26,7 @@
   <object id="view.auth.user.list" model="ui.view">
     <field name="name">auth.user.list</field>
     <field name="model">auth.user</field>
+    <field name="view_type">list</field>
     <field name="template_name">erp/views/auth.user/list.xml</field>
   </object>
   <object id="view.res.company.form" model="ui.view">
@@ -33,6 +37,7 @@
   <object id="view.res.company.list" model="ui.view">
     <field name="name">res.company.list</field>
     <field name="model">res.company</field>
+    <field name="view_type">list</field>
     <field name="template_name">erp/views/res.company/list.xml</field>
   </object>
   <object id="view.ir.model.form" model="ui.view">
