@@ -1,0 +1,19 @@
+<data>
+  <object id="fixtures/xml/author/1" model="fixtures.author">
+    <field name="name">Xml Author 1</field>
+  </object>
+  <object id="fixtures/xml/author/2" model="fixtures.author">
+    <field name="name">Xml Author 2</field>
+  </object>
+  <object id="fixtures/xml/author/3" model="fixtures.author">
+    <field name="name">Xml Author 3</field>
+  </object>
+  <object id="fixtures/xml/author/4/delete" model="fixtures.author">
+    <field name="name">Xml Author 4</field>
+  </object>
+  <object id="fixtures/xml/book/1" model="fixtures.book">
+    <field name="name">Xml Book 1</field>
+    <field name="author" ref="fixtures/xml/author/1"/>
+  </object>
+  <delete id="fixtures/xml/author/4/delete"/>
+</data>
