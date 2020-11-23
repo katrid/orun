@@ -2,9 +2,9 @@
 <data translate="true">
   <menuitem id="menu.contacts" name="Contacts" sequence="91" icon="/static/contacts/contacts.svg">
     <menuitem id="menu.contacts.partners" name="Partners">
-      <menuitem id="menu.contacts.partners.partner" name="Contacts" action="action.contacts.view.partner" />
-      <menuitem id="menu.contacts.partners.partner.category" name="Categories" action="action.contacts.view.partner.category" />
-      <menuitem id="menu.contacts.partners.partner.title" name="Titles" action="action.contacts.view.partner.title" />
+      <menuitem id="menu.contacts.partners.partner" name="Contacts" action="action.contacts.view.partner"/>
+      <menuitem id="menu.contacts.partners.partner.category" name="Categories" action="action.contacts.view.partner.category"/>
+      <menuitem id="menu.contacts.partners.partner.title" name="Titles" action="action.contacts.view.partner.title"/>
     </menuitem>
     <menuitem id="menu.contacts.localization" name="Localization">
       <menuitem id="menu.contacts.localization.country" name="Countries" action="action.contacts.view.country"/>
