@@ -40,7 +40,6 @@ def report(request, path):
 
 
 def login(request: HttpRequest, **kwargs):
-    print(kwargs)
     if request.method == 'POST':
         if request.is_json():
             data = request.json
