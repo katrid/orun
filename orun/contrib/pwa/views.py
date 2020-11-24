@@ -19,12 +19,23 @@ def manifest_json(request, template_name='pwa/manifest.json'):
 
 
 def sync(request):
+    """
+    Upload received data to database
+    :param request:
+    :return:
+    """
+    PwaSync = apps['pwa.sync']
     data = request.json
     objs = data['data']
     res = []
     for obj in objs:
-        svc = apps[obj['service']]
+        svc = obj['service']
         values = {k: v for k, v in obj['data'].items() if not k.startswith('$')}
-        r = svc.write(values)
-        res.append({'id': r[0], '$id': obj['$id'], 'status': 'ok'})
+        uid = values.pop('uuid')
+        try:
+            obj_id = PwaSync.objects.get(uuid=uid).object_id
+            res.append({'id': obj_id, '$id': obj['$id'], 'status': 'ok'})
+        except PwaSync.DoesNotExist:
+            obj_id = PwaSync.sync(svc, values)[0]
+        res.append({'id': obj_id, '$id': obj['$id'], 'status': 'ok'})
     return JsonResponse({'ok': True, 'result': res})

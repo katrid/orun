@@ -54,10 +54,37 @@ self.addEventListener('install', function (event) {
 });
 
 
-self.addEventListener('fetch', function(event) {
+self.importScripts('/static/pwa/assets/dexie.min.js');
+
+
+function getDb() {
+  let db = new Dexie('orun.pwa');
+  db.version(3)
+    .stores({records: '++$id, service, uuid, status, id', variables: 'name, value'});
+  return db;
+}
+
+
+self.addEventListener('fetch', function (event) {
   event.respondWith(
-    caches.match(event.request).then(function(response) {
+    caches.match(event.request).then(function (response) {
       return response || fetch(event.request);
     })
   );
+});
+
+
+self.addEventListener('sync', function (event) {
+  if (event.tag === 'pwaSync')
+    event.waitUntil(function () {
+      let db = getDb();
+      db.records.where('status').equal('pending').each(
+        obj => {
+          fetch('{% block sync_url %}/pwa/sync/{% endblock %}', {
+            method: 'post',
+            body: JSON.stringify(obj),
+          }).then(res => console.log(res));
+        }
+      );
+    });
 });
