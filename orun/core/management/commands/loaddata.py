@@ -10,7 +10,7 @@ from orun.core.management.base import BaseCommand, CommandError
 
 def load_fixture(schema, *filenames, **options):
     if isinstance(schema, str):
-        addon = apps.addons[schema]
+        addon = apps.app_configs[schema]
     else:
         addon = schema
     for filename in filenames:
