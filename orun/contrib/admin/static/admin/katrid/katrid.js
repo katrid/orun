@@ -3145,6 +3145,7 @@ var Katrid;
                     else
                         viewType = newField.viewType = view;
                     newField.inplaceEditor = config?.inplaceEditor;
+                    console.log(view, viewType);
                     newField[viewType + 'Render'].apply(newField);
                     return newField;
                 }
@@ -3179,7 +3180,14 @@ var Katrid;
                         this.visible = true;
                     let widget = el.getAttribute('widget') || this.widget;
                     if (widget) {
-                        let r = document.createElement(widget + '-field');
+                        let r;
+                        if (widget.indexOf('-') > -1) {
+                            this.el = document.createElement(widget);
+                            this.el.bind(this);
+                            return;
+                        }
+                        else
+                            r = document.createElement(widget + '-field');
                         if (r.bind) {
                             r.bind(this);
                             this.el = r;
@@ -8356,6 +8364,126 @@ var Katrid;
         }
     }));
 })();
+Katrid.UI.uiKatrid.directive("pwaAutocomplete", ['$controller', ($controller) => ({
+        restrict: "A",
+        require: "ngModel",
+        link(scope, el, attrs, controller) {
+            $(el).autocomplete({
+                source: async (req, res) => {
+                    let conn = new Katrid.Pwa.Data.Connection(scope, 'orun.pwa');
+                    let objs = await conn.listStatic(attrs.service, { 'text.startsWith': req.term });
+                    let items = [];
+                    for (let obj of objs)
+                        items.push({ value: obj.id, label: obj.text });
+                    res(items);
+                    return;
+                    let domain;
+                    if (field && field.domain) {
+                        domain = field.domain;
+                        if (_.isString(domain))
+                            domain = scope.$eval(domain);
+                    }
+                    let data = {
+                        args: [req.term],
+                        kwargs: {
+                            filter: domain,
+                            limit: DEFAULT_PAGE_SIZE,
+                            name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
+                        }
+                    };
+                    let svc;
+                    if (fieldName)
+                        svc = new Katrid.Services.Model(modelName).getFieldChoices({
+                            field: fieldName, term: req.term, kwargs: data.kwargs
+                        });
+                    else if (scope.model)
+                        svc = scope.model.getFieldChoices({ field: field.name, term: req.term, kwargs: data.kwargs });
+                    else
+                        svc = new Katrid.Services.Model(field.model).searchName(data);
+                    svc.then(r => {
+                        let items = [];
+                        for (let obj of r.items)
+                            items.push({ value: obj[0], label: obj[1] });
+                        res(items);
+                    });
+                },
+                minLength: 1,
+                select: (event, ui) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    el.val(ui.item.label);
+                    scope.$apply(() => {
+                        let obj = [ui.item.value, ui.item.label];
+                        el.data('value', obj);
+                        controller.$setViewValue(obj);
+                        controller.$setDirty();
+                        return false;
+                    });
+                    return false;
+                }
+            });
+            controller.$parsers.push(value => {
+                value = el.data('value');
+                return value;
+            });
+            controller.$formatters.push(value => {
+                if (_.isArray(value))
+                    return value[1];
+                return value;
+            });
+        }
+    })]);
+class PwaAutocomplete extends HTMLElement {
+    connectedCallback() {
+        this.classList.add('form-group', 'col-6');
+        let label = document.createElement('label');
+        label.innerText = this.field.caption;
+        label.classList.add('form-label');
+        let input = document.createElement('input');
+        input.setAttribute('ng-model', this.name);
+        input.setAttribute('pwa-autocomplete', '');
+        input.classList.add('form-control');
+        input.setAttribute('service', this.field.model);
+        this.append(label);
+        this.append(input);
+    }
+    bind(field) {
+        this.field = field;
+        this.name = field.name;
+    }
+}
+class PwaChoiceField extends HTMLElement {
+    connectedCallback() {
+        this.classList.add('form-group', 'col-6');
+        let label = document.createElement('label');
+        label.innerText = this.field.caption;
+        label.classList.add('form-label');
+        let sel = document.createElement('select');
+        this.loadOptions(sel);
+        sel.setAttribute('ng-model', this.name);
+        sel.classList.add('form-control');
+        this.append(label);
+        this.append(sel);
+    }
+    async loadOptions(el) {
+        if (this.field instanceof Katrid.Data.Fields.ForeignKey) {
+            let conn = new Katrid.Pwa.Data.Connection(null, 'orun.pwa');
+            let objs = await conn.listStatic(this.field.model);
+            for (let obj of objs) {
+                let opt = document.createElement('option');
+                opt.value = obj.id;
+                opt.innerText = obj.text;
+                el.append(opt);
+            }
+        }
+    }
+    bind(field) {
+        this.field = field;
+        this.name = field.name;
+    }
+}
+Katrid.define('pwa-autocomplete', PwaAutocomplete);
+Katrid.define('pwa-choice-field', PwaChoiceField);
 var Katrid;
 (function (Katrid) {
     var Pwa;
@@ -8370,8 +8498,8 @@ var Katrid;
                 get db() {
                     if (!this._db) {
                         this._db = new Dexie(this.dbName);
-                        this._db.version(2)
-                            .stores({ records: '++$id, service, status, id', variables: 'name, value' });
+                        this._db.version(5)
+                            .stores({ records: '++$id, service, values, uuid, status, id', variables: 'name, value', staticData: '$id, service, id, text, data' });
                     }
                     return this._db;
                 }
@@ -8397,11 +8525,15 @@ var Katrid;
                     else {
                         r = await this.db.records.add({
                             service,
+                            uuid: _.guid(),
                             data,
                             status: 'pending',
                         });
                         data.$id = r;
                     }
+                    navigator.serviceWorker.ready.then(function (reg) {
+                        return reg.sync.register('orun-sync');
+                    });
                     return r;
                 }
                 saveChild(name) {
@@ -8427,6 +8559,17 @@ var Katrid;
                         r.$id = obj.$id;
                         return r;
                     });
+                }
+                async listStatic(service, where = null) {
+                    let qs = this.db.staticData.where({ service });
+                    if (where)
+                        for (let [k, v] of Object.entries(where)) {
+                            if (k.indexOf('.') > -1) {
+                                let w = k.split('.');
+                            }
+                        }
+                    qs.each(obj => console.log(obj));
+                    return (await qs.toArray()).map(obj => ({ id: obj.id, text: obj.text }));
                 }
                 async delete(service, id) {
                     await this.db.records.where({ service, $id: id }).delete();
@@ -8466,7 +8609,7 @@ var Katrid;
                     let fieldName = f.getAttribute('name');
                     let field = modelInfo.fields[fieldName];
                     if (field)
-                        field = field.assign(this, f);
+                        field = field.assign('form', f);
                     if (field && field.visible) {
                         field.formRender();
                         f.replaceWith(field.el);
@@ -8557,9 +8700,10 @@ var Katrid;
         }
         class Application extends Katrid.Core.Application {
             createControllers(app) {
+                Katrid.settings.ui.foreignKey = { allowCreate: false, allowCreateEdit: false };
                 app.controller('pwaController', function ($scope, $compile) {
                     Katrid.Core.$compile = $compile;
-                    let connection = new Katrid.Pwa.Data.Connection($scope, 'katrid');
+                    let connection = new Katrid.Pwa.Data.Connection($scope, 'orun.pwa');
                     $scope.goto = async (path) => {
                         let content = $(await fetch(path).then(res => res.text()))[0];
                         let ngView = document.querySelector('pwa-view');
@@ -8577,7 +8721,6 @@ var Katrid;
                     $scope.dbGetVar = async (varName, defaultValue) => {
                         let value = $scope[varName] = await connection.getVar(varName);
                         value = value?.value;
-                        console.log('get db var', varName, defaultValue);
                         if (!value && defaultValue) {
                             $scope[varName] = defaultValue;
                             $scope.dbSetVar(varName, defaultValue);
@@ -8601,15 +8744,17 @@ var Katrid;
                         $scope.record = {};
                         $scope.changing = true;
                     };
-                    $scope.save = async (data, service) => {
+                    $scope.save = async (data, service, path = null) => {
                         if (!service)
                             service = $scope.view.model;
-                        if (!data.$id)
+                        if (!data.$id && $scope.records)
                             $scope.records.push(data);
                         await connection.save(service, data);
                         $scope.record = null;
                         $scope.changing = false;
                         $scope.$apply();
+                        if (path)
+                            window.location.href = path;
                     };
                     $scope.edit = (record) => {
                         if (record.$attachments)
@@ -10187,6 +10332,7 @@ var Katrid;
         render() {
         }
     }
+    Katrid.settings.ui.foreignKey = { allowCreate: true, allowCreateEdit: true };
     Katrid.UI.uiKatrid.directive("fkAutocomplete", ['$controller', ($controller) => ({
             restrict: "A",
             require: "ngModel",
@@ -10307,8 +10453,11 @@ var Katrid;
                                 const more = query.page * Katrid.settings.services.choicesPageLimit < res.count;
                                 if (!multiple && !more) {
                                     let msg;
+                                    let fkSettings = { allowCreate: Katrid.settings.foreignKey.allowCreate };
+                                    if ((attrs.allowCreate && attrs.allowCreate !== "false" || attrs.allowCreate == null) && v)
+                                        fkSettings.allowCreate = false;
                                     const v = sel.data("select2").search.val();
-                                    if ((attrs.allowCreate && attrs.allowCreate !== "false" || attrs.allowCreate == null) && v) {
+                                    if (fkSettings.allowCreate) {
                                         msg = Katrid.i18n.gettext('Create <i>"%s"</i>...');
                                         r.push({
                                             id: newItem,
@@ -10367,7 +10516,10 @@ var Katrid;
                     }
                 };
                 let allowCreateEdit = attrs.noCreateEdit;
-                allowCreateEdit = _.isUndefined(allowCreateEdit) || !Boolean(allowCreateEdit);
+                if (allowCreateEdit === undefined)
+                    allowCreateEdit = Katrid.settings.ui.foreignKey.allowCreateEdit;
+                else
+                    allowCreateEdit = !Boolean(allowCreateEdit);
                 let { multiple: multiple } = attrs;
                 if (multiple) {
                     config["multiple"] = true;
@@ -10393,6 +10545,7 @@ var Katrid;
                         wnd.createNew();
                     });
                 };
+                console.log('allow create edit', allowCreateEdit);
                 if (allowCreateEdit)
                     sel.parent().find('div.select2-container>div.select2-drop')
                         .append(`<div style="padding: 4px;"><button type="button" class="btn btn-link btn-sm">${Katrid.i18n.gettext('Create New...')}</button></div>`)
@@ -12331,6 +12484,14 @@ var Katrid;
                 let r = 0;
                 return _.sum(iterable, member) / iterable.length;
             }
+        }
+    });
+    _.mixin({
+        guid() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
         }
     });
 })();

@@ -30,12 +30,13 @@ def sync(request):
     res = []
     for obj in objs:
         svc = obj['service']
-        values = {k: v for k, v in obj['data'].items() if not k.startswith('$')}
-        uid = values.pop('uuid')
-        try:
-            obj_id = PwaSync.objects.get(uuid=uid).object_id
+        if isinstance(svc, str):
+            values = {k: v for k, v in obj['data'].items() if not k.startswith('$')}
+            uid = obj.pop('uuid')
+            try:
+                obj_id = PwaSync.objects.get(uuid=uid).object_id
+                res.append({'id': obj_id, '$id': obj['$id'], 'status': 'ok'})
+            except PwaSync.DoesNotExist:
+                obj_id = PwaSync.sync(svc, values)[0]
             res.append({'id': obj_id, '$id': obj['$id'], 'status': 'ok'})
-        except PwaSync.DoesNotExist:
-            obj_id = PwaSync.sync(svc, values)[0]
-        res.append({'id': obj_id, '$id': obj['$id'], 'status': 'ok'})
     return JsonResponse({'ok': True, 'result': res})

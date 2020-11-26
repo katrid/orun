@@ -13,9 +13,7 @@
 {% block additional_assets %}
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
         navigator.serviceWorker.register('{% block service_worker %}/pwa/service-worker.js{% endblock %}');
-      })
     }
   </script>
 {% endblock %}
