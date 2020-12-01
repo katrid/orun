@@ -11696,11 +11696,15 @@ nav#header .nav-item .dropdown-menu {
   right: 6px;
   top: 0.8em;
 }
-.dropdown-submenu .dropdown-menu {
+.dropdown-submenu > ul {
+  display: none !important;
   top: 0;
   left: 100%;
   margin-left: 0.1rem;
   margin-right: 0.1rem;
+}
+.dropdown-submenu > ul.show {
+  display: block !important;
 }
 
 .timeline-item .timeline-icon {

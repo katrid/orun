@@ -9449,12 +9449,22 @@ var Katrid;
             }
             createMenuItem(item, dropdownMenu) {
                 if (item.children && item.children.length) {
-                    let h6 = document.createElement('h6');
-                    h6.classList.add('dropdown-header');
-                    h6.innerText = item.name;
-                    dropdownMenu.append(h6);
+                    let menuItem = this.createDropdownItem(item);
+                    menuItem.innerText = item.name;
+                    let li = document.createElement('li');
+                    let ul = document.createElement('ul');
+                    menuItem.classList.add('dropdown-toggle');
+                    li.classList.add('dropdown-submenu');
+                    li.append(menuItem);
+                    li.append(ul);
+                    menuItem.addEventListener('click', evt => {
+                        evt.stopPropagation();
+                        evt.preventDefault();
+                        ul.classList.toggle('show');
+                    });
+                    dropdownMenu.append(li);
                     for (let subItem of item.children)
-                        this.createMenuItem(subItem, dropdownMenu);
+                        this.createMenuItem(subItem, ul);
                 }
                 else {
                     let menuItem = this.createDropdownItem(item);
