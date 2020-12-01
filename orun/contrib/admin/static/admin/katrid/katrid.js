@@ -8459,6 +8459,8 @@ class PwaChoiceField extends HTMLElement {
         label.innerText = this.field.caption;
         label.classList.add('form-label');
         let sel = document.createElement('select');
+        this.service = this.getAttribute('service');
+        sel.setAttribute('service', this.service);
         this.loadOptions(sel);
         sel.setAttribute('ng-model', this.name);
         sel.classList.add('form-control');
@@ -8468,7 +8470,7 @@ class PwaChoiceField extends HTMLElement {
     async loadOptions(el) {
         if (this.field instanceof Katrid.Data.Fields.ForeignKey) {
             let conn = new Katrid.Pwa.Data.Connection(null, 'orun.pwa');
-            let objs = await conn.listStatic(this.field.model);
+            let objs = await conn.listStatic(this.service || this.field.model);
             for (let obj of objs) {
                 let opt = document.createElement('option');
                 opt.value = obj.id;
@@ -8503,12 +8505,15 @@ var Katrid;
                     }
                     return this._db;
                 }
-                getVar(varName) {
-                    return this.db.variables.get(varName);
+                async getVar(varName) {
+                    let res = await this.db.variables.get(varName);
+                    return res.value;
                 }
                 setVar(varName, varValue) {
-                    this.db.transaction('rw', this.db.variables, () => {
-                        this.db.variables.where('name').equal(varName).modify({ value: varValue });
+                    return this.db.transaction('rw', this.db.variables, async () => {
+                        let res = await this.db.variables.where({ name: varName }).modify({ value: varValue });
+                        if (res === 0)
+                            await this.db.variables.add({ name: varName, value: varValue });
                     });
                 }
                 async save(service, data) {
@@ -8720,10 +8725,10 @@ var Katrid;
                     };
                     $scope.dbGetVar = async (varName, defaultValue) => {
                         let value = $scope[varName] = await connection.getVar(varName);
-                        value = value?.value;
                         if (!value && defaultValue) {
                             $scope[varName] = defaultValue;
-                            $scope.dbSetVar(varName, defaultValue);
+                            console.log('set var', varName, defaultValue);
+                            await $scope.dbSetVar(varName, defaultValue);
                         }
                         $scope.$apply();
                     };
@@ -8738,7 +8743,7 @@ var Katrid;
                     };
                     $scope.dbSetVar = async (varName, varValue) => {
                         $scope[varName] = varValue;
-                        connection.setVar(varName, varValue);
+                        return connection.setVar(varName, varValue);
                     };
                     $scope.createNew = () => {
                         $scope.record = {};
@@ -8772,6 +8777,7 @@ var Katrid;
                             $scope[member].splice($scope[member].indexOf(record), 1);
                         }
                     };
+                    $scope.confirm = (msg) => confirm(msg);
                     $scope.sum = (iterable, member) => {
                         let res = 0;
                         for (let obj of iterable)

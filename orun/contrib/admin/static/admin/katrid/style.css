@@ -9976,7 +9976,7 @@ a.dropdown-item {
 
 #page-content {
   position: absolute;
-  overflow: hidden;
+  overflow-x: hidden;
   height: 100%;
   min-width: 310px;
   width: 100%;
