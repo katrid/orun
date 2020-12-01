@@ -48,9 +48,10 @@ self.addEventListener('install', function (event) {
       return cache.addAll(fileList);
     })
       .then(() => {
-        fetch('{% block fetch_url %}/pwa/push/{% endblock %}')
+        fetch('{% block fetch_url %}/pwa/fetch/{% endblock %}')
           .then(res => res.json())
           .then(async res => {
+            console.log(res);
             if (res.data) {
               let db = await getDb();
               db.staticData.clear();
