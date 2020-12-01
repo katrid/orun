@@ -10469,10 +10469,10 @@ var Katrid;
                                 const more = query.page * Katrid.settings.services.choicesPageLimit < res.count;
                                 if (!multiple && !more) {
                                     let msg;
-                                    let fkSettings = { allowCreate: Katrid.settings.foreignKey.allowCreate };
+                                    let fkSettings = { allowCreate: Katrid.settings.ui.foreignKey.allowCreate };
+                                    const v = sel.data("select2").search.val();
                                     if ((attrs.allowCreate && attrs.allowCreate !== "false" || attrs.allowCreate == null) && v)
                                         fkSettings.allowCreate = false;
-                                    const v = sel.data("select2").search.val();
                                     if (fkSettings.allowCreate) {
                                         msg = Katrid.i18n.gettext('Create <i>"%s"</i>...');
                                         r.push({
