@@ -1,10 +1,7 @@
-import inspect
-from collections import Mapping
-from functools import wraps, partial
+from functools import partial
+from functools import wraps
 
 from orun.core.exceptions import RPCError, ValidationError
-from orun.utils.functional import SimpleLazyObject
-from functools import wraps
 
 
 class RecordProxy:
@@ -34,31 +31,6 @@ class RecordProxy:
         return self.__instance__.__call__(self.env, *args, **kwargs)
 
 
-class Environment(Mapping):
-    def __init__(self, user_id, context):
-        self.user_id = user_id
-        self.user = SimpleLazyObject(lambda: self['auth.user'].objects.get(self.user_id))
-        self.context = context
-
-    def __getitem__(self, item):
-        if inspect.isclass(item):
-            item = item.Meta.name
-        model = app.models[item]
-        return model.__new__(model)
-
-    def __iter__(self):
-        return app.models
-
-    def __call__(self, user_id=None, context=None):
-        ctx = self.context.copy()
-        ctx.update(context or {})
-        return self.__class__(user_id, ctx)
-
-    def __len__(self):
-        return len(app.models)
-
-    def ref(self, name):
-        return self['ir.object'].get_object(name).object_id
 
 
 def method(fn) -> classmethod:
