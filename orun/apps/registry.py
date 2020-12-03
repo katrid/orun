@@ -162,7 +162,7 @@ class Registry:
         """
         self.check_apps_ready()
         candidates = []
-        for app_config in reversed(self.app_configs.values()):
+        for app_config in reversed(list(self.app_configs.values())):
             if object_name.startswith(app_config.name):
                 subpath = object_name[len(app_config.name):]
                 if subpath == '' or subpath[0] == '.':
