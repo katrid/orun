@@ -8541,6 +8541,11 @@ var Katrid;
                     });
                     return r;
                 }
+                first(service) {
+                    return new Promise((resolve, reject) => {
+                        this.db.records.where({ service }).first(obj => resolve(obj.data));
+                    });
+                }
                 saveChild(name) {
                     let child = this.scope['form_' + name];
                     let record = child.record;
@@ -8721,6 +8726,10 @@ var Katrid;
                         if (!lst)
                             lst = [];
                         $scope[member] = lst;
+                        $scope.$apply();
+                    };
+                    $scope.first = async (service) => {
+                        $scope.record = await connection.first(service);
                         $scope.$apply();
                     };
                     $scope.dbGetVar = async (varName, defaultValue) => {
