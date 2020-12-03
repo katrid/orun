@@ -1,5 +1,5 @@
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 from threading import RLock, Event, local, Thread
 from collections import Counter, defaultdict, OrderedDict
 import functools
@@ -7,9 +7,10 @@ import jinja2
 
 from orun.utils.functional import SimpleLazyObject
 from orun.apps import AppConfig
+from orun import SUPERUSER
 from orun.core.exceptions import ImproperlyConfigured, AppRegistryNotReady
 if TYPE_CHECKING:
-    from orun.db.models import Model
+    from orun.db.models.base import ModelBase, Model
 
 
 class Registry:
@@ -23,9 +24,9 @@ class Registry:
         # set to False if the current process is not the main
         self.main = True
         # get a new event loop
-        self.models = {}
+        self.models: Dict[str, ModelBase] = {}
         self.services = {}
-        self.app_configs: dict[str, AppConfig] = {}
+        self.app_configs: Dict[str, AppConfig] = {}
         self.addons = self.app_configs
         self._lock = RLock()
         self._pending_operations = defaultdict(list)
@@ -36,7 +37,7 @@ class Registry:
         # set_available_apps and set_installed_apps.
         self.stored_apps = []
 
-        self.env = Environment(self)
+        self.env = Environment(self, user_id=SUPERUSER)
         self._local_env = local()
 
     def create_template_env(self):
@@ -121,7 +122,6 @@ class Registry:
 
             self.ready = True
             self.ready_event.set()
-            self.env.setup()
 
         self.template_env = self.create_template_env()
 
@@ -162,12 +162,13 @@ class Registry:
         """
         self.check_apps_ready()
         candidates = []
-        for app_config in self.app_configs.values():
+        for app_config in reversed(self.app_configs.values()):
             if object_name.startswith(app_config.name):
                 subpath = object_name[len(app_config.name):]
                 if subpath == '' or subpath[0] == '.':
                     candidates.append(app_config)
         if candidates:
+            return candidates[0]
             return sorted(candidates, key=lambda ac: -len(ac.schema))[0]
 
     def get_app_configs(self):
