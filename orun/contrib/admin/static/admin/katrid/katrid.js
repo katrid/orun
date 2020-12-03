@@ -8507,7 +8507,7 @@ var Katrid;
                 }
                 async getVar(varName) {
                     let res = await this.db.variables.get(varName);
-                    return res.value;
+                    return res?.value;
                 }
                 setVar(varName, varValue) {
                     return this.db.transaction('rw', this.db.variables, async () => {
@@ -8725,9 +8725,9 @@ var Katrid;
                     };
                     $scope.dbGetVar = async (varName, defaultValue) => {
                         let value = $scope[varName] = await connection.getVar(varName);
+                        console.log('set var', varName, value, defaultValue);
                         if (!value && defaultValue) {
                             $scope[varName] = defaultValue;
-                            console.log('set var', varName, defaultValue);
                             await $scope.dbSetVar(varName, defaultValue);
                         }
                         $scope.$apply();
