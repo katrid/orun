@@ -9417,6 +9417,7 @@ var Katrid;
                 return module;
             }
             showMenu(li) {
+                $('.apps-menu.show').removeClass('show');
                 clearTimeout(this._timeout);
                 li.classList.add('show');
                 this._currentMenu = li;
