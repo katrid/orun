@@ -3,7 +3,7 @@ from orun.db import models
 
 class LogEntry(models.Model):
     """
-    Log entries for Admin UI and API operations.
+    Log entries on the internal database logging
     """
     user = models.ForeignKey('auth_user', null=False, db_index=True)
     action = models.ForeignKey('ui.action')  # optional ui action
@@ -17,9 +17,34 @@ class LogEntry(models.Model):
         name = 'ir.admin.log'
 
 
+class ObjectEntry(models.Model):
+    """
+    Register entries to the quick search on Admin UI menu
+    """
+    object_id = models.BigIntegerField(null=False)
+    content_type = models.ForeignKey('content.type', null=False)
+    content_object = models.CharField(200)
+
+    class Meta:
+        log_changes = False
+        name = 'ui.admin.entry'
+
+    @classmethod
+    def log(cls, obj: models.Model):
+        """
+        Logs a new entry to the quick search menu
+        :param obj:
+        :return:
+        """
+        ct = cls.env['content.type'].get_for_model(obj)
+        entry = cls.objects.get_or_create(object_id=obj.pk, content_type=ct)
+        entry.content_object = str(obj)
+        entry.save()
+
+
 class UserActionCounter(models.Model):
     """
-    Register the number of times that an action is accessed by user on Admin UI
+    Ranking the number of times that an action is accessed by an user on Admin UI
     """
     user = models.ForeignKey('auth.user', null=False, db_index=True)
     action = models.ForeignKey('ui.action', null=False, on_delete=models.DB_CASCADE)
@@ -30,7 +55,13 @@ class UserActionCounter(models.Model):
         name = 'ui.admin.user.action.counter'
 
     @classmethod
-    def add_user_action(cls, user, action):
+    def log(cls, user, action):
+        """
+        Log a new entry to user latest action access
+        :param user:
+        :param action:
+        :return:
+        """
         counter = cls.objects.get_or_create(user=user, action=action)
         counter.counter += 1
         counter.save()
