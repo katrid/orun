@@ -4,7 +4,6 @@ import re
 from jinja2 import Environment, FunctionLoader, Template
 import logging
 
-from orun import g
 from orun.apps import apps
 from orun.shortcuts import ref
 from orun.template import loader, Template
@@ -13,7 +12,6 @@ from orun.db import models, connection
 from orun.utils.translation import gettext, gettext_lazy as _
 from orun.utils.xml import etree
 from orun.core.serializers.json import OrunJSONEncoder
-from orun.contrib.contenttypes.models import ContentType
 
 
 logger = logging.getLogger('orun')

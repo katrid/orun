@@ -1,5 +1,4 @@
 from collections import defaultdict
-from orun import SUPERUSER, g
 from orun.db import models
 from orun.utils.translation import gettext
 

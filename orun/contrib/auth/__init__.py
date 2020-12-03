@@ -18,6 +18,14 @@ HASH_SESSION_KEY = '_auth_user_hash'
 REDIRECT_FIELD_NAME = 'next'
 
 
+def current_user():
+    """
+    Get the current user_id
+    :return:
+    """
+    return apps.env.user_id
+
+
 def load_backend(path):
     return import_string(path)()
 

@@ -1,4 +1,4 @@
-from orun import apps, api, g, SUPERUSER
+from orun import api
 from orun.contrib import auth
 from orun.contrib.auth.hashers import check_password
 from orun.core.exceptions import PermissionDenied

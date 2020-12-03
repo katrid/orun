@@ -4,7 +4,7 @@ import uuid
 from collections import defaultdict
 from jinja2 import Environment
 
-from orun import api, g
+from orun import api
 from orun.apps import apps
 from orun.conf import settings
 from orun.db import models, connection
