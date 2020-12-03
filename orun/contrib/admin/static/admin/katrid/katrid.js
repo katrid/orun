@@ -2010,7 +2010,17 @@ var Katrid;
                 menu.show(evt.pageX, evt.pageY);
             }
             copyToClipboard() {
-                navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
+                if (typeof (navigator.clipboard) == 'undefined') {
+                    let textArea = document.createElement("textarea");
+                    textArea.value = Katrid.UI.Utils.tableToText(this.table);
+                    textArea.style.position = "fixed";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    document.body.removeChild(textArea);
+                }
+                else
+                    navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
             }
         }
         BI.QueryView = QueryView;
