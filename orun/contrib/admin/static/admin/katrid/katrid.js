@@ -2010,17 +2010,7 @@ var Katrid;
                 menu.show(evt.pageX, evt.pageY);
             }
             copyToClipboard() {
-                if (typeof (navigator.clipboard) == 'undefined') {
-                    let textArea = document.createElement("textarea");
-                    textArea.value = Katrid.UI.Utils.tableToText(this.table);
-                    textArea.style.position = "fixed";
-                    document.body.appendChild(textArea);
-                    textArea.focus();
-                    textArea.select();
-                    document.body.removeChild(textArea);
-                }
-                else
-                    navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
+                navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
             }
         }
         BI.QueryView = QueryView;
@@ -5114,17 +5104,7 @@ var Katrid;
                     });
                 }
                 copyClick() {
-                    if (typeof (navigator.clipboard) == 'undefined') {
-                        let textArea = document.createElement("textarea");
-                        textArea.value = Katrid.UI.Utils.tableToText(this.table);
-                        textArea.style.position = "fixed";
-                        document.body.appendChild(textArea);
-                        textArea.focus();
-                        textArea.select();
-                        document.body.removeChild(textArea);
-                    }
-                    else
-                        navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
+                    navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
                 }
                 deleteRow() {
                     console.log('delete selected rorw');
@@ -8474,23 +8454,12 @@ class PwaAutocomplete extends HTMLElement {
 }
 class PwaChoiceField extends HTMLElement {
     connectedCallback() {
-        this.classList.add('form-group', 'col-6');
-        let label = document.createElement('label');
-        label.innerText = this.field.caption;
-        label.classList.add('form-label');
-        let sel = document.createElement('select');
-        this.service = this.getAttribute('service');
-        sel.setAttribute('service', this.service);
-        this.loadOptions(sel);
-        sel.setAttribute('ng-model', this.name);
-        sel.classList.add('form-control');
-        this.append(label);
-        this.append(sel);
     }
     async loadOptions(el) {
         if (this.field instanceof Katrid.Data.Fields.ForeignKey) {
             let conn = new Katrid.Pwa.Data.Connection(null, 'orun.pwa');
             let objs = await conn.listStatic(this.service || this.field.model);
+            console.log(this.service || this.field.model);
             for (let obj of objs) {
                 let opt = document.createElement('option');
                 opt.value = obj.id;
@@ -8502,6 +8471,18 @@ class PwaChoiceField extends HTMLElement {
     bind(field) {
         this.field = field;
         this.name = field.name;
+        this.classList.add('form-group', 'col-md-6');
+        let label = document.createElement('label');
+        label.innerText = this.field.caption;
+        label.classList.add('form-label');
+        let sel = document.createElement('select');
+        this.service = this.getAttribute('service');
+        sel.setAttribute('service', this.service);
+        this.loadOptions(sel);
+        sel.setAttribute('ng-model', this.name);
+        sel.classList.add('form-control');
+        this.append(label);
+        this.append(sel);
     }
 }
 Katrid.define('pwa-autocomplete', PwaAutocomplete);
@@ -8598,7 +8579,6 @@ var Katrid;
                                 let w = k.split('.');
                             }
                         }
-                    qs.each(obj => console.log(obj));
                     return (await qs.toArray()).map(obj => ({ id: obj.id, text: obj.text }));
                 }
                 async delete(service, id) {
