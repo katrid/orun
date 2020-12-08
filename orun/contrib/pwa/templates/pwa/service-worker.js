@@ -100,7 +100,7 @@ function syncToServer() {
       method: 'post',
       body: JSON.stringify({data: objs}),
     }).then(res => {
-      console.log('ok', res);
+      db.records.where({status: 'pending'}).delete();
       resolve(res);
     }).catch(err => reject(err));
   });
