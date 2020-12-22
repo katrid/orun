@@ -143,6 +143,7 @@ class Command(BaseCommand):
         if self.verbosity >= 1:
             self.stdout.write("  Creating tables...\n")
         post_model_list = {}
+        print(manifest)
         with connection.schema_editor() as editor:
             for app_name in manifest:
                 app = apps.app_configs[app_name]
@@ -179,4 +180,5 @@ class Command(BaseCommand):
                 # Check by additional sql objects
                 for app_name, model_list in post_model_list.items():
                     for model in model_list:
-                        editor.sync_model(model)
+                        if model._meta.can_migrate(connection):
+                            editor.sync_model(model)
