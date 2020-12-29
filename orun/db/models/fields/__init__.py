@@ -2485,6 +2485,11 @@ class PasswordField(CharField):
         kwargs.setdefault('max_length', 128)
         super(PasswordField, self).__init__(*args, **kwargs)
 
+    def get_prep_value(self, value):
+        value = None if value == '' else value
+        value = Field.get_prep_value(self, value)
+        return super().to_python(value)
+
     def to_python(self, value):
         from orun.contrib.auth.hashers import is_password_usable, make_password
         if is_password_usable(value):

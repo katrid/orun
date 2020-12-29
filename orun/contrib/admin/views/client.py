@@ -77,7 +77,7 @@ def login(request: HttpRequest, **kwargs):
 @login_required
 def logout(request):
     auth.logout(request)
-    return HttpResponseRedirect('/web/login/')
+    return HttpResponseRedirect('/web/login/?next=/web/')
 
 
 @login_required
