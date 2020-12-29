@@ -2487,6 +2487,6 @@ class PasswordField(CharField):
 
     def to_python(self, value):
         from orun.contrib.auth.hashers import is_password_usable, make_password
-        if not is_password_usable(value):
+        if is_password_usable(value):
             return make_password(value)
         return value
