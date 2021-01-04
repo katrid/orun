@@ -27,7 +27,7 @@ from orun.db.models import Q
 from orun.db.models.fields.related import (
     ForeignObjectRel, ForeignKey, OneToOneField, lazy_related_operation,
 )
-from orun.db.models.manager import Manager
+from orun.db.models.manager import Manager, QuerySet
 from orun.db.models.options import Options
 from orun.db.models.query import Q
 from orun.db.models.aggregates import Count
@@ -421,7 +421,7 @@ class ModelState:
 
 
 class Model(metaclass=ModelBase):
-    objects: Manager
+    objects: QuerySet
     env = apps.env
     _meta: Options
 
@@ -2047,10 +2047,9 @@ class Model(metaclass=ModelBase):
                 _kwargs = {}
                 for w in where:
                     for k, v in w.items():
+                        f = None
                         if '__' in k:
-                            _kwargs[k] = v
-                            continue
-                        f = self._meta.fields[k]
+                            f = self._meta.fields[k.split('__', 1)[0]]
                         if isinstance(f, ForeignKey):
                             name_fields = list(chain(*(_resolve_fk_search(fk) for fk in f.related_model._meta.get_name_fields())))
                             if len(name_fields) == 1:
