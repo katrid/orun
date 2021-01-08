@@ -1,7 +1,7 @@
-import orun.addons
+import orun.apps
 
 
-class Addon(orun.addons.Addon):
+class AppConfig(orun.apps.AppConfig):
     name = '{{ app_name }}'
     verbose_name = '{{ camel_case_app_name }}'
     version = '1.0'
