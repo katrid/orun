@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<data translate="true">
+  <object id="test/root-user" model="auth.user">
+    <field name="name">Test Admin</field>
+    <field name="username">test</field>
+    <field name="is_superuser">True</field>
+    <field name="active">True</field>
+  </object>
+  <object id="test/main-company" model="res.company" noupdate="1">
+    <field name="name">My Company</field>
+    <field name="is_company">True</field>
+    <field name="email">mycompany@example.com</field>
+    <field name="website">www.example.com</field>
+  </object>
+  <object id="test/anonymous-user" model="auth.user" noupdate="1">
+    <field name="name">Anonymous</field>
+    <field name="username">anonymous</field>
+    <field name="active">False</field>
+  </object>
+</data>
