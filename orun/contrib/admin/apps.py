@@ -11,3 +11,4 @@ class AdminConfig(AppConfig):
         'static/admin/katrid/templates.html',
     ]
     dependencies = ['orun.contrib.auth', 'orun.contrib.contenttypes']
+    urls_module = 'orun.contrib.admin.urls'

@@ -6,7 +6,7 @@ import logging
 
 from orun.apps import apps
 from orun.shortcuts import ref
-from orun.template import loader, Template
+from orun.template import loader
 from orun.conf import settings
 from orun.db import models, connection
 from orun.utils.translation import gettext, gettext_lazy as _

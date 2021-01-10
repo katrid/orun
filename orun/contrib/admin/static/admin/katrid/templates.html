@@ -1295,7 +1295,7 @@
 
           <div>
             <div ng-repeat="group in action.searchView.groups">
-              <a class="dropdown-item" ng-class="{'selected': filter.selected}" ng-repeat="filter in group"
+              <a class="dropdown-item" ng-class="{'selected': filter.selected}" ng-repeat="filter in group.items"
                  ng-click="filter.toggle();$event.stopPropagation();">
                 ${ filter.toString() }
               </a>
@@ -1373,7 +1373,7 @@
     <div class="dropdown-menu search-view-filter-menu">
       <div>
         <div ng-repeat="group in action.searchView.filterGroups">
-          <a class="dropdown-item" ng-class="{'selected': filter.selected}" ng-repeat="filter in group"
+          <a class="dropdown-item" ng-class="{'selected': filter.selected}" ng-repeat="filter in group.items"
              ng-click="filter.toggle();$event.stopPropagation();">
             ${ filter.toString() }
           </a>

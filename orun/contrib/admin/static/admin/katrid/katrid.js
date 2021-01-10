@@ -2419,7 +2419,11 @@ var Katrid;
                                 if (this.readonly)
                                     this.records = data;
                                 else
-                                    this.records = data.map((obj) => this._createRecord(obj));
+                                    this.records = data.map((obj, idx) => {
+                                        let rec = this._createRecord(obj);
+                                        rec.$index = idx;
+                                        return rec;
+                                    });
                                 if (this.pageIndex === 1) {
                                     return this.offsetLimit = this._records.length;
                                 }
@@ -2443,10 +2447,9 @@ var Katrid;
             }
             async groupBy(group, params) {
                 this._params = [];
-                console.log('group by', group, params);
-                if (!group || !group.length) {
+                if (!group?.length) {
                     this.groups = [];
-                    this.action.groups = null;
+                    this.scope.action.groups = null;
                     this.scope.groups = null;
                     this.search(params);
                     return;
@@ -2454,21 +2457,22 @@ var Katrid;
                 this.scope.action.groups = group;
                 this.scope.groupings = [];
                 this.groups = group;
-                this.scope.groups = await this._loadGroup(group, 0, params);
+                this.scope.records = this.scope.groups = await this._loadGroup(group, 0, params);
+                console.log('records', this.scope.records);
                 return this.scope.$apply();
             }
-            async _loadGroup(group, index, params, parent) {
+            async _loadGroup(group, index, where, parent) {
                 let rows = [];
-                if (!params)
-                    params = [];
+                if (!where)
+                    where = [];
                 if (parent && parent.$params)
-                    params = params.concat(parent.$params);
-                let res = await this.model.groupBy([group[index]], params);
+                    where = where.concat(parent.$params);
+                let res = await this.model.groupBy([group[index]], where);
                 const groupName = group[index];
                 for (let r of res) {
                     let s = r[groupName];
                     let paramValue;
-                    if ($.isArray(s)) {
+                    if (Array.isArray(s)) {
                         paramValue = s[0];
                         s = s[1];
                     }
@@ -2478,12 +2482,8 @@ var Katrid;
                     r.__str__ = s;
                     r.$expanded = false;
                     r.$group = groupName;
-                    r.$params = [];
-                    if (parent)
-                        r.$params = r.$params.concat(parent.$params);
                     let params = {};
                     params[groupName] = paramValue;
-                    r.$params.push(params);
                     r.$level = index;
                     r.$hasChildren = true;
                     rows.push(r);
@@ -2912,11 +2912,11 @@ var Katrid;
                 this.parent.record.$record.addChild(record.$record);
             }
             async expandGroup(index, row) {
-                let params = [];
+                let params = {};
                 if (this._params)
-                    params = params.concat(this._params);
+                    Object.assign(params, this._params);
                 if (row.$params)
-                    params = params.concat(row.$params);
+                    Object.assign(params, row.$params);
                 if (row.$level === (this.groups.length - 1)) {
                     let res = await this.model.search({ params });
                     if (res.data) {
@@ -2951,6 +2951,9 @@ var Katrid;
                 for (let obj of this.scope.groups)
                     if (obj.$hasChildren && obj.$expanded && obj.$children.length)
                         records = records.concat(obj.$children);
+                let n = 0;
+                for (let rec of records)
+                    rec['$index'] = n++;
                 return records;
             }
             _applyResponse(res) {
@@ -3145,7 +3148,6 @@ var Katrid;
                     else
                         viewType = newField.viewType = view;
                     newField.inplaceEditor = config?.inplaceEditor;
-                    console.log(view, viewType);
                     newField[viewType + 'Render'].apply(newField);
                     return newField;
                 }
@@ -3621,7 +3623,7 @@ var Katrid;
                 }
                 create() {
                     super.create();
-                    this.defaultSearchLookup = '';
+                    this.defaultSearchLookup = '__icontains';
                 }
                 getParamTemplate() {
                     return 'view.param.ForeignKey';
@@ -5021,6 +5023,13 @@ var Katrid;
         <input type="checkbox" ng-model="record.$selected">
           </th>`;
                     }
+                    let groupHeader = document.createElement('th');
+                    groupHeader.setAttribute('ng-if', '::record.$hasChildren');
+                    groupHeader.colSpan = 2;
+                    groupHeader.innerHTML = `<i class="indent-\${::record.$level}">&nbsp;</i>
+      <span class="fas fa-fw fa-caret-right" ng-class="{'fa-caret-down': record.$expanded, 'fa-caret-right': !record.$expanded}"></span>
+          \${record.__str__}`;
+                    this.tRow.append(groupHeader);
                     if (options.showStar) {
                         let th = document.createElement('th');
                         th.classList.add('list-record-star');
@@ -5036,14 +5045,17 @@ var Katrid;
                         this.addField(f);
                         f.remove();
                     }
+                    this.tRow.querySelector('td').setAttribute('ng-if', '::!record.$hasChildren');
                     this.tRow.setAttribute('data-id', '${ ::record.id }');
                     this.tRow.setAttribute('ng-repeat', 'record in records');
-                    this.tRow.setAttribute('ng-click', 'action.listRowClick($index, record, $event)');
+                    this.tRow.setAttribute('ng-click', 'action.listRowClick(record.$index, record, $event)');
                     if (this.inlineEditor)
-                        this.tRow.setAttribute('ng-class', "{" +
-                            "'form-data-changing': (dataSource.changing && dataSource.recordIndex === $index), " +
-                            "'form-data-readonly': !(dataSource.changing && dataSource.recordIndex === $index)" +
-                            "}");
+                        this.tRow.setAttribute('ng-class', `{
+          'form-data-changing': (dataSource.changing && dataSource.recordIndex === $index),
+          'form-data-readonly': !(dataSource.changing && dataSource.recordIndex === $index)
+          }`);
+                    else
+                        this.tRow.setAttribute('ng-class', `{'group-header': record.$hasChildren}`);
                     let ngTrClass = this.getAttribute('ng-tr-class');
                     if (ngTrClass) {
                         if (!ngTrClass.startsWith('{'))
@@ -5063,7 +5075,6 @@ var Katrid;
                 addField(fld) {
                     let fieldName = fld.getAttribute('name');
                     let field = this._view.fields[fieldName];
-                    console.log('form view', this.inlineEditor);
                     if (field) {
                         if (!field.visible)
                             return;
@@ -5107,7 +5118,7 @@ var Katrid;
                     navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
                 }
                 deleteRow() {
-                    console.log('delete selected rorw');
+                    console.log('delete selected row');
                 }
                 filterByFieldContent(td, record) {
                     let name = td.getAttribute('data-name');
@@ -5947,9 +5958,11 @@ var Katrid;
                 Search.SearchGroups = SearchGroups;
                 class SearchGroup extends Search.SearchFilter {
                     constructor(view, name, caption, group, el) {
-                        super(view, name, el);
+                        super(view, name, caption, null, group, el);
                         this.group = group;
-                        this.caption = caption;
+                        if (el.attr('context'))
+                            this.context = eval(`(${el.attr('context')})`);
+                        this.groupBy = this.context?.group_by || name;
                         this._selected = false;
                     }
                     static fromItem(view, el, group) {
@@ -6152,7 +6165,8 @@ var Katrid;
                                     continue;
                                 }
                                 else if (tag === 'GROUP') {
-                                    obj = Search.SearchGroup.fromItem({ view: this, el: child });
+                                    console.log('add group');
+                                    obj = Search.SearchGroup.fromItem(this, child);
                                     this.groups.push(obj);
                                     continue;
                                 }
@@ -6258,7 +6272,7 @@ var Katrid;
                     update() {
                         if (this.groupLength !== this._groupLength) {
                             this._groupLength = this.groupLength;
-                            this.action.applyGroups(this.groupBy(), this.getParams());
+                            this.view.action.applyGroups(this.groupBy(), this.getParams());
                         }
                         else
                             console.log('notify the action');
@@ -6303,7 +6317,6 @@ var Katrid;
                             $scope.controlVisible = $scope.field.isControlVisible(condition);
                         };
                         $scope.valueChange = (value) => {
-                            console.log('value change', value);
                             $scope.searchValue = value;
                         };
                         $scope.addCondition = (field, condition, value) => {
@@ -6346,6 +6359,7 @@ var Katrid;
                         this.view = view;
                         this.$items = null;
                         this.facetGrouping = new Search.FacetGroup();
+                        this.groupingGroups = new Search.SearchGroups(this, this.facetGrouping);
                         if (view) {
                             this.el = $(view.content);
                             this.menu = element.find('.search-dropdown-menu.search-view-menu');
@@ -6356,24 +6370,20 @@ var Katrid;
                                 if (tag === 'FILTER') {
                                     obj = Search.SearchFilters.fromItem(this, child);
                                     this.filterGroups.push(obj);
+                                    this.append(obj);
                                 }
                                 else if (tag === 'FILTER-GROUP') {
                                     obj = Search.SearchFilters.fromGroup(this, child);
                                     this.filterGroups.push(obj);
-                                    continue;
                                 }
                                 else if (tag === 'GROUP') {
-                                    obj = Search.SearchGroup.fromItem({ view: this, el: child });
-                                    this.groups.push(obj);
-                                    continue;
+                                    obj = Search.SearchGroup.fromItem(this, child, this.groupingGroups);
+                                    this.addGrouping(obj);
                                 }
                                 else if (tag === 'FIELD') {
                                     obj = Search.SearchField.fromField(this, child);
                                     this.fields.push(obj);
-                                    continue;
                                 }
-                                if (obj)
-                                    this.append(obj);
                             }
                             this.input
                                 .on('input', (evt) => {
@@ -6412,13 +6422,14 @@ var Katrid;
                         }
                     }
                     addCustomGroup(field) {
-                        if (!this.customGroups) {
-                            this.customGroups = new Search.SearchGroups(this, this.facetGrouping);
-                            this.groups.push(this.customGroups);
-                        }
-                        let obj = new Search.SearchGroup(this, field.name, field.caption, this.customGroups);
-                        this.customGroups.push(obj);
-                        obj.selected = true;
+                        let group = new Search.SearchGroup(this, field.name, field.caption, this.groupingGroups);
+                        this.addGrouping(group);
+                        group.selected = true;
+                    }
+                    addGrouping(group) {
+                        if (!this.groups.length)
+                            this.groups = [this.groupingGroups];
+                        this.groupingGroups.push(group);
                     }
                     set viewMoreButtons(value) {
                         if (this._viewMoreButtons !== value) {
@@ -6511,7 +6522,7 @@ var Katrid;
                             this.scope.action.setSearchParams(this.getParams());
                     }
                     groupBy() {
-                        return this.facetGrouping.values.map(obj => obj._ref.name);
+                        return this.facetGrouping.values.map(obj => obj._ref.groupBy);
                     }
                     show() {
                         let shouldApply = false;
@@ -11523,7 +11534,7 @@ var Katrid;
             if (key) {
                 const svc = new Katrid.Services.Model('mail.message');
                 if (this.scope.$parent.record)
-                    return svc.post('get_messages', { args: [this.scope.$parent.record.messages] })
+                    return svc.post('get_messages', { args: [this.scope.$parent.model.name, this.scope.$parent.recordId] })
                         .then(res => {
                         this.items = res;
                         this.scope.$apply();
@@ -11531,11 +11542,15 @@ var Katrid;
             }
         }
         async _sendMesage(msg, attachments) {
+            let svc = new Katrid.Services.Model('mail.message');
             if (attachments)
-                attachments = attachments.map((obj) => obj.id);
-            let msgs = await this.model.post('post_message', { args: [[this.scope.$parent.recordId]], kwargs: { content: msg, content_subtype: 'html', format: true, attachments: attachments } });
+                attachments = attachments.map(obj => obj.id);
+            let msgs = await svc.post('post_message', {
+                args: [this.model.name, this.scope.$parent.recordId],
+                kwargs: { content: msg, content_subtype: 'html', format: true, attachments: attachments }
+            });
             this.scope.message = '';
-            this.items = msgs.concat(this.items);
+            this.items.unshift(msgs);
             this.scope.$apply();
             this.scope.files = null;
             this.scope.hideEditor();
@@ -11627,7 +11642,7 @@ var Katrid;
           <div ng-show="loading">{{ loading }}</div>
           <div class="comment media col-sm-12" ng-repeat="comment in comments.items">
             <div class="media-left">
-              <img src="/static/web/assets/img/avatar.png" class="avatar rounded">
+              <img src="/static/admin/assets/img/avatar.png" class="avatar rounded">
             </div>
             <div class="media-body">
               <strong>{{ ::comment.author_name }}</strong> - <span class="timestamp text-muted" title="$\{ ::comment.date_time|moment:'LLLL'}"> {{::comment.date_time|moment}}</span>

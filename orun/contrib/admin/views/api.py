@@ -16,7 +16,7 @@ from orun.http import HttpResponse, JsonResponse, HttpResponseForbidden
 @api.jsonrpc
 def rpc(request, service, meth, params):
     data = request.json
-    method = data['method']
+    method = data.get('method', meth)
     if method.startswith('_'):
         raise MethodNotFound
     else:
