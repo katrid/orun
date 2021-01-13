@@ -100,7 +100,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def get_new_connection(self, conn_params):
         options = self.settings_dict['OPTIONS']
-        if options['driver'] == 'pytds':
+        if options.get('driver') == 'pytds':
             import pytds
             connection = pytds.connect(
                 server=conn_params['server'], database=conn_params['database'], port=conn_params['port'],
