@@ -129,6 +129,7 @@ class Deserializer(base.Deserializer):
                 name=obj_name,
                 object_id=instance.pk,
                 model=ContentType.objects.get_by_natural_key(instance._meta.name),
+                model_name=instance._meta.name,
                 can_update=not obj.get('no-update', False),
             )
         for child, v in children.items():
