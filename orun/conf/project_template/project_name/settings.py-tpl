@@ -34,29 +34,7 @@ INSTALLED_APPS = [
     'orun.contrib.erp',
 ]
 
-MIDDLEWARE = [
-    'orun.contrib.sessions.middleware.SessionMiddleware',
-    'orun.middleware.common.CommonMiddleware',
-    'orun.contrib.admin.middleware.AuthenticationMiddleware',
-]
-
 ROOT_URLCONF = '{{ project_name }}.urls'
-
-TEMPLATES = [
-    {
-        'BACKEND': 'orun.template.backends.jinja2.Jinja2',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'orun.template.context_processors.debug',
-                'orun.template.context_processors.request',
-                'orun.contrib.auth.context_processors.auth',
-                'orun.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
 
 WSGI_APPLICATION = '{{ project_name }}.wsgi.application'
 
