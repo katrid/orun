@@ -96,7 +96,6 @@ def create_permissions(app_models, verbosity=2, interactive=True, using=DEFAULT_
             # if there is no corresponding entry in the /etc/passwd file
             # (a very restricted chroot environment, for example).
             return ''
-    return result
 
 
 def get_default_username(check_db=True):

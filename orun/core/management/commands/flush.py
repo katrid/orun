@@ -38,7 +38,7 @@ class Command(BaseCommand):
 
         # Import the 'management' module within each installed app, to register
         # dispatcher events.
-        for app_config in apps.get_addons():
+        for app_config in apps.app_configs.values():
             try:
                 import_module('.management', app_config.name)
             except ImportError:

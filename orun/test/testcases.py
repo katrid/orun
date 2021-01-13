@@ -15,6 +15,7 @@ from urllib.parse import (
     parse_qsl, unquote, urlencode, urljoin, urlparse, urlsplit, urlunparse,
 )
 from urllib.request import url2pathname
+from typing import Dict
 
 from orun.apps import apps
 from orun.conf import settings
@@ -900,7 +901,7 @@ class TransactionTestCase(SimpleTestCase):
     available_apps = None
 
     # Subclasses can define fixtures which will be automatically installed.
-    fixtures = None
+    fixtures: Dict[str, list] = None
 
     databases = _TransactionTestCaseDatabasesDescriptor()
     _disallowed_database_msg = (
@@ -933,7 +934,7 @@ class TransactionTestCase(SimpleTestCase):
                 enter=True,
             )
             for db_name in self._databases_names(include_mirrors=False):
-                emit_post_migrate_signal(verbosity=0, interactive=False, db=db_name)
+                emit_post_migrate_signal(verbosity=0, interactive=False, db=db_name, app_models=())
         try:
             self._fixture_setup()
         except Exception:
@@ -975,7 +976,7 @@ class TransactionTestCase(SimpleTestCase):
 
     def _fixture_setup(self):
         if self.fixtures:
-            for schema, fixtures in self.fixtures:
+            for schema, fixtures in self.fixtures.items():
                 call_command('loaddata', schema, *fixtures, **{'verbosity': 0, 'database': DEFAULT_DB_ALIAS})
         return
         for db_name in self._databases_names(include_mirrors=False):
@@ -1132,7 +1133,7 @@ class TestCase(TransactionTestCase):
         if cls.fixtures:
             for db_name in cls._databases_names(include_mirrors=False):
                 try:
-                    for schema, fixtures in cls.fixtures:
+                    for schema, fixtures in cls.fixtures.items():
                         call_command('loaddata', schema, *fixtures, **{'verbosity': 0, 'database': db_name})
                 except Exception:
                     cls._rollback_atomics(cls.cls_atomics)

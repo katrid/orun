@@ -226,7 +226,7 @@ class Deserializer(base.Deserializer):
         return self.read_object(templ)
 
     def read_view(self, obj, **attrs):
-        template_name = obj.attrib.get('template-name') or obj.attrib.get('file')
+        template_name = obj.attrib.get('template', obj.attrib.get('template-name', obj.attrib.get('file')))
         view = {
             'model': 'ui.view',
             'id': obj.attrib.get('id'),

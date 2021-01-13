@@ -1,0 +1,15 @@
+<search>
+  <field name="name"/>
+  <filter-group>
+    <filter label="{{ _('Persons') }}" name="is_individual" domain="{'is_customer': 1}"/>
+    <filter label="{{ _('Companies') }}" name="is_company" domain="{'is_company': 1}"/>
+  </filter-group>
+  <filter-group>
+    <filter label="{{ _('Vendors') }}" name="is_supplier" domain="{'is_supplier': 1}"/>
+    <filter label="{{ _('Customers') }}" name="is_customer" domain="{'is_customer': 1}"/>
+  </filter-group>
+  <filter-group>
+    <filter caption="{{ _('Archived') }}" name="archived" domain="{'active': 0}"/>
+  </filter-group>
+  <group name="group_company" caption="{{ _('Company') }}" context="{'group_by': 'parent'}"/>
+</search>

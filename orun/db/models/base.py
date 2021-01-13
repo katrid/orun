@@ -1885,8 +1885,6 @@ class Model(metaclass=ModelBase):
 
             # dispatch events
             if obj._state.adding:
-                if hasattr(obj, 'before_insert') and callable(obj.before_insert):
-                    obj.before_insert()
                 before_insert.send(cls._meta.name, old=None, new=obj)
             elif cls._meta.name in before_update.models:
                 # make a copy of old data
@@ -1898,8 +1896,6 @@ class Model(metaclass=ModelBase):
             if obj._state.adding:
                 cls._from_json(obj, row)
             if obj._state.adding:
-                if hasattr(obj, 'after_insert') and callable(obj.after_insert):
-                    obj.after_insert()
                 if cls._meta.name in after_insert.models:
                     after_insert.send(cls._meta.name, old=None, new=obj)
 
@@ -1969,20 +1965,22 @@ class Model(metaclass=ModelBase):
         where = params
         field_name = grouping[0]
         field = self._meta.fields[field_name]
+        count_ret = '%s__count' % field_name
         if field.group_choices:
             qs = field.get_group_choices(self, where)
         else:
             qs = self._search(where)
-            qs = qs.values(field.name).annotate(Count(field.name)).order_by(field.name)
-        count_name = '%s__count' % field_name
-        count_ret = '%s__count' % field_name
+            qs = qs.values(field.name).annotate(pk__count=Count('pk')).order_by(field.name)
         res = []
         if field.many_to_one:
             for row in qs:
                 key = row[field.name]
+                count = row['pk__count']
+                s = f'{field.remote_field.model.objects.get(pk=key)._get_instance_label() if key else gettext("(Undefined)")} ({count})'
                 res.append({
-                    field_name: field.remote_field.model.objects.get(pk=key)._get_instance_label() if key else None,
-                    count_ret: row[count_name],
+                    '$params': {field_name: key},
+                    field_name: s,
+                    count_ret: count,
                 })
             return res
         return list(qs)
@@ -2007,7 +2005,7 @@ class Model(metaclass=ModelBase):
 
     @api.method
     def search(cls, fields=None, count=None, page=None, limit=None, **kwargs):
-        qs = cls._search(fields=fields, filter=kwargs.get('domain'), **kwargs)
+        qs = cls._search(fields=fields, **kwargs)
         if count:
             count = qs.count()
         if limit is None:
@@ -2025,10 +2023,13 @@ class Model(metaclass=ModelBase):
         }
 
     @classmethod
-    def _search(self, where=None, fields=None, filter=None, join=None, **kwargs):
+    def _search(self, where=None, fields=None, params=None, join=None, **kwargs):
         # self.check_permission('read')
         qs = self.objects.all()
         # load only selected fields
+        domain = kwargs.get('domain')
+        if domain and params:
+            params.update(domain)
         if fields:
             if 'record_name' in fields:
                 fields.append(self._meta.title_field)
@@ -2065,8 +2066,8 @@ class Model(metaclass=ModelBase):
                 qs = qs.filter(**where)
             elif where is not None:
                 qs = qs.filter(where)
-        if filter:
-            qs = qs.filter(**filter)
+        if params:
+            qs = qs.filter(**params)
         # filter active records only
         if self._meta.active_field:
             qs = qs.filter(**{self._meta.active_field: True})
@@ -2129,7 +2130,7 @@ class Model(metaclass=ModelBase):
             field.save_form_data(instance, v)
 
         # todo fix full clean
-        # instance.full_clean(validate_unique=False)
+        instance.full_clean(validate_unique=False)
         if instance.pk:
             flds = data.keys() - [f.name for f in children]
             if flds:

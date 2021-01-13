@@ -91,7 +91,7 @@ def onchange(*fields):
     def decorator(fn):
 
         def contribute_to_class(flds, cls, name: str):
-            if not isinstance(flds, (tuple, list, dict)):
+            if not isinstance(flds, (tuple, list)):
                 flds = [flds]
             for field in flds:
                 if not isinstance(field, str):

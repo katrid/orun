@@ -5,10 +5,8 @@ from orun.utils.translation import gettext_lazy as _, gettext
 from orun.db import models
 from orun.core.exceptions import PermissionDenied
 
-from . import comment
 
-
-class DocumentApproval(comment.Comments):
+class DocumentApproval(models.Model):
     """
     Model for documents with approval levels.
     """

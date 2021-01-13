@@ -143,7 +143,6 @@ class Command(BaseCommand):
         if self.verbosity >= 1:
             self.stdout.write("  Creating tables...\n")
         post_model_list = {}
-        print(manifest)
         with connection.schema_editor() as editor:
             for app_name in manifest:
                 app = apps.app_configs[app_name]

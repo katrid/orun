@@ -1136,4 +1136,7 @@ def create_forward_many_to_many_manager(superclass, rel, reverse):
                     model=self.model, pk_set=old_ids, using=db,
                 )
 
+        def __iter__(self):
+            return iter(self.get_queryset())
+
     return ManyRelatedManager

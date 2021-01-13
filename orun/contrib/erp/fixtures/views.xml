@@ -18,6 +18,7 @@
     <field name="view_type">card</field>
     <field name="template_name">erp/views/res.partner/card.html</field>
   </object>
+  <view id="erp/views/res.partner/search" name="res.partner.search" model="res.partner" template="erp/views/res.partner/search.html"/>
   <object id="view.auth.user.form" model="ui.view">
     <field name="name">auth.user.form</field>
     <field name="model">auth.user</field>

@@ -4002,6 +4002,11 @@ var Katrid;
     (function (Forms) {
         var Dialogs;
         (function (Dialogs) {
+            toastr['options'] = {
+                'closeButton': true,
+                'progressBar': true,
+                'timeOut': 60000,
+            };
             class Alerts {
                 static success(msg) {
                     return toastr['success'](msg);

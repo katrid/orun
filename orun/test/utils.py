@@ -13,7 +13,7 @@ from unittest import TestCase, skipIf, skipUnless
 from xml.dom.minidom import Node, parseString
 
 from orun.apps import apps
-from orun.apps import Registry as Apps
+from orun.apps.registry import Registry as Apps
 from orun.conf import UserSettingsHolder, settings
 from orun.core import mail
 from orun.core.exceptions import ImproperlyConfigured

@@ -95,7 +95,7 @@ def get_installed_libraries():
     candidates = ['orun.templatetags']
     candidates.extend(
         '%s.templatetags' % app_config.name
-        for app_config in apps.get_addons())
+        for app_config in apps.app_configs.values())
 
     for candidate in candidates:
         try:

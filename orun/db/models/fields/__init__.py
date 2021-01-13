@@ -205,7 +205,6 @@ class Field(BaseField):
 
     # Designates whether empty strings fundamentally are allowed at the
     # database level.
-    empty_strings_allowed = True
     empty_values = list(validators.EMPTY_VALUES)
 
     # These track each time a Field instance is created. Used to retain order.
@@ -249,7 +248,7 @@ class Field(BaseField):
                  max_length: Optional[int] = None, unique=False, null=True, required: Optional[bool] = None,
                  db_index=False, rel=None, default=NOT_PROVIDED, editable=True,
                  serialize=True, unique_for_date=None, unique_for_month=None,
-                 unique_for_year=None, choices: Optional[dict] = None, help_text=None,
+                 unique_for_year=None, choices: Optional[Union[dict, list, tuple]] = None, help_text=None,
                  db_column: Optional[str] = None, db_tablespace=None, db_compute=None, db_default=NOT_PROVIDED,
                  stored: Optional[bool] = None,
                  translate=None, copy=None, widget_attrs=None, readonly=None,
@@ -278,8 +277,13 @@ class Field(BaseField):
         self.unique_for_month = unique_for_month
         self.unique_for_year = unique_for_year
         self.widget_attrs = widget_attrs
-        if isinstance(choices, collections.abc.Iterator):
-            choices = list(choices)
+        if isinstance(choices, dict):
+            choices = choices.items()
+        elif isinstance(choices, (list, tuple)) and choices:
+            if not isinstance(choices[0], (list, tuple)):
+                choices = [(choice, choice) for choice in choices]
+            else:
+                choices = list(choices)
         self.choices = choices or []
         self.help_text = help_text
         self.db_index = db_index
@@ -947,9 +951,7 @@ class Field(BaseField):
                 return self.default
             return lambda: self.default
 
-        if not self.empty_strings_allowed or self.null and not connection.features.interprets_empty_strings_as_nulls:
-            return return_None
-        return str  # return empty string
+        return return_None
 
     def get_choices(self, include_blank=True, blank_choice=BLANK_CHOICE_DASH, limit_choices_to=None, ordering=()):
         """
@@ -1960,6 +1962,8 @@ class IntegerField(Field):
     def to_python(self, value):
         if value is None:
             return value
+        if value == '':
+            return None
         try:
             return int(value)
         except (TypeError, ValueError):

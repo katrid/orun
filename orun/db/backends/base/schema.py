@@ -176,8 +176,7 @@ class BaseDatabaseSchemaEditor:
                     params += [default_value]
         # Oracle treats the empty string ('') as null, so coerce the null
         # option whenever '' is a possible value.
-        if (field.empty_strings_allowed and not field.primary_key and
-                self.connection.features.interprets_empty_strings_as_nulls):
+        if not field.primary_key:
             null = True
         if null and not self.connection.features.implied_column_null:
             sql += " NULL"

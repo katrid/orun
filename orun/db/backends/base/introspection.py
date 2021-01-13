@@ -87,7 +87,7 @@ class BaseDatabaseIntrospection:
         from orun.apps import apps
         from orun.db import router
         tables = set()
-        for app_config in apps.get_addons():
+        for app_config in apps.app_configs.values():
             for model in router.get_migratable_models(app_config, self.connection.alias):
                 if not model._meta.managed:
                     continue

@@ -139,21 +139,22 @@ class WSGIHandler(base.BaseHandler):
         set_script_prefix(get_script_name(environ))
         signals.request_started.send(sender=self.__class__, environ=environ)
         request = self.request_class(environ)
-        # apps.env.setup()
-        # with apps.env(request=request):
-        response = self.get_response(request)
+        with apps.env(request=request):
+            # apps.env.setup()
+            # with apps.env(request=request):
+            response = self.get_response(request)
 
-        response._handler_class = self.__class__
+            response._handler_class = self.__class__
 
-        status = '%d %s' % (response.status_code, response.reason_phrase)
-        response_headers = [
-            *response.items(),
-            *(('Set-Cookie', c.output(header='')) for c in response.cookies.values()),
-        ]
-        start_response(status, response_headers)
-        if getattr(response, 'file_to_stream', None) is not None and environ.get('wsgi.file_wrapper'):
-            response = environ['wsgi.file_wrapper'](response.file_to_stream)
-        return response
+            status = '%d %s' % (response.status_code, response.reason_phrase)
+            response_headers = [
+                *response.items(),
+                *(('Set-Cookie', c.output(header='')) for c in response.cookies.values()),
+            ]
+            start_response(status, response_headers)
+            if getattr(response, 'file_to_stream', None) is not None and environ.get('wsgi.file_wrapper'):
+                response = environ['wsgi.file_wrapper'](response.file_to_stream)
+            return response
 
 
 def get_path_info(environ):

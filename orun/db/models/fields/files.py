@@ -8,7 +8,7 @@ from orun.core.files.base import File, ContentFile
 from orun.core.files.images import ImageFile
 from orun.core.files.storage import default_storage, checksum
 from orun.db.models import signals
-from orun.db.models.fields import Field
+from orun.db.models.fields import Field, CharField
 from orun.utils.translation import gettext_lazy as _
 
 
@@ -210,7 +210,7 @@ class FileDescriptor:
         instance.__dict__[self.field.name] = value
 
 
-class FileField(Field):
+class FileField(CharField):
 
     # The class to wrap instance attributes in. Accessing the file object off
     # the instance will always return an instance of attr_class.
@@ -275,7 +275,7 @@ class FileField(Field):
     def get_prep_value(self, value):
         value = super().get_prep_value(value)
         # Need to convert File objects provided via a form to string for database insertion
-        if value is None:
+        if not value:
             return None
         return value.name
 

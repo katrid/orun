@@ -284,6 +284,8 @@ class ManyToManyRel(ForeignObjectRel):
                 rel = getattr(field, 'remote_field', None)
                 if rel and rel.model == self.model:
                     break
+            else:
+                raise AssertionError('Impossible to determine the related field')
         return field.foreign_related_fields[0]
 
 
