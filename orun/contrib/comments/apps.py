@@ -11,4 +11,4 @@ class CommentsConfig(AppConfig):
     installable = True
     application = True
     fixtures = ['mail.xml', 'views.xml', 'actions.xml', 'menu.xml']
-    dependencies = ['orun.contrib.admin']
+    dependencies = ['orun.contrib.erp']
