@@ -22,7 +22,7 @@ class CopyTo(models.Model):
         return 'Copy from "%s" to "%s"' % (self.source_model, self.dest_model)
 
     @api.method
-    def get_copy_to_choices(self, model):
+    def get_by_model(self, model):
         opts = self.objects.filter(source_model__name=model)
         return [
             {'id': opt.pk, 'name': str(opt.caption or opt.dest_model.model_class()._meta.verbose_name)}
@@ -43,7 +43,10 @@ class CopyTo(models.Model):
                 'model': dest._meta.name,
                 'value': values,
                 'context': {
-                    'copy_from': [source._meta.name, source_id],
+                    'copy_from': {
+                        'model': source._meta.name,
+                        'id': source_id,
+                    },
                 }
             }
 
@@ -63,8 +66,8 @@ def auto_mapping_fields(source, dest):
 
 
 def get_val(obj, attr: str):
-    if attr.startswith('='):
-        return attr[1:]
+    if attr.startswith("'"):
+        return attr[1:-1]
     else:
         return obj.get(attr)
 
