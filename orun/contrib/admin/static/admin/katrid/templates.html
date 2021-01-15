@@ -815,7 +815,7 @@
                     <i class="fa fa-fw fa-files-o"></i>
                     {{ _.gettext('Duplicate') }}
                   </a>
-                  <a class="dropdown-item" ng-if="$parent.record.id" ng-repeat="opt in ::copyToOpts"
+                  <a class="dropdown-item" ng-if="$parent.record.id" ng-repeat="opt in ::copyToOptions"
                      ng-click="action.copyTo(opt.id)">
                     <i class="fa fa-fw fa-files-o"></i>
                     {{ _.sprintf(_.gettext('Copy To %s'), opt.name) }}
@@ -2044,10 +2044,10 @@
             <i class="fa fa-fw fa-files-o"></i>
             {{ _.gettext('Duplicate') }}
           </a>
-          <a class="dropdown-item" ng-if="(action.viewType === 'form') && $parent.record.id" ng-repeat="opt in ::copyToOpts"
+          <a class="dropdown-item" ng-if="(action.viewType === 'form') && $parent.record.id" ng-repeat="opt in ::copyToOptions"
              ng-click="action.copyTo(opt.id)">
             <i class="fa fa-fw fa-files-o"></i>
-            {{ _.sprintf(_.gettext('Copy To %s'), opt.name) }}
+            ${ ::_.sprintf(_.gettext('Copy To %s'), opt.name) }
           </a>
           <!-- replace-actions -->
         </div>

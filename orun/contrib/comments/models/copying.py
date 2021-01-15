@@ -31,10 +31,10 @@ class CopyTo(models.Model):
 
     @api.method
     def copy_to(self, id, source_id):
-        ir_copy_to = self.objects.get(id)
+        ir_copy_to = self.objects.get(pk=id)
         if source_id is not None and ir_copy_to.active:
             source = self.env[ir_copy_to.source_model.name]
-            source_obj = source.objects.get(source_id)
+            source_obj = source.objects.get(pk=source_id)
             dest = self.env[ir_copy_to.dest_model.name]
             mapping = ir_copy_to.fields_mapping
             mapping = json.loads(mapping)

@@ -642,6 +642,16 @@ var Katrid;
                     this.fields = res.fields;
                     this.fieldList = res.fieldList;
                     this.views = res.views;
+                    if (res.views.form) {
+                        console.log('this.model.info', this.model);
+                        let copyTo = new Katrid.Services.Model('ir.copy.to');
+                        copyTo.rpc('get_by_model', [this.model.name])
+                            .then(res => {
+                            this.scope.copyToOptions = res;
+                            console.log('copy to options', res);
+                            this.scope.$apply();
+                        });
+                    }
                     let templ = Katrid.app.getTemplate('ui.action.window.jinja2', { action: this });
                     templ = Katrid.Core.$compile(templ)(this.scope);
                     templ[0].action = this;
