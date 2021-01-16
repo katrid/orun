@@ -85,7 +85,7 @@ def copy_to_dest(mapping, dest, source):
                         values[k].append({'action': 'CREATE', 'values': copy_to_dest(v['values'], field.rel.model, line)})
             elif isinstance(v, list):
                 for line in v:
-                    values[k].append({'action': 'CREATE', 'values': copy_to_dest(line, field.rel.model, source)})
+                    values[k].append({'action': 'CREATE', 'values': copy_to_dest(line, field.remote_field.model, source)})
         else:
             values[k] = get_val(source, v)
     return values

@@ -587,8 +587,8 @@ var Katrid;
                     let res = await svc.rpc('copy_to', [configId, this.scope.recordId]);
                     let model = new Katrid.Services.Model(res.model);
                     let views = await model.getViewInfo({ view_type: 'form' });
-                    let wnd = new Katrid.Forms.Dialogs.Window({ scope: this.scope, view: views, model });
-                    let defs = { defaultValues: res.value };
+                    let scope = this.scope.$new(true);
+                    let wnd = new Katrid.Forms.Dialogs.Window({ scope, view: views, model, defaultValues: res.value });
                     wnd.createNew();
                 }
             }
@@ -4697,6 +4697,7 @@ var Katrid;
                     this.action = {
                         model: options.model,
                         context: {},
+                        scope: this.scope,
                         saveAndClose: async () => {
                             let data = await this.scope.dataSource.save();
                             this.dialog.modal('hide');
