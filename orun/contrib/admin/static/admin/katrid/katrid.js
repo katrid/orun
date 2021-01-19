@@ -2802,9 +2802,6 @@ var Katrid;
                 return this.record;
             }
             setValues(values) {
-                if (values.baixas[0].action === 'CLEAR')
-                    return;
-                console.log('set values', values);
                 Object.entries(values).forEach(([k, v]) => {
                     let fld = this.fields[k];
                     if (fld)
@@ -4768,7 +4765,6 @@ var Katrid;
                                     defaultValues = this.options.defaultValues;
                             }
                             await dataSource.insert(true, defaultValues, kwargs);
-                            console.log('inserting', dataSource);
                             this.scope.$apply();
                             resolve(el);
                         }, 1000);
