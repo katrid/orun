@@ -2793,7 +2793,7 @@ var Katrid;
                 if (res)
                     Object.assign(defaults, res);
                 for (let [k, v] of Object.entries(defaults))
-                    if (_.isFunction(v)) {
+                    if (typeof v === "function") {
                         v = v(defaults, this);
                         if (!_.isUndefined(v))
                             defaults[k] = v;
@@ -2802,6 +2802,9 @@ var Katrid;
                 return this.record;
             }
             setValues(values) {
+                if (values.baixas[0].action === 'CLEAR')
+                    return;
+                console.log('set values', values);
                 Object.entries(values).forEach(([k, v]) => {
                     let fld = this.fields[k];
                     if (fld)
@@ -2827,7 +2830,7 @@ var Katrid;
                 if (this.scope.views)
                     return this.scope.views.form.fields[fieldName];
                 else
-                    return this.scope.view.fields[fieldName];
+                    return this.action.view.fields[fieldName];
             }
             set state(state) {
                 this._modifiedFields = [];
@@ -4768,7 +4771,7 @@ var Katrid;
                             console.log('inserting', dataSource);
                             this.scope.$apply();
                             resolve(el);
-                        });
+                        }, 1000);
                     });
                 }
                 ;
