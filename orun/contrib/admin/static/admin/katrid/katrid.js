@@ -774,7 +774,7 @@ var Katrid;
                 if (res.tag === 'refresh')
                     this.refresh();
                 else if (res.tag == 'new') {
-                    this.dataSource.insert(true, res.values);
+                    this.dataSource.insert(false, res.values);
                 }
                 else if (res.type) {
                     const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
@@ -2790,10 +2790,10 @@ var Katrid;
                     Object.assign(defaults, this.scope.$eval(this.scope.ngDefaultValues));
                 if (this.action.context && this.action.context.default_values)
                     Object.assign(defaults, this.action.context.default_values);
-                if (defaultValues)
-                    Object.assign(defaults, defaultValues);
                 if (res)
                     Object.assign(defaults, res);
+                if (defaultValues)
+                    Object.assign(defaults, defaultValues);
                 for (let [k, v] of Object.entries(defaults))
                     if (typeof v === "function") {
                         v = v(defaults, this);
