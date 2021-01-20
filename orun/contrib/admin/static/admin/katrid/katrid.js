@@ -774,7 +774,7 @@ var Katrid;
                 if (res.tag === 'refresh')
                     this.refresh();
                 else if (res.tag == 'new') {
-                    this.dataSource.insert(false, res.values);
+                    this.dataSource.insert(true, res.values);
                 }
                 else if (res.type) {
                     const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
