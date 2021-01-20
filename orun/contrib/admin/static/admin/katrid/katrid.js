@@ -770,10 +770,12 @@ var Katrid;
             async formButtonClick(id, meth, self) {
                 if (id instanceof Katrid.Forms.Views.SelectionHelper)
                     id = id.map(obj => obj.id);
-                console.log('form button click', id);
                 let res = await this.model.rpc(meth, [id], null, this);
                 if (res.tag === 'refresh')
                     this.refresh();
+                else if (res.tag == 'new') {
+                    this.dataSource.insert(true, res.values);
+                }
                 else if (res.type) {
                     const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
                     act.execute();
@@ -4620,7 +4622,10 @@ var Katrid;
                     let el = document.createElement('a');
                     el.classList.add('dropdown-item');
                     this.assign(action, el);
-                    el.setAttribute('ng-click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
+                    if (el.hasAttribute('data-action'))
+                        el.setAttribute('ng-click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
+                    else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name')))
+                        el.setAttribute('ng-click', `action.formButtonClick(action.selection, '${el.getAttribute('name')}', $event.target)`);
                     return el;
                 }
             }
