@@ -8,3 +8,4 @@ from .module import *
 from .sequence import *
 from .config import *
 from .decimal import *
+from .http import *
