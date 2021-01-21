@@ -3862,6 +3862,8 @@ var Katrid;
                     }
                     return record;
                 }
+                else if (this.state === RecordState.created)
+                    return record;
             }
             addChild(child) {
                 if (this.state === RecordState.unmodified)
