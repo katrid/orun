@@ -2028,7 +2028,9 @@ class Model(metaclass=ModelBase):
         qs = self.objects.all()
         # load only selected fields
         domain = kwargs.get('domain')
-        if domain and params:
+        if params is None:
+            params = {}
+        if domain:
             params.update(domain)
         if fields:
             if 'record_name' in fields:
