@@ -210,7 +210,20 @@ EMAIL_TIMEOUT = None
 # List of strings representing installed apps.
 INSTALLED_APPS = []
 
-TEMPLATES = []
+TEMPLATES = [
+    {
+        'BACKEND': 'orun.template.backends.jinja2.Jinja2',
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'orun.template.context_processors.debug',
+                'orun.template.context_processors.request',
+                'orun.template.context_processors.i18n',
+            ],
+        },
+    },
+]
+
 
 # Default form rendering class.
 FORM_RENDERER = 'orun.forms.renderers.DjangoTemplates'
@@ -443,7 +456,11 @@ SECURE_PROXY_SSL_HEADER = None
 # List of middleware to use. Order is important; in the request phase, these
 # middleware will be applied in the order given, and in the response
 # phase the middleware will be applied in reverse order.
-MIDDLEWARE = []
+MIDDLEWARE = [
+    'orun.contrib.sessions.middleware.SessionMiddleware',
+    'orun.middleware.common.CommonMiddleware',
+    'orun.contrib.admin.middleware.AuthenticationMiddleware',
+]
 
 ############
 # SESSIONS #
@@ -471,7 +488,7 @@ SESSION_SAVE_EVERY_REQUEST = False
 # Whether a user's session cookie expires when the Web browser is closed.
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 # The module to store session data
-SESSION_ENGINE = 'orun.contrib.sessions.backends.db'
+SESSION_ENGINE = 'orun.contrib.sessions.backends.signed_cookies'
 # Directory to store session files if using the file session module. If None,
 # the backend will use a sensible default.
 SESSION_FILE_PATH = None
