@@ -3864,6 +3864,8 @@ var Katrid;
                 }
             }
             addChild(child) {
+                if (this.state === RecordState.unmodified)
+                    this.state = RecordState.modified;
                 if (this.children.indexOf(child) === -1)
                     this.children.push(child);
             }
@@ -3902,8 +3904,7 @@ var Katrid;
                         console.log(v.constructor.name);
                 }
                 if (this.dataSource.parent && !parent) {
-                    let field = this.dataSource.parent.scope.view.fields[this.dataSource.fieldName]._info.field;
-                    res[field] = this.dataSource.parent.record.$record._prepareRecord(this.dataSource.parent.record);
+                    let field = this.dataSource.parent.scope.view.fields[this.dataSource.field.name]._info.field;
                 }
                 return res;
             }
@@ -3930,7 +3931,13 @@ var Katrid;
                 if (!this.pending)
                     this.pending = {};
                 Object.assign(this.pending, this.data);
-                this.parent.addChild(this);
+                if (this.state == RecordState.unmodified)
+                    this.state = RecordState.modified;
+                let rec = this;
+                while (rec.parent) {
+                    rec.parent.addChild(rec);
+                    rec = rec.parent;
+                }
             }
             set(propKey, value) {
                 let field = this.dataSource.fieldByName(propKey);
@@ -4518,13 +4525,15 @@ var Katrid;
                     }
                 }
                 onRenderField(el, field) {
-                    let title = field.caption;
-                    if (field.helpText)
-                        title += '<br>' + field.helpText;
-                    title += '<br>Field: ' + field.name;
-                    if (field.model)
-                        title += '<br>Model: ' + field.model;
-                    el.setAttribute('ui-tooltip', title);
+                    if (!Katrid.settings.ui.isMobile) {
+                        let title = field.caption;
+                        if (field.helpText)
+                            title += '<br>' + field.helpText;
+                        title += '<br>Field: ' + field.name;
+                        if (field.model)
+                            title += '<br>Model: ' + field.model;
+                        el.setAttribute('ui-tooltip', title);
+                    }
                 }
                 beforeRender(template) {
                     for (let customTag of Object.values(Views.customTagRegistry))
@@ -7380,7 +7389,8 @@ var Katrid;
                     this.field.dataSource.flush();
                     if (!this.scope.records)
                         this.scope.records = [];
-                    this.scope.records.push(this.scope.record);
+                    if (this.scope.records.indexOf(this.scope.record) === -1)
+                        this.scope.records.push(this.scope.record);
                 }
             }
             Widgets.OneToManyAction = OneToManyAction;
@@ -8549,6 +8559,7 @@ var Katrid;
                     });
                 }
                 async save(service, data) {
+                    console.log('save', service, data);
                     let r;
                     if (data.$id) {
                         await this.db.records.update(data.$id, {
