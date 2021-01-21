@@ -5,5 +5,5 @@
     <filter caption="{{ _('Vendors') }}" name="is_supplier" domain="{'is_supplier': 1}"/>
     <filter caption="{{ _('Customers') }}" name="is_customer" domain="{'is_customer': 1}"/>
   </filter-group>
-  <field caption="{{ _('Archived') }}" name="archived" domain="{'active': 0}"/>
+  <filter caption="{{ _('Archived') }}" name="archived" domain="{'active': 0}"/>
 </search>
