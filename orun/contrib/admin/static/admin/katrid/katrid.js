@@ -7379,7 +7379,8 @@ var Katrid;
                     let i = 0;
                     for (let rec of this.selection) {
                         rec.$record.delete();
-                        this.dataSource.records.splice(rec, 1);
+                        console.log('delete selection', rec);
+                        this.dataSource.records.splice(this.dataSource.records.indexOf(rec), 1);
                     }
                     this.scope.$apply();
                     this.selection.clear();
