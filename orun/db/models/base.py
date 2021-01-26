@@ -2009,7 +2009,7 @@ class Model(metaclass=ModelBase):
         if count:
             count = qs.count()
         if limit is None:
-            limite = CHOICES_PAGE_LIMIT
+            limit = CHOICES_PAGE_LIMIT
         elif limit == -1:
             limit = None
         if page and limit:
@@ -2026,7 +2026,6 @@ class Model(metaclass=ModelBase):
     def _search(self, where=None, fields=None, params=None, join=None, **kwargs):
         # self.check_permission('read')
         qs = self.objects.all()
-        # load only selected fields
         domain = kwargs.get('domain')
         if params is None:
             params = {}
@@ -2035,10 +2034,25 @@ class Model(metaclass=ModelBase):
         if fields:
             if 'record_name' in fields:
                 fields.append(self._meta.title_field)
+
+            # optimize select_related fields
+            rel_fields = []
+            only = []
+            for f in fields:
+                field = self._meta.fields[f]
+                if field.many_to_one:
+                    rel_fields.append(field.name)
+                    rel_fields.extend(field.get_select_related(only))
+
+            qs = qs.select_related(*rel_fields)
             fields = [f.attname for f in [self._meta.fields[f] for f in fields] if f.concrete]
+            if only:
+                fields.extend(only)
+
             pk = self._meta.pk.attname
             if pk not in fields:
                 fields.append(pk)
+            # load only selected fields
             if fields:
                 qs = qs.only(*fields)
         elif self._meta.deferred_fields:

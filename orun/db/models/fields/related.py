@@ -1,4 +1,4 @@
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 import functools
 import inspect
 from functools import partial
@@ -769,6 +769,22 @@ class ForeignKey(ForeignObject):
                 id='fields.W342',
             )
         ] if self.unique else []
+
+    def get_select_related(self, only: List[str], path=None) -> List[str]:
+        res = []
+        name_fields = self.name_fields
+        if path is None:
+            path = self.name + '__'
+        if name_fields:
+            name_fields = [self.related_model._meta.fields[f] for f in name_fields]
+        else:
+            name_fields = self.related_model._meta.get_name_fields()
+        for f in name_fields:
+            if f.many_to_one:
+                res.extend([f for f in f.get_select_related(only, f'{path}{f.name}__')])
+            else:
+                only.append(f'{path or self.name}{f.name}')
+        return res
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
