@@ -8,7 +8,9 @@ class SQLCompiler(compiler.SQLCompiler):
         sql, params = super().as_sql(with_limits=False, with_col_aliases=with_col_aliases)
         if with_limits:
             if self.query.high_mark is not None:
-                sql = '{} OFFSET {} ROWS FETCH NEXT {} ROWS ONLY'.format(sql, self.query.low_mark, self.query.high_mark)
+                sql = '{} OFFSET {} ROWS FETCH NEXT {} ROWS ONLY'.format(
+                    sql, self.query.low_mark, self.query.high_mark - self.query.low_mark
+                )
         return sql, params
 
 
