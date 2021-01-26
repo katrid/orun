@@ -193,6 +193,13 @@ class Options:
             bases = [base.Meta for base in parents if hasattr(base, 'Meta') and base.Meta]
         if bases:
             bases = tuple(bases)
+            if parents:
+                for base in bases:
+                    if 'field_groups' in meta_attrs and meta_attrs.get('override'):
+                        parent = parents[0]
+                        if not parent.Meta.field_groups:
+                            parent.Meta.field_groups = {}
+                        parent.Meta.field_groups.update(meta_attrs['field_groups'])
         else:
             bases = (Options,)
 
