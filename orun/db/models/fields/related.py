@@ -914,7 +914,10 @@ class ForeignKey(ForeignObject):
     def value_to_json(self, value):
         from orun.db.models import Model
         if isinstance(value, Model):
-            return value._get_instance_label()
+            try:
+                return value._get_instance_label()
+            except:
+                return '<ERROR>'
 
     def save_form_data(self, instance, data):
         setattr(instance, self.attname, data)
