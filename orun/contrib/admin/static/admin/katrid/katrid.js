@@ -2399,8 +2399,14 @@ var Katrid;
                 if (domain) {
                     domain = JSON.parse(domain);
                 }
+                if (!fields)
+                    fields = this.action.view.fields;
                 if (_.isObject(fields))
                     fields = Object.keys(fields);
+                else if (!fields) {
+                    fields = this.action.view.fields;
+                    console.log('search fields', fields);
+                }
                 params = {
                     count: true,
                     page,
