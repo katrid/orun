@@ -3688,6 +3688,8 @@ var Katrid;
                         let child = dataSource.childByName(this.name);
                         val.map((obj) => {
                             if (obj.action === 'CLEAR') {
+                                for (let rec of child.scope.records)
+                                    rec.$record.delete();
                                 child.scope.records = [];
                                 dataSource.record[this.name] = [];
                             }
