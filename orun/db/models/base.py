@@ -2016,7 +2016,6 @@ class Model(metaclass=ModelBase):
             page = int(page)
             limit = int(limit)
             qs = qs[(page - 1) * limit:page * limit]
-            print((page - 1) * limit, page * limit)
         # defer = qs.query.deferred_loading[0]
         defer = [f.name for f in cls._meta.fields if f.defer]
         return {
