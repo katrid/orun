@@ -2016,7 +2016,8 @@ class Model(metaclass=ModelBase):
             page = int(page)
             limit = int(limit)
             qs = qs[(page - 1) * limit:page * limit]
-        defer = qs.query.deferred_loading[0]
+        # defer = qs.query.deferred_loading[0]
+        defer = [f.name for f in cls._meta.fields if f.defer]
         return {
             'data': [obj.to_json(fields=fields, exclude=defer) for obj in qs],
             'count': count,
@@ -2085,7 +2086,7 @@ class Model(metaclass=ModelBase):
         if params:
             qs = qs.filter(**params)
         # filter active records only
-        if self._meta.active_field:
+        if self._meta.active_field is not None:
             qs = qs.filter(**{self._meta.active_field: True})
         return qs
 
