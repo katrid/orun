@@ -1,4 +1,5 @@
 from decimal import Decimal
+import datetime
 from jinja2 import Template
 
 from orun import api
@@ -93,9 +94,14 @@ class Query(models.Model):
         cur = connection.cursor()
         cur.execute(sql, values)
         desc = cur.cursor.description
+        datatype_map = {
+            datetime.date: 'DateField',
+            datetime.datetime: 'DateTimeField',
+            str: 'CharField',
+        }
         if with_description:
             fields = [
-                {'name': f[0], 'type': 'CharField', 'size': f[2]}
+                {'name': f[0], 'type': datatype_map.get(f[1], 'CharField'), 'size': f[2]}
                 for f in desc
             ]
         else:
