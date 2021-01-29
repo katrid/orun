@@ -9904,7 +9904,7 @@ body.page-small #main-content {
 }
 
 #main-content {
-  height: 100%;
+  display: flex;
 }
 
 body.page-small.show-left-menu #main-content {
@@ -9975,19 +9975,17 @@ a.dropdown-item {
 }
 
 #page-content {
-  position: absolute;
-  overflow: hidden;
-  height: 100%;
+  display: flex;
+  flex-direction: column;
   min-width: 310px;
   width: 100%;
 }
 
 #main-content {
   min-width: 310px;
-  min-height: 100%;
-  padding-bottom: 50px;
-  position: relative;
   transition: all 0.3s ease 0s;
+  flex: 1 1 auto;
+  overflow: auto;
 }
 
 .content {
@@ -10409,6 +10407,7 @@ app-header.navbar {
   padding: 0;
   justify-content: flex-end;
   flex-flow: wrap;
+  flex: 0 1;
 }
 app-header.navbar .navbar-search {
   flex: initial;
@@ -11945,15 +11944,15 @@ nav#header .nav-item .dropdown-menu {
 }
 
 html {
-  position: relative;
-  min-height: 100%;
+  height: 100%;
   margin: 0;
 }
 
 body {
-  min-height: 100%;
+  height: 100%;
   font-size: 13px;
   background-color: #f8f9fa;
+  display: flex;
 }
 
 #header {
@@ -12545,7 +12544,6 @@ table.grid.inline-editor .grid-field-readonly {
 }
 
 #action-view {
-  height: 100%;
   width: 100%;
   display: flex;
   flex: 1 1 auto;
@@ -12580,10 +12578,9 @@ table.grid.inline-editor .grid-field-readonly {
   width: 100%;
   border-bottom: 1px solid #d6d6d6;
   background-color: #f8f9fa;
-  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.05);
 }
 .data-heading > .panel-body {
-  padding: 12px;
+  padding: 10px 15px;
 }
 
 .content {
@@ -13258,13 +13255,34 @@ dashboard-view {
 }
 
 query-viewer {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   background-color: #ffffff;
+  overflow: hidden;
+}
+query-viewer > .col-12 {
+  flex: 1 1 auto;
 }
 query-viewer #select-query {
   margin-bottom: 20px;
 }
 query-viewer .table {
   margin-top: 16px;
+}
+
+query-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+query-view search-view {
+  flex: 0 1 auto;
+}
+query-view .table-responsive {
+  flex: 1 1 auto;
+  overflow: auto;
 }
 
 pwa-form {

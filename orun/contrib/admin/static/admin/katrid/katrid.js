@@ -2050,7 +2050,7 @@ var Katrid;
     (function (BI) {
         class QueryViewer extends HTMLElement {
             connectedCallback() {
-                this.innerHTML = `<div class="col-12"><h5>Visualizador de Consultas</h5><div class="toolbar"><select id="select-query" class="form-control"></select></div><query-view></query-view></div>`;
+                this.innerHTML = `<div class="col-12"><h5>Visualizador de Consultas</h5><div class="toolbar"><select id="select-query" class="form-control"></select></div></div><query-view class="col-12"></query-view>`;
                 this.load();
             }
             async load() {
