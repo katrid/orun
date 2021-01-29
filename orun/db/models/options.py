@@ -393,7 +393,9 @@ class Options:
     def get_name_fields(self) -> List['Field']:
         if self.field_groups and 'name_fields' in self.field_groups:
             return [self.fields[field_name] for field_name in self.field_groups['name_fields']]
-        return [self.fields[self.title_field]]
+        if self.title_field:
+            return [self.fields[self.title_field]]
+        return []
 
     def get_active_field(self):
         return self.fields[self.active_field]
