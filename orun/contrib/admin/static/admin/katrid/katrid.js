@@ -295,7 +295,7 @@ var Katrid;
                     target: btn.attr('target') || 'new',
                 };
                 action = new ClientAction({
-                    action, app: Katrid.app.actionManager.action.scope, location: Katrid.app.actionManager.action.location
+                    action, app: Katrid.webApp.actionManager.action.scope, location: Katrid.webApp.actionManager.action.location
                 });
                 action.execute();
             }
@@ -598,7 +598,7 @@ var Katrid;
                 let search = {
                     action: this.info.id,
                     view_type: viewType,
-                    menu_id: Katrid.app.currentMenu.id,
+                    menu_id: Katrid.webApp.currentMenu.id,
                 };
                 if ((viewType === 'form') && this.record)
                     search.id = this.record.id;
@@ -617,7 +617,7 @@ var Katrid;
                 }
                 if (this.viewType === 'form') {
                     let h = { action: this, url: this.makeUrl('form') };
-                    if (this === Katrid.app.actionManager.currentAction)
+                    if (this === Katrid.webApp.actionManager.currentAction)
                         h.text = '${ record.record_name }';
                     else
                         h.text = this.record && this.record.record_name;
@@ -680,6 +680,8 @@ var Katrid;
                     view.renderTo(this.$container);
                     view.ready();
                 }
+                if (view instanceof Katrid.Forms.Views.RecordCollectionView)
+                    this.searchResultView = view;
                 if (this.viewType !== 'form') {
                     this.lastViewType = this.viewType;
                     this.lastUrl = location.hash;
@@ -729,8 +731,9 @@ var Katrid;
                 console.log('search params', params);
                 await this.dataSource.search(params);
             }
-            applyGroups(groups, params) {
-                return this.dataSource.groupBy(groups, params);
+            async applyGroups(groups, params) {
+                let res = await this.dataSource.groupBy(groups, params);
+                this.searchResultView.groupBy(res);
             }
             groupHeaderClick(record, index) {
                 console.log('group header click', record);
@@ -743,7 +746,7 @@ var Katrid;
                 }
             }
             async loadGroupRecords(group) {
-                if (group.count > 0) {
+                if (group.$count > 0) {
                     let res = await this.dataSource.model.search({ params: group.$params });
                     group.records = res.data;
                     console.log(group);
@@ -799,7 +802,7 @@ var Katrid;
                         action: this.info.id,
                         model: this.info.model,
                         view_type: 'form',
-                        menu_id: Katrid.app.currentMenu.id,
+                        menu_id: Katrid.webApp.currentMenu.id,
                     };
                     console.log(this.app.$location.$$search);
                     if (evt && evt.ctrlKey) {
@@ -849,7 +852,7 @@ var Katrid;
                         return;
                 }
                 if (this.selection)
-                    return Array.from(this.selection).map(obj => obj.id);
+                    return Array.from(this.selection).map((obj) => obj.id);
             }
             set attachments(value) {
                 this.scope.$apply(() => this.scope.attachments = value);
@@ -1013,6 +1016,7 @@ var Katrid;
                     value.bind(this);
             }
             set datasourceName(value) {
+                console.log(this.dashboard);
                 this._datasource = this.dashboard.findComponent(value);
             }
             createContainer() {
@@ -1148,6 +1152,7 @@ var Katrid;
         BarChart = __decorate([
             BI.registerWidget('bar')
         ], BarChart);
+        BI.BarChart = BarChart;
         let HBarChart = class HBarChart extends BarChart {
             getConfig() {
                 let ret = super.getConfig();
@@ -1159,6 +1164,7 @@ var Katrid;
         HBarChart = __decorate([
             BI.registerWidget('hbar')
         ], HBarChart);
+        BI.HBarChart = HBarChart;
         function getTraces(config, dashboard) {
             let kwargs = ['datasource', 'x', 'y', 'values', 'labels'];
             if (config.traces instanceof Function) {
@@ -1189,6 +1195,7 @@ var Katrid;
             }
             return config;
         }
+        BI.getTraces = getTraces;
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -1498,6 +1505,7 @@ var Katrid;
         class WebApplication extends Application {
             constructor(config) {
                 super(config);
+                Katrid.webApp = this;
                 this.actionManager = new Katrid.Actions.ActionManager();
                 window.addEventListener('hashchange', (event) => {
                     this.loadPage(location.hash);
@@ -1767,7 +1775,7 @@ var Katrid;
                 this.$element = templ;
                 let queries = await Katrid.Services.Query.all();
                 this.$scope.queries = queries.data;
-                console.log(templ);
+                console.log('render result');
                 this.app.$element.html(templ);
                 this.$scope.$apply();
             }
@@ -1977,7 +1985,7 @@ var Katrid;
             async refresh(query, params) {
                 $(this.container).empty();
                 let res = await Katrid.Services.Query.read({ id: query, details: true, params });
-                this.fields = res.fields;
+                let fields = this.fields = res.fields;
                 this.searchView.fields = this.fields = Katrid.Data.Fields.fromArray(res.fields);
                 this.fieldList = Object.values(this.fields);
                 let _toObject = (fields, values) => {
@@ -2000,12 +2008,19 @@ var Katrid;
                 }
                 for (let row of res.data) {
                     let tr = document.createElement('tr');
+                    let i = 0;
                     for (let col of row) {
+                        let field = fields[i];
                         let td = document.createElement('td');
                         if (_.isNumber(col))
                             col = Katrid.intl.format(col);
+                        else if (field.type === 'DateField')
+                            col = moment(col).format('DD/MM/YYYY');
+                        else if (field.type === 'DateTimeField')
+                            col = moment(col).format('DD/MM/YYYY HH:mm');
                         td.innerText = col;
                         tr.append(td);
+                        i++;
                     }
                     tbody.append(tr);
                 }
@@ -2476,8 +2491,8 @@ var Katrid;
                 this.scope.groupings = [];
                 this.groups = group;
                 this.scope.records = this.scope.groups = await this._loadGroup(group, 0, params);
-                console.log('records', this.scope.records);
-                return this.scope.$apply();
+                this.scope.$apply();
+                return this.scope.groups;
             }
             async _loadGroup(group, index, where, parent) {
                 let rows = [];
@@ -2559,43 +2574,6 @@ var Katrid;
                 }
                 return data;
             }
-            getNestedData() {
-                let ret = {};
-                for (let child of this.children)
-                    if (child.$modifiedRecords.length) {
-                        let res = [];
-                        let deleted = [];
-                        for (let rec of child.$modifiedRecords) {
-                            if (rec.$deleted) {
-                                deleted.push(rec);
-                                if ((rec.id !== null) && (rec.id !== undefined))
-                                    res.push({ id: rec.id, action: 'DESTROY' });
-                            }
-                        }
-                        for (let rec of child.$modifiedRecords) {
-                            console.log(rec.$modified, rec.$modifiedData);
-                            if (rec.$modifiedData && !rec.$deleted && rec.$modified && (deleted.indexOf(rec) === -1)) {
-                                let data = this._getModified(rec.$modifiedData);
-                                if (rec.id)
-                                    data['id'] = rec.id;
-                                jQuery.extend(data, child.getNestedData());
-                                if ((rec.id === null) || (rec.id === undefined))
-                                    res.push({
-                                        action: 'CREATE',
-                                        values: data,
-                                    });
-                                else if ((rec.id !== null) && (rec.id !== undefined))
-                                    res.push({
-                                        action: 'UPDATE',
-                                        values: data,
-                                    });
-                            }
-                        }
-                        if (Object.keys(res).length > 0)
-                            ret[child.fieldName] = res;
-                    }
-                return ret;
-            }
             save(autoRefresh = true) {
                 for (let child of this.children)
                     if (child.changing)
@@ -2612,7 +2590,7 @@ var Katrid;
                         return this.model.write([data])
                             .then((res) => {
                             if (this.action && this.action.viewType && (this.action.viewType === 'form'))
-                                Katrid.app.changeUrl('id', res[0]);
+                                Katrid.webApp.changeUrl('id', res[0]);
                             if (this.action.form) {
                                 this.action.form.$setPristine();
                                 this.action.form.$setUntouched();
@@ -2914,7 +2892,7 @@ var Katrid;
                 this._recordIndex = index;
                 let rec = this.scope.record = this._records[index];
                 if (!this.parent)
-                    Katrid.app.changeUrl('id', this.scope.record.id);
+                    Katrid.webApp.changeUrl('id', this.scope.record.id);
                 this.scope.recordId = null;
                 this.get(rec.id);
             }
@@ -4363,12 +4341,6 @@ var Katrid;
                 }
             }
             Widgets.FieldWidget = FieldWidget;
-            class InputField extends FieldWidget {
-            }
-            Widgets.InputField = InputField;
-            class StringField extends InputField {
-            }
-            Widgets.StringField = StringField;
             Widgets.registry = {};
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -4452,11 +4424,11 @@ var Katrid;
                 getBreadcrumb() {
                     let html = `<ol class="breadcrumb">`;
                     let i = 0;
-                    for (let h of Katrid.app.actionManager.actions) {
+                    for (let h of Katrid.webApp.actionManager.actions) {
                         if ((h instanceof Katrid.Actions.WindowAction) && (i === 0 && h.viewModes.length > 1))
                             html += `<li class="breadcrumb-item"><a href="#" ng-click="action.backTo(0, 0)">${h.info.display_name}</a></li>`;
                         i++;
-                        if ((h instanceof Katrid.Actions.WindowAction) && (Katrid.app.actionManager.length > i && h.viewType === 'form'))
+                        if ((h instanceof Katrid.Actions.WindowAction) && (Katrid.webApp.actionManager.length > i && h.viewType === 'form'))
                             html += `<li class="breadcrumb-item"><a href="#" ng-click="action.backTo(${i - 1}, 'form')">${h.scope.record.display_name}</a></li>`;
                     }
                     if (this.type === 'form')
@@ -4551,12 +4523,6 @@ var Katrid;
                 }
                 afterRender(container) {
                 }
-                prepareActions(actionsList) {
-                    for (let actions of actionsList) {
-                        for (let action of actions)
-                            this.prepareAction(action);
-                    }
-                }
                 prepareAction(action) {
                     console.log('prepare action', action);
                 }
@@ -4577,6 +4543,9 @@ var Katrid;
                 }
             }
             Views.WindowView = WindowView;
+            class RecordCollectionView extends WindowView {
+            }
+            Views.RecordCollectionView = RecordCollectionView;
             Katrid.UI.uiKatrid
                 .directive('smartForm', () => ({
                 restrict: 'A',
@@ -4897,7 +4866,7 @@ var Katrid;
     (function (Forms) {
         var Views;
         (function (Views) {
-            class Card extends Views.WindowView {
+            class Card extends Views.RecordCollectionView {
                 create() {
                     super.create();
                     this.viewType = 'card';
@@ -4917,6 +4886,10 @@ var Katrid;
                     }
                     let templ = $(Katrid.app.getTemplate(this.templateUrl, { content: content[0].outerHTML }));
                     return Katrid.Core.$compile(templ)(this.action.scope);
+                }
+                groupBy(data) {
+                    for (let group of data)
+                        this.action.loadGroupRecords(group);
                 }
                 async ready() {
                 }
@@ -5682,6 +5655,7 @@ var Katrid;
                             el: container,
                             methods: {
                                 applyFilter: function () {
+                                    console.log('field change');
                                     if (this.value)
                                         this.addCondition(this.field, this.conditionName, this.value);
                                     this.customFilter.push(this.tempFilter);
@@ -5999,7 +5973,7 @@ var Katrid;
                     constructor(view, name, caption, group, el) {
                         super(view, name, caption, null, group, el);
                         this.group = group;
-                        if (el.attr('context'))
+                        if (el && el.attr('context'))
                             this.context = eval(`(${el.attr('context')})`);
                         this.groupBy = this.context?.group_by || name;
                         this._selected = false;
@@ -6480,8 +6454,12 @@ var Katrid;
                         return this._viewMoreButtons;
                     }
                     load(filter) {
-                        Object.entries(filter).map((item, idx) => {
-                            let i = this.getByName(item[0]);
+                        filter.map((item, idx) => {
+                            let i;
+                            if (typeof item === 'string')
+                                i = this.getByName(item);
+                            else
+                                i = this.getByName(item[0]);
                             if (i)
                                 i.selected = true;
                         });
@@ -6492,6 +6470,9 @@ var Katrid;
                                 if (subitem.name === name)
                                     return subitem;
                         for (let item of this.items)
+                            if (item.name === name)
+                                return item;
+                        for (let item of this.groupingGroups.items)
                             if (item.name === name)
                                 return item;
                     }
@@ -6615,8 +6596,8 @@ var Katrid;
                     link(scope, el, attrs) {
                         let view = scope.action.views.search;
                         scope.action.searchView = new SearchView(scope, el, view);
-                        if (scope.action.context.default_search) {
-                            scope.action.searchView.load(scope.action.context.default_search);
+                        if (scope.action.context.search_default) {
+                            scope.action.searchView.load(scope.action.context.search_default);
                         }
                     }
                 }
@@ -7526,6 +7507,8 @@ var Katrid;
             }
             get index() {
                 return this._collection.indexOf(this);
+            }
+            startSelection() {
             }
         }
         class TableCell {
