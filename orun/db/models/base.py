@@ -550,12 +550,9 @@ class Model(metaclass=ModelBase):
         return '<%s: %s>' % (self.__class__.__name__, self)
 
     def __str__(self):
-        if self._meta.title_field:
-            f = self._meta.fields[self._meta.title_field]
-            v = f.value_to_json(getattr(self, self._meta.title_field))
-            if not isinstance(v, str):
-                v = str(v)
-            return v
+        name_fields = self._meta.get_name_fields()
+        if name_fields:
+            return ' - '.join([str(f.value_to_json(getattr(self, f.name))) for f in name_fields])
         return '%s object (%s)' % (self._meta.name, self.pk)
 
     def __eq__(self, other):
@@ -1965,7 +1962,6 @@ class Model(metaclass=ModelBase):
         where = params
         field_name = grouping[0]
         field = self._meta.fields[field_name]
-        count_ret = '%s__count' % field_name
         if field.group_choices:
             qs = field.get_group_choices(self, where)
         else:
@@ -1980,7 +1976,27 @@ class Model(metaclass=ModelBase):
                 res.append({
                     '$params': {field_name: key},
                     field_name: s,
-                    count_ret: count,
+                    '$count': count,
+                })
+            return res
+        elif field.choices:
+            choices = dict(field.flatchoices)
+            values = {row[field.name]: row['pk__count'] for row in qs}
+            for k, n in choices.items():
+                count = values.get(k)
+                s = force_str(choices.get(k, k), strings_only=True)
+                if k in values and count:
+                    s += f' ({count})'
+                res.append({
+                    '$params': {field_name: k},
+                    field_name: s,
+                    '$count': count,
+                })
+            for k, v in [(k, v) for k, v in values.items() if k not in choices]:
+                res.append({
+                    '$params': {field_name: k},
+                    field_name: (gettext("(Undefined)") if k is None else k) + f' {(v)}',
+                    '$count': v,
                 })
             return res
         return list(qs)
@@ -2370,7 +2386,12 @@ def _resolve_fk_search(field: Field):
         rel_model = apps[field.remote_field.model]
         name_fields = field.name_fields
         if not name_fields:
-            name_fields = [f.name for f in rel_model._meta.get_name_fields()]
+            name_fields = []
+            for f in rel_model._meta.get_name_fields():
+                if isinstance(f, ForeignKey):
+                    name_fields.extend(_resolve_fk_search(f))
+                else:
+                    name_fields.append(f.name)
         return [f'{field.name}__{f}' for f in name_fields]
     return [field.name]
 
