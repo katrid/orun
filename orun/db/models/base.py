@@ -1881,6 +1881,7 @@ class Model(metaclass=ModelBase):
                 obj = cls()
 
             # dispatch events
+            # TODO events should be called from orm api internals
             if obj._state.adding:
                 before_insert.send(cls._meta.name, old=None, new=obj)
             elif cls._meta.name in before_update.models:
@@ -2002,7 +2003,7 @@ class Model(metaclass=ModelBase):
         return list(qs)
 
     def _get_instance_label(self):
-        return (self.pk, str(self))
+        return (self.pk, self.__str__())
 
     @api.method
     def get_formview_action(self, id=None):
