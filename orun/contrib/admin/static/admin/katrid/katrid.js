@@ -8269,7 +8269,10 @@ var Katrid;
                         .catch(res => {
                         if (res.messages && _.isObject(res.messages)) {
                             for (let msg of Object.values(res.messages))
-                                Katrid.Forms.Dialogs.Alerts.error(msg.join('\n'));
+                                if (typeof msg === 'string')
+                                    Katrid.Forms.Dialogs.Alerts.error(msg);
+                                else if (msg instanceof Array)
+                                    Katrid.Forms.Dialogs.Alerts.error(msg.join('\n'));
                         }
                         else
                             Katrid.Forms.Dialogs.Alerts.error(res.message);
