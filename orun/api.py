@@ -146,7 +146,7 @@ def jsonrpc(fn):
                 'id': _id,
                 'error': {
                     'code': code,
-                    'messages': e.message_dict,
+                    'messages': getattr(e, 'error_dict', list(e)),
                 }
             })
         except RPCError as e:
