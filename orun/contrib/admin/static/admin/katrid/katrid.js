@@ -5012,6 +5012,8 @@ var Katrid;
                     super(...arguments);
                     this.hasTotal = false;
                     this.totals = [];
+                    this.columns = [];
+                    this.pasteAllowed = false;
                 }
                 create() {
                     super.create();
@@ -5080,27 +5082,34 @@ var Katrid;
                     table.append(this.tBody);
                     this.append(table);
                     let el = Katrid.Core.$compile(this)(this.action.scope);
-                    el.find('tr')[0].addEventListener('contextmenu', () => console.log('context'));
                     this.table = table;
                     this.createContextMenu();
                 }
                 addField(fld) {
                     let fieldName = fld.getAttribute('name');
                     let field = this._view.fields[fieldName];
-                    if (field) {
+                    let html = fld.innerHTML;
+                    if ((field && field.visible) || !field)
+                        this.columns.push(field);
+                    if (!fieldName || html) {
+                        let td = document.createElement('td');
+                        let th = document.createElement('th');
+                        th.classList.add('grid-field-readonly');
+                        if (field) {
+                            th.innerHTML = `<span class="grid-field-readonly">${field.caption}</span>`;
+                        }
+                        else
+                            th.innerText = fld.getAttribute('header');
+                        td.innerHTML = html;
+                        this.tHeadRow.append(th);
+                        this.tRow.append(td);
+                    }
+                    else {
                         if (!field.visible)
                             return;
                         field = field.clone(fld);
                         field.view = this._view;
                         field.listCreate(this);
-                    }
-                    else {
-                        let td = document.createElement('td');
-                        let th = document.createElement('th');
-                        th.innerText = fld.getAttribute('header');
-                        td.innerHTML = fld.innerHTML;
-                        this.tHeadRow.append(th);
-                        this.tRow.append(td);
                     }
                 }
                 createContextMenu() {
@@ -5109,25 +5118,58 @@ var Katrid;
                         event.stopPropagation();
                         let scope = angular.element(event.target).scope();
                         let rec = scope.record;
-                        if (!rec.$selected) {
-                            this._action.selection.unselectAll();
-                            rec.$selected = true;
-                        }
-                        scope.$apply();
                         let td = event.target;
                         if (td.tagName !== 'TD')
                             td = $(td).closest('td')[0];
+                        if (rec) {
+                            if (!rec.$selected) {
+                                this._action.selection.unselectAll();
+                                rec.$selected = true;
+                            }
+                            scope.$apply();
+                        }
                         let menu = new Forms.ContextMenu();
-                        menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => this.copyClick());
-                        menu.addSeparator();
-                        menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => this.filterByFieldContent(td, rec));
-                        menu.addSeparator();
-                        menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteRow());
+                        if (td && (td.tagName === 'TD'))
+                            menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => this.copyClick());
+                        if (this.pasteAllowed && this.action.scope.$parent.action.dataSource.changing)
+                            menu.add('<i class="fa fa-fw fa-paste"></i> Colar', (...args) => this.pasteClick());
+                        if (td && (td.tagName === 'TD')) {
+                            menu.addSeparator();
+                            menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => this.filterByFieldContent(td, rec));
+                        }
+                        if (rec) {
+                            menu.addSeparator();
+                            menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteRow());
+                        }
                         menu.show(event.pageX, event.pageY);
                     });
                 }
                 copyClick() {
                     navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
+                }
+                async pasteClick() {
+                    let text = await navigator.clipboard.readText();
+                    console.log('paste from text', text);
+                    let n = 0;
+                    let sep = '\t';
+                    if (!text.includes(sep))
+                        text = ';';
+                    text.split('\n').forEach((line, n) => {
+                        if (n > 0) {
+                            line = line.trim();
+                            if (line) {
+                                let record = {};
+                                line.split(sep).forEach((s, n) => {
+                                    let field = this.columns[n];
+                                    if (field)
+                                        record[field.name] = s;
+                                });
+                                console.log('add record', record);
+                                this.action.dataSource.addRecord(record);
+                                this.action.scope.$apply();
+                            }
+                        }
+                    });
                 }
                 deleteRow() {
                     console.log('delete selected row');
@@ -7214,6 +7256,7 @@ var Katrid;
                     this._scope.views = res.views;
                     this._scope.view = this.view;
                     this.render(this.view.render(this)[0]);
+                    this.view.element['pasteAllowed'] = this.field.fieldEl.hasAttribute('paste-allowed');
                     this.querySelector('.content');
                 }
                 render(elView) {
@@ -11777,11 +11820,20 @@ var Katrid;
         (function (Utils) {
             function tableToText(table) {
                 let output = [];
-                for (let tr of table.querySelectorAll('tr')) {
-                    let row = [];
-                    for (let td of tr.children)
+                let row = [];
+                let n = 0;
+                for (let td of table.tHead.rows[0].querySelectorAll('th')) {
+                    if (n > 0)
                         row.push(td.innerText);
-                    output.push(row.join('\t'));
+                    n++;
+                }
+                output.push(row.join('\t'));
+                for (let tr of table.querySelectorAll('tr')) {
+                    row = [];
+                    for (let td of tr.querySelectorAll('td'))
+                        row.push(td.innerText);
+                    if (row.length)
+                        output.push(row.join('\t'));
                 }
                 return output.join('\n');
             }
