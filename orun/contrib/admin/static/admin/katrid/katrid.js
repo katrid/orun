@@ -422,6 +422,7 @@ var Katrid;
                 super(config);
                 this._loadDataCallbacks = [];
                 this._cachedViews = {};
+                this.pendingOperation = false;
                 this.model = config.scope.model;
                 this.viewMode = config.info.view_mode;
                 this.viewModes = this.viewMode.split(',');
@@ -771,17 +772,27 @@ var Katrid;
                 }
             }
             async formButtonClick(id, meth, self) {
-                if (id instanceof Katrid.Forms.Views.SelectionHelper)
-                    id = id.map(obj => obj.id);
-                let res = await this.model.rpc(meth, [id], null, this);
-                if (res.tag === 'refresh')
-                    this.refresh();
-                else if (res.tag == 'new') {
-                    this.dataSource.insert(true, res.values);
+                if (this.pendingOperation) {
+                    alert('Já existe uma operação em execução');
+                    throw Error('There is already a pending operation');
                 }
-                else if (res.type) {
-                    const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
-                    act.execute();
+                try {
+                    this.pendingOperation = true;
+                    if (id instanceof Katrid.Forms.Views.SelectionHelper)
+                        id = id.map(obj => obj.id);
+                    let res = await this.model.rpc(meth, [id], null, this);
+                    if (res.tag === 'refresh')
+                        this.refresh();
+                    else if (res.tag == 'new') {
+                        this.dataSource.insert(true, res.values);
+                    }
+                    else if (res.type) {
+                        const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
+                        act.execute();
+                    }
+                }
+                finally {
+                    this.pendingOperation = false;
                 }
             }
             ;
@@ -5149,8 +5160,6 @@ var Katrid;
                 }
                 async pasteClick() {
                     let text = await navigator.clipboard.readText();
-                    console.log('paste from text', text);
-                    let n = 0;
                     let sep = '\t';
                     if (!text.includes(sep))
                         text = ';';
@@ -5164,7 +5173,6 @@ var Katrid;
                                     if (field)
                                         record[field.name] = s;
                                 });
-                                console.log('add record', record);
                                 this.action.dataSource.addRecord(record);
                                 this.action.scope.$apply();
                             }
