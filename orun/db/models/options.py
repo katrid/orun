@@ -138,6 +138,7 @@ class Options:
         self.auto_field = None
         self.abstract = False
         self.concrete_model = None
+        self.related_fkey_lookups = []
         # For any class that is a proxy (including automatically created
         # classes for deferred object loading), proxy_for_model tells us
         # which class this model is proxying. Note that proxy_for_model

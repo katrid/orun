@@ -2,6 +2,7 @@ from typing import Optional, Callable, List
 import functools
 import inspect
 from functools import partial
+import json
 
 from orun.apps import apps
 from orun.core import checks, exceptions
@@ -926,8 +927,11 @@ class ForeignKey(ForeignObject):
     def _formfield(self):
         res = super()._formfield()
         res['model'] = self.remote_field.model._meta.name
-        if self.filter:
-            res['filter'] = self.filter
+        if self.filter and isinstance(self.filter, (dict, str)):
+            if isinstance(self.filter, dict):
+                res['filter'] = json.dumps(self.filter)
+            else:
+                res['filter'] = self.filter
         return res
 
     def get_data_type(self) -> str:
