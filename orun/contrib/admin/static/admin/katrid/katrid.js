@@ -4080,6 +4080,30 @@ var Katrid;
                 });
             }
             Dialogs.alert = alert;
+            function createModal(title) {
+                let modal = document.createElement('div');
+                modal.classList.add('modal');
+                modal.tabIndex = -1;
+                modal.setAttribute('role', 'dialog');
+                modal.innerHTML = `<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">${title}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+      </div>
+      <div class="modal-footer">
+        <button type="button" name="btn-ok" class="btn btn-primary">OK</button>
+        <button type="button" name="btn-cancel" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
+  </div>`;
+                return modal;
+            }
+            Dialogs.createModal = createModal;
         })(Dialogs = Forms.Dialogs || (Forms.Dialogs = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -4625,6 +4649,8 @@ var Katrid;
                         el.setAttribute('ng-click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
                     else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name')))
                         el.setAttribute('ng-click', `action.formButtonClick(action.selection, '${el.getAttribute('name')}', $event.target)`);
+                    if (action.hasAttribute('id'))
+                        el.setAttribute('id', action.id);
                     return el;
                 }
             }
