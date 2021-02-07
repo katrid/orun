@@ -1,0 +1,8 @@
+<data>
+  <action id="mail.action.mail.channel" type="ui.action.window" model="mail.channel">
+    <field name="view_modes">list,form</field>
+  </action>
+  <menuitem id="mail.menu" parent="menu.settings" name="Mail">
+    <menuitem id="mail.menu.channel" action="mail.action.mail.channel"/>
+  </menuitem>
+</data>
