@@ -255,6 +255,7 @@ class Field(BaseField):
                  defer=False,
                  auto_created=False, validators=(), error_messages=None, concrete=None,
                  getter: Union[str, Callable, None] = None, setter: Union[str, Callable, None] = None,
+                 on_insert_value: Union[str, Callable, None] = None, on_update_value: Union[str, Callable, None] = None,
                  group_choices=None, track_visibility=None,
                  descriptor=None, **kwargs):
         self.name = name
@@ -277,6 +278,8 @@ class Field(BaseField):
         self.unique_for_month = unique_for_month
         self.unique_for_year = unique_for_year
         self.widget_attrs = widget_attrs
+        self.on_insert_value = on_insert_value
+        self.on_update_value = on_update_value
         if isinstance(choices, dict):
             choices = choices.items()
         elif isinstance(choices, (list, tuple)) and choices:
@@ -914,6 +917,10 @@ class Field(BaseField):
 
     def pre_save(self, model_instance, add):
         """Return field's value just before saving."""
+        if callable(self.on_update_value) and model_instance.pk is not None:
+            return self.on_update_value()
+        elif callable(self.on_insert_value) and model_instance.pk is None:
+            return self.on_insert_value()
         return getattr(model_instance, self.attname)
 
     def get_prep_value(self, value):

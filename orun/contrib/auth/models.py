@@ -1,3 +1,4 @@
+from orun.apps import apps
 from orun.contrib import auth
 from orun.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from orun.core.exceptions import PermissionDenied

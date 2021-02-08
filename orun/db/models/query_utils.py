@@ -57,6 +57,9 @@ class Q(tree.Node):
     conditional = True
 
     def __init__(self, *args, _connector=None, _negated=False, **kwargs):
+        if args and isinstance(args[0], (int, str)):
+            kwargs['pk'] = args[0]
+            args = args[1:]
         super().__init__(children=[*args, *sorted(kwargs.items())], connector=_connector, negated=_negated)
 
     def _combine(self, other, conn):

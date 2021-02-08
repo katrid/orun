@@ -1,3 +1,4 @@
+from typing import TYPE_CHECKING, Type
 import copy
 import inspect
 from importlib import import_module
@@ -164,6 +165,10 @@ class BaseManager:
     def __hash__(self):
         return id(self)
 
+    def __getitem__(self, item) -> Type['Model']:
+        from orun.apps import apps
+        return apps.models[item]
+
 
 class Manager(BaseManager.from_queryset(QuerySet)):
     pass
@@ -176,6 +181,7 @@ class ManagerDescriptor:
 
     def __get__(self, instance, cls=None):
         if instance is not None:
+            return cls._meta.managers_map[self.manager.name]
             raise AttributeError("Manager isn't accessible via %s instances" % cls.__name__)
 
         if cls._meta.abstract:
@@ -193,3 +199,6 @@ class EmptyManager(Manager):
 
     def get_queryset(self):
         return super().get_queryset().none()
+
+if TYPE_CHECKING:
+    from orun.db.models import Model

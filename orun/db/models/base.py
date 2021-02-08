@@ -23,7 +23,7 @@ from orun.db.models.constants import LOOKUP_SEP
 from orun.db.models.constraints import CheckConstraint, UniqueConstraint
 from orun.db.models.deletion import CASCADE, Collector
 from orun.db.models.fields import BaseField, Field, BigAutoField, CharField, DateTimeField
-from orun.db.models import Q
+from orun.utils.module_loading import import_string
 from orun.db.models.fields.related import (
     ForeignObjectRel, ForeignKey, OneToOneField, lazy_related_operation,
 )
@@ -189,25 +189,8 @@ class ModelBase(type):
             fields = {k: v for k, v in attr_items if isinstance(v, BaseField)}
             opts.local_fields = fields
 
-            if not opts.inherits and not opts.abstract:
-                # TODO move to auth application
-                if opts.log_changes:
-                    fields['created_by'] = ForeignKey(
-                        'auth.user', verbose_name=_('Created by'),
-                        auto_created=True, editable=False, deferred=True, db_index=False, copy=False
-                    )
-                    fields['created_on'] = DateTimeField(
-                        default=datetime.datetime.now, verbose_name=_('Created on'),
-                        auto_created=True, editable=False, deferred=True, copy=False
-                    )
-                    fields['updated_by'] = ForeignKey(
-                        'auth.user', verbose_name=_('Updated by'),
-                        auto_created=True, editable=False, deferred=True, db_index=False, copy=False
-                    )
-                    fields['updated_on'] = DateTimeField(
-                        on_update=datetime.datetime.now, verbose_name=_('Updated on'),
-                        auto_created=True, editable=False, deferred=True, copy=False
-                    )
+            if not opts.inherits and not opts.abstract and opts.log_changes and settings.AUDIT_LOG_BACKEND:
+                import_string(settings.AUDIT_LOG_BACKEND).prepare_meta_class(opts)
 
             if not opts.abstract:
                 addon.models.append(new_class)
@@ -388,13 +371,6 @@ class ModelBase(type):
     def _default_manager(cls):
         return cls._meta.default_manager
 
-    @property
-    def env(cls):
-        return apps.env
-        from orun.api import get_context
-        ctx = get_context()
-        return ctx.env
-
 
 class ModelStateFieldsCacheDescriptor:
     def __get__(self, instance, cls=None):
@@ -421,8 +397,8 @@ class ModelState:
 
 
 class Model(metaclass=ModelBase):
-    objects: QuerySet
     env = apps.env
+    objects: Manager
     _meta: Options
 
     def __init__(self, *args, **kwargs):
@@ -889,8 +865,7 @@ class Model(metaclass=ModelBase):
             values = [(f, None, (getattr(self, f.attname) if raw else f.pre_save(self, False)))
                       for f in non_pks]
             forced_update = update_fields or force_update
-            updated = self._do_update(base_qs, using, pk_val, values, update_fields,
-                                      forced_update)
+            updated = self._do_update(base_qs, using, pk_val, values, update_fields, forced_update)
             if force_update and not updated:
                 raise DatabaseError("Forced update did not affect any rows.")
             if update_fields and not updated:

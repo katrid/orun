@@ -1,4 +1,4 @@
-from orun import env, api, SUPERUSER
+from orun import api, SUPERUSER
 from orun.apps import apps
 from orun.dispatch import Signal
 from orun.utils.translation import gettext_lazy as _, gettext

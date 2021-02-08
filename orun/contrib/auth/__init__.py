@@ -65,7 +65,7 @@ def _clean_credentials(credentials):
 def _get_user_session_key(request):
     # This value in the session is always serialized to a string, so we need
     # to convert it back to Python whenever we access it.
-    return apps.apps['auth.user']._meta.pk.to_python(request.session[SESSION_KEY])
+    return apps.apps[settings.AUTH_USER_MODEL]._meta.pk.to_python(request.session[SESSION_KEY])
 
 
 def authenticate(request=None, **credentials):
@@ -225,3 +225,5 @@ def update_session_auth_hash(request, user):
         request.session[HASH_SESSION_KEY] = user.get_session_auth_hash()
 
 
+def current_user_id():
+    return orun_apps.env.user_id

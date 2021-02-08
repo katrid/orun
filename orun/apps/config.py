@@ -4,6 +4,7 @@ from importlib import import_module
 import glob
 from typing import List
 
+from orun.core.signals import Signal
 from orun.utils.module_loading import import_string, module_has_submodule
 from orun.core.exceptions import ImproperlyConfigured
 
@@ -26,6 +27,7 @@ class AppConfig:
     installable = False
     auto_install = False
     version: str = None
+    urls_module: str = None
 
     def __init__(self, app_name: str, app_module):
         self.name = app_name
@@ -223,6 +225,7 @@ class AppConfig:
         """
         Override this method in subclasses to run code when Orun starts.
         """
+        app_config_ready.send(self)
 
     def get_js_templates(self):
         for templ in self.js_templates:
@@ -232,3 +235,6 @@ class AppConfig:
                         yield f.read()
             with open(os.path.join(self.path, templ), 'rb') as f:
                 yield f.read()
+
+
+app_config_ready = Signal()

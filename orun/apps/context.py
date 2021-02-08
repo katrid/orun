@@ -1,32 +1,39 @@
-from typing import TYPE_CHECKING, Optional
-
-import orun
+from orun.conf import settings
 from orun.utils.functional import SimpleLazyObject
-if TYPE_CHECKING:
-    from .registry import Registry
-    from orun.db.models.base import ModelBase
+
+
+class LazyEnvironment:
+    def __init__(self, registry, root):
+        self._registry = registry
+        self._root_env = root
+
+    def __getattr__(self, item):
+        return getattr(getattr(self._registry._local_ctx, 'env', self._root_env), item, None)
+
+    def __call__(self, **kwargs):
+        ctx = self._context.copy()
+        ctx.update(kwargs)
+        return Environment(self._registry, **ctx)
 
 
 class Environment:
-    old_env = None
+    _old_env = None
 
-    def __init__(self, registry: 'Registry', **kwargs):
-        if orun.env is None:
-            orun.env = self
+    def __init__(self, registry, **kwargs):
         self._registry = registry
-        self.user_id = kwargs.get('user_id')
-        self.user = SimpleLazyObject(lambda: self._registry.models['auth.user'].objects.get(self.user_id))
+        self._context = kwargs
         self.request = kwargs.get('request')
-        self.context = kwargs
 
-    def __iter__(self):
-        return self._registry.models
+    @property
+    def user(self):
+        return (self.request and self.request.user) or self._registry.models[settings.AUTH_USER_MODEL].objects.get(self.user_id)
 
-    def __getitem__(self, item) -> 'ModelBase':
-        return self._registry.models[item]
+    @property
+    def user_id(self):
+        return int((self.request and self.request.user_id) or self._context.get('user_id'))
 
     def __call__(self, **kwargs):
-        ctx = self.context.copy()
+        ctx = self._context.copy()
         ctx.update(kwargs)
         return self.__class__(self._registry, **ctx)
 
@@ -34,8 +41,8 @@ class Environment:
         return self._registry.models['ir.object'].get_object(name).object_id
 
     def __enter__(self):
-        self.old_env = getattr(self._registry._local_env, 'env', None)
-        self._registry._local_env.env = self
+        self._old_env = getattr(self._registry._local_ctx, 'env', self._registry.env._root_env)
+        self._registry._local_ctx.env = self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._registry._local_env.env = self.old_env
+        self._registry._local_ctx.env = self._old_env

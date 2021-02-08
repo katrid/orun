@@ -4,8 +4,6 @@ if TYPE_CHECKING:
     from orun.apps.context import Environment
 
 SUPERUSER = 1
-env: Optional['Environment'] = None
-
 VERSION = (1, 0, 0, 'alpha', 0)
 
 __version__ = get_version(VERSION)

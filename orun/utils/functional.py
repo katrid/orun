@@ -338,6 +338,7 @@ class LazyObject:
 
     __bytes__ = new_method_proxy(bytes)
     __str__ = new_method_proxy(str)
+    __int__ = new_method_proxy(int)
     __bool__ = new_method_proxy(bool)
 
     # Introspection support

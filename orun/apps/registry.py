@@ -1,11 +1,11 @@
 import sys
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, Type
 from threading import RLock, Event, local, Thread
 from collections import Counter, defaultdict, OrderedDict
 import functools
 import jinja2
 
-from orun.utils.functional import SimpleLazyObject
+from orun.utils.module_loading import import_module
 from orun.apps import AppConfig
 from orun import SUPERUSER
 from orun.core.exceptions import ImproperlyConfigured, AppRegistryNotReady
@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
 
 class Registry:
+    loop = None
+
     def __init__(self, installed_apps=()):
         # installed_apps is set to None when creating the master registry
         # because it cannot be populated at that point. Other registries must
@@ -24,7 +26,7 @@ class Registry:
         # set to False if the current process is not the main
         self.main = True
         # get a new event loop
-        self.models: Dict[str, ModelBase] = {}
+        self.models: Dict[str, Type[Model]] = {}
         self.services = {}
         self.app_configs: Dict[str, AppConfig] = {}
         self.addons = self.app_configs
@@ -37,8 +39,8 @@ class Registry:
         # set_available_apps and set_installed_apps.
         self.stored_apps = []
 
-        self.env = Environment(self, user_id=SUPERUSER)
-        self._local_env = local()
+        self._local_ctx = local()
+        self.env = LazyEnvironment(self, Environment(self, user_id=SUPERUSER))
 
     def create_template_env(self):
         from orun.utils.filters import default_filter
@@ -85,8 +87,7 @@ class Registry:
                 addon.app = self
 
             # Check for duplicate app names.
-            counts = Counter(
-                app_config.name for app_config in self.app_configs.values())
+            counts = Counter(app_config.name for app_config in self.app_configs.values())
             duplicates = [
                 name for name, count in counts.most_common() if count > 1]
             if duplicates:
@@ -109,14 +110,14 @@ class Registry:
                         for o in model.Meta.overrides:
                             o.__build__(self)
 
-            # Phase 4: apply pending operations
+            # Phase 3: apply pending operations
             self.do_pending_operations()
 
             self.clear_cache()
 
             self.models_ready = True
 
-            # Phase 3: run ready() methods of app configs.
+            # Phase 4: run ready() methods of app configs.
             for app_config in self.app_configs.values():
                 app_config.ready()
 
@@ -321,10 +322,11 @@ class Registry:
         return self.models[name]
 
     def start_async_loop(self, loop):
+        loop.set_debug(True)
         loop.run_forever()
 
 
-from .context import Environment
+from .context import Environment, LazyEnvironment
 apps = Registry()
 
 def get_dependencies(addon, registry):

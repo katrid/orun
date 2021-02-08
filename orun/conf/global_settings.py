@@ -515,6 +515,7 @@ CACHE_MIDDLEWARE_ALIAS = 'default'
 
 SUPER_USER_ID = 1
 AUTH_USER_MODEL = 'auth.user'
+AUDIT_LOG_BACKEND = None
 
 AUTHENTICATION_BACKENDS = ['orun.contrib.auth.backends.ModelBackend']
 

@@ -1,4 +1,5 @@
 from orun import api
+from orun.apps import apps
 from orun.contrib import auth
 from orun.contrib.auth.hashers import check_password
 from orun.core.exceptions import PermissionDenied
