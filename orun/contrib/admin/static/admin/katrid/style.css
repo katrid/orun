@@ -13252,17 +13252,24 @@ dashboard-view {
   font-weight: 300;
   flex: 1;
 }
-.kpi-header {
+
+.dashboard-subheader .kpi-header {
   font-weight: 300;
   font-size: 0.75rem;
   text-transform: uppercase;
   display: block !important;
 }
-
-.kpi-value {
+.dashboard-subheader .kpi-value {
   font-weight: 500;
   display: block !important;
   font-size: 1rem;
+}
+.dashboard-subheader .kpi-item {
+  padding: 2px 10px;
+  border-left: 1px solid #e3e3e3;
+}
+.dashboard-subheader .kpi-item:first-child {
+  border: none;
 }
 
 .dashboard-container-widget {
