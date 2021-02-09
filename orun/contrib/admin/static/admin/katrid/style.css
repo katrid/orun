@@ -13243,6 +13243,27 @@ dashboard-view {
 .dashboard {
   padding: 15px;
 }
+.dashboard .dashboard-header {
+  display: flex;
+  flex-direction: row;
+}
+.dashboard .dashboard-header .dashboard-title {
+  font-size: 1.375rem;
+  font-weight: 300;
+  flex: 1;
+}
+.kpi-header {
+  font-weight: 300;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  display: block !important;
+}
+
+.kpi-value {
+  font-weight: 500;
+  display: block !important;
+  font-size: 1rem;
+}
 
 .dashboard-container-widget {
   padding: 10px;
