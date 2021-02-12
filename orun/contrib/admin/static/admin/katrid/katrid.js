@@ -772,10 +772,6 @@ var Katrid;
                 }
             }
             async formButtonClick(id, meth, self) {
-                if (this.pendingOperation) {
-                    alert('Já existe uma operação em execução');
-                    throw Error('There is already a pending operation');
-                }
                 try {
                     this.pendingOperation = true;
                     if (id instanceof Katrid.Forms.Views.SelectionHelper)
@@ -8738,6 +8734,15 @@ var Katrid;
                         field = field.assign('form', f);
                     if (field && field.visible) {
                         field.formRender();
+                        let input = field.el.querySelector('input');
+                        if (input && f.hasAttribute('ng-default'))
+                            input.addEventListener('focus', function (ev) {
+                                if (!this.value) {
+                                    let val = eval(f.getAttribute('ng-default'));
+                                    console.log('val', val);
+                                    input.value = val;
+                                }
+                            });
                         f.replaceWith(field.el);
                     }
                     else {

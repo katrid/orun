@@ -11950,9 +11950,9 @@ html {
 
 body {
   height: 100%;
-  font-size: 13px;
   background-color: #f8f9fa;
   display: flex;
+  font-size: 0.8125rem;
 }
 
 #header {
@@ -12196,8 +12196,8 @@ calendar-view .fc-header-toolbar {
   margin: 10px;
 }
 
-html, body {
-  font-family: Open Sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+body {
+  font-family: Roboto, Open Sans, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 .form-field-readonly.bool-text,
@@ -12884,10 +12884,6 @@ list-view .list-record-star:hover {
   padding: 16px;
 }
 
-body {
-  font-size: 12px;
-}
-
 .table td.BooleanField {
   text-transform: capitalize;
 }
@@ -13334,6 +13330,10 @@ pwa-menu .btn {
   margin-top: 32px;
 }
 
+.pwa-app {
+  font-size: 1rem !important;
+  width: 100%;
+}
 .pwa-app .navbar {
   margin-bottom: 10px;
 }
