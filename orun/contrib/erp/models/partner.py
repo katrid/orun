@@ -78,6 +78,8 @@ class Partner(models.Model):
         verbose_name_plural = _('Partners')
 
     def __str__(self):
+        if self.parent:
+            return f'{self.parent} / {self.name}'
         return self.name
 
     @property
