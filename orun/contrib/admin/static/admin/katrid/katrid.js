@@ -2020,7 +2020,7 @@ var Katrid;
                         let field = fields[i];
                         let td = document.createElement('td');
                         if (_.isNumber(col))
-                            col = Katrid.intl.format(col);
+                            col = Katrid.intl.number.format(col);
                         else if (field.type === 'DateField')
                             col = moment(col).format('DD/MM/YYYY');
                         else if (field.type === 'DateTimeField')
@@ -5239,7 +5239,9 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
-    Katrid.intl = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
+    Katrid.intl = {
+        number: new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }),
+    };
     Katrid.i18n = {
         languageCode: 'pt-BR',
         formats: {},
@@ -10848,7 +10850,7 @@ var Katrid;
     });
     Vue.filter('number', function (value, digits) {
         if (value !== null)
-            return Katrid.intl.format(value);
+            return Katrid.intl.number.format(value);
     });
 })();
 (function () {
