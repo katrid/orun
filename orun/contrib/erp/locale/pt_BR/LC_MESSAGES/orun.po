@@ -412,3 +412,18 @@ msgstr "Login realizado com sucesso, por favor aguarde..."
 
 msgid "Contacts"
 msgstr "Contatos"
+
+msgid "Contact"
+msgstr "Contato"
+
+msgid "Invoice address"
+msgstr "Endereço de fatura"
+
+msgid "Shipping address"
+msgstr "Endereço de entrega"
+
+msgid "Private address"
+msgstr "Endereço privado"
+
+msgid "Other address"
+msgstr "Outro endereço"

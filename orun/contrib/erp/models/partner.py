@@ -25,8 +25,9 @@ class PartnerTitle(models.Model):
 
 
 class Partner(models.Model):
-    name = models.CharField(128, label=_('Name'), null=False)
-    parent = models.ForeignKey('self')
+    name = models.CharField(128, label=_('Name'), null=False, db_index=True)
+    display_name = models.CharField(512, db_index=True)
+    parent = models.ForeignKey('self', verbose_name='Related Company')
     title = models.ForeignKey(PartnerTitle, label=_('Title'))
     active = models.BooleanField(default=True, label=_('Active'))
     color = models.IntegerField(label=_('Color'))
@@ -73,14 +74,29 @@ class Partner(models.Model):
 
     class Meta:
         name = 'res.partner'
-        title_field = 'name'
+        title_field = 'display_name'
         verbose_name = _('Partner')
         verbose_name_plural = _('Partners')
 
     def __str__(self):
+        return self.display_name
         if self.parent:
-            return f'{self.parent} / {self.name}'
+            return f'{self.parent}, {self.name}'
         return self.name
+
+    def save(self, *args, **kwargs):
+        # TODO replace by orm api
+        if self.parent_id:
+            self.display_name = f'{self.parent.display_name}, {self.name}'
+        else:
+            self.display_name = self.name
+        super().save(*args, **kwargs)
+        contacts = self.objects.filter(parent_id=self.pk)
+        if contacts:
+            parent_name = self.display_name
+            for contact in contacts:
+                contact.display_name = f'{parent_name}, {contact.name}'
+                contact.save(update_fields=['display_name'])
 
     @property
     def is_authenticated(self):

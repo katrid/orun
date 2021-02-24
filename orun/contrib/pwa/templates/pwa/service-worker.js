@@ -34,17 +34,16 @@ let fileList = [
   //{% if LANGUAGE_CODE != 'en-us' %}
   "/static/admin/assets/js/angular/i18n/angular-locale_{{ LANGUAGE_CODE }}.js",
   "/static/admin/assets/js/select2/select2_locale_{{ LANGUAGE_CODE }}.min.js",
-  //{% endif %}
+  {% endif -%}
+  {% block cache %}
+  {% endblock -%}
 ];
 
-fileList.concat([
-  //{% block cache %}
-  //{% endblock %}
-]);
+console.log(fileList);
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
-    caches.open('orun-pwa-v1').then(function (cache) {
+    caches.open('orun-pwa-v2').then(function (cache) {
       return cache.addAll(fileList);
     })
       .then(() => {

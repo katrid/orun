@@ -404,7 +404,8 @@ var Katrid;
                     }
                 }
                 else {
-                    $(Katrid.app.$element).html(Katrid.Core.$compile(content)(this.scope));
+                    let el = Katrid.Core.$compile(content)(this.scope);
+                    $(Katrid.app.$element).html(el);
                 }
             }
         }
@@ -1399,7 +1400,7 @@ var Katrid;
                 Katrid.app = this;
                 this.title = config.title;
                 for (let entry of Object.entries(Katrid.customElementsRegistry))
-                    customElements.define(entry[0], entry[1]);
+                    customElements.define(entry[0], entry[1].constructor, entry[1].options);
                 this.userInfo = config.userInfo;
             }
             get context() {
@@ -1847,8 +1848,8 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 (function (Katrid) {
     Katrid.customElementsRegistry = {};
-    function define(name, constructor) {
-        Katrid.customElementsRegistry[name] = constructor;
+    function define(name, constructor, options) {
+        Katrid.customElementsRegistry[name] = { constructor, options };
     }
     Katrid.define = define;
 })(Katrid || (Katrid = {}));
@@ -3613,7 +3614,7 @@ var Katrid;
                     Object.assign(this.template, {
                         list: 'view.list.foreignkey.jinja2',
                         card: 'view.list.foreignkey.jinja2',
-                        form: 'view.form.foreignkey.jinja2',
+                        form: 'view.form.autocomplete.jinja2',
                     });
                     if (Katrid.settings.ui.isMobile)
                         this.template.form = 'view.form.autocomplete.jinja2';
@@ -4016,11 +4017,12 @@ var Katrid;
     (function (Forms) {
         var Dialogs;
         (function (Dialogs) {
-            toastr['options'] = {
-                'closeButton': true,
-                'progressBar': true,
-                'timeOut': 60000,
-            };
+            if (window['toastr'])
+                toastr['options'] = {
+                    'closeButton': true,
+                    'progressBar': true,
+                    'timeOut': 60000,
+                };
             class Alerts {
                 static success(msg) {
                     return toastr['success'](msg);
@@ -5216,6 +5218,18 @@ var Katrid;
             Views.ListViewElement = ListViewElement;
             Katrid.define('list-view', ListViewElement);
             Views.registry['list'] = ListView;
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            class PortletView extends HTMLElement {
+            }
+            Views.PortletView = PortletView;
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -7293,17 +7307,20 @@ var Katrid;
                 }
                 render(elView) {
                     let listView = elView.querySelector('list-view');
-                    listView.inlineEditor = this.inlineEditor;
-                    listView.classList.add('table-responsive');
-                    listView.setAttribute('data-options', '{"showStar": false}');
+                    console.log('render', listView);
+                    if (listView) {
+                        listView.inlineEditor = this.inlineEditor;
+                        listView.classList.add('table-responsive');
+                        listView.setAttribute('data-options', '{"showStar": false}');
+                        let table = listView.querySelector('table');
+                        table.classList.add('grid');
+                        if (this.inlineEditor)
+                            table.classList.add('inline-editor');
+                    }
                     let tb = this.renderToolbar();
                     Katrid.Core.$compile(tb)(this._scope);
                     this.appendChild(tb);
                     this.appendChild(elView);
-                    let table = listView.querySelector('table');
-                    table.classList.add('grid');
-                    if (this.inlineEditor)
-                        table.classList.add('inline-editor');
                 }
                 renderToolbar() {
                     let tb = document.createElement('div');
@@ -8249,8 +8266,8 @@ var Katrid;
     var Services;
     (function (Services) {
         class Model extends Services.Service {
-            searchName(kwargs) {
-                return this.post('search_name', kwargs);
+            searchByName(kwargs) {
+                return this.post('search_by_name', kwargs);
             }
             createName(name) {
                 let kwargs = { name };
@@ -8512,7 +8529,7 @@ Katrid.UI.uiKatrid.directive("pwaAutocomplete", ['$controller', ($controller) =>
                     else if (scope.model)
                         svc = scope.model.getFieldChoices({ field: field.name, term: req.term, kwargs: data.kwargs });
                     else
-                        svc = new Katrid.Services.Model(field.model).searchName(data);
+                        svc = new Katrid.Services.Model(field.model).searchByName(data);
                     svc.then(r => {
                         let items = [];
                         for (let obj of r.items)
@@ -9634,7 +9651,7 @@ var Katrid;
                     this.input = input;
                     this.options = options;
                     this.template = '<a class="dropdown-item" href="#">${item}</a>';
-                    this.waitTemplate = () => `<div class="dropdown-wait text-muted"><i class="fas fa-spinner fa-spin"></i> ${_.gettext('Loading...')}}</div>`;
+                    this.waitTemplate = () => `<div class="dropdown-wait text-muted"><i class="fas fa-spinner fa-spin"></i> ${_.gettext('Loading...')}</div>`;
                     this._loading = false;
                     this.delay = 500;
                     this._elements = [];
@@ -9649,7 +9666,7 @@ var Katrid;
                 }
                 show() {
                     document.body.append(this.el);
-                    this._popper = new Popper(this.input, this.el);
+                    this._popper = Popper.createPopper(this.input, this.el, { placement: 'bottom-start' });
                     this.el.classList.add('show');
                 }
                 hide() {
@@ -9680,8 +9697,9 @@ var Katrid;
                         this.loading = true;
                         return new Promise((resolve, reject) => {
                             this._pendingTimeout = setTimeout(() => {
-                                resolve(this._source()
+                                resolve(this._source({ term: this.input.value })
                                     .then((items) => {
+                                    this.clearItems();
                                     this.loadItems(items);
                                 })
                                     .finally(() => this.loading = false));
@@ -9722,16 +9740,18 @@ var Katrid;
                 }
                 addItem(item) {
                     this.items.push(item);
-                    let template = item.template || this.template;
+                    let template = item.template || item.text;
                     if (typeof template === 'function')
                         template = template();
-                    this.el.append($(template)[0]);
+                    else
+                        template = `<a class="dropdown-item">${template}</a>`;
+                    $(this.el).append(template);
                     let el = this.el.querySelector('.dropdown-item:last-child');
                     $(el).data('item', item);
                     el.addEventListener('mousedown', evt => {
-                        let e = this.onSelectItem(evt.target);
-                        if (e.defaultPrevented)
-                            evt.preventDefault();
+                        this.input.focus();
+                        evt.preventDefault();
+                        this.onSelectItem(evt.target);
                     });
                     this._elements.push(el);
                     return el;
@@ -9782,14 +9802,46 @@ var Katrid;
                 }
             }
             Controls.DropdownMenu = DropdownMenu;
-            class AutocompleteInput extends HTMLInputElement {
+            class InputAutoComplete extends HTMLInputElement {
                 constructor() {
                     super(...arguments);
                     this.menu = null;
                     this.closeOnChange = true;
                 }
                 connectedCallback() {
-                    let dataOptions = this.getAttribute('data-options');
+                    let parent = this.parentElement;
+                    let caret = parent.querySelector('.caret');
+                    caret.addEventListener('click', evt => this.click());
+                    if (this.hasAttribute('data-options')) {
+                        let dataOptions = JSON.parse(this.getAttribute('data-options'));
+                    }
+                    else {
+                        this._source = async (query) => {
+                            let domain = this.getAttribute('filter') || this.field.filter;
+                            if (domain && (typeof domain === 'string'))
+                                domain = this.actionView.action.scope.$eval(domain);
+                            let format = 'html';
+                            let data = {
+                                args: [query.term],
+                                kwargs: {
+                                    count: 1,
+                                    page: query.page,
+                                    filter: domain,
+                                    format,
+                                    name_fields: this.getAttribute('name-fields')?.split(",") || null
+                                }
+                            };
+                            let res = await this.actionView.action.model.getFieldChoices({
+                                field: this.field.name, term: query.term, kwargs: data.kwargs
+                            });
+                            console.log(res.items);
+                            return res.items;
+                        };
+                        this.actionView = this.closest('action-view');
+                        if (this.actionView && this.name) {
+                            this.field = this.actionView.action.view.fields[this.name];
+                        }
+                    }
                     this.type = 'text';
                     this.addEventListener('input', this.onInput);
                     this.addEventListener('click', this.onClick);
@@ -9797,6 +9849,8 @@ var Katrid;
                     this.addEventListener('keydown', this.onKeyDown);
                 }
                 onInput() {
+                    if (this.$selectedItem)
+                        this._selectItem();
                     this.showMenu();
                 }
                 onClick() {
@@ -9807,19 +9861,10 @@ var Katrid;
                     this.invalidateValue();
                 }
                 createMenu() {
-                    let source = () => {
-                        return new Promise((resolve, reject) => {
-                            let res = [];
-                            for (let i = 1; i <= 10; i++)
-                                res.push({ id: i, text: 'Item ' + i.toString() });
-                            res.push({ id: 11, text: 'Create New...', template: '<a class="dropdown-item">Create New...</a>' });
-                            resolve(res);
-                        });
-                    };
-                    this.menu = new DropdownMenu(this, { source });
+                    this.menu = new DropdownMenu(this, { source: this._source });
                 }
                 invalidateValue() {
-                    this.selectedItem = this._selectedItem;
+                    this.selectedItem = this.$selectedItem;
                 }
                 onKeyDown(evt) {
                     if (this.menu)
@@ -9860,10 +9905,12 @@ var Katrid;
                         this.setSource(options.source);
                 }
                 setSource(value) {
-                    this.menu.source = value;
+                    this._source = value;
                 }
                 _selectItem(el) {
-                    let item = $(el).data('item');
+                    let item = null;
+                    if (el)
+                        item = $(el).data('item');
                     let event = new CustomEvent('selectItem', {
                         detail: {
                             item,
@@ -9873,20 +9920,28 @@ var Katrid;
                     this.dispatchEvent(event);
                     if (!event.defaultPrevented) {
                         this.selectedItem = item;
-                        this.menu.hide();
+                        if (el && this.menu)
+                            this.menu.hide();
                     }
                     return event;
                 }
+                get selectedItem() {
+                    return this.$selectedItem;
+                }
                 set selectedItem(value) {
-                    this._selectedItem = value;
+                    this.$selectedItem = value;
                     if (value)
                         this.value = value.text;
                     else
                         this.value = '';
                 }
+                get selectedValue() {
+                    if (this.$selectedItem)
+                        return this.$selectedItem.id;
+                }
             }
-            Controls.AutocompleteInput = AutocompleteInput;
-            Katrid.define('auto-complete', AutocompleteInput);
+            Controls.InputAutoComplete = InputAutoComplete;
+            Katrid.define('input-autocomplete', InputAutoComplete, { extends: 'input' });
         })(Controls = Forms.Controls || (Forms.Controls = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -10057,7 +10112,7 @@ var Katrid;
                             if (field)
                                 svc = svc.getFieldChoices({ field, term: query.term, kwargs: data.kwargs });
                             else
-                                svc = new Katrid.Services.Model(attrs.modelChoices).searchName(data);
+                                svc = new Katrid.Services.Model(attrs.modelChoices).searchByName(data);
                             svc.then(res => {
                                 let data = res.items;
                                 const r = data.map(item => ({
@@ -10482,6 +10537,34 @@ var Katrid;
         }
     }
     Katrid.settings.ui.foreignKey = { allowCreate: true, allowCreateEdit: true };
+    Katrid.UI.uiKatrid.directive('inputAutocomplete', ['$controller', ($controller) => ({
+            restrict: 'A',
+            scope: false,
+            require: 'ngModel',
+            link: function (scope, element, attrs, ngModel) {
+                ngModel.$formatters.push(function (value) {
+                    console.log('formatter', value);
+                    if (value) {
+                        element[0].$selectedItem = value;
+                        return value.text;
+                    }
+                    element[0].selectedItem = null;
+                    return '';
+                });
+                element[0].addEventListener('selectItem', function (evt) {
+                    if (evt.detail.item)
+                        ngModel.$setViewValue(evt.detail.item);
+                    else
+                        ngModel.$setViewValue(null);
+                });
+                ngModel.$parsers.push(function (value) {
+                    console.log('parser', value);
+                    if (value)
+                        return value.id;
+                    return value;
+                });
+            }
+        })]);
     Katrid.UI.uiKatrid.directive("fkAutocomplete", ['$controller', ($controller) => ({
             restrict: "A",
             require: "ngModel",
@@ -10518,7 +10601,7 @@ var Katrid;
                         else if (scope.model)
                             svc = scope.model.getFieldChoices({ field: field.name, term: req.term, kwargs: data.kwargs });
                         else
-                            svc = new Katrid.Services.Model(field.model).searchName(data);
+                            svc = new Katrid.Services.Model(field.model).searchByName(data);
                         svc.then(r => {
                             let items = [];
                             for (let obj of r.items)
@@ -10578,26 +10661,33 @@ var Katrid;
                         let domain = attrs.filter || field.filter;
                         if (domain && _.isString(domain))
                             domain = scope.$eval(domain);
+                        let format = 'html';
                         let data = {
                             args: [query.term],
                             kwargs: {
                                 count: 1,
                                 page: query.page,
                                 filter: domain,
+                                format,
                                 name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
                             }
                         };
                         const f = () => {
                             let svc;
                             if (scope.model)
-                                svc = scope.model.getFieldChoices({ field: field.name, term: query.term, kwargs: data.kwargs });
+                                svc = scope.model.getFieldChoices({
+                                    field: field.name,
+                                    term: query.term,
+                                    kwargs: data.kwargs
+                                });
                             else
-                                svc = new Katrid.Services.Model(field.model).searchName(data);
+                                svc = new Katrid.Services.Model(field.model).searchByName(data);
                             svc.then(res => {
                                 let data = res.items;
                                 const r = data.map(item => ({
                                     id: item[0],
-                                    text: item[1]
+                                    text: item[2] || item[1],
+                                    str: item[1],
                                 }));
                                 const more = query.page * Katrid.settings.services.choicesPageLimit < res.count;
                                 if (!multiple && !more) {
@@ -10737,7 +10827,7 @@ var Katrid;
                     else {
                         controller.$setDirty();
                         if (v) {
-                            return controller.$setViewValue([v.id, v.text]);
+                            return controller.$setViewValue([v.id, v.str]);
                         }
                         else {
                             return controller.$setViewValue(null);

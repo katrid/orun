@@ -1543,7 +1543,8 @@
     {% import "view.form.field.utils.jinja2" as utils %}
     <section class="form-group
 		    {% block css_class %}{{ field.cssClass }}{% endblock %}
-		    {% block cols %} {% if window.isNaN(field.cols) %}{{ field.cols }}{% else %}col-md-{{ field.cols }}{% endif %} {% endblock %}"
+		    {% block cols %}
+      {% if window.isNaN(field.cols) %}{{ field.cols }}{% else %}col-md-{{ field.cols }}{% endif %} {% endblock %}"
         {% if field.ngShow %}
              ng-show="{{ field.ngShow }}"
         {% endif %}
@@ -1568,7 +1569,7 @@
       {% endblock %}
       {% block span %}
         {% if not field.inplaceEditor %}
-        <span class="form-field-readonly">
+          <span class="form-field-readonly">
         {% block readonly %}
           ${ record.{{ field.name }} || '{{ field.emptyText }}'}
         {% endblock %}
@@ -1576,11 +1577,12 @@
         {% endif %}
       {% endblock %}
       {% block field %}
-        <input {% block fields_css %}class="form-field form-control"{% endblock %} {% block input_type %}type="text"{% endblock %} {{ utils.field_attrs(field) }}
-          {% if field.attrs.nolabel === 'placeholder' %}
-          placeholder="{{ field.caption }}"
-          {% endif %}
-		      {% block field_attrs %}input-field{% endblock %}
+        <input {% block fields_css %}class="form-field form-control"{% endblock %}
+               {% block input_type %}type="text"{% endblock %} {{ utils.field_attrs(field) }}
+            {% if field.attrs.nolabel === 'placeholder' %}
+               placeholder="{{ field.caption }}"
+            {% endif %}
+               {% block field_attrs %}input-field{% endblock %}
         >
       {% endblock %}
     </section>
@@ -1617,11 +1619,31 @@
   <script id="view.form.autocomplete.jinja2" type="text/ng-template">
     {% extends "view.form.field.jinja2" %}
     {% block readonly %}
-      <a href="#/app/?menu_id=${ ::action.params.menu_id }&model={{ field.model }}&view_type=form&id=${ record.{{ field.name }}[0] }">
-        ${ record.{{ field.name }}[1]||'{{ field.emptyText }}' }
+      <a href="#/app/?menu_id=${ ::action.params.menu_id }&model={{ field.model }}&view_type=form&id=${ record.{{ field.name }}.id }">
+        ${ record.{{ field.name }}.text||'{{ field.emptyText }}' }
       </a>
     {% endblock %}
-    {% block field_attrs %}autocomplete="off" input-field fk-autocomplete ng-model-options="{updateOn: 'change'}"{% endblock %}
+    {% block before_field %}
+    {% endblock %}
+
+    {% block field %}
+
+      <div class="input-dropdown form-field">
+
+        <input {% block fields_css %}class="form-field form-control"{% endblock %}
+               {% block input_type %}type="text"{% endblock %}
+            {% if field.attrs.nolabel === 'placeholder' %}
+               placeholder="{{ field.caption }}"
+            {% endif %}
+            {{ utils.field_attrs(field) }}
+               {% block field_attrs %}autocomplete="no" input-autocomplete input-field is="input-autocomplete"
+               ng-model-options="{updateOn: 'selectItem'}"{% endblock %}
+        >
+        <span class="caret"></span>
+      </div>
+    {% endblock %}
+
+
   </script>
 
   <script id="view.form.manytomany.jinja2" type="text/ng-template">
@@ -1735,7 +1757,7 @@
     {% block field %}
       <onetomany-field name="{{ field.name }}"
           {% if attrs.inlineEditor %}
-            inline-editor
+                       inline-editor
           {% endif %}
       >
         {{ content }}
@@ -1776,7 +1798,8 @@
     {% endblock %}
     {% block field %}
       <div class="input-group date">
-        <input input-field date-picker="{% block date_picker %}L{% endblock %}" type="text" name="{{ field.name }}" class="form-field form-control"
+        <input input-field date-picker="{% block date_picker %}L{% endblock %}" type="text" name="{{ field.name }}"
+               class="form-field form-control"
                ng-model="record.{{ field.name }}" inputmode="numeric">
         <div class="input-group-append input-group-addon">
           <div class="input-group-text">

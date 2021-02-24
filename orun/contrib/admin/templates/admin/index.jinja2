@@ -22,6 +22,7 @@
         <div class="navbar-search">
           <i class="fa fw fa-search"></i>
           <input id="navbar-search" type="text" class="form-control form-control-dark typeahead"
+                 is="auto-complete"
                  placeholder="{{ _('Find resources here...') }}">
         </div>
         <ul class="nav navbar-nav navbar-right hidden-xs">
@@ -107,6 +108,7 @@
       el = $(el);
       items.push({href: el.attr('href'), name: el.text().trim()});
     });
+    $('#navbar-search').setSource(items);
   </script>
 
   {# plotly #}

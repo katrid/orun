@@ -1,14 +1,23 @@
-from orun import app, request
-from orun.views import BaseView, route
-from orun.utils.json import jsonify
+from orun.apps import apps
+from orun.reports.base import PaginatedReport
 
 
-@route('/model/choices/', methods=['POST'])
-def model_choices(self):
-    data = request.json
-    model = app[data['model']]
-    model_field = data['kwargs'].get('model_field')
-    if model_field:
-        model_field = model._meta.fields[model_field]
-        print(model_field)
-    return jsonify(model.search_name(name=data.get('q'), count=data.get('count'), page=data.get('page')))
+class AutoReport(PaginatedReport):
+    content_type = 'text/plain'
+
+    def auto_report(self, request, *args, **kwargs):
+        model_name = request.GET.get('model')
+        model = apps.get_model(model_name)
+        fields = model._meta.get_fields_group('auto_report') or model._meta.list_fields
+        # generate report from auto_report fields
+        data = model.objects.all().only(*[f.name for f in fields])
+        return {'data': list(data)}
+
+    def get(self, request, *args, **kwargs):
+        self.write_line('Teste')
+        self.write_line('Teste')
+        self.write_line('Teste')
+        return '\n'.join(self.stream)
+
+
+apps.register_service(AutoReport, 'admin.views.reports.AutoReport')

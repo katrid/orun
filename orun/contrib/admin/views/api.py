@@ -1,6 +1,3 @@
-from threading import local
-
-
 from orun import api
 from orun.db.models import QuerySet
 from orun.conf import settings
@@ -17,19 +14,16 @@ from orun.http import HttpResponse, JsonResponse, HttpResponseForbidden
 def rpc(request, service, meth, params):
     data = request.json
     method = data.get('method', meth)
-    if method.startswith('_'):
-        raise MethodNotFound
-    else:
+    if not method.startswith('_'):
         kwargs = {}
         args = ()
-        service = apps[service]
+        service = apps.services[service]
         meth = getattr(service, method)
         if getattr(meth, 'exposed', None):
             qs = kwargs
 
             args = params.get('args') or ()
             kwargs = params.get('kwargs') or {}
-            # with Environment(request, data.get('context')):
             r = meth(*args, **kwargs)
 
             if isinstance(r, QuerySet):
@@ -40,16 +34,35 @@ def rpc(request, service, meth, params):
             elif isinstance(r, models.Model):
                 r = {'data': [r]}
             return r
-        else:
-            raise MethodNotFound
+    raise MethodNotFound
+
+
+@login_required
+@transaction.atomic
+def view(request, service: str):
+    """
+    Return a rendered view object
+    :param request:
+    :param service:
+    :return:
+    """
+    if request.method == 'GET':
+        cls = apps.services[service]
+        service = cls()
+        res = service.get(request)
+        if isinstance(res, (dict, list, tuple)):
+            res = JsonResponse(res)
+        elif not isinstance(res, HttpResponse):
+            res = HttpResponse(res, content_type=service.content_type)
+        return res
 
 
 @login_required
 def choices(request, service, field):
-    service = apps[service]
+    service = apps.services[service]
     field = service._meta.get_field(field)
     service = apps[field.related_model._meta.name]
-    r = service.search_name(name=request.args.get('q'))
+    r = service.search_by_name(name=request.args.get('q'))
     return {'result': r}
 
 

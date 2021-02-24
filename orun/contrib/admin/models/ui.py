@@ -62,6 +62,7 @@ class View(models.Model):
             ('report', 'Report'),
             ('dashboard', 'Dashboard'),
             ('custom', 'Custom'),
+            ('class', 'Class'),
         ), default='form', null=False
     )
     mode = models.ChoiceField(
@@ -72,10 +73,11 @@ class View(models.Model):
     )
     model = models.CharField(128, db_index=True)
     priority = models.IntegerField(_('Priority'), default=99, null=False)
-    template_name = models.CharField(max_length=255)
+    template_name = models.CharField(max_length=256)
     content = models.TextField(caption=_('Content'))
     ref_id = models.CharField(caption=_('Reference ID'), getter='_get_xml_id')
     children = models.OneToManyField('self', 'parent')
+    class_name = models.CharField(max_length=256, verbose_name='Python Class Name')
 
     class Meta:
         name = 'ui.view'
