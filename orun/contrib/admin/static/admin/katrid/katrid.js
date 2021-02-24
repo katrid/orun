@@ -10122,8 +10122,8 @@ var Katrid;
                             svc.then(res => {
                                 let data = res.items;
                                 const r = data.map(item => ({
-                                    id: item[0],
-                                    text: item[1]
+                                    id: item.id,
+                                    text: item.text
                                 }));
                                 const more = query.page * Katrid.settings.services.choicesPageLimit < res.count;
                                 return query.callback({
@@ -10145,12 +10145,12 @@ var Katrid;
                             if (multiple) {
                                 const values = [];
                                 for (let i of Array.from(v)) {
-                                    values.push({ id: i[0], text: i[1] });
+                                    values.push({ id: i.id, text: i.text });
                                 }
                                 return callback(values);
                             }
                             else {
-                                return callback({ id: v[0], text: v[1] });
+                                return callback({ id: v.id, text: v.text });
                             }
                         }
                     }
