@@ -1,13 +1,15 @@
 import os
 from lxml import etree
 import reptile
-from reptile.exports import pdf
-from orun import app
+
+from orun.apps import apps
+# from reptile.exports import pdf
+# from orun import app
 
 
 class ReptileEngine:
     def __init__(self):
-        reptile.ReportEngine.env = app.report_env
+        reptile.ReportEngine.env = apps.report_env
 
     def auto_report(self, xml, *args, **kwargs):
         return self.from_xml(xml, *args, **kwargs)

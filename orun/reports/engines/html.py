@@ -6,7 +6,7 @@ from orun import app
 from orun.reports.pdf import ChromePDF
 
 
-class ChromeEngine:
+class HtmlEngine:
     env: jinja2.Environment = None
     default_connection = None
 
