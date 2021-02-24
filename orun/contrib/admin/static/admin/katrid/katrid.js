@@ -9064,7 +9064,13 @@ var Katrid;
                         param.info.choices[child.attr('value')] = child.text();
                     }
                 }
-                return `<div${defaultValue}><select class="form-control" ng-model="param.value1"><option value="\${ key }" ng-repeat="(key, value) in fields.${param.name}.choices">\${ value }</option></select></div>`;
+                let multiple = '';
+                if (param.operation === 'in') {
+                    multiple = 'multiple-tags multiple="multiple"';
+                }
+                else
+                    multiple = 'class="form-control"';
+                return `<div${defaultValue}><select ${multiple} ng-model="param.value1"><option value="\${ key }" ng-repeat="(key, value) in fields.${param.name}.choices">\${ value }</option></select></div>`;
             }
         };
         Reports.Params = Params;
@@ -10868,6 +10874,14 @@ var Katrid;
                         return sel.select2("val", null);
                     }
                 };
+            }
+        })]);
+    Katrid.UI.uiKatrid.directive('multipleTags', ['$controller', ($controller) => ({
+            restrict: 'A',
+            scope: false,
+            require: 'ngModel',
+            link: (scope, element, attrs, ngModel) => {
+                element.select2();
             }
         })]);
     Katrid.UI.uiKatrid.filter('m2m', () => function (input) {
