@@ -1745,6 +1745,11 @@ class DecimalField(Field):
         if value is not None:
             return float(value)
 
+    def save_form_data(self, instance, data):
+        if data:
+            data = float(data)
+        super().save_form_data(instance, data)
+
 
 class DurationField(Field):
     """

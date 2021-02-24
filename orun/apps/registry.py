@@ -100,7 +100,6 @@ class Registry:
             # Phase 2: import models modules.
             for app_config in self.app_configs.values():
                 app_config.import_models()
-                app_config.import_api()
 
             # Phase 3: apply models inheritance, respecting extended and overridden models
             for app_config in self.app_configs.values():
@@ -119,6 +118,7 @@ class Registry:
 
             # Phase 4: run ready() methods of app configs.
             for app_config in self.app_configs.values():
+                app_config.import_views()
                 app_config.ready()
 
             self.ready = True
@@ -192,12 +192,12 @@ class Registry:
         if not self.models_ready:
             raise AppRegistryNotReady("Models aren't loaded yet.")
 
-    def register_service(self, service):
-        self.services[service._meta.name] = service
+    def register_service(self, service, name: str = None):
+        self.services[name or service.__qualname__] = service
 
     def register_model(self, model):
         self.models[model._meta.name] = model
-        self.register_service(model)
+        self.register_service(model, model._meta.name)
 
     def lazy_model_operation(self, function, model_name):
         if self.models_ready and model_name in self.models:

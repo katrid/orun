@@ -91,7 +91,7 @@ class OrunJSONEncoder(json.JSONEncoder):
         if isinstance(o, models.Model):
             if hasattr(o, '__serialize__'):
                 return o.to_json()
-            return o._get_instance_label()
+            return o._api_format_choice()
         elif isinstance(o, types.GeneratorType):
             return list(o)
         elif isinstance(o, datetime.datetime):

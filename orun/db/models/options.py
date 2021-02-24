@@ -507,6 +507,10 @@ class Options:
         else:
             return self.editable_fields
 
+    def get_fields_group(self, group: str):
+        if self.field_groups and group in self.field_groups:
+            return [self.fields[field_name] for field_name in self.field_groups[group]]
+
     @property
     def copyable_fields(self):
         return [f for f in self.fields if f.copy]

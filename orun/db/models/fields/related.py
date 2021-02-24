@@ -917,7 +917,7 @@ class ForeignKey(ForeignObject):
         from orun.db.models import Model
         if isinstance(value, Model):
             try:
-                return value._get_instance_label()
+                return value._api_format_choice()
             except:
                 return '<ERROR>'
 

@@ -11,7 +11,7 @@ from orun.core.exceptions import ImproperlyConfigured
 
 APPS_MODULE_NAME = 'apps'
 MODELS_MODULE_NAME = 'models'
-API_MODULE_NAME = 'api'
+VIEWS_MODULE_NAME = 'views'
 
 
 class AppConfig:
@@ -34,7 +34,7 @@ class AppConfig:
         self.module = app_module
         self.models = []
         self.models_module = None
-        self.api_module = None
+        self.view_module = None
         if not self.schema:
             self.schema = self.name.rpartition('.')[2]
 
@@ -209,12 +209,10 @@ class AppConfig:
             models_module_name = '%s.%s' % (self.name, MODELS_MODULE_NAME)
             self.models_module = import_module(models_module_name)
 
-    def import_api(self):
-        # Dictionary of models for this app, primarily maintained in the
-        # 'all_models' attribute of the Apps this AppConfig is attached to.
-        if module_has_submodule(self.module, API_MODULE_NAME):
-            api_module_name = '%s.%s' % (self.name, API_MODULE_NAME)
-            self.api_module = import_module(api_module_name)
+    def import_views(self):
+        if module_has_submodule(self.module, VIEWS_MODULE_NAME):
+            views_module_name = '%s.%s' % (self.name, VIEWS_MODULE_NAME)
+            self.views_module = import_module(views_module_name)
 
     def get_models(self, include_auto_created=False):
         for model in self.models:

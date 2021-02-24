@@ -1923,7 +1923,7 @@ class Model(metaclass=ModelBase):
             for k, v in context.items():
                 if k.startswith('default_'):
                     data[k[8:]] = v
-        return self.objects.create(**data)._get_instance_label()
+        return self.objects.create(**data)._format_instance_label()
 
     @api.method
     def reorder(cls, ids):
@@ -1948,7 +1948,7 @@ class Model(metaclass=ModelBase):
             for row in qs:
                 key = row[field.name]
                 count = row['pk__count']
-                s = f'{field.remote_field.model.objects.get(pk=key)._get_instance_label() if key else gettext("(Undefined)")} ({count})'
+                s = f'{field.remote_field.model.objects.get(pk=key)._format_instance_label() if key else gettext("(Undefined)")} ({count})'
                 res.append({
                     '$params': {field_name: key},
                     field_name: s,
@@ -1977,8 +1977,8 @@ class Model(metaclass=ModelBase):
             return res
         return list(qs)
 
-    def _get_instance_label(self):
-        return (self.pk, self.__str__())
+    def _api_format_choice(self, fmt=None, **context):
+        return {'id': self.pk, 'text': self.__str__()}
 
     @api.method
     def get_formview_action(self, id=None):
@@ -2083,10 +2083,11 @@ class Model(metaclass=ModelBase):
         return qs
 
     @api.method
-    def search_name(
+    def search_by_name(
         self, name=None, count=None, page=None, label_from_instance=None, name_fields=None, *args, exact=False,
         **kwargs
     ):
+        fmt = kwargs.get('format')
         where = kwargs.get('params')
         q = None
         if name:
@@ -2115,11 +2116,11 @@ class Model(metaclass=ModelBase):
         else:
             qs = qs[:limit]
         if isinstance(label_from_instance, list):
-            label_from_instance = lambda obj, label_from_instance=label_from_instance: (obj.pk, ' - '.join([str(getattr(obj, f, '')) for f in label_from_instance if f in self._meta.fields_dict]))
+            label_from_instance = lambda obj, format, label_from_instance=label_from_instance: (obj.pk, ' - '.join([str(getattr(obj, f, '')) for f in label_from_instance if f in self._meta.fields_dict]))
         if callable(label_from_instance):
-            res = [label_from_instance(obj) for obj in qs]
+            res = [label_from_instance(obj, fmt) for obj in qs]
         else:
-            res = [obj._get_instance_label() for obj in qs]
+            res = [obj._api_format_choice(fmt, name=name) for obj in qs]
         return {
             'count': count,
             'items': res,
@@ -2192,6 +2193,7 @@ class Model(metaclass=ModelBase):
 
     @api.method
     def get_field_choices(self, field, q=None, count=False, ids=None, page=None, exact=False, limit=None, **kwargs):
+        fmt = kwargs.get('format', 'str')
         field_name = field
         field = self._meta.fields[field_name]
         related_model = apps[field.remote_field.model]
@@ -2215,7 +2217,7 @@ class Model(metaclass=ModelBase):
                 else:
                     search_params['params'] = {'pk': ids}
             label_from_instance = kwargs.get('label_from_instance', field.label_from_instance or kwargs.get('name_fields'))
-            return related_model.search_name(label_from_instance=label_from_instance, exact=exact, **search_params)
+            return related_model.search_by_name(label_from_instance=label_from_instance, exact=exact, format=fmt, **search_params)
         elif field.one_to_many:
             from orun.db.models.query import QuerySet
             where = kwargs['filter']
