@@ -427,3 +427,6 @@ msgstr "Endereço privado"
 
 msgid "Other address"
 msgstr "Outro endereço"
+
+msgid "Contacts & Addresses"
+msgstr "Contatos e Endereços"
