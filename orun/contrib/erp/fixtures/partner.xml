@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <data translate="true">
-  <object id="auth.user.root" model="auth.user">
+  <object id="auth.user.root" model="auth.user" no-update="1">
     <field name="name">Administrator</field>
     <field name="username">admin</field>
     <field name="is_superuser">True</field>
