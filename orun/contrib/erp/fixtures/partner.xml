@@ -26,7 +26,7 @@
     <field name="name">Professor</field>
     <field name="abbreviation">Prof.</field>
   </object>
-  <object id="sys.main.company" model="res.company" noupdate="1">
+  <object id="sys.main.company" model="res.company" no-update="1">
     <field name="name">My Company</field>
     <field name="is_company">True</field>
     <field name="email">mycompany@example.com</field>
@@ -35,7 +35,7 @@
   <object id="auth.user.root" model="auth.user">
     <field name="user_company" ref="sys.main.company"/>
   </object>
-  <object id="auth.user.anonymous" model="auth.user" noupdate="1">
+  <object id="auth.user.anonymous" model="auth.user" no-update="1">
     <field name="name">Anonymous</field>
     <field name="username">anonymous</field>
     <field name="active">False</field>
