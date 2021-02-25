@@ -3620,10 +3620,10 @@ var Katrid;
                         this.template.form = 'view.form.autocomplete.jinja2';
                 }
                 listSpanTemplate() {
-                    return `<a class="grid-field-readonly">\${ record.${this.name}[1]||'${this.emptyText}' } </a>`;
+                    return `<a class="grid-field-readonly">\${ record.${this.name}.text||'${this.emptyText}' } </a>`;
                 }
                 formSpanTemplate() {
-                    return `<a href="#/app/?menu_id=\${ ::action.params.menu_id }&model=${this.model}&view_type=form&id=\${ record.${this.name}[0] }">\${ record.${this.name}[1]||'${this.emptyText}' } </a>`;
+                    return `<a href="#/app/?menu_id=\${ ::action.params.menu_id }&model=${this.model}&view_type=form&id=\${ record.${this.name}.id }">\${ record.${this.name}.text||'${this.emptyText}' } </a>`;
                 }
                 create() {
                     super.create();
