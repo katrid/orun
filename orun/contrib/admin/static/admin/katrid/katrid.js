@@ -5121,6 +5121,8 @@ var Katrid;
                     this.createContextMenu();
                 }
                 addField(fld) {
+                    if (fld.hasAttribute('invisible'))
+                        return;
                     let fieldName = fld.getAttribute('name');
                     let field = this._view.fields[fieldName];
                     let html = fld.innerHTML;
@@ -7313,9 +7315,11 @@ var Katrid;
                         listView.classList.add('table-responsive');
                         listView.setAttribute('data-options', '{"showStar": false}');
                         let table = listView.querySelector('table');
-                        table.classList.add('grid');
-                        if (this.inlineEditor)
-                            table.classList.add('inline-editor');
+                        if (table) {
+                            table.classList.add('grid');
+                            if (this.inlineEditor)
+                                table.classList.add('inline-editor');
+                        }
                     }
                     let tb = this.renderToolbar();
                     Katrid.Core.$compile(tb)(this._scope);
