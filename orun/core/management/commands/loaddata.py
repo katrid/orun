@@ -52,5 +52,4 @@ class Command(BaseCommand):
         if file_list:
             with open(file_list, 'r') as f:
                 filenames = [f.strip() for f in f.readlines()]
-        print(schema, filenames)
         load_fixture(schema, *filenames, **options)
