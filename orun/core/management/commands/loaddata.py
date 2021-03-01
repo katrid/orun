@@ -33,7 +33,7 @@ def load_fixture(schema, *filenames, **options):
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
-            'args', nargs='+',
+            'args', nargs='?',
             help='Specify the schema and filenames.',
         )
         parser.add_argument(
