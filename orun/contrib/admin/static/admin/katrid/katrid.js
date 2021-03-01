@@ -9850,7 +9850,7 @@ var Katrid;
                             else {
                                 let scope = angular.element(this.parentElement).scope();
                                 if (scope.model) {
-                                    let res = await scope.action.model.getFieldChoices({
+                                    let res = await scope.model.getFieldChoices({
                                         field: this.field.name, term: query.term, kwargs: data.kwargs
                                     });
                                     return res.items;
