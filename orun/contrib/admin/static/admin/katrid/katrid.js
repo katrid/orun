@@ -9842,6 +9842,7 @@ var Katrid;
                                 }
                             };
                             let scope = angular.element(this.parentElement).scope();
+                            console.log('scope', scope);
                             let res = await scope.action.model.getFieldChoices({
                                 field: this.field.name, term: query.term, kwargs: data.kwargs
                             });
