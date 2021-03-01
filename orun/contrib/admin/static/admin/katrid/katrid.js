@@ -9841,7 +9841,8 @@ var Katrid;
                                     name_fields: this.getAttribute('name-fields')?.split(",") || null
                                 }
                             };
-                            let res = await this.actionView.action.model.getFieldChoices({
+                            let scope = angular.element(this.parentElement).scope();
+                            let res = await scope.action.model.getFieldChoices({
                                 field: this.field.name, term: query.term, kwargs: data.kwargs
                             });
                             console.log(res.items);
