@@ -9841,13 +9841,21 @@ var Katrid;
                                     name_fields: this.getAttribute('name-fields')?.split(",") || null
                                 }
                             };
-                            let scope = angular.element(this.parentElement).scope();
-                            console.log('scope', scope);
-                            let res = await scope.action.model.getFieldChoices({
-                                field: this.field.name, term: query.term, kwargs: data.kwargs
-                            });
-                            console.log(res.items);
-                            return res.items;
+                            if (this.actionView?.action?.model) {
+                                let res = await this.actionView.action.model.getFieldChoices({
+                                    field: this.field.name, term: query.term, kwargs: data.kwargs
+                                });
+                                return res.items;
+                            }
+                            else {
+                                let scope = angular.element(this.parentElement).scope();
+                                if (scope.model) {
+                                    let res = await scope.action.model.getFieldChoices({
+                                        field: this.field.name, term: query.term, kwargs: data.kwargs
+                                    });
+                                    return res.items;
+                                }
+                            }
                         };
                         this.actionView = this.closest('action-view');
                         if (this.actionView && this.name) {
