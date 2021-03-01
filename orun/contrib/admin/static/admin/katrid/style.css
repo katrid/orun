@@ -12199,6 +12199,7 @@ table-field .table tbody tr {
 
 .dropdown-menu {
   box-shadow: 0 0 16px -2px rgba(0, 0, 0, 0.3);
+  z-index: 1080;
 }
 .dropdown-menu .dropdown-wait {
   padding: 0.25rem 1.5rem;
