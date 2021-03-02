@@ -3944,6 +3944,7 @@ var Katrid;
                         this.state = RecordState.modified;
                     let oldValue = this.pristine[propKey];
                     value = field.toJSON(value);
+                    console.log('compare', oldValue, value);
                     if (this.compare(oldValue, value)) {
                         this.setModified(propKey);
                         this.data[propKey] = value;
