@@ -8363,7 +8363,7 @@ var Katrid;
                 return new Promise((resolve, reject) => {
                     this.post(meth, { args: args, kwargs: kwargs })
                         .then((res) => {
-                        if ((res.tag === 'refresh') && action)
+                        if ((res?.tag === 'refresh') && action)
                             action.refresh();
                         resolve(res);
                     })
