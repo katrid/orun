@@ -1578,6 +1578,7 @@
       {% endblock %}
       {% block field %}
         <input {% block fields_css %}class="form-field form-control"{% endblock %}
+               autocomplete="off"
                {% block input_type %}type="text"{% endblock %} {{ utils.field_attrs(field) }}
             {% if field.attrs.nolabel === 'placeholder' %}
                placeholder="{{ field.caption }}"
@@ -1636,7 +1637,7 @@
                placeholder="{{ field.caption }}"
             {% endif %}
             {{ utils.field_attrs(field) }}
-               {% block field_attrs %}autocomplete="no" input-autocomplete input-field is="input-autocomplete"
+               {% block field_attrs %}autocomplete="off" input-autocomplete input-field is="input-autocomplete"
                ng-model-options="{updateOn: 'selectItem'}"{% endblock %}
         >
         <span class="caret"></span>

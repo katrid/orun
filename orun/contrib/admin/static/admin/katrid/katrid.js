@@ -9821,7 +9821,7 @@ var Katrid;
                     this.closeOnChange = true;
                 }
                 connectedCallback() {
-                    this.autocomplete = "no";
+                    this.autocomplete = "off";
                     let parent = this.parentElement;
                     let caret = parent.querySelector('.caret');
                     caret.addEventListener('click', evt => this.click());
