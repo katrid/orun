@@ -3951,6 +3951,8 @@ var Katrid;
                             console.log('field change', this.onFieldChange, oldValue, value);
                             if (this.onFieldChange)
                                 this.onFieldChange.apply(this.dataSource, [field, value, this]);
+                            else if (this.dataSource)
+                                this.dataSource._onFieldChange(field, value, this);
                         }
                     }
                 }
