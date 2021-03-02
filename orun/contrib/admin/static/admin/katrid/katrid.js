@@ -3940,6 +3940,7 @@ var Katrid;
             set(propKey, value) {
                 let field = this.dataSource.fieldByName(propKey);
                 if (field) {
+                    console.log('set', propKey, value);
                     if (this.state === RecordState.unmodified)
                         this.state = RecordState.modified;
                     let oldValue = this.pristine[propKey];
