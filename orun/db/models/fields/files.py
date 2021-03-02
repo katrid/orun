@@ -281,9 +281,9 @@ class FileField(CharField):
 
     def pre_save(self, model_instance, add):
         file = super().pre_save(model_instance, add)
-        if file and not file._committed:
-            # Commit the file to storage prior to saving the model
-            file.save(file.name, file.file, save=False)
+        # if file and not file._committed:
+        #     # Commit the file to storage prior to saving the model
+        #     file.save(file.name, file.file, save=False)
         return file
 
     def contribute_to_class(self, cls, name, **kwargs):
