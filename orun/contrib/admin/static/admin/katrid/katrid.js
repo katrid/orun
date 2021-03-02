@@ -3945,10 +3945,10 @@ var Katrid;
                     let oldValue = this.pristine[propKey];
                     value = field.toJSON(value);
                     if (this.compare(oldValue, value)) {
-                        console.log('different', oldValue, value);
                         this.setModified(propKey);
                         this.data[propKey] = value;
                         if (field.onChange) {
+                            console.log('field change', this.onFieldChange, oldValue, value);
                             if (this.onFieldChange)
                                 this.onFieldChange.apply(this.dataSource, [field, value, this]);
                         }
