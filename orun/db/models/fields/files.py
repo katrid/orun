@@ -277,6 +277,8 @@ class FileField(CharField):
         # Need to convert File objects provided via a form to string for database insertion
         if not value:
             return None
+        if isinstance(value, str):
+            return value
         return value.name
 
     def pre_save(self, model_instance, add):
