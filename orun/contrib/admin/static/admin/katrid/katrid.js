@@ -3916,6 +3916,8 @@ var Katrid;
             compare(oldValue, newValue) {
                 if (_.isArray(oldValue) && _.isArray(newValue))
                     return oldValue.join(',') !== newValue.join(',');
+                else if (oldValue && newValue)
+                    console.log(oldValue, newValue);
                 return oldValue != newValue;
             }
             discard() {
