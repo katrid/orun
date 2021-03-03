@@ -10583,13 +10583,6 @@ var Katrid;
                     else
                         ngModel.$setViewValue(null);
                 });
-                ngModel.$parsers.push(function (value) {
-                    if (Array.isArray(value))
-                        value = { id: value[0], text: value[1] };
-                    if (value)
-                        return value.id;
-                    return value;
-                });
             }
         })]);
     Katrid.UI.uiKatrid.directive("fkAutocomplete", ['$controller', ($controller) => ({
