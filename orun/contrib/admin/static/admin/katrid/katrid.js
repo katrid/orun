@@ -3649,6 +3649,8 @@ var Katrid;
                 toJSON(val) {
                     if (_.isArray(val))
                         return val[0];
+                    if (val?.id)
+                        return val.id;
                     return val;
                 }
                 get validAttributes() {
@@ -3948,7 +3950,6 @@ var Katrid;
                         this.setModified(propKey);
                         this.data[propKey] = value;
                         if (field.onChange) {
-                            console.log('field change', this.onFieldChange, oldValue, value);
                             if (this.onFieldChange)
                                 this.onFieldChange.apply(this.dataSource, [field, value, this]);
                             else if (this.dataSource)
