@@ -412,6 +412,7 @@ FIRST_DAY_OF_WEEK = 0
 
 # Decimal separator symbol
 DECIMAL_SEPARATOR = '.'
+DEFAULT_AUTO_FIELD = 'orun.db.models.BigAutoField'
 
 # Boolean that sets whether to add thousand separator when formatting numbers
 USE_THOUSAND_SEPARATOR = False
