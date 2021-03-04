@@ -123,8 +123,8 @@ class ViewAction(Action):
     class Meta:
         name = 'ui.action.view'
 
-    @api.method
-    def get_view(self, id):
+    @api.classmethod
+    def get_view(cls, id):
         if isinstance(id, list):
             id = id[0]
         view = apps['ui.view'].objects.get(pk=id)
