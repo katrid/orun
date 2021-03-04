@@ -9889,6 +9889,7 @@ var Katrid;
                 onFocusout() {
                     this.hideMenu();
                     this.invalidateValue();
+                    this.term = '';
                 }
                 createMenu() {
                     this.menu = new DropdownMenu(this, { source: this._source });
