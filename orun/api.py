@@ -1,6 +1,8 @@
-from functools import partial
-from functools import wraps
+import inspect
+from functools import partial, wraps
+import builtins
 
+from orun.db.models.base import ModelBase
 from orun.core.exceptions import RPCError, ValidationError
 
 
@@ -31,60 +33,64 @@ class RecordProxy:
         return self.__instance__.__call__(self.env, *args, **kwargs)
 
 
-
-
-def method(fn) -> classmethod:
+def _register_method(fn, meth_name):
+    # def contribute_to_class(cls, name):
+    #     setattr(cls, name, fn)
+    #     cls._meta.methods[meth_name] = fn
+    #
+    # fn.contribute_to_class = contribute_to_class
     fn.exposed = True
-    fn = classmethod(fn)
-    return fn
+    fn.meth_name = meth_name
+    return builtins.classmethod(fn)
 
 
-def records(*args, each=False, **kwargs):
-    from orun.db import models
+def classmethod(name_or_fn):
+    if callable(name_or_fn):
+        return _register_method(name_or_fn, name_or_fn.__name__)
+    if isinstance(name_or_fn, str):
+        return partial(_register_method, meth_name=name_or_fn)
 
-    def decorator(fn):
-        fn.exposed = True
+
+def method(*args, select=None, each=None):
+
+    def decorator(fn, meth_name=None):
+        meth_name = meth_name or fn.__name__
 
         @wraps(fn)
         def wrapped(self, *args, **kwargs):
-            ids = None
-            kwargs = dict(kwargs)
-            if isinstance(self, list):
-                self = RecordProxy(self)
-            if self._state is not None and self.pk:
-                return fn(self, *args, **kwargs)
-            elif 'id' in kwargs:
-                ids = [kwargs.pop('id')]
-            elif args:
-                args = list(args)
-                ids = args[0]
+            if args:
+                arg = args[0]
                 args = args[1:]
-            if not ids and not issubclass(self, models.Model):
-                ids = (self,)
-            elif ids:
-                # if the object is a dict
-                # create a new record instance
-                if isinstance(ids, dict):
-                    ids = [self(**ids)]
+                objs = None
+                # simulate orm
+                if inspect.isclass(self):
+                    if select:
+                        objs = self.select(*select)
+                    else:
+                        objs = self.select()
+                single = False
+                if isinstance(arg, list):
+                    objs = objs.where(pk__in=arg)
                 else:
-                    if not isinstance(ids, list):
-                        ids = [ids]
-                    ids = self.objects.filter(self.c.pk.in_(kwargs.pop('ids', ids)))
-            if not isinstance(ids, RecordsProxy):
-                ids = RecordsProxy(self, ids)
-            if each:
-                for id in ids:
-                    return fn(id, *args, **kwargs)
-            else:
-                return fn(ids, *args, **kwargs)
-        return wrapped
+                    objs = objs.where(pk=arg)
+                    single = True
+                if each or (each is None and not single):
+                    return [fn(obj, *args, **kwargs) for obj in objs]
+                elif single:
+                    return fn(objs.first(), *args, **kwargs)
+                else:
+                    return fn(objs, *args, **kwargs)
 
-    if args and callable(args[0]):
-        return decorator(args[0])
+        return _register_method(wrapped, meth_name)
+
+    arg = args and args[0]
+    if isinstance(arg, str):
+        meth_name = arg
+        return partial(decorator, meth_name=meth_name)
+    elif callable(arg):
+        meth_name = arg.__name__
+        return decorator(arg, meth_name)
     return decorator
-
-
-record = partial(records, each=True)
 
 
 def onchange(*fields):

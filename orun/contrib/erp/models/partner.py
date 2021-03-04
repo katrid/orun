@@ -79,7 +79,7 @@ class Partner(models.Model):
         verbose_name_plural = _('Partners')
 
     def __str__(self):
-        return self.display_name
+        return self.name
         if self.parent:
             return f'{self.parent}, {self.name}'
         return self.name
@@ -87,9 +87,9 @@ class Partner(models.Model):
     def save(self, *args, **kwargs):
         # TODO replace by orm api
         if self.parent_id:
-            self.display_name = f'{self.parent.display_name}, {self.name}'
+            self.display_name = f'{self.parent.display_name}, str({self.name})'
         else:
-            self.display_name = self.name
+            self.display_name = str(self)
         super().save(*args, **kwargs)
         contacts = self.objects.filter(parent_id=self.pk)
         if contacts:

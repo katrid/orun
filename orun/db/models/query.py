@@ -406,6 +406,11 @@ class QuerySet:
         Perform the query and return a single object matching the given
         keyword arguments.
         """
+        # if args:
+        #     arg = args[0]
+        #     if isinstance(arg, (str, int)):
+        #         kwargs['pk'] = arg
+        #         args = args[1:]
         clone = self.filter(*args, **kwargs)
         if self.query.can_filter() and not self.query.distinct_fields:
             clone = clone.order_by()
@@ -900,6 +905,9 @@ class QuerySet:
         set.
         """
         return self._filter_or_exclude(False, *args, **kwargs)
+
+    def where(self, *args, **kwargs):
+        return self.filter(*args, **kwargs)
 
     def exclude(self, *args, **kwargs):
         """

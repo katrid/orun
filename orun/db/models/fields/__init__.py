@@ -18,7 +18,7 @@ from orun.core import checks, exceptions, validators
 from orun.core.exceptions import FieldDoesNotExist  # NOQA
 from orun.db import connection, connections, router
 from orun.db.models.constants import LOOKUP_SEP
-from orun.db.models.query_utils import DeferredAttribute, CalculatedAttribute, RegisterLookupMixin
+from orun.db.models.query_utils import DeferredAttribute, CalculatedAttribute, RegisterLookupMixin, Q
 from orun.utils import timezone
 from orun.utils.datastructures import DictWrapper
 from orun.utils.dateparse import (
@@ -122,6 +122,8 @@ class Fields(list):
         return super().__getitem__(item)
 
     def __setitem__(self, key, value):
+        if value not in self:
+            self.append(value)
         if isinstance(key, str):
             self._dict[key] = value
         else:
@@ -157,6 +159,7 @@ class BaseField(RegisterLookupMixin):
     max_length: int = None
     _unique = False
     stored = True
+    local = True
     db_default = NOT_PROVIDED
     db_compute = None
     db_tablespace = None
@@ -550,7 +553,7 @@ class Field(BaseField):
     def get_col(self, alias, output_field=None):
         if output_field is None:
             output_field = self
-        if alias != self.model._meta.db_table or output_field != self:
+        if alias != self.model._meta.db_table or output_field is not self:
             from orun.db.models.expressions import Col
             return Col(alias, self, output_field)
         else:
@@ -883,14 +886,15 @@ class Field(BaseField):
         for every subclass of cls, even if cls is not an abstract model.
         """
         self.set_attributes_from_name(name)
-        self.model = cls
+        if not self.model:
+            self.model = cls
         cls._meta.add_field(self)
         if self.column:
             # Don't override classmethods with the descriptor. This means that
             # if you have a classmethod and a field with the same name, then
             # such fields can't be deferred (we don't have a check for this).
             if not getattr(cls, self.attname, None):
-                setattr(cls, self.attname, DeferredAttribute(self.attname))
+                setattr(cls, self.attname, DeferredAttribute(self, self.attname))
         elif self.descriptor:
             setattr(cls, self.name, self.descriptor)
         if self.choices:

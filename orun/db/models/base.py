@@ -5,10 +5,9 @@ import copy
 from functools import partialmethod, reduce
 from itertools import chain
 from collections import defaultdict
-from typing import Type
+from typing import List
 
 from orun.apps import apps
-from orun import api
 from orun.conf import settings
 from orun.core import checks
 from orun.core.exceptions import (
@@ -22,26 +21,19 @@ from orun.db import (
 from orun.db.models.constants import LOOKUP_SEP
 from orun.db.models.constraints import CheckConstraint, UniqueConstraint
 from orun.db.models.deletion import CASCADE, Collector
-from orun.db.models.fields import BaseField, Field, BigAutoField, CharField, DateTimeField
-from orun.utils.module_loading import import_string
 from orun.db.models.fields.related import (
-    ForeignObjectRel, ForeignKey, OneToOneField, lazy_related_operation,
+    ForeignObjectRel, OneToOneField, lazy_related_operation,
 )
-from orun.db.models.manager import Manager, QuerySet
+from orun.db.models.manager import Manager
 from orun.db.models.options import Options
 from orun.db.models.query import Q
-from orun.db.models.aggregates import Count
 from orun.db.models.signals import (
     class_prepared, post_init, post_save, pre_init, pre_save,
-    before_insert, before_update, before_delete,
-    after_insert, after_update, after_delete,
 )
 from orun.utils.encoding import force_str
 from orun.utils.text import capfirst, get_text_list
 from orun.utils.translation import gettext_lazy as _, gettext
 from orun.utils.version import get_version
-from orun.utils.xml import get_xml_fields, etree
-from orun.db.models.fields import NOT_PROVIDED, BooleanField
 
 
 class Deferred:
@@ -52,7 +44,6 @@ class Deferred:
         return '<Deferred field>'
 
 
-CHOICES_PAGE_LIMIT = 100
 DEFERRED = Deferred()
 
 
@@ -75,241 +66,265 @@ def _has_contribute_to_class(value):
     return not inspect.isclass(value) and hasattr(value, 'contribute_to_class')
 
 
-# TODO add store option to related/proxy field
-# TODO add related/proxy field to ForeignKey, OneToManyField and ManyToManyField
-# TODO add field compute operation (maybe use getter with api records)
-# TODO store generic foreign key values to database
 class ModelBase(type):
     """Metaclass for all models."""
     Meta: Options = None
-    _meta: Options = None
+    _meta: Options
     __model__ = None
 
-    def __new__(cls, name, bases, attrs):
+    def __new__(cls, name, bases, attrs, helper=False, **kwargs):
         super_new = super().__new__
 
-        if not bases or 'env' in attrs:
+        # Create the class.
+        attr_meta = attrs.pop('Meta', None)
+
+        if helper:
+            base = bases[0]
+            Options.create_helper(base, attrs, attr_meta)
+            return base
+
+        # Also ensure initialization is only performed for subclasses of Model
+        # (excluding Model class itself).
+        parents = [b for b in bases if isinstance(b, ModelBase)]
+        if not parents:
             return super_new(cls, name, bases, attrs)
 
-        attr_meta = meta = attrs.pop('Meta', None)
-        registry = apps
-        if meta:
-            registry = getattr(meta, 'apps', registry)
-        app = attrs.get('__app__')
-        addon = getattr(meta, 'addon', None)
-        parents = [b for b in bases if isinstance(b, ModelBase) and b.Meta]
+        override = helper
 
-        if app is None:
-            module = attrs.get('__module__')
-            new_attrs = {'__module__': module}
+        module = attrs.pop('__module__')
+        new_attrs = {'__module__': module}
+        classcell = attrs.pop('__classcell__', None)
+        if classcell is not None:
+            new_attrs['__classcell__'] = classcell
 
-            # Look for an application configuration to attach the model to.
-            app_config = addon = apps.get_containing_app_config(module)
-
-            abstract = getattr(attr_meta, 'abstract', False)
-            if getattr(meta, 'schema', None) is None:
-                if app_config is None:
-                    if not abstract:
-                        raise RuntimeError(
-                            "Model class %s.%s doesn't declare an explicit "
-                            "app_label and isn't in an application in "
-                            "INSTALLED_APPS." % (module, name)
-                        )
-
-                else:
-                    schema = app_config.schema
-            if addon:
-                schema = addon.schema
+        # Pass all attrs without a (Orun-specific) contribute_to_class()
+        # method to type.__new__() so that they're properly initialized
+        # (i.e. __set_name__()).
+        contributable_attrs = {}
+        for obj_name, obj in attrs.items():
+            if _has_contribute_to_class(obj):
+                contributable_attrs[obj_name] = obj
             else:
-                schema = module.split('.', 1)[0]
-                addon = registry.addons[schema]
+                new_attrs[obj_name] = obj
+        new_class = super_new(cls, name, bases, new_attrs, **kwargs)
 
-            overriding = getattr(meta, 'overriding', None)
-            override = getattr(meta, 'override', bool(overriding))
-            if overriding:
-                bases = (overriding,) + bases
-                parents.insert(0, overriding)
+        abstract = getattr(attr_meta, 'abstract', False)
+        meta = attr_meta or getattr(new_class, 'Meta', None)
+        base_meta = getattr(new_class, '_meta', None)
 
-            contributable_attrs = {}
-            for obj_name, obj in list(attrs.items()):
-                if _has_contribute_to_class(obj):
-                    contributable_attrs[obj_name] = obj
-                else:
-                    new_attrs[obj_name] = obj
+        # Look for an application configuration to attach the model to.
+        app_config = apps.get_containing_app_config(module)
 
-            new_class: ModelBase = super_new(cls, name, bases, new_attrs)
-            meta_attrs = {
-                'addon': addon,
-                'override': override,
-            }
-            if not override:
-                meta_attrs['schema'] = schema
-            opts = Options.from_model(meta, new_class, parents, meta_attrs)
-            if override and opts.inherits:
-                opts.inherits.Meta.overrides.append(new_class)
-            if overriding:
-                opts.inherits.Meta.swapped = True
-            new_class.Meta = opts
-            opts.contributable_attrs = contributable_attrs
+        if app_config:
+            schema = app_config.schema
+        elif (schema := getattr(meta, 'schema', None)) is None:
+            schema = module
 
-            attr_items = attrs.items()
-            if opts.override:
-                opts.inherits.Meta.swapped = True
-            if opts.proxy or opts.override:
-                opts.parents = opts.inherits.Meta.parents
-
-            # Check if primary key is needed
-            if not opts.override and not opts.abstract:
-                pk = None
-                for k, attr in attr_items:
-                    if isinstance(attr, Field) and attr.primary_key:
-                        opts.pk = pk = attr
-                if pk is None and not opts.proxy:
-                    if parents:
-                        for b in parents:
-                            if b.Meta.abstract:
-                                for f in b.Meta.local_fields.values():
-                                    if f.primary_key:
-                                        opts.pk = pk = f
-                                        break
-                            else:
-                                if b.Meta.pk is not None:
-                                    pk = OneToOneField(
-                                        b, primary_key=True, auto_created=True, parent_link=True, on_delete=CASCADE
-                                    )
-                                    pk.name = '%s_ptr' % b.Meta.model_name
-                                    attr_items = chain(((pk.name, pk),), attr_items)
-                                    new_class.Meta.parents[b] = pk
-                                    opts.pk = pk
-                                    break
-                    if pk is None:
-                        pk = BigAutoField(primary_key=True)
-                        attr_items = chain((('id', pk),), attr_items)
-                        opts.pk = pk
-            fields = {k: v for k, v in attr_items if isinstance(v, BaseField)}
-            opts.local_fields = fields
-
-            if not opts.inherits and not opts.abstract and opts.log_changes and settings.AUDIT_LOG_BACKEND:
-                import_string(settings.AUDIT_LOG_BACKEND).prepare_meta_class(opts)
-
-            if not opts.abstract:
-                addon.models.append(new_class)
-
-                new_class.add_to_class(
+        new_class.Meta = Options.from_model(meta, new_class, parents, {'addon': app_config, 'schema': schema})
+        new_class.add_to_class('_meta', new_class.Meta())
+        if not abstract:
+            new_class.add_to_class(
+                'DoesNotExist',
+                subclass_exception(
                     'DoesNotExist',
-                    subclass_exception(
-                        'DoesNotExist',
-                        tuple(
-                            x.DoesNotExist for x in parents if hasattr(x, '_meta') and not x.Meta.abstract
-                        ) or (ObjectDoesNotExist,),
-                        module,
-                        attached_to=new_class))
-                new_class.add_to_class(
+                    tuple(
+                        x.DoesNotExist for x in parents if hasattr(x, '_meta') and not x._meta.abstract
+                    ) or (ObjectDoesNotExist,),
+                    module,
+                    attached_to=new_class))
+            new_class.add_to_class(
+                'MultipleObjectsReturned',
+                subclass_exception(
                     'MultipleObjectsReturned',
-                    subclass_exception(
-                        'MultipleObjectsReturned',
-                        tuple(
-                            x.MultipleObjectsReturned for x in parents if hasattr(x, '_meta') and not x.Meta.abstract
-                        ) or (MultipleObjectsReturned,),
-                        module,
-                        attached_to=new_class))
+                    tuple(
+                        x.MultipleObjectsReturned for x in parents if hasattr(x, '_meta') and not x._meta.abstract
+                    ) or (MultipleObjectsReturned,),
+                    module,
+                    attached_to=new_class))
+            if base_meta and not base_meta.abstract:
+                # Non-abstract child classes inherit some attributes from their
+                # non-abstract parent (unless an ABC comes before it in the
+                # method resolution order).
+                if not hasattr(meta, 'ordering'):
+                    new_class._meta.ordering = base_meta.ordering
+                if not hasattr(meta, 'get_latest_by'):
+                    new_class._meta.get_latest_by = base_meta.get_latest_by
 
-            return new_class
+        is_proxy = new_class._meta.proxy
 
-        new_class = super_new(cls, name, bases, attrs)
-        base_model = attrs.get('__model__')
-        opts = new_class.Meta(base_model=base_model, apps=app)
-        new_class.add_to_class('_meta', opts)
+        # If the model is a proxy, ensure that the base class
+        # hasn't been swapped out.
+        if is_proxy and base_meta and base_meta.swapped:
+            raise TypeError("%s cannot proxy the swapped model '%s'." % (name, base_meta.swapped))
 
-        # TODO optimize the fields copy
-        local_fields = {}
-        fields = {}
-        one_to_one = new_class.Meta.pk.one_to_one
-        is_proxy = new_class.Meta.proxy
+        # Add remaining attributes (those with a contribute_to_class() method)
+        # to the class.
+        for obj_name, obj in contributable_attrs.items():
+            new_class.add_to_class(obj_name, obj)
+
+        field_names = {f.name for f in new_class._meta.fields}
+
+        # Basic setup for proxy models.
         if is_proxy:
-            new_class._meta.concrete_model = apps[new_class._meta.inherits]
+            base = None
+            for parent in [kls for kls in parents if hasattr(kls, '_meta')]:
+                if parent._meta.abstract:
+                    if parent._meta.fields:
+                        raise TypeError(
+                            "Abstract base class containing model fields not "
+                            "permitted for proxy model '%s'." % name
+                        )
+                    else:
+                        continue
+                if base is None:
+                    base = parent
+                elif parent._meta.concrete_model is not base._meta.concrete_model:
+                    raise TypeError("Proxy model '%s' has more than one non-abstract model base class." % name)
+            if base is None:
+                raise TypeError("Proxy model '%s' has no non-abstract model base class." % name)
+            new_class._meta.setup_proxy(base)
+            new_class._meta.concrete_model = base._meta.concrete_model
         else:
             new_class._meta.concrete_model = new_class
-        for b in reversed(bases):
-            if new_class.Meta.inherits and b._meta and b._meta.auto_field:
-                new_class._meta.auto_field = b._meta.auto_field
-            if ((one_to_one and base_model.Meta.parents) or is_proxy or new_class._meta.override) and b._meta:
-                # add all fields to new model
 
-                for f in b._meta.fields:
-                    new_class._meta.fields.append(f)
 
-                if is_proxy or new_class._meta.override:
-                    new_class._meta.local_fields.extend(b._meta.local_fields)
-                if new_class._meta.override:
-                    for f in new_class._meta.local_fields:
-                        fields[f.name] = f
-                        f.model = new_class
+        # Collect the parent links for multi-table inheritance.
+        parent_links = {}
+        for base in reversed([new_class] + parents):
+            # Conceptually equivalent to `if base is Model`.
+            if not hasattr(base, '_meta'):
+                continue
+            # Skip concrete parent classes.
+            if base != new_class and not base._meta.abstract:
+                continue
+            # Locate OneToOneField instances.
+            for field in base._meta.local_fields:
+                if isinstance(field, OneToOneField) and field.remote_field.parent_link:
+                    related = resolve_relation(new_class, field.remote_field.model)
+                    parent_links[make_model_tuple(related)] = field
 
-            elif b._meta:
-                if b._meta.parents:
-                    new_class._meta.parents.update(b._meta.parents)
+        # Track fields inherited from base models.
+        inherited_attributes = set()
+        # Do the appropriate setup for any model parents.
+        for base in new_class.mro():
+            if base not in parents or not hasattr(base, '_meta'):
+                # Things without _meta aren't functional models, so they're
+                # uninteresting parents.
+                inherited_attributes.update(base.__dict__)
+                continue
+
+            parent_fields = base._meta.local_fields
+            if not base._meta.abstract:
+                # Check for clashes between locally declared fields and those
+                # on the base classes.
+                for field in parent_fields:
+                    if field.name in field_names:
+                        raise FieldError(
+                            'Local field %r in class %r clashes with field of '
+                            'the same name from base class %r.' % (
+                                field.name,
+                                name,
+                                base.__name__,
+                            )
+                        )
+                    else:
+                        new_field = copy.deepcopy(field)
+                        new_field.local = False
+                        new_class.add_to_class(field.name, new_field)
+                        inherited_attributes.add(field.name)
+
+                # Concrete classes...
+                base = base._meta.concrete_model
+                base_key = base._meta.name
+                if base_key in parent_links:
+                    field = parent_links[base_key]
+                elif not is_proxy:
+                    attr_name = '%s_ptr' % base._meta.model_name
+                    field = OneToOneField(
+                        base,
+                        on_delete=CASCADE,
+                        name=attr_name,
+                        auto_created=True,
+                        parent_link=True,
+                    )
+                    base._meta.child_links.append(new_class)
+
+                    if attr_name in field_names:
+                        raise FieldError(
+                            "Auto-generated field '%s' in class %r for "
+                            "parent_link to base class %r clashes with "
+                            "declared field of the same name." % (
+                                attr_name,
+                                name,
+                                base.__name__,
+                            )
+                        )
+
+                    # Only add the ptr field if it's not already present;
+                    # e.g. migrations will already have it specified
+                    if not hasattr(new_class, attr_name):
+                        new_class.add_to_class(attr_name, field)
                 else:
-                    new_class._meta.auto_field = b._meta.auto_field
-                for f in b._meta.fields:
-                    fields[f.name] = f
-                    new_class._meta.fields.append(f)
-                for f in b._meta.local_fields:
-                    f.model = new_class
-                    new_class._meta.local_fields.append(f)
+                    field = None
+                new_class._meta.parents[base] = field
             else:
-                # Add remaining attributes (those with a contribute_to_class() method)
-                # to the class.
-                for k, v in b.Meta.local_fields.items():
-                    f = fields.get(k)
-                    if b.Meta.abstract:
-                        if f is None:
-                            field = v.clone()
-                        elif f in new_class._meta.local_fields:
-                            field = v.assign(f)
-                        else:
-                            field = v.clone(f)
-                    elif f:
-                        field = v.assign(f)
-                    else:
-                        field = v
+                base_parents = base._meta.parents.copy()
 
-                    if k in fields:
-                        new_class._meta.local_fields.remove(fields[k])
-                    else:
-                        new_class.add_to_class(k, field)
-                    new_class._meta.local_fields.append(field)
-                    fields[k] = field
+                # Add fields from abstract base class if it wasn't overridden.
+                for field in parent_fields:
+                    if (field.name not in field_names and
+                            field.name not in new_class.__dict__ and
+                            field.name not in inherited_attributes):
+                        new_field = copy.deepcopy(field)
+                        new_field.model = None
+                        new_class.add_to_class(field.name, new_field)
+                        # Replace parent links defined on this base by the new
+                        # field. It will be appropriately resolved if required.
+                        if field.one_to_one:
+                            for parent, parent_link in base_parents.items():
+                                if field == parent_link:
+                                    base_parents[parent] = new_field
 
-                for obj_name, obj in b.Meta.contributable_attrs.items():
-                    if not isinstance(obj, Field):
-                        new_class.add_to_class(obj_name, obj)
+                # Pass any non-abstract parent classes onto child.
+                new_class._meta.parents.update(base_parents)
 
-                for parent, field in b.Meta.parents.items():
-                    if parent.Meta.proxy:
-                        m = app.models[parent.Meta.inherits.Meta.name]
-                    else:
-                        m = app.models[parent.Meta.name]
-                    new_class._meta.parents[m] = fields.get(field.name, field)
+            # Inherit private fields (like GenericForeignKey) from the parent
+            # class
+            # TODO virtual fields
+            # for field in base._meta.private_fields:
+            #     if field.name in field_names:
+            #         if not base._meta.abstract:
+            #             raise FieldError(
+            #                 'Local field %r in class %r clashes with field of '
+            #                 'the same name from base class %r.' % (
+            #                     field.name,
+            #                     name,
+            #                     base.__name__,
+            #                 )
+            #             )
+            #     else:
+            #         field = copy.deepcopy(field)
+            #         if not base._meta.abstract:
+            #             field.mti_inherited = True
+            #         new_class.add_to_class(field.name, field)
 
-        for f in new_class._meta.local_fields:
-            if f.primary_key:
-                new_class._meta.pk = f
+        # Copy indexes so that index names are unique when models extend an
+        # abstract model.
+        new_class._meta.indexes = [copy.deepcopy(idx) for idx in new_class._meta.indexes]
 
-        app.register_model(new_class)
+        if abstract:
+            # Abstract base models can't be instantiated and don't appear in
+            # the list of models for an app. We do the final setup for them a
+            # little differently from normal models.
+            # attr_meta.abstract = False
+            # new_class.Meta = attr_meta
+            return new_class
+
+
+        app_config.models.append(new_class)
+        apps.register_model(new_class)
         new_class._prepare()
         return new_class
-
-    def __build__(cls, app):
-        bases = [cls] + [
-            app.models.get(base.Meta.name, base)
-            for base in cls.Meta.bases
-            if issubclass(base, Model) and base.Meta and base is not cls
-        ]
-        new_cls = type(cls.__name__, tuple(bases), {'__module__': cls.__module__, '__app__': app, '__model__': cls})
-        if app.models_ready:
-            app.do_pending_operations()
-        return new_cls
 
     def add_to_class(cls, name, value):
         if _has_contribute_to_class(value):
@@ -587,12 +602,6 @@ class Model(metaclass=ModelBase):
         meta = meta or self._meta
         return [getattr(obj, meta.pk.attname) for obj in self]
 
-    def _get_external_id(self):
-        result = defaultdict(list)
-        for obj in apps['ir.object'].objects.filter(model_name=self._meta.name, object_id__in=self._get_pk_vals()).only('schema', 'name', 'object_id'):
-            result[obj.object_id].append('%s.%s' % (obj.schema, obj.name))
-        return result
-
     def get_deferred_fields(self):
         """
         Return a set containing names of deferred fields for this instance.
@@ -662,6 +671,10 @@ class Model(metaclass=ModelBase):
                 field.delete_cached_value(self)
 
         self._state.db = db_instance._state.db
+
+    @classmethod
+    def select(cls, *fields):
+        return cls._default_manager.only(*[str(f) for f in fields])
 
     def serializable_value(self, field_name):
         """
@@ -1769,363 +1782,6 @@ class Model(metaclass=ModelBase):
                 )
         return errors
 
-    @api.method
-    def load_views(cls, views=None, toolbar=False, **kwargs):
-        if views is None and 'action' in kwargs:
-            Action = apps['ui.action.window']
-            action = Action.objects.get(kwargs.get('action'))
-            views = {mode: None for mode in action.view_mode.split(',')}
-        elif views is None:
-            views = {'form': None, 'list': None, 'search': None}
-
-        return {
-            'fields': cls.get_fields_info(),
-            'views': {
-                mode: cls.get_view_info(view_type=mode, view=v, toolbar=toolbar)
-                for mode, v in views.items()
-            }
-        }
-
-    @classmethod
-    def get_field_info(cls, field, view_type=None):
-        return field.formfield
-
-    @api.method
-    def get_fields_info(cls, view_id=None, view_type='form', toolbar=False, context=None, xml=None):
-        opts = cls._meta
-        if xml is not None:
-            fields = get_xml_fields(xml)
-            return {
-                f.name: cls.get_field_info(f, view_type)
-                for f in [opts.fields[f.attrib['name']] for f in fields if 'name' in f.attrib] if f
-            }
-        if view_type == 'search':
-            searchable_fields = opts.searchable_fields
-            if searchable_fields:
-                return {f.name: cls.get_field_info(f, view_type) for f in searchable_fields}
-            return {}
-        else:
-            r = {}
-            for field in opts.fields:
-                r[field.name] = cls.get_field_info(field, view_type)
-            return r
-
-    @classmethod
-    def _get_default_view(cls, view_type):
-        from orun.template.loader import select_template
-        from orun.contrib.admin.models import ui
-        template = select_template(
-            [
-                'views/%s/%s.jinja2' % (cls._meta.name, view_type),
-                'views/%s/%s.html' % (cls._meta.name, view_type),
-                'views/%s/%s.xml' % (cls._meta.name, view_type),
-                'views/%s/%s.xml' % (cls._meta.addon.schema, view_type),
-                'views/%s.jinja2' % view_type,
-            ], using='jinja2'
-        )
-        templ = template.render(context=dict(opts=cls._meta, _=gettext))
-        xml = ui.etree.fromstring(templ)
-        ui.resolve_refs(xml)
-        templ = ui.etree.tostring(xml, encoding='utf-8')
-        return templ.decode('utf-8')
-
-    @classmethod
-    def _get_default_form_view(cls):
-        return cls._get_default_view(view_type='form')
-
-    @classmethod
-    def _get_default_list_view(cls):
-        pass
-
-    @classmethod
-    def _get_default_search_view(cls):
-        pass
-
-    @api.method
-    def write(cls: Type['Model'], data):
-        if isinstance(data, dict):
-            data = [data]
-        res = []
-        for row in data:
-            pk = row.pop('id', None)
-            if pk:
-                #_cache_change = _cache_change or cls.check_permission('change')
-                obj = cls.get(pk)
-            else:
-                #_cache_create = _cache_create or cls.check_permission('create')
-                obj = cls()
-
-            # dispatch events
-            # TODO events should be called from orm api internals
-            if obj._state.adding:
-                before_insert.send(cls._meta.name, old=None, new=obj)
-            elif cls._meta.name in before_update.models:
-                # make a copy of old data
-                old = copy.deepcopy(obj)
-                cls._from_json(obj, row)
-                before_update.send(cls._meta.name, old=obj, new=obj)
-            else:
-                cls._from_json(obj, row)
-            if obj._state.adding:
-                cls._from_json(obj, row)
-            if obj._state.adding:
-                if cls._meta.name in after_insert.models:
-                    after_insert.send(cls._meta.name, old=None, new=obj)
-
-            res.append(obj.pk)
-        return res
-
-    @api.method
-    def destroy(self, ids):
-        # self.check_permission('delete')
-        ids = [v for v in self._search({'pk__in': ids}).only('pk')]
-        r = []
-        if not ids:
-            raise ObjectDoesNotExist()
-        for obj in ids:
-            r.append(obj.pk)
-            obj.delete()
-        return {
-            'ids': r,
-        }
-
-    @api.method
-    def field_change_event(cls, field, record, *args, **kwargs):
-        for fn in cls._meta.field_change_event[field]:
-            record = fn(cls, record)
-        return record
-
-    @api.record
-    def _proxy_field_change(self, field):
-        obj = getattr(self, field.proxy_field[0])
-        if obj is not None:
-            obj = getattr(obj, field.proxy_field[1])
-        return {
-            'value': {field.name: obj}
-        }
-
-    @api.method
-    def get(self, id):
-        if id:
-            obj = self._search().get(pk=id)
-            obj.__serialize__ = True
-            return obj
-        else:
-            raise self.DoesNotExist()
-
-    @api.method
-    def create_name(self, name, *args, **kwargs):
-        context = kwargs.get('context')
-        opts = self._meta
-        assert opts.title_field
-        data = {opts.title_field: name}
-        if context:
-            for k, v in context.items():
-                if k.startswith('default_'):
-                    data[k[8:]] = v
-        return self.objects.create(**data)._format_instance_label()
-
-    @api.method
-    def reorder(cls, ids):
-        objs = cls.objects.only('pk').filter(pk__in=ids)
-        sequence = {id: i for i, id in enumerate(ids)}
-        for obj in objs:
-            obj.sequence = sequence[obj.pk]
-        cls.objects.bulk_update(objs, [cls._meta.sequence_field])
-
-    @api.method
-    def group_by(self, grouping, params):
-        where = params
-        field_name = grouping[0]
-        field = self._meta.fields[field_name]
-        if field.group_choices:
-            qs = field.get_group_choices(self, where)
-        else:
-            qs = self._search(where)
-            qs = qs.values(field.name).annotate(pk__count=Count('pk')).order_by(field.name)
-        res = []
-        if field.many_to_one:
-            for row in qs:
-                key = row[field.name]
-                count = row['pk__count']
-                s = f'{field.remote_field.model.objects.get(pk=key)._format_instance_label() if key else gettext("(Undefined)")} ({count})'
-                res.append({
-                    '$params': {field_name: key},
-                    field_name: s,
-                    '$count': count,
-                })
-            return res
-        elif field.choices:
-            choices = dict(field.flatchoices)
-            values = {row[field.name]: row['pk__count'] for row in qs}
-            for k, n in choices.items():
-                count = values.get(k)
-                s = force_str(choices.get(k, k), strings_only=True)
-                if k in values and count:
-                    s += f' ({count})'
-                res.append({
-                    '$params': {field_name: k},
-                    field_name: s,
-                    '$count': count,
-                })
-            for k, v in [(k, v) for k, v in values.items() if k not in choices]:
-                res.append({
-                    '$params': {field_name: k},
-                    field_name: (gettext("(Undefined)") if k is None else k) + f' {(v)}',
-                    '$count': v,
-                })
-            return res
-        return list(qs)
-
-    def _api_format_choice(self, fmt=None, **context):
-        return {'id': self.pk, 'text': self.__str__()}
-
-    @api.method
-    def get_formview_action(self, id=None):
-        return {
-            'action_type': 'ui.action.window',
-            'model': self._meta.name,
-            'object_id': id,
-            'view_mode': 'form',
-            'view_type': 'form',
-            'target': 'current',
-            'views': {
-                'form': None,
-            },
-            'context': {},
-        }
-
-    @api.method
-    def search(cls, fields=None, count=None, page=None, limit=None, **kwargs):
-        qs = cls._search(fields=fields, **kwargs)
-        if count:
-            count = qs.count()
-        if limit is None:
-            limit = CHOICES_PAGE_LIMIT
-        elif limit == -1:
-            limit = None
-        if page and limit:
-            page = int(page)
-            limit = int(limit)
-            qs = qs[(page - 1) * limit:page * limit]
-        # defer = qs.query.deferred_loading[0]
-        defer = [f.name for f in cls._meta.fields if f.defer]
-        return {
-            'data': [obj.to_json(fields=fields, exclude=defer) for obj in qs],
-            'count': count,
-        }
-
-    @classmethod
-    def _search(self, where=None, fields=None, params=None, join=None, **kwargs):
-        # self.check_permission('read')
-        qs = self.objects.all()
-        domain = kwargs.get('domain')
-        if params is None:
-            params = {}
-        if domain:
-            params.update(domain)
-        if fields:
-            if 'record_name' in fields:
-                fields.append(self._meta.title_field)
-
-            # optimize select_related fields
-            rel_fields = []
-            only = []
-            for f in fields:
-                field = self._meta.fields[f]
-                if field.many_to_one:
-                    rel_fields.append(field.name)
-                    rel_fields.extend(field.get_select_related(only))
-
-            qs = qs.select_related(*rel_fields)
-            fields = [f.attname for f in [self._meta.fields[f] for f in fields] if f.concrete]
-            if only:
-                fields.extend(only)
-
-            pk = self._meta.pk.attname
-            if pk not in fields:
-                fields.append(pk)
-            # load only selected fields
-            if fields:
-                qs = qs.only(*fields)
-        elif self._meta.deferred_fields:
-            qs.defer(self._meta.deferred_fields)
-
-        if where:
-            if isinstance(where, list):
-                _args = []
-                _kwargs = {}
-                for w in where:
-                    for k, v in w.items():
-                        f = None
-                        if '__' in k:
-                            f = self._meta.fields[k.split('__', 1)[0]]
-                        if isinstance(f, ForeignKey):
-                            name_fields = list(chain(*(_resolve_fk_search(fk) for fk in f.related_model._meta.get_name_fields())))
-                            if len(name_fields) == 1:
-                                _args.append(Q(**{f'{f.name}__{name_fields[0]}__icontains': v}))
-                            elif name_fields:
-                                _args.append(reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f.name}__{fk}__icontains': v}) for fk in name_fields]))
-                            else:
-                                kwargs[k] = v
-                        else:
-                            _kwargs[k] = v
-                qs = qs.filter(*_args, **_kwargs)
-            elif isinstance(where, dict):
-                qs = qs.filter(**where)
-            elif where is not None:
-                qs = qs.filter(where)
-        if params:
-            qs = qs.filter(**params)
-        # filter active records only
-        if self._meta.active_field is not None:
-            qs = qs.filter(**{self._meta.active_field: True})
-        return qs
-
-    @api.method
-    def search_by_name(
-        self, name=None, count=None, page=None, label_from_instance=None, name_fields=None, *args, exact=False,
-        **kwargs
-    ):
-        fmt = kwargs.get('format')
-        where = kwargs.get('params')
-        q = None
-        if name:
-            if name_fields is None:
-                name_fields = chain(*(_resolve_fk_search(f) for f in self._meta.get_name_fields()))
-            else:
-                name_fields = [f.name for f in name_fields]
-            if exact:
-                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f}__iexact': name}) for f in name_fields])
-            else:
-                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f}__icontains': name}) for f in name_fields])
-        if where:
-            if q is None:
-                q = Q(**where)
-            else:
-                q &= Q(**where)
-        if q is not None:
-            kwargs = {'where': q}
-        qs = self._search(*args, **kwargs)
-        limit = kwargs.get('limit') or 10
-        if count:
-            count = qs.count()
-        if page:
-            page = int(page)
-            qs = qs[(page - 1) * limit:page * limit]
-        else:
-            qs = qs[:limit]
-        if isinstance(label_from_instance, list):
-            label_from_instance = lambda obj, format, label_from_instance=label_from_instance: (obj.pk, ' - '.join([str(getattr(obj, f, '')) for f in label_from_instance if f in self._meta.fields_dict]))
-        if callable(label_from_instance):
-            res = [label_from_instance(obj, fmt) for obj in qs]
-        else:
-            res = [obj._api_format_choice(fmt, name=name) for obj in qs]
-        return {
-            'count': count,
-            'items': res,
-        }
-
     @classmethod
     def _from_json(cls, instance, data, **kwargs):
         data.pop('id', None)
@@ -2170,7 +1826,7 @@ class Model(metaclass=ModelBase):
                 raise
         return instance
 
-    def to_json(self, fields=None, exclude=None, view_type=None):
+    def to_dict(self, fields=None, exclude=None, view_type=None):
         opts = self._meta
         data = {}
         if fields:
@@ -2191,72 +1847,6 @@ class Model(metaclass=ModelBase):
             data['id'] = self.pk
         return data
 
-    @api.method
-    def get_field_choices(self, field, q=None, count=False, ids=None, page=None, exact=False, limit=None, **kwargs):
-        fmt = kwargs.get('format', 'str')
-        field_name = field
-        field = self._meta.fields[field_name]
-        related_model = apps[field.remote_field.model]
-        search_params = {}
-        if limit:
-            search_params['limit'] = limit
-        if field.many_to_many:
-            field = field.remote_field.target_field
-        if field.many_to_one:
-            if ids is None:
-                search_params['name_fields'] = kwargs.get('name_fields', (field.name_fields is not None and [related_model._meta.fields_dict[f] for f in field.name_fields]) or None)
-                search_params['name'] = q
-                search_params['page'] = page
-                search_params['count'] = count
-                filter = kwargs.get('filter', field.filter)
-                if filter:
-                    search_params['params'] = filter
-            else:
-                if isinstance(ids, (list, tuple)):
-                    search_params['params'] = {'pk__in': ids}
-                else:
-                    search_params['params'] = {'pk': ids}
-            label_from_instance = kwargs.get('label_from_instance', field.label_from_instance or kwargs.get('name_fields'))
-            return related_model.search_by_name(label_from_instance=label_from_instance, exact=exact, format=fmt, **search_params)
-        elif field.one_to_many:
-            from orun.db.models.query import QuerySet
-            where = kwargs['filter']
-            qs = field.get_queryset(where)
-            return {
-                'data': [obj.to_json() for obj in qs] if isinstance(qs, QuerySet) else qs,
-                'count': count,
-            }
-
-    @api.method
-    def get_view_info(self, view_type, view=None, toolbar=False):
-        View = apps['ui.view']
-        model = apps['content.type']
-
-        if view is None:
-            view = View.objects.filter(mode='primary', view_type=view_type, model=self._meta.name).first()
-        elif isinstance(view, (int, str)):
-            view = View.objects.get(pk=view)
-
-        if view:
-            xml_content = view.get_xml(self, {'request': self.env.request})
-            r = {
-                'content': etree.tostring(xml_content, encoding='utf-8').decode('utf-8'),
-                'fields': self.get_fields_info(view_type=view_type, xml=xml_content)
-            }
-        else:
-            content = self._get_default_view(view_type=view_type)
-            r = {
-                'content': content,
-                'fields': self.get_fields_info(view_type=view_type, xml=content),
-            }
-        if toolbar and view_type != 'search':
-            bindings = apps['ui.action'].get_bindings(self._meta.name)
-            r['toolbar'] = {
-                'print': [action.to_json() for action in bindings['print'] if view_type == 'list' or not action.multiple],
-                'action': [action.to_json() for action in bindings['action'] if view_type == 'list' or not action.multiple],
-            }
-        return r
-
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
         if not self._state.loading and key in self._meta.fields:
@@ -2270,10 +1860,10 @@ class Model(metaclass=ModelBase):
             if not f.name:
                 continue
             v = getattr(self, f.name)
-            if self._meta.title_field == f.name:
+            if self._meta.name_field == f.name:
                 new_item[f.name] = gettext('%s (copy)') % v
             elif f.one_to_many:
-                values = new_item[f.name] = [
+                new_item[f.name] = [
                     {
                         'action': 'CREATE',
                         # remove parent record information
@@ -2288,33 +1878,6 @@ class Model(metaclass=ModelBase):
     def __iter__(self):
         """Emulate the Recordset behavior"""
         yield self
-
-    @api.method
-    def copy(cls, id):
-        # ensure permission
-        instance = cls.get(id)
-        return copy.copy(instance)
-
-    @api.method
-    def get_defaults(self, context=None, *args, **kwargs):
-        r = {}
-        defaults = context or {}
-        for f in self._meta.fields:
-            if 'default_' + f.name in defaults:
-                val = r[f.name] = defaults['default_' + f.name]
-                if val and isinstance(f, ForeignKey):
-                    r[f.name] = [val, str(f.remote_field.model.objects.get(pk=val))]
-            elif f.editable:
-                if f.default is not NOT_PROVIDED:
-                    if callable(f.default):
-                        r[f.name] = f.value_to_json(f.default())
-                    else:
-                        r[f.name] = f.value_to_json(f.default)
-                elif isinstance(f, BooleanField):
-                    r[f.name] = False
-        if 'creation_name' in kwargs and self._meta.title_field:
-            r[self._meta.title_field] = kwargs['creation_name']
-        return r or None
 
 
 ############################################
@@ -2357,21 +1920,6 @@ def make_foreign_order_accessors(model, related_model):
 ########
 # MISC #
 ########
-
-
-def _resolve_fk_search(field: Field):
-    if isinstance(field, ForeignKey):
-        rel_model = apps[field.remote_field.model]
-        name_fields = field.name_fields
-        if not name_fields:
-            name_fields = []
-            for f in rel_model._meta.get_name_fields():
-                if isinstance(f, ForeignKey):
-                    name_fields.extend(_resolve_fk_search(f))
-                else:
-                    name_fields.append(f.name)
-        return [f'{field.name}__{f}' for f in name_fields]
-    return [field.name]
 
 
 def model_unpickle(model_id):

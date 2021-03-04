@@ -4,6 +4,6 @@
     <field name="name">mail.res.partner.form.inherit</field>
     <field name="parent" ref="view.res.partner.form"/>
     <field name="model">res.partner</field>
-    <field name="template_name">mail/views/res.partner/form.xml</field>
+    <field name="template_name">mail/views/res.partner/form.html</field>
   </object>
 </data>

@@ -1,7 +1,8 @@
 import copy
-from typing import List, Optional
+from typing import Sequence, List, Optional, Dict, Union
 import inspect
 from collections import defaultdict
+from functools import partialmethod, partial, wraps
 
 from orun.apps import apps
 from orun.conf import settings
@@ -68,13 +69,13 @@ class Options:
     abstract = False
     proxy = False
     swapped = False
+    overridden = False
     db_table: str = None
     db_schema: str = None
     db_tablespace: str = None
     tablename: str = None
     name: str = None
     concrete = None
-    override = False
     addon = None
     schema = None
     model = None
@@ -92,7 +93,7 @@ class Options:
     default_related_name: str = None
     auto_created = False
     field_change_event = None
-    title_field = None
+    name_field = None
     status_field = None
     sequence_field: str = None
     active_field: str = None
@@ -112,15 +113,14 @@ class Options:
     }
     REVERSE_PROPERTIES = {'related_objects', 'fields_map', '_relation_tree'}
 
-    def __init__(self, base_model=None, apps=None):
-        self.base_model = base_model
+    def __init__(self):
         self.apps = apps
         self.parents = {}
         self._get_fields_cache = {}
         if self.field_change_event is None:
             self.__class__.field_change_event = self.field_change_event = defaultdict(list)
         self.local_fields = []
-        self.fields: List[Field] = Fields(self)
+        self.fields: Union[Sequence[Field], Dict[str, Field]] = Fields(self)
         self.local_managers = []
         self.base_manager_name = None
         self.default_manager_name = None
@@ -136,9 +136,9 @@ class Options:
         self.required_db_features = []
         self.required_db_vendor = None
         self.auto_field = None
-        self.abstract = False
         self.concrete_model = None
         self.related_fkey_lookups = []
+        self.child_links = []
         # For any class that is a proxy (including automatically created
         # classes for deferred object loading), proxy_for_model tells us
         # which class this model is proxying. Note that proxy_for_model
@@ -167,13 +167,15 @@ class Options:
                     cls.tablename = cls.name.split('.', 1)[-1].replace('.', '_')
                     cls.qualname = '{}.{}'.format(cls.db_schema, cls.tablename)
                     cls.db_table = '"{}"."{}"'.format(cls.db_schema, cls.tablename)
+                elif not cls.db_schema:
+                    cls.db_table = f'"{cls.db_table}"'
             else:
                 cls.qualname = cls.tablename = cls.db_table
 
             if cls.inherited is None:
                 cls.inherited = cls.extension or bool(cls.parents)
             if cls.concrete is None:
-                cls.concrete = bool(cls.db_table)
+                cls.concrete = not cls.abstract and bool(cls.db_table)
             if not cls.concrete:
                 cls.managed = False
 
@@ -196,11 +198,11 @@ class Options:
             bases = tuple(bases)
             if parents:
                 for base in bases:
-                    if 'field_groups' in meta_attrs and meta_attrs.get('override'):
+                    if 'fields_groups' in meta_attrs and meta_attrs.get('override'):
                         parent = parents[0]
-                        if not parent.Meta.field_groups:
-                            parent.Meta.field_groups = {}
-                        parent.Meta.field_groups.update(meta_attrs['field_groups'])
+                        if not parent.Meta.fields_groups:
+                            parent.Meta.fields_groups = {}
+                        parent.Meta.fields_groups.update(meta_attrs['fields_groups'])
         else:
             bases = (Options,)
 
@@ -214,14 +216,9 @@ class Options:
             meta_attrs['name'] = meta_attrs['object_name'] = meta_attrs['model_name'] = None
         meta_attrs.setdefault('bases', parents)
         meta_attrs.setdefault('inherited', bool(parents))
-        for parent in parents:
-            if not parent.Meta.abstract:
-                meta_attrs.setdefault('inherits', parent)
-                break
         meta_attrs['model'] = model
 
         opts = type('Options', bases, meta_attrs)
-        opts.overrides = []
         return opts
 
     def contribute_to_class(self, cls, name):
@@ -296,6 +293,36 @@ class Options:
                 auto = AutoField(verbose_name='ID', primary_key=True, auto_created=True)
                 model.add_to_class('id', auto)
 
+    @classmethod
+    def create_helper(cls, model, attrs, meta):
+
+        if meta:
+            assert not hasattr(meta, 'name')
+            attrs = {'__model__': model}
+            for k, v in meta.__dict__.items():
+                if k.startswith('_'):
+                    continue
+                if k == 'field_groups' and model._meta.field_groups:
+                    model._meta.field_groups.update(v)
+                else:
+                    setattr(model._meta, k, v)
+
+        class_helper = type('ModelHelper', (ModelHelper,), attrs)
+        attrs.pop('__module__', None)
+        attrs.pop('__qualname__', None)
+        for k, v in attrs.items():
+            if attr := getattr(model, k, None):
+                setattr(class_helper, k, attr)
+                if inspect.isfunction(v):
+                    v = method_helper(v, class_helper)
+            if hasattr(v, 'contribute_to_class'):
+                model.add_to_class(k, v)
+            else:
+                setattr(model, k, v)
+
+        if hasattr(model, '_meta'):
+            model._meta.__class__.overridden = True
+
     def add_manager(self, manager):
         self.local_managers.append(manager)
         self._expire_cache()
@@ -304,9 +331,19 @@ class Options:
         # if field.is_relation and field.many_to_many:
         #     self.local_many_to_many.append(field)
 
+        if field.local:
+            self.local_fields.append(field)
+        elif field.many_to_many:
+            field.concrete = False
+
+        for link in self.child_links:
+            new_field = copy.deepcopy(field)
+            new_field.local = False
+            link.add_to_class(field.name, new_field)
+
         # Special field names
-        if self.title_field is None and field.name == 'name':
-            self.__class__.title_field = field.name
+        if self.name_field is None and field.name == 'name':
+            self.__class__.name_field = field.name
         elif self.status_field is None and field.name == 'status':
             self.__class__.status_field = field.name
         elif self.sequence_field is None and field.name == 'sequence':
@@ -315,7 +352,7 @@ class Options:
             self.__class__.active_field = field.name
 
         self.fields.append(field)
-        if self.pk is None and field.primary_key and field in self.local_fields:
+        if self.pk is None and field.primary_key:
             self.pk = field
 
         # If the field being added is a relation to another known field,
@@ -388,14 +425,14 @@ class Options:
             (m[2] for m in sorted(managers)),
         )
 
-    def get_title_field(self):
-        return self.fields[self.title_field]
+    def get_name_field(self):
+        return self.fields[self.name_field]
 
     def get_name_fields(self) -> List['Field']:
         if self.field_groups and 'name_fields' in self.field_groups:
             return [self.fields[field_name] for field_name in self.field_groups['name_fields']]
-        if self.title_field:
-            return [self.fields[self.title_field]]
+        if self.name_field:
+            return [self.fields[self.name_field]]
         return []
 
     def get_active_field(self):
@@ -519,8 +556,8 @@ class Options:
     def searchable_fields(self):
         if self.field_groups and 'searchable_fields' in self.field_groups:
             return [self.fields[field_name] for field_name in self.field_groups['searchable_fields']]
-        elif self.title_field:
-            return [self.get_title_field()]
+        elif self.name_field:
+            return [self.get_name_field()]
         return []
 
     @property
@@ -880,6 +917,17 @@ class Options:
             if isinstance(attr, property):
                 names.append(name)
         return frozenset(names)
+
+
+class ModelHelper:
+    pass
+
+
+def method_helper(fn, class_helper):
+    @wraps(fn)
+    def wrapped(self, *args, **kwargs):
+        return fn(self, class_helper, *args, **kwargs)
+    return wrapped
 
 
 from orun.db.models.fields import Fields, Field

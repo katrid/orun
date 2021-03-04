@@ -30,7 +30,11 @@ class Orun:
         from orun.apps.config import app_config_ready
         app_config_ready.connect(self._app_config_ready)
 
-    def _app_config_ready(self, signal, sender: AppConfig):
+    def setup(self):
+        import orun
+        orun.setup()
+
+    def _app_config_ready(self, signal, sender: AppConfig, **kwargs):
         from orun.urls import path, include
         if not self._mounted:
             self._mount()

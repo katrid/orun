@@ -110,7 +110,6 @@ class DocumentApproval(models.Model):
     def get_confirmation_message(self):
         raise NotImplemented
 
-    @api.record
     def send_approval(self):
         assert self.current_approval_level, 'Não há nível de aprovação especificado para o documento'
         approval_needed.send(self, user=g.user, level=self.current_approval_level)

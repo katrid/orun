@@ -115,12 +115,66 @@ class Q(tree.Node):
         return path, args, kwargs
 
 
-class DeferredAttribute:
+class FieldComparator:
+    def __eq__(self, other):
+        return Q(**{self.field_name: other})
+
+    def __gt__(self, other):
+        return Q(**{f'{self.field_name}__gt': other})
+
+    def __lt__(self, other):
+        return Q(**{f'{self.field_name}__lt': other})
+
+    def __gte__(self, other):
+        return Q(**{f'{self.field_name}__gte': other})
+
+    def __lte__(self, other):
+        return Q(**{f'{self.field_name}__lte': other})
+
+    def __ne__(self, other):
+        return ~Q(**{self.field_name: other})
+
+    def __contains__(self, item):
+        return ~Q(**{f'{self.field_name}__in': item})
+
+    def not_(self, other):
+        return self != other
+
+    def eq(self, other):
+        return self == other
+
+    exact = eq
+
+    def iexact(self, other):
+        return Q(**{f'{self.field_name}__iexact': other})
+
+    def isnull(self):
+        return Q(**{f'{self.field_name}__isnull': True})
+
+    def startswith(self, other):
+        return Q(**{f'{self.field_name}__startswith': other})
+
+    def istartswith(self, other):
+        return Q(**{f'{self.field_name}__istartswith': other})
+
+    def endswith(self, other):
+        return Q(**{f'{self.field_name}__endswith': other})
+
+    def iendswith(self, other):
+        return Q(**{f'{self.field_name}__iendswith': other})
+
+    def __str__(self):
+        return self.field_name
+
+
+class DeferredAttribute(FieldComparator):
     """
     A wrapper for a deferred-loading field. When the value is read from this
     object the first time, the query is executed.
     """
-    def __init__(self, field_name):
+
+    def __init__(self, field, field_name):
+        self.field = field
         self.field_name = field_name
 
     def __get__(self, instance, cls=None):
@@ -160,6 +214,7 @@ class CalculatedAttribute(FieldCacheMixin):
     A wrapper for a deferred-loading field. When the value is read from this
     object the first time, the query is executed.
     """
+
     def __init__(self, field, getter, setter):
         self.field = field
         self.getter = getter
@@ -315,12 +370,14 @@ def check_rel_lookup_compatibility(model, target_opts, field):
       1) model and opts match (where proxy inheritance is removed)
       2) model is parent of opts' model or the other way around
     """
+
     def check(opts):
         return (
-            model._meta.concrete_model == opts.concrete_model or
-            opts.concrete_model in model._meta.get_parent_list() or
-            model in opts.get_parent_list()
+                model._meta.concrete_model == opts.concrete_model or
+                opts.concrete_model in model._meta.get_parent_list() or
+                model in opts.get_parent_list()
         )
+
     # If the field is a primary key, then doing a query against the field's
     # model is ok, too. Consider the case:
     # class Restaurant(models.Model):
@@ -331,8 +388,8 @@ def check_rel_lookup_compatibility(model, target_opts, field):
     # with that. This logic applies only to primary keys, as when doing __in=qs,
     # we are going to turn this into __in=qs.values('pk') later on.
     return (
-        check(target_opts) or
-        (getattr(field, 'primary_key', False) and check(field.model._meta))
+            check(target_opts) or
+            (getattr(field, 'primary_key', False) and check(field.model._meta))
     )
 
 
@@ -351,10 +408,10 @@ class FilteredRelation:
 
     def __eq__(self, other):
         return (
-            isinstance(other, self.__class__) and
-            self.relation_name == other.relation_name and
-            self.alias == other.alias and
-            self.condition == other.condition
+                isinstance(other, self.__class__) and
+                self.relation_name == other.relation_name and
+                self.alias == other.alias and
+                self.condition == other.condition
         )
 
     def clone(self):

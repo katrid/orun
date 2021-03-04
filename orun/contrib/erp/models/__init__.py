@@ -9,3 +9,4 @@ from .sequence import *
 from .config import *
 from .decimal import *
 from .http import *
+from .copy import *

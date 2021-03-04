@@ -27,6 +27,7 @@ from orun.db.models.query_utils import FilteredRelation
 
 # Imports that would create circular imports if sorted
 from orun.db.models.base import DEFERRED, Model  # isort:skip
+from orun.db.models.decorators import ModelHelper
 from orun.db.models.fields.related import (  # isort:skip
     ForeignKey, ForeignObject, OneToOneField, ManyToManyField, OneToManyField,
     ManyToOneRel, ManyToManyRel, OneToOneRel, OneToManyRel,
@@ -47,5 +48,6 @@ __all__ += [
     'FilteredRelation',
     'ForeignKey', 'ForeignObject', 'OneToOneField', 'ManyToManyField', 'OneToManyField',
     'ManyToOneRel', 'ManyToManyRel', 'OneToOneRel', 'OneToManyRel',
+    'override',
 ]
 

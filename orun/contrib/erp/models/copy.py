@@ -14,16 +14,16 @@ class CopyTo(models.Model):
     fields_mapping = models.TextField(label=_('Fields Mapping'), template={'form': 'view.form.code-editor.pug'})
 
     class Meta:
-        name = 'ir.copy.to'
+        name = 'ui.copy.to'
         verbose_name = _('Copying Settings')
         verbose_name_plural = _('Copying Settings')
 
     def __str__(self):
         return 'Copy from "%s" to "%s"' % (self.source_model, self.dest_model)
 
-    @api.method
-    def get_by_model(self, model):
-        opts = self.objects.filter(source_model__name=model)
+    @api.classmethod
+    def get_by_model(cls, model):
+        opts = cls.objects.filter(source_model__name=model)
         return [
             {'id': opt.pk, 'name': str(opt.caption or opt.dest_model.model_class()._meta.verbose_name)}
             for opt in opts

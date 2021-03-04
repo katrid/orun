@@ -585,7 +585,7 @@ var Katrid;
             }
             async copyTo(configId) {
                 if (this.scope.recordId) {
-                    let svc = new Katrid.Services.Model('ir.copy.to');
+                    let svc = new Katrid.Services.Model('ui.copy.to');
                     let res = await svc.rpc('copy_to', [configId, this.scope.recordId]);
                     let model = new Katrid.Services.Model(res.model);
                     let views = await model.getViewInfo({ view_type: 'form' });
@@ -646,7 +646,7 @@ var Katrid;
                     this.views = res.views;
                     if (res.views.form) {
                         console.log('this.model.info', this.model);
-                        let copyTo = new Katrid.Services.Model('ir.copy.to');
+                        let copyTo = new Katrid.Services.Model('ui.copy.to');
                         copyTo.rpc('get_by_model', [this.model.name])
                             .then(res => {
                             this.scope.copyToOptions = res;
@@ -3050,7 +3050,6 @@ var Katrid;
                     return obj;
             }
             _onFieldChange(field, newValue, record) {
-                console.log('on field change', field.name);
                 if (field.name === this._lastFieldName)
                     clearTimeout(this.pendingOperation);
                 this._lastFieldName = field.name;
@@ -3060,7 +3059,7 @@ var Katrid;
                     rec[field.name] = newValue;
                     if (this.parent)
                         rec[this.field.info.field] = this.encodeObject(this.parent.record);
-                    this.dispatchEvent('field_change_event', [field.name, rec]);
+                    this.dispatchEvent('admin_on_field_change', [field.name, rec]);
                 };
                 this.pendingOperation = setTimeout(fn, 50);
             }
@@ -3918,8 +3917,6 @@ var Katrid;
             compare(oldValue, newValue) {
                 if (_.isArray(oldValue) && _.isArray(newValue))
                     return oldValue.join(',') !== newValue.join(',');
-                else if (oldValue && newValue)
-                    console.log(oldValue, newValue);
                 return oldValue != newValue;
             }
             discard() {
@@ -8277,28 +8274,28 @@ var Katrid;
     (function (Services) {
         class Model extends Services.Service {
             searchByName(kwargs) {
-                return this.post('search_by_name', kwargs);
+                return this.post('api_search_by_name', kwargs);
             }
             createName(name) {
                 let kwargs = { name };
-                return this.post('create_name', { kwargs: kwargs });
+                return this.post('api_create_name', { kwargs: kwargs });
             }
             search(data, params, config, context) {
-                return this.post('search', { kwargs: data }, params, config, context);
+                return this.post('api_search', { kwargs: data }, params, config, context);
             }
-            destroy(id) {
+            delete(id) {
                 if (!_.isArray(id))
                     id = [id];
-                return this.post('destroy', { kwargs: { ids: id } });
+                return this.post('api_delete', { kwargs: { ids: id } });
             }
             getById(id, config) {
-                return this.post('get', { args: [id] }, null, config);
+                return this.post('api_get', { args: [id] }, null, config);
             }
             getDefaults(kwargs, config) {
-                return this.post('get_defaults', { kwargs }, null, config);
+                return this.post('api_get_defaults', { kwargs }, null, config);
             }
             copy(id) {
-                return this.post('copy', { args: [id] });
+                return this.post('api_copy', { args: [id] });
             }
             static _prepareFields(res) {
                 if (res) {
@@ -8312,15 +8309,15 @@ var Katrid;
                 return res;
             }
             getViewInfo(data) {
-                return this.post('get_view_info', { kwargs: data })
+                return this.post('admin_get_view_info', { kwargs: data })
                     .then(this.constructor._prepareFields);
             }
             async loadViews(data) {
-                return this.post('load_views', { kwargs: data })
+                return this.post('admin_load_views', { kwargs: data })
                     .then(this.constructor._prepareFields);
             }
             getFieldsInfo(data) {
-                return this.post('get_fields_info', { kwargs: data })
+                return this.post('admin_get_fields_info', { kwargs: data })
                     .then(this.constructor._prepareFields);
             }
             getFieldChoices(config) {
@@ -8329,14 +8326,14 @@ var Katrid;
                     kwargs.filter = config.filter;
                 if (config.context)
                     kwargs.context = config.context;
-                return this.post('get_field_choices', { args: [config.field, config.term], kwargs }, null, config.config);
+                return this.post('api_get_field_choices', { args: [config.field, config.term], kwargs }, null, config.config);
             }
             doViewAction(data) {
-                return this.post('do_view_action', { kwargs: data });
+                return this.post('admin_do_view_action', { kwargs: data });
             }
             write(data, params) {
                 return new Promise((resolve, reject) => {
-                    this.post('write', { kwargs: { data } }, params)
+                    this.post('api_write', { kwargs: { data } }, params)
                         .then((res) => {
                         Katrid.Forms.Dialogs.Alerts.success(Katrid.i18n.gettext('Record saved successfully.'));
                         resolve(res);
@@ -8355,10 +8352,10 @@ var Katrid;
                 });
             }
             groupBy(grouping, params) {
-                return this.post('group_by', { kwargs: { grouping, params } });
+                return this.post('api_group_by', { kwargs: { grouping, params } });
             }
             autoReport() {
-                return this.post('auto_report', { kwargs: {} });
+                return this.post('admin_auto_report', { kwargs: {} });
             }
             rpc(meth, args, kwargs, action) {
                 return new Promise((resolve, reject) => {
@@ -9713,7 +9710,7 @@ var Katrid;
                         this.loading = true;
                         return new Promise((resolve, reject) => {
                             this._pendingTimeout = setTimeout(() => {
-                                resolve(this._source({ term: this.input.value })
+                                resolve(this._source({ term: this.input.term })
                                     .then((items) => {
                                     this.clearItems();
                                     this.loadItems(items);
@@ -9823,9 +9820,10 @@ var Katrid;
                     super(...arguments);
                     this.menu = null;
                     this.closeOnChange = true;
+                    this.term = '';
                 }
                 connectedCallback() {
-                    this.autocomplete = "off";
+                    this.autocomplete = "new-street-address";
                     let parent = this.parentElement;
                     let caret = parent.querySelector('.caret');
                     caret.addEventListener('click', evt => this.click());
@@ -9876,8 +9874,10 @@ var Katrid;
                     this.addEventListener('keydown', this.onKeyDown);
                 }
                 onInput() {
-                    if (this.$selectedItem)
-                        this._selectItem();
+                    this.term = this.value;
+                    if (this.$selectedItem) {
+                        this.$selectedItem = null;
+                    }
                     this.showMenu();
                 }
                 onClick() {
@@ -9910,6 +9910,10 @@ var Katrid;
                                     evt.preventDefault();
                                 }
                                 break;
+                            case Katrid.UI.keyCode.ESCAPE:
+                                if (this.menu)
+                                    this.hideMenu();
+                                break;
                         }
                 }
                 showMenu() {
@@ -9935,6 +9939,7 @@ var Katrid;
                     this._source = value;
                 }
                 _selectItem(el) {
+                    this.term = '';
                     let item = null;
                     if (el)
                         item = $(el).data('item');
@@ -9947,8 +9952,8 @@ var Katrid;
                     this.dispatchEvent(event);
                     if (!event.defaultPrevented) {
                         this.selectedItem = item;
-                        if (el && this.menu)
-                            this.menu.hide();
+                        if (this.menu)
+                            this.hideMenu();
                     }
                     return event;
                 }
@@ -10570,7 +10575,6 @@ var Katrid;
             require: 'ngModel',
             link: function (scope, element, attrs, ngModel) {
                 ngModel.$formatters.push(function (value) {
-                    console.log('formatter', value);
                     if (value) {
                         element[0].$selectedItem = value;
                         return value.text;

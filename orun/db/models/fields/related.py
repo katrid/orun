@@ -1025,7 +1025,7 @@ def create_many_to_many_intermediary_model(field, klass):
             on_delete=CASCADE,
         )
     })
-    new_model = new_model.__build__(field.model._meta.apps)
+    # new_model = new_model.__build__(field.model._meta.apps)
     return new_model
 
 
@@ -1564,6 +1564,7 @@ class ManyToManyField(RelatedField):
         return {"type": None, "check": None}
 
     def value_to_json(self, value):
+        return
         for obj in value.all():
             yield obj._get_label_instance()
 
@@ -1623,7 +1624,7 @@ class OneToManyField(RelatedField):
             action = v['action']
             if action == 'CREATE':
                 values[self.remote_field.to_field.name] = instance.pk
-                obj = rel_model.write(values)
+                obj = rel_model.api_write(values)
                 if instance.pk is None:
                     res.append(obj)
             elif action == 'DESTROY':

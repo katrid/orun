@@ -1,7 +1,4 @@
-from typing import TYPE_CHECKING, Optional
 from orun.utils.version import get_version
-if TYPE_CHECKING:
-    from orun.apps.context import Environment
 
 SUPERUSER = 1
 VERSION = (1, 0, 0, 'alpha', 0)

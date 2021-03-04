@@ -101,14 +101,6 @@ class Registry:
             for app_config in self.app_configs.values():
                 app_config.import_models()
 
-            # Phase 3: apply models inheritance, respecting extended and overridden models
-            for app_config in self.app_configs.values():
-                for model in app_config.models:
-                    if not model.Meta.override:
-                        model.__build__(self)
-                        for o in model.Meta.overrides:
-                            o.__build__(self)
-
             # Phase 3: apply pending operations
             self.do_pending_operations()
 

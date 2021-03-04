@@ -40,10 +40,9 @@ class Action(models.Model):
     def get_action(self):
         return apps[self.action_type].objects.get(pk=self.pk)
 
-    @api.method
-    def load(self, id, context=None):
-        print(id)
-        return self.objects.get(pk=id).get_action().to_json()
+    @api.method(select=['action_type'])
+    def load(self, context=None):
+        return self.get_action().to_dict()
 
     def execute(self):
         raise NotImplemented()

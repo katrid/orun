@@ -68,7 +68,7 @@ class Message(models.Model):
             'attachments': [{'id': f.pk, 'name': f.file_name, 'mimetype': f.mimetype} for f in self.attachments],
         }
 
-    @api.method
+    @api.classmethod
     def post_message(cls, model_name, id, content=None, **kwargs):
         Message = apps['mail.message']
         msg = Message.objects.create(
@@ -83,7 +83,7 @@ class Message(models.Model):
             msg.attachments.set(attachments)
         return msg.get_message()
 
-    @api.method
+    @api.classmethod
     def get_messages(cls, model_name, id):
         for msg in cls.objects.filter(model=model_name, object_id=id):
             yield msg.get_message()

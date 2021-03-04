@@ -18,7 +18,6 @@ class Company(Partner):
         ('A4', 'A4'),
         ('LETTER', 'Letter'),
     )
-    parent = models.ForeignKey('self')
     currency = models.ForeignKey('res.currency')
     report_header = models.TextField()
     report_footer = models.TextField()

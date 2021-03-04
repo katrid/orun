@@ -1578,7 +1578,7 @@
       {% endblock %}
       {% block field %}
         <input {% block fields_css %}class="form-field form-control"{% endblock %}
-               autocomplete="off"
+               autocomplete="new-street-address" spellcheck="false"
                {% block input_type %}type="text"{% endblock %} {{ utils.field_attrs(field) }}
             {% if field.attrs.nolabel === 'placeholder' %}
                placeholder="{{ field.caption }}"
@@ -1637,7 +1637,7 @@
                placeholder="{{ field.caption }}"
             {% endif %}
             {{ utils.field_attrs(field) }}
-               {% block field_attrs %}autocomplete="off" input-autocomplete input-field is="input-autocomplete"
+               {% block field_attrs %}autocomplete="off" spellcheck="false" input-autocomplete input-field is="input-autocomplete"
                ng-model-options="{updateOn: 'selectItem'}"{% endblock %}
         >
         <span class="caret"></span>
@@ -1716,7 +1716,7 @@
     {% extends "view.form.field.jinja2" %}
     {% block css_class %}TextField{% endblock %}
     {% block field %}
-      <textarea class="form-field form-control" name="{{ field.name }}" ng-model="record.{{ field.name }}"></textarea>
+      <textarea class="form-field form-control" spellcheck="true" name="{{ field.name }}" ng-model="record.{{ field.name }}"></textarea>
     {% endblock %}
   </script>
 

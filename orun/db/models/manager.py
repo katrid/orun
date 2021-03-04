@@ -167,7 +167,7 @@ class BaseManager:
 
     def __getitem__(self, item) -> Type['Model']:
         from orun.apps import apps
-        return apps.models[item]
+        return apps[item]
 
 
 class Manager(BaseManager.from_queryset(QuerySet)):

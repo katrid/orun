@@ -50,7 +50,7 @@ from .partner import Partner
 #         return bool(len(qs))
 
 
-class User(Partner, AbstractUser):
+class User(AbstractUser, Partner):
     # date_joined = models.DateTimeField(_('Date Joined'), auto_now=True)
     signature = models.HtmlField(_('Signature'))
     user_action = models.ForeignKey('ui.action', verbose_name=_('Home Action'))
@@ -133,6 +133,3 @@ class ExportField(models.Model):
     class Meta:
         name = 'auth.export.field'
 
-
-def get_current_user():
-    pass
