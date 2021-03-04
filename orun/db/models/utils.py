@@ -5,7 +5,7 @@ def make_model_name(model) -> str:
     """
     try:
         if not isinstance(model, str):
-            return model.Meta.name
+            return model._meta.name
         assert '.' in model
     except (ValueError, AssertionError):
         raise ValueError(

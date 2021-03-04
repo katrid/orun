@@ -76,7 +76,7 @@ class View(models.Model):
     template_name = models.CharField(max_length=256)
     content = models.TextField(caption=_('Content'))
     ref_id = models.CharField(caption=_('Reference ID'), getter='_get_xml_id')
-    children = models.OneToManyField('self', 'parent')
+    # children = models.OneToManyField('self', 'parent')
     class_name = models.CharField(max_length=256, verbose_name='Python Class Name')
 
     class Meta:

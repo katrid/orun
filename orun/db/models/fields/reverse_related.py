@@ -331,6 +331,9 @@ class OneToManyRel(ForeignObjectRel):
 def get_first_rel_field(model, rel_model):
     for f in model._meta.fields:
         if f.many_to_one and f.remote_field and isinstance(f.remote_field.model, str):
-            f.remote_field.model = f.model._meta.apps[f.remote_field.model]
+            if f.remote_field.model == 'self':
+                f.remote_field.model = f.model
+            else:
+                f.remote_field.model = f.model._meta.apps[f.remote_field.model]
         if f.many_to_one and f.remote_field and f.remote_field.model.Meta.name == rel_model._meta.name:
             return f

@@ -1,4 +1,3 @@
-from orun import apps
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 
@@ -79,23 +78,24 @@ class Partner(models.Model):
         verbose_name_plural = _('Partners')
 
     def __str__(self):
-        return self.name
+        return self.display_name
         if self.parent:
             return f'{self.parent}, {self.name}'
         return self.name
 
-    def save(self, *args, **kwargs):
-        # TODO replace by orm api
+    def get_display_name(self):
         if self.parent_id:
-            self.display_name = f'{self.parent.display_name}, str({self.name})'
+            self.display_name = f'{self.parent.display_name}, {self.name}'
         else:
             self.display_name = str(self)
+
+    def save(self, *args, **kwargs):
+        # TODO replace by orm api
+        self.display_name = self.get_display_name()
         super().save(*args, **kwargs)
         contacts = self.objects.filter(parent_id=self.pk)
         if contacts:
-            parent_name = self.display_name
             for contact in contacts:
-                contact.display_name = f'{parent_name}, {contact.name}'
                 contact.save(update_fields=['display_name'])
 
     @property

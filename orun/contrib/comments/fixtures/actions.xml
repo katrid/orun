@@ -3,7 +3,7 @@
   <action id="action.mail.view.mail.approval" type="ui.action.window" model="mail.approval.model">
     <field name="view_mode">list,form</field>
   </action>
-  <action id="action.mail.view.ir.copy.to" type="ui.action.window" model="ir.copy.to">
+  <action id="action.mail.view.ui.copy.to" type="ui.action.window" model="ui.copy.to">
     <field name="view_mode">list,form</field>
   </action>
 </data>

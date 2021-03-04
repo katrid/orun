@@ -12213,6 +12213,11 @@ table-field .table tbody tr {
   background-color: #f8f8f8;
 }
 
+.dropdown-item p {
+  margin: 0;
+  padding: 0;
+}
+
 .nav-item > .dropdown-menu {
   margin: 0;
 }

@@ -9764,7 +9764,10 @@ var Katrid;
                     el.addEventListener('mousedown', evt => {
                         this.input.focus();
                         evt.preventDefault();
-                        this.onSelectItem(evt.target);
+                        let target = evt.target;
+                        if (target.tagName != 'A')
+                            target = target.closest('a.dropdown-item');
+                        this.onSelectItem(target);
                     });
                     this._elements.push(el);
                     return el;

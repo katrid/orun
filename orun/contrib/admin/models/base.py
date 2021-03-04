@@ -110,7 +110,7 @@ class AdminModel(models.Model, helper=True):
         return qs
 
     def _api_format_choice(self, format=None, **context):
-        return {'id': self.pk, 'text': self.__str__()}
+        return {'id': self.pk, 'text': str(self)}
 
     @api.classmethod
     def api_search_by_name(
@@ -434,9 +434,9 @@ class AdminModel(models.Model, helper=True):
         if toolbar and view_type != 'search':
             bindings = cls.objects['ui.action'].get_bindings(cls._meta.name)
             r['toolbar'] = {
-                'print': [action.to_json() for action in bindings['print'] if
+                'print': [action.to_dict() for action in bindings['print'] if
                           view_type == 'list' or not action.multiple],
-                'action': [action.to_json() for action in bindings['action'] if
+                'action': [action.to_dict() for action in bindings['action'] if
                            view_type == 'list' or not action.multiple],
             }
         return r
@@ -479,7 +479,7 @@ class AdminModel(models.Model, helper=True):
 
     @classmethod
     def _admin_get_default_form_view(cls):
-        return cls._get_default_view(view_type='form')
+        return cls._admin_get_default_view(view_type='form')
 
     @classmethod
     def _admin_get_default_list_view(cls):

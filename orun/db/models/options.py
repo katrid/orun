@@ -16,6 +16,7 @@ from orun.utils.datastructures import ImmutableList, OrderedSet
 from orun.utils.functional import cached_property
 from orun.utils.text import camel_case_to_spaces, format_lazy
 from orun.utils.translation import override
+from orun.utils.module_loading import import_string
 
 PROXY_PARENTS = object()
 
@@ -198,11 +199,11 @@ class Options:
             bases = tuple(bases)
             if parents:
                 for base in bases:
-                    if 'fields_groups' in meta_attrs and meta_attrs.get('override'):
+                    if 'field_groups' in meta_attrs and meta_attrs.get('override'):
                         parent = parents[0]
-                        if not parent.Meta.fields_groups:
-                            parent.Meta.fields_groups = {}
-                        parent.Meta.fields_groups.update(meta_attrs['fields_groups'])
+                        if not parent.Meta.field_groups:
+                            parent.Meta.field_groups = {}
+                        parent.Meta.field_groups.update(meta_attrs['field_groups'])
         else:
             bases = (Options,)
 
@@ -290,7 +291,7 @@ class Options:
                         'Add parent_link=True to %s.' % field,
                     )
             else:
-                auto = AutoField(verbose_name='ID', primary_key=True, auto_created=True)
+                auto = import_string(settings.DEFAULT_AUTO_FIELD)(verbose_name='ID', primary_key=True, auto_created=True)
                 model.add_to_class('id', auto)
 
     @classmethod
@@ -315,6 +316,8 @@ class Options:
                 setattr(class_helper, k, attr)
                 if inspect.isfunction(v):
                     v = method_helper(v, class_helper)
+                elif isinstance(v, classmethod):
+                    v = classmethod_helper(v, class_helper)
             if hasattr(v, 'contribute_to_class'):
                 model.add_to_class(k, v)
             else:
@@ -928,6 +931,12 @@ def method_helper(fn, class_helper):
     def wrapped(self, *args, **kwargs):
         return fn(self, class_helper, *args, **kwargs)
     return wrapped
+
+
+def classmethod_helper(fn, class_helper):
+    def wrapped(cls, *args, **kwargs):
+        return fn.__func__(cls, class_helper, *args, **kwargs)
+    return classmethod(wrapped)
 
 
 from orun.db.models.fields import Fields, Field
