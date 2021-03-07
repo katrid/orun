@@ -48,7 +48,7 @@ class Deserializer(base.Deserializer):
 
     def read_object(self, obj, trans=False, **attrs):
         if not isinstance(obj, dict):
-            values = obj.getchildren()
+            values = list(obj)
             obj = dict(obj.attrib)
         else:
             values = obj.get('children', [])
@@ -189,7 +189,7 @@ class Deserializer(base.Deserializer):
         action = {
             'model': act,
             'id': obj.attrib['id'],
-            'children': obj.getchildren(),
+            'children': list(obj),
             'fields': fields,
         }
         return self.read_object(action, **attrs)
@@ -266,7 +266,7 @@ class Deserializer(base.Deserializer):
         report = {
             'model': 'ui.action.report',
             'id': obj.attrib.get('id'),
-            'children': obj.getchildren(),
+            'children': list(obj),
             'fields': {
                 'report_type': obj.attrib.get('type', 'paginated'),
                 'name': obj.attrib.get('name'),
