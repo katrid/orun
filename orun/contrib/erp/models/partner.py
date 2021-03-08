@@ -89,7 +89,7 @@ class Partner(models.Model):
         else:
             self.display_name = str(self)
 
-    def save(self, *args, **kwargs):
+    def save_(self, *args, **kwargs):
         # TODO replace by orm api
         self.display_name = self.get_display_name()
         super().save(*args, **kwargs)
