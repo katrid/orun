@@ -102,7 +102,7 @@ def onchange(*fields):
             for field in flds:
                 if not isinstance(field, str):
                     field = field.name
-                lst = cls._meta.__class__.field_change_event[field]
+                lst = cls._meta.field_change_event[field]
                 if fn not in lst:
                     lst.append(fn)
 
