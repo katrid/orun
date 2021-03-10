@@ -9143,7 +9143,6 @@ var Katrid;
                 const xmlReport = $scope.$parent.action.info.content;
                 const report = new Reports.Report($scope.$parent.action, $scope);
                 $scope.report = report;
-                console.log($scope.$parent.action);
                 report.loadFromXml(xmlReport);
                 report.render($element);
                 return report.loadParams();

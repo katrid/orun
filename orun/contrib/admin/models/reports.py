@@ -23,8 +23,8 @@ class ReportAction(Action):
     class Meta:
         name = 'ui.action.report'
 
-    def to_json(self, *args, **kwargs):
-        data = super(ReportAction, self).to_json(*args, **kwargs)
+    def to_dict(self, *args, **kwargs):
+        data = super(ReportAction, self).to_dict(*args, **kwargs)
         model = None
         if self.model:
             model = apps[self.model]
