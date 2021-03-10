@@ -1,7 +1,7 @@
 from orun.apps import AppConfig
 
 
-class ERPConfig(AppConfig):
+class Addon(AppConfig):
     name = 'orun.contrib.erp'
     verbose_name = 'Basic ERP Module'
     auto_install = True

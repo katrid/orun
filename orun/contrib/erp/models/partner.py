@@ -87,9 +87,9 @@ class Partner(models.Model):
         if self.parent_id:
             self.display_name = f'{self.parent.display_name}, {self.name}'
         else:
-            self.display_name = str(self)
+            self.display_name = self.name
 
-    def save_(self, *args, **kwargs):
+    def save(self, *args, **kwargs):
         # TODO replace by orm api
         self.display_name = self.get_display_name()
         super().save(*args, **kwargs)

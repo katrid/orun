@@ -393,7 +393,7 @@ var Katrid;
             async onHashChange(params) {
                 location.hash = '#/app/?' + $.param(params);
                 let svc = new Katrid.Services.Model('ui.action.view');
-                let res = await svc.post('get_view', { args: [this.info.view[0]] });
+                let res = await svc.post('get_view', { args: [this.info.view.id] });
                 let content = res.content;
                 let viewType = res.type;
                 if (content.startsWith('{')) {

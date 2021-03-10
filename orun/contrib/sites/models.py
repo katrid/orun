@@ -90,7 +90,7 @@ class Site(models.Model):
     objects = SiteManager()
 
     class Meta:
-        db_table = 'orun_site'
+        name = 'orun.site'
         verbose_name = _('site')
         verbose_name_plural = _('sites')
         ordering = ('domain',)

@@ -23,7 +23,7 @@ class ObjectEntry(models.Model):
     """
     object_id = models.BigIntegerField(null=False)
     content_type = models.ForeignKey('content.type', null=False)
-    content_object = models.CharField(200)
+    content_object = models.CharField(250)
 
     class Meta:
         log_changes = False
