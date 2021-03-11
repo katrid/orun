@@ -84,7 +84,7 @@ class Partner(models.Model):
         return self.name
 
     def get_display_name(self):
-        if self.parent_id:
+        if self.parent_id and self.parent_id != self.pk:
             self.display_name = f'{self.parent.display_name}, {self.name}'
         else:
             self.display_name = self.name
