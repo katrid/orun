@@ -334,6 +334,8 @@ class Options:
         #     self.local_many_to_many.append(field)
 
         if field.local:
+            if field.name in self.fields:
+                raise ValueError(f'Field "{field.name}" duplicated. Use the fields_override attribute to extend a field.')
             self.local_fields.append(field)
         elif field.many_to_many:
             field.concrete = False
