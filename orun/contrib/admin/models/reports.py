@@ -146,7 +146,7 @@ class ReportAction(Action):
                 'name': self.name,
             }
 
-    @api.method
+    @api.classmethod
     def export_report(cls, id, format='pdf', params=None):
         # TODO check permission
         if isinstance(id, list):
@@ -157,7 +157,7 @@ class ReportAction(Action):
             rep = cls.objects.get(pk=id)
         return rep._export_report(format=format, params=params)
 
-    @api.method
+    @api.classmethod
     def on_execute_action(cls, action_id, context):
         fmt = context.pop('format', 'pdf')
         params = context.pop('params', None)
