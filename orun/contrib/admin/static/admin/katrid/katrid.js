@@ -3091,6 +3091,7 @@ var Katrid;
             }
             class Field {
                 constructor(info) {
+                    this.attrs = {};
                     this.visible = true;
                     this.info = info;
                     this.cssClass = info.type;
@@ -3126,45 +3127,28 @@ var Katrid;
                 loadInfo(info) {
                     if (info.template)
                         this.template = Object.assign(this.template, info.template);
-                    if ('cols' in info)
+                    if (info.cols)
                         this.cols = info.cols;
                     if ('readonly' in info)
                         this.readonly = info.readonly;
                     if ('visible' in info)
                         this.visible = info.visible;
                 }
-                clone(el) {
-                    let newField = new this.constructor(this.info);
-                    newField.visible = this.visible;
-                    newField.readonly = this.readonly;
-                    newField.filter = this.filter;
-                    newField.fieldEl = el;
-                    return newField;
-                }
-                assign(view, el, config = null) {
-                    let newField = this.clone(el);
-                    let viewType;
-                    if (view instanceof Katrid.Forms.Views.WindowView) {
-                        newField.view = view;
-                        viewType = view.viewType;
+                assign(el) {
+                    for (let attr of el.attributes) {
+                        this.attrs[attr.name] = attr.value;
+                        let camelCase = toCamelCase(attr.name);
+                        if (camelCase !== attr.name)
+                            this.attrs[camelCase] = attr.value;
                     }
-                    else
-                        viewType = newField.viewType = view;
-                    newField.inplaceEditor = config?.inplaceEditor;
-                    newField[viewType + 'Render'].apply(newField);
-                    return newField;
+                    this.loadInfo(this.attrs);
+                    this.fieldEl = el;
                 }
                 get fieldEl() {
                     return this._fieldEl;
                 }
                 set fieldEl(value) {
                     this._fieldEl = value;
-                    if (value) {
-                        let newInfo = {};
-                        for (let attr of value.attributes)
-                            newInfo[attr.name] = value.nodeValue;
-                        this.loadInfo(newInfo);
-                    }
                 }
                 formRender(context = {}) {
                     let el = this._fieldEl;
@@ -3219,6 +3203,75 @@ var Katrid;
                     context['html'] = $el.html();
                     this.el = $(Katrid.app.getTemplate(this.template[this.viewType], context))[0];
                 }
+                formLabel() {
+                    if (!this.attrs.nolabel) {
+                        let label = document.createElement('label');
+                        label.innerText = this.caption;
+                        label.classList.add('form-label');
+                        label.setAttribute('input-field', 'input-field');
+                        return label;
+                    }
+                }
+                formControl() {
+                    let input = document.createElement('input');
+                    input.type = 'text';
+                    input.name = this.name;
+                    input.setAttribute('ng-model', 'record.' + this.name);
+                    input.classList.add('form-field', 'form-control');
+                    input.autocomplete = 'none';
+                    input.spellcheck = false;
+                    if (this.attrs.nolabel === 'placeholder')
+                        input.placeholder = this.caption;
+                    if (this.attrs.ngFieldChange)
+                        input.setAttribute('ng-change', this.attrs.ngFieldChange);
+                    return input;
+                }
+                formCreate(view) {
+                    let label = this.formLabel();
+                    let control = this.formControl();
+                    let section = document.createElement('section');
+                    if (this.ngIf)
+                        section.setAttribute('ng-if', this.ngIf);
+                    if (this.ngShow)
+                        section.setAttribute('ng-show', this.ngShow);
+                    if (this.ngClass)
+                        section.setAttribute('ng-class', this.ngClass);
+                    if (this.ngReadonly)
+                        section.setAttribute('ng-readonly', this.ngReadonly);
+                    else if (this.readonly)
+                        section.setAttribute('readonly', 'true');
+                    section.classList.add('form-group');
+                    if (this.cols && !isNaN(this.cols))
+                        section.classList.add('col-md-' + this.cols);
+                    else if (typeof this.cols === 'string')
+                        section.classList.add(this.cols);
+                    if (this.cssClass)
+                        section.classList.add(this.cssClass);
+                    if (label)
+                        section.append(label);
+                    section.append(control);
+                    let spanTempl = this.formSpanTemplate();
+                    if (spanTempl) {
+                        let span = document.createElement('div');
+                        span.classList.add('form-field-readonly');
+                        span.innerHTML = spanTempl;
+                        section.append(span);
+                    }
+                    this.createTooltip(section);
+                    return section;
+                }
+                createTooltip(section) {
+                    if (!Katrid.settings.ui.isMobile) {
+                        let title = this.caption;
+                        if (this.helpText)
+                            title += '<br>' + this.helpText;
+                        title += '<br>Field: ' + this.name;
+                        title += `<br>Content: \${record.${this.name}}`;
+                        if (this.model)
+                            title += '<br>Model: ' + this.model;
+                        section.setAttribute('ui-tooltip', title);
+                    }
+                }
                 listCreate(view) {
                     let td = document.createElement('td');
                     td.innerHTML = this.listSpanTemplate();
@@ -3235,9 +3288,10 @@ var Katrid;
                         let formView = view.action.views.form;
                         let field = formView.fields[this.name];
                         let fieldEl = view.action.formView.querySelector(`field[name=${this.name}]`);
-                        let newField = field.assign('form', fieldEl, { inplaceEditor: true });
-                        newField.el.className = newField.cssClass;
-                        td.append(newField.el);
+                        field.assign(fieldEl);
+                        let el = field.formCreate(td);
+                        el.className = field.cssClass;
+                        td.append(el);
                     }
                 }
                 formSpanTemplate() {
@@ -3292,16 +3346,10 @@ var Katrid;
                     templ.innerHTML = html;
                     this.el = templ;
                 }
-                cardRender() {
-                    let el = this._fieldEl;
-                    let view = this.view;
-                    let widget = el.getAttribute('widget') || this.widget;
-                    if (widget) {
-                        let r = document.createElement(widget + '-field');
-                        r.bind(this);
-                        this.el = r;
-                        return;
-                    }
+                cardCreate() {
+                    let span = document.createElement('span');
+                    span.innerText = `\$\{ record.${this.name} }`;
+                    return span;
                 }
                 render(viewType, el, context) {
                     let attrs = {};
@@ -3434,6 +3482,24 @@ var Katrid;
                     return ret.concat(super.getFilterConditions());
                 }
             }
+            class ChoiceField extends Field {
+                formSpanTemplate() {
+                    return `\${ view.fields.${this.name}.displayChoices[record.${this.name}] || '${this.emptyText}' }`;
+                }
+                formControl() {
+                    let control = document.createElement('select');
+                    control.classList.add('form-field', 'form-control');
+                    control.name = this.name;
+                    control.setAttribute('ng-model', 'record.' + this.name);
+                    let option = document.createElement('option');
+                    option.setAttribute('ng-repeat', `choice in view.fields.${this.name}.choices`);
+                    option.setAttribute('value', "${ choice[0] }");
+                    option.innerText = '${ choice[1] }';
+                    control.append(option);
+                    return control;
+                }
+            }
+            Fields.ChoiceField = ChoiceField;
             class PasswordField extends StringField {
                 constructor(info) {
                     if (!info.template)
@@ -3446,6 +3512,14 @@ var Katrid;
                 }
                 create() {
                     super.create();
+                }
+                formControl() {
+                    let control = super.formControl();
+                    control.setAttribute('type', 'password');
+                    return control;
+                }
+                formSpanTemplate() {
+                    return '**********************';
                 }
             }
             Fields.PasswordField = PasswordField;
@@ -3475,6 +3549,25 @@ var Katrid;
                         { name: 'is not null', label: _.gettext('Is defined'), input: false },
                         { name: 'is null', label: _.gettext('Is not defined'), input: false },
                     ];
+                }
+                formLabel() {
+                    let label = document.createElement('label');
+                    label.classList.add('form-label', 'form-label-checkbox');
+                    label.innerHTML = `
+      <span class="checkbox-span">${this.caption}</span>
+      <span>&nbsp;</span>`;
+                    return label;
+                }
+                formControl() {
+                    let label = document.createElement('label');
+                    label.classList.add('checkbox');
+                    let caption = this.caption;
+                    if (this.helpText)
+                        caption = this.helpText;
+                    label.setAttribute('ng-show', 'action.dataSource.changing');
+                    label.innerHTML =
+                        `<input type="checkbox" name="${this.name}" class="form-field form-control" ng-model="record.${this.name}">${caption}<i class="fas"></i>`;
+                    return label;
                 }
             }
             Fields.BooleanField = BooleanField;
@@ -3509,6 +3602,14 @@ var Katrid;
                     res['type'] = 'date';
                     return res;
                 }
+                formControl() {
+                    let div = document.createElement('div');
+                    div.classList.add('input-group', 'date');
+                    div.innerHTML = `
+      <input input-field date-picker="L" type="text" name="${this.name}" ng-model="record.${this.name}" class="form-control form-field" inputmode="numeric">
+      <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>`;
+                    return div;
+                }
             }
             Fields.DateField = DateField;
             class DateTimeField extends DateField {
@@ -3533,9 +3634,14 @@ var Katrid;
                     res['type'] = 'datetime-local';
                     return res;
                 }
+                formControl() {
+                    let control = super.formControl();
+                    control.querySelector('input').setAttribute('date-picker', 'L LT');
+                    return control;
+                }
             }
             Fields.DateTimeField = DateTimeField;
-            class TimeField extends DateTimeField {
+            class TimeField extends Field {
                 constructor(info) {
                     if (!info.cols)
                         info.cols = 3;
@@ -3545,6 +3651,14 @@ var Katrid;
                 }
                 create() {
                     super.create();
+                }
+                formSpanTemplate() {
+                    return `\${ (record.${this.name}|date:'shortTime') || '${this.emptyText}' }`;
+                }
+                formControl() {
+                    let control = super.formControl();
+                    control.setAttribute('time-picker', 'time-picker');
+                    return control;
                 }
             }
             Fields.TimeField = TimeField;
@@ -3601,6 +3715,15 @@ var Katrid;
                         this.decimalPlaces = this.info.attrs.decimal_places || 2;
                     }
                 }
+                formSpanTemplate() {
+                    return `\${ (record.${this.name}|number:${this.decimalPlaces || 0}) || '${this.emptyText}' }`;
+                }
+                formControl() {
+                    let control = super.formControl();
+                    control.setAttribute('input-decimal', this.decimalPlaces.toString());
+                    control.setAttribute('inputmode', 'decimal');
+                    return control;
+                }
                 listSpanTemplate() {
                     return `<span class="grid-field-readonly">\${ (record.${this.name}|number:${this.decimalPlaces || 0}) || '${this.emptyText}' }</span>`;
                 }
@@ -3617,6 +3740,19 @@ var Katrid;
                     });
                     if (Katrid.settings.ui.isMobile)
                         this.template.form = 'view.form.autocomplete.jinja2';
+                }
+                formControl() {
+                    let control = document.createElement('div');
+                    control.innerHTML = `
+<input is="input-autocomplete" class="form-field form-control" name="${this.name}" ng-model="record.${this.name}" 
+autocomplete="none"
+spellcheck="false" input-field ng-model-options="{updateOn: 'selectItem'}" input-autocomplete>
+<span class="caret"></span>
+`;
+                    if (this.attrs.nolabel === 'placeholder')
+                        control.querySelector('input').placeholder = this.caption;
+                    control.classList.add('input-dropdown', 'form-field');
+                    return control;
                 }
                 listSpanTemplate() {
                     return `<a class="grid-field-readonly">\${ record.${this.name}.text||'${this.emptyText}' } </a>`;
@@ -3666,8 +3802,6 @@ var Katrid;
             class OneToManyField extends Field {
                 create() {
                     super.create();
-                    this.widget = 'onetomany';
-                    this.template.form = 'view.form.grid.jinja2';
                     this.cols = 12;
                 }
                 get field() {
@@ -3693,6 +3827,16 @@ var Katrid;
                         child.scope.$apply();
                     }
                 }
+                formSpanTemplate() {
+                    return;
+                }
+                formControl() {
+                    let grid = (document.createElement('onetomany-field'));
+                    grid.bind(this);
+                    return grid;
+                }
+                createTooltip(section) {
+                }
             }
             Fields.OneToManyField = OneToManyField;
             class ManyToManyField extends ForeignKey {
@@ -3708,6 +3852,25 @@ var Katrid;
                         val = val.split(',');
                     return val;
                 }
+                formControl() {
+                    let control = super.formControl();
+                    control.setAttribute('foreignkey', 'foreignkey');
+                    control.setAttribute('multiple', 'multiple');
+                    return control;
+                }
+                formCreate(view) {
+                    let section = super.formCreate(view);
+                    section.classList.add('ForeignKey');
+                    return section;
+                }
+                formSpanTemplate() {
+                    return `
+      <a href="#/app/?menu_id=\${ ::action.params.menu_id }&model={{ field.model }}&view_type=form&id=\${ record.{{ field.name }}[0] }">
+        <span ng-repeat="val in record.{{ field.name }}">
+        \${ val[1] }
+        </span>
+      </a>`;
+                }
             }
             Fields.ManyToManyField = ManyToManyField;
             class TextField extends StringField {
@@ -3718,6 +3881,14 @@ var Katrid;
                 }
                 create() {
                     super.create();
+                }
+                formControl() {
+                    let control = document.createElement('textarea');
+                    control.classList.add('form-field', 'form-control');
+                    control.spellcheck = true;
+                    control.name = this.name;
+                    control.setAttribute('ng-model', 'record.' + this.name);
+                    return control;
                 }
             }
             Fields.TextField = TextField;
@@ -3770,7 +3941,11 @@ var Katrid;
             class RadioField extends Field {
             }
             function fromInfo(config) {
-                let cls = Katrid.Data.Fields.registry[config.type] || StringField;
+                let cls;
+                if (config.choices)
+                    cls = ChoiceField;
+                else
+                    cls = Katrid.Data.Fields.registry[config.type] || StringField;
                 return new cls(config);
             }
             Fields.fromInfo = fromInfo;
@@ -3792,6 +3967,7 @@ var Katrid;
                 DecimalField,
                 NumericField,
                 IntegerField,
+                ChoiceField,
                 TextField,
                 ImageField,
                 DateField,
@@ -4370,13 +4546,15 @@ var Katrid;
                 create() {
                     super.create();
                     if (!this._field)
-                        this.bind(this.actionView.action.view.viewInfo.fields[this.name]);
+                        this.bind(this.view.viewInfo.fields[this.name]);
                     this._id = ++ID;
                     let cols = this._field.cols || 12;
                     this.classList.add('col-md-' + cols.toString());
                 }
             }
             Widgets.FieldWidget = FieldWidget;
+            class StringFieldWidget extends FieldWidget {
+            }
             Widgets.registry = {};
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -4523,35 +4701,6 @@ var Katrid;
                 }
                 get fields() {
                     return this.viewInfo.fields;
-                }
-                renderField(fieldEl) {
-                    let name = fieldEl.getAttribute('name');
-                    if (name) {
-                        let fld = this.fields[name];
-                        if (fld) {
-                            let newField = fld.assign(this, fieldEl);
-                            if (newField.visible) {
-                                newField.el;
-                                if (newField.el)
-                                    this.onRenderField(newField.el, newField);
-                                return newField.el;
-                            }
-                            return null;
-                        }
-                        else
-                            console.error(`Field "${name}" not found`);
-                    }
-                }
-                onRenderField(el, field) {
-                    if (!Katrid.settings.ui.isMobile) {
-                        let title = field.caption;
-                        if (field.helpText)
-                            title += '<br>' + field.helpText;
-                        title += '<br>Field: ' + field.name;
-                        if (field.model)
-                            title += '<br>Model: ' + field.model;
-                        el.setAttribute('ui-tooltip', title);
-                    }
                 }
                 beforeRender(template) {
                     for (let customTag of Object.values(Views.customTagRegistry))
@@ -4911,16 +5060,28 @@ var Katrid;
                     this.templateUrl = 'view.card.jinja2';
                     this.action.view = this;
                 }
+                renderField(fieldEl) {
+                    let name = fieldEl.getAttribute('name');
+                    if (name) {
+                        let fld = this.fields[name];
+                        if (fld) {
+                            fld.view = this;
+                            fld.assign(fieldEl);
+                            if (fld.visible) {
+                                return fld.cardCreate();
+                            }
+                        }
+                        else
+                            console.error(`Field "${name}" not found`);
+                    }
+                }
                 render(container) {
                     let content = $(this.template());
                     content.children('field').remove();
-                    for (let element of content.find('field')) {
-                        let el = $(element);
-                        let newField = this.renderField(element);
-                        if (newField)
-                            el.replaceWith(newField);
-                        else
-                            el.replaceWith(`\$\{ record.${el.attr('name')} }`);
+                    for (let child of content.find('field')) {
+                        let el = this.renderField(child);
+                        if (el)
+                            child.replaceWith(el);
                     }
                     let templ = $(Katrid.app.getTemplate(this.templateUrl, { content: content[0].outerHTML }));
                     return Katrid.Core.$compile(templ)(this.action.scope);
@@ -4955,6 +5116,21 @@ var Katrid;
                     $(form).find('tabset').tabset();
                     return form;
                 }
+                renderField(fieldEl) {
+                    let name = fieldEl.getAttribute('name');
+                    if (name) {
+                        let fld = this.fields[name];
+                        if (fld) {
+                            fld.view = this;
+                            fld.assign(fieldEl);
+                            if (fld.visible) {
+                                return fld.formCreate(this.element);
+                            }
+                        }
+                        else
+                            console.error(`Field "${name}" not found`);
+                    }
+                }
                 prepare(container) {
                     let form = this.template();
                     form.setAttribute('smart-form', 'smart-form');
@@ -4967,7 +5143,6 @@ var Katrid;
                         if (newField) {
                             child.parentElement.insertBefore(newField, child);
                             child.remove();
-                            newField.setAttribute('form-field', 'form-field');
                         }
                     }
                     let context = {};
@@ -5147,7 +5322,7 @@ var Katrid;
                     else {
                         if (!field.visible)
                             return;
-                        field = field.clone(fld);
+                        field.assign(fld);
                         field.view = this._view;
                         field.listCreate(this);
                     }
@@ -7307,12 +7482,12 @@ var Katrid;
                     this._scope.views = res.views;
                     this._scope.view = this.view;
                     this.render(this.view.render(this)[0]);
-                    this.view.element['pasteAllowed'] = this.field.fieldEl.hasAttribute('paste-allowed');
+                    if (this.view.element)
+                        this.view.element['pasteAllowed'] = this.field.fieldEl.hasAttribute('paste-allowed');
                     this.querySelector('.content');
                 }
                 render(elView) {
                     let listView = elView.querySelector('list-view');
-                    console.log('render', listView);
                     if (listView) {
                         listView.inlineEditor = this.inlineEditor;
                         listView.classList.add('table-responsive');
@@ -8109,19 +8284,22 @@ var Katrid;
                             reject(res.error);
                         else {
                             if (res.result) {
+                                let result = res.result;
+                                if (Array.isArray(result) && (result.length === 1))
+                                    result = result[0];
                                 let messages;
-                                if (res.result.messages)
-                                    messages = res.result.messages;
+                                if (result.messages)
+                                    messages = result.messages;
                                 else
                                     messages = [];
-                                if (res.result.message)
-                                    messages.push(res.result.message);
-                                else if (res.result.warn)
-                                    messages.push({ type: 'warn', message: res.result.warn });
-                                else if (res.result.info)
-                                    messages.push({ type: 'info', message: res.result.info });
-                                else if (res.result.error)
-                                    messages.push({ type: 'error', message: res.result.error });
+                                if (result.message)
+                                    messages.push(result.message);
+                                else if (result.warn)
+                                    messages.push({ type: 'warn', message: result.warn });
+                                else if (result.info)
+                                    messages.push({ type: 'info', message: result.info });
+                                else if (result.error)
+                                    messages.push({ type: 'error', message: result.error });
                                 messages.forEach(function (msg) {
                                     if (_.isString(msg))
                                         Katrid.Forms.Dialogs.Alerts.success(msg);
@@ -8136,21 +8314,20 @@ var Katrid;
                                     else if (msg.type === 'alert')
                                         Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
                                 });
-                            }
-                            res = res.result;
-                            if (res) {
-                                if (res.open)
-                                    window.open(res.open);
-                                if (res.download) {
-                                    console.log(res.result);
-                                    let a = document.createElement('a');
-                                    a.href = res.download;
-                                    a.target = '_blank';
-                                    a.click();
-                                    return;
+                                if (result) {
+                                    if (result.open)
+                                        window.open(result.open);
+                                    if (result.download) {
+                                        console.log(result.result);
+                                        let a = document.createElement('a');
+                                        a.href = result.download;
+                                        a.target = '_blank';
+                                        a.click();
+                                        return;
+                                    }
                                 }
                             }
-                            resolve(res);
+                            resolve(res.result);
                         }
                     })
                         .then(res => {
