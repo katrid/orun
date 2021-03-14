@@ -6,23 +6,23 @@
     <field name="is_superuser">True</field>
     <field name="active">True</field>
   </object>
-  <object id="sys.res.partner.title.madam" model="res.partner.title">
+  <object id="sys.res.partner.title.madam" model="res.partner.title" no-update="1">
     <field name="name">Madam</field>
     <field name="abbreviation">Mrs.</field>
   </object>
-  <object id="sys.res.partner.title.miss" model="res.partner.title">
+  <object id="sys.res.partner.title.miss" model="res.partner.title" no-update="1">
     <field name="name">Miss</field>
     <field name="abbreviation">Miss</field>
   </object>
-  <object id="sys.res.partner.title.mister" model="res.partner.title">
+  <object id="sys.res.partner.title.mister" model="res.partner.title" no-update="1">
     <field name="name">Mister</field>
     <field name="abbreviation">Mr.</field>
   </object>
-  <object id="sys.res.partner.title.doctor" model="res.partner.title">
+  <object id="sys.res.partner.title.doctor" model="res.partner.title" no-update="1">
     <field name="name">Doctor</field>
     <field name="abbreviation">Dr.</field>
   </object>
-  <object id="sys.res.partner.title.prof" model="res.partner.title">
+  <object id="sys.res.partner.title.prof" model="res.partner.title" no-update="1">
     <field name="name">Professor</field>
     <field name="abbreviation">Prof.</field>
   </object>
@@ -32,7 +32,7 @@
     <field name="email">mycompany@example.com</field>
     <field name="website">www.example.com</field>
   </object>
-  <object id="auth.user.root" model="auth.user">
+  <object id="auth.user.root" model="auth.user" no-update="1">
     <field name="user_company" ref="sys.main.company"/>
   </object>
   <object id="auth.user.anonymous" model="auth.user" no-update="1">
