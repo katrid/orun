@@ -121,6 +121,7 @@ class Options:
         self.field_change_event = defaultdict(list)
         self.local_fields = []
         self.fields: Union[Sequence[Field], Dict[str, Field]] = Fields(self)
+        self.derived_models = []
         self.local_managers = []
         self.base_manager_name = None
         self.default_manager_name = None
@@ -138,7 +139,6 @@ class Options:
         self.auto_field = None
         self.concrete_model = None
         self.related_fkey_lookups = []
-        self.child_links = []
         # For any class that is a proxy (including automatically created
         # classes for deferred object loading), proxy_for_model tells us
         # which class this model is proxying. Note that proxy_for_model
@@ -340,9 +340,9 @@ class Options:
         elif field.many_to_many:
             field.concrete = False
 
-        for link in self.child_links:
+        for link in self.derived_models:
             new_field = copy.deepcopy(field)
-            new_field.local = False
+            new_field.local = self.abstract
             link.add_to_class(field.name, new_field)
 
         # Special field names
