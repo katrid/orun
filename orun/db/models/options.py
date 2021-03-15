@@ -342,6 +342,7 @@ class Options:
 
         for link in self.derived_models:
             new_field = copy.deepcopy(field)
+            new_field.model = link
             new_field.local = self.abstract
             link.add_to_class(field.name, new_field)
 
