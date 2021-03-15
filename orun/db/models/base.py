@@ -169,7 +169,6 @@ class ModelBase(type):
             base = None
             for parent in [kls for kls in parents if hasattr(kls, '_meta')]:
                 if parent._meta.abstract:
-                    parent._meta.derived_models.append(new_class)
                     if parent._meta.fields:
                         raise TypeError(
                             "Abstract base class containing model fields not "
@@ -187,6 +186,9 @@ class ModelBase(type):
             new_class._meta.concrete_model = base._meta.concrete_model
         else:
             new_class._meta.concrete_model = new_class
+            for parent in parents:
+                if parent is not Model:
+                    parent._meta.derived_models.append(new_class)
 
 
         # Collect the parent links for multi-table inheritance.
@@ -248,7 +250,6 @@ class ModelBase(type):
                         auto_created=True,
                         parent_link=True,
                     )
-                    base._meta.derived_models.append(new_class)
 
                     if attr_name in field_names:
                         raise FieldError(
