@@ -235,7 +235,7 @@ var Katrid;
                 }
                 else if (!actionId && params.model && (!action || (action.params && (action.params.model !== params.model)))) {
                     let svc = new Katrid.Services.Model(params.model);
-                    let actionInfo = await svc.rpc('get_formview_action', [params.id]);
+                    let actionInfo = await svc.rpc('admin_get_formview_action', [params.id]);
                     let scope = this.createScope();
                     action = scope.action = new Katrid.Actions.registry[actionInfo.action_type]({ info: actionInfo, scope, location: params });
                 }
@@ -3133,6 +3133,24 @@ var Katrid;
                         this.readonly = info.readonly;
                     if ('visible' in info)
                         this.visible = info.visible;
+                    if (info.ngReadonly)
+                        this.ngReadonly = info.ngReadonly;
+                    if (info.domain)
+                        this.filter = info.domain;
+                    if (info.filter)
+                        this.filter = info.filter;
+                    if (info.ngShow)
+                        this.ngShow = info.ngShow;
+                    if (info.ngIf)
+                        this.ngIf = info.ngIf;
+                    if (info.ngClass)
+                        this.ngClass = info.ngClass;
+                    if (info.ngMaxLength)
+                        this.ngMaxLength = info.ngMaxLength;
+                    if (info.ngMinLength)
+                        this.ngMinLength = info.ngMinLength;
+                    if (info.ngChange)
+                        this.ngChange = info.ngChange;
                 }
                 assign(el) {
                     for (let attr of el.attributes) {
@@ -3218,12 +3236,18 @@ var Katrid;
                     input.name = this.name;
                     input.setAttribute('ng-model', 'record.' + this.name);
                     input.classList.add('form-field', 'form-control');
-                    input.autocomplete = 'none';
+                    input.autocomplete = 'off';
                     input.spellcheck = false;
+                    if (this.maxLength)
+                        input.maxLength = this.maxLength;
+                    if (this.ngMaxLength)
+                        input.setAttribute('ng-maxlength', this.ngMaxLength);
+                    if (this.ngMinLength)
+                        input.setAttribute('ng-minlength', this.ngMinLength);
                     if (this.attrs.nolabel === 'placeholder')
                         input.placeholder = this.caption;
-                    if (this.attrs.ngFieldChange)
-                        input.setAttribute('ng-change', this.attrs.ngFieldChange);
+                    if (this.attrs.ngFieldChange || this.ngChange)
+                        input.setAttribute('ng-change', this.attrs.ngFieldChange || this.ngChange);
                     return input;
                 }
                 formCreate(view) {
@@ -3745,7 +3769,7 @@ var Katrid;
                     let control = document.createElement('div');
                     control.innerHTML = `
 <input is="input-autocomplete" class="form-field form-control" name="${this.name}" ng-model="record.${this.name}" 
-autocomplete="none"
+autocomplete="off"
 spellcheck="false" input-field ng-model-options="{updateOn: 'selectItem'}" input-autocomplete>
 <span class="caret"></span>
 `;
@@ -8326,8 +8350,10 @@ var Katrid;
                                         return;
                                     }
                                 }
+                                resolve(result);
                             }
-                            resolve(res.result);
+                            else
+                                resolve(res);
                         }
                     })
                         .then(res => {
