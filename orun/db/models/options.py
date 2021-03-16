@@ -337,6 +337,8 @@ class Options:
             if field.name in self.fields:
                 raise ValueError(f'Field "{field.name}" duplicated. Use the fields_override attribute to extend a field.')
             self.local_fields.append(field)
+            if self.pk is None and field.primary_key:
+                self.pk = field
         elif field.many_to_many:
             field.concrete = False
 
@@ -358,8 +360,6 @@ class Options:
             self.__class__.active_field = field.name
 
         self.fields.append(field)
-        if self.pk is None and field.primary_key:
-            self.pk = field
 
         # If the field being added is a relation to another known field,
         # expire the cache on this field and the forward cache on the field
