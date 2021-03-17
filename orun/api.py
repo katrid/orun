@@ -39,9 +39,10 @@ def _register_method(fn, meth_name):
     #     cls._meta.methods[meth_name] = fn
     #
     # fn.contribute_to_class = contribute_to_class
-    fn.exposed = True
     fn.meth_name = meth_name
-    return builtins.classmethod(fn)
+    fn = builtins.classmethod(fn)
+    fn.exposed = True
+    return fn
 
 
 def classmethod(name_or_fn):

@@ -313,13 +313,10 @@ class Options:
         for k, v in attrs.items():
             if attr := getattr(model, k, None):
                 setattr(class_helper, k, attr)
-                exposed = getattr(v, 'exposed', None)
                 if inspect.isfunction(v):
                     v = method_helper(v, class_helper)
                 elif isinstance(v, classmethod):
                     v = classmethod_helper(v, class_helper)
-                if exposed:
-                    v.exposed = True
             if hasattr(v, 'contribute_to_class'):
                 model.add_to_class(k, v)
             else:
