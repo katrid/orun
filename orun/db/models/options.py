@@ -337,8 +337,6 @@ class Options:
             if field.name in self.fields:
                 raise ValueError(f'Field "{field.name}" duplicated. Use the fields_override attribute to extend a field.')
             self.local_fields.append(field)
-            if self.pk is None and field.primary_key:
-                self.pk = field
         elif field.many_to_many:
             field.concrete = False
 
@@ -348,6 +346,9 @@ class Options:
             if self.abstract:
                 new_field.model = link
             link.add_to_class(field.name, new_field)
+
+        if self.pk is None and field.primary_key:
+            self.pk = field
 
         # Special field names
         if self.name_field is None and field.name == 'name':
