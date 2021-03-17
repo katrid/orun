@@ -346,7 +346,7 @@ class Options:
             if self.abstract:
                 new_field.model = link
             link.add_to_class(field.name, new_field)
-
+            field = new_field
         if self.pk is None and field.primary_key:
             self.pk = field
 
