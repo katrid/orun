@@ -812,6 +812,7 @@ var Katrid;
                         view_type: 'form',
                         menu_id: Katrid.webApp.currentMenu.id,
                     };
+                    this.dataSource.recordId = row.id;
                     console.log(this.app.$location.$$search);
                     if (evt && evt.ctrlKey) {
                         const url = '#/app/?' + $.param(search);
@@ -2296,7 +2297,7 @@ var Katrid;
                 if (data === true)
                     r = this.search(this._params, this._page);
                 else if (data) {
-                    r = this.get(data[0]);
+                    r = this.get(data);
                 }
                 else if (this.record && this.record.id) {
                     r = this.get(this.record.id);
@@ -2597,8 +2598,9 @@ var Katrid;
                         this.uploading++;
                         return this.model.write([data])
                             .then((res) => {
+                                console.log('model write', res);
                             if (this.action && this.action.viewType && (this.action.viewType === 'form'))
-                                Katrid.webApp.changeUrl('id', res[0]);
+                                Katrid.webApp.changeUrl('id', res);
                             if (this.action.form) {
                                 this.action.form.$setPristine();
                                 this.action.form.$setUntouched();
