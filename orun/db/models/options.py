@@ -942,6 +942,8 @@ def method_helper(fn, class_helper):
 def classmethod_helper(fn, class_helper):
     def wrapped(cls, *args, **kwargs):
         return fn.__func__(cls, class_helper, *args, **kwargs)
+    if getattr(fn, 'exposed', None):
+        wrapped.exposed = fn.exposed
     return classmethod(wrapped)
 
 

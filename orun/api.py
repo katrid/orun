@@ -34,13 +34,9 @@ class RecordProxy:
 
 
 def _register_method(fn, meth_name):
-    # def contribute_to_class(cls, name):
-    #     setattr(cls, name, fn)
-    #     cls._meta.methods[meth_name] = fn
-    #
-    # fn.contribute_to_class = contribute_to_class
-    fn.meth_name = meth_name
+    fn.exposed = True
     fn = builtins.classmethod(fn)
+    fn.meth_name = meth_name
     fn.exposed = True
     return fn
 
