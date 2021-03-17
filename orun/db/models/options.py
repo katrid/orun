@@ -317,6 +317,8 @@ class Options:
                     v = method_helper(v, class_helper)
                 elif isinstance(v, classmethod):
                     v = classmethod_helper(v, class_helper)
+                if getattr(v, 'exposed', None):
+                    v.exposed = True
             if hasattr(v, 'contribute_to_class'):
                 model.add_to_class(k, v)
             else:
