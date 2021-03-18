@@ -393,7 +393,7 @@ var Katrid;
             async onHashChange(params) {
                 location.hash = '#/app/?' + $.param(params);
                 let svc = new Katrid.Services.Model('ui.action.view');
-                let res = await svc.post('admin_get_view', { args: [this.info.view.id] });
+                let res = await svc.post('get_view', { args: [this.info.view.id] });
                 let content = res.content;
                 let viewType = res.type;
                 if (content.startsWith('{')) {
@@ -429,6 +429,11 @@ var Katrid;
                 this.viewModes = this.viewMode.split(',');
                 if (config.info.model)
                     config.scope.model = this.model = new Katrid.Services.Model(config.info.model);
+                this.dataSource = new Katrid.Data.DataSource({
+                    model: this.model,
+                    scope: config.scope,
+                    action: this,
+                });
                 config.scope.$on('dataStateChange', this.onDataStateChange);
                 config.scope.$on('afterCancel', (evt, dataSource) => {
                     if (dataSource === this.dataSource)
@@ -484,6 +489,8 @@ var Katrid;
                     this.viewType = viewType;
                     await this.execute();
                 }
+                if (this.params.id && (this.dataSource.recordId != this.params.id))
+                    await this.dataSource.get(this.params.id);
             }
             rpc(method, data, event) {
                 if (event)
@@ -520,8 +527,9 @@ var Katrid;
             onLoadData(recs) {
                 console.log('on load records');
                 this.scope.records = recs;
-                if (this.selection && this.selection.clear)
+                if (this.selection)
                     this.selection.clear();
+                console.log('callbacks', this._loadDataCallbacks);
                 for (let cb of this._loadDataCallbacks)
                     cb(recs);
             }
@@ -598,6 +606,9 @@ var Katrid;
                     search.id = this.record.id;
                 return search;
             }
+            get record() {
+                return this.scope.record;
+            }
             get searchModes() {
                 return this.viewModes.filter(v => v !== 'form');
             }
@@ -643,42 +654,54 @@ var Katrid;
                             this.scope.$apply();
                         });
                     }
+                    let templ = Katrid.app.getTemplate('ui.action.window.jinja2', { action: this });
+                    templ = Katrid.Core.$compile(templ)(this.scope);
+                    templ[0].action = this;
+                    this.$parent.html(templ);
+                    this.$element = templ;
+                    this.$container = this.$element.find('.action-view-content:first');
                 }
                 let firstTime = false;
                 if (this.view) {
                     this._cachedViews[this.view.viewType] = this.view;
-                    $(this.view.el).detach();
+                    this.view.el.detach();
                 }
                 else
                     firstTime = true;
-                this.$parent.empty();
+                this.$container.empty();
+                this.refreshBreadcrumb();
                 this.scope.view = this.views[this.viewType];
                 let view;
                 if (this.viewType in this._cachedViews) {
                     this.view = view = this._cachedViews[this.viewType];
-                    this.$parent.append(view.el);
+                    this.$container.append(view.el);
                 }
                 else {
                     view = new Katrid.Forms.Views.registry[this.viewType]({ action: this, viewInfo: this.scope.view });
                     this.view = view;
-                    view.renderTo(this.$parent);
+                    view.renderTo(this.$container);
+                    view.ready();
                 }
-                view.ready();
                 if (view instanceof Katrid.Forms.Views.RecordCollectionView)
                     this.searchResultView = view;
                 if (this.viewType !== 'form') {
                     this.lastViewType = this.viewType;
                     this.lastUrl = location.hash;
+                    this.dataSource.refresh(true);
                 }
-            }
-            changeUrl() {
-                console.log('change the url');
+                setTimeout(() => {
+                    if ((this.viewType === 'form') && !Katrid.app.$location.$$search.id)
+                        this.dataSource.insert();
+                });
             }
             get viewType() {
                 return this._viewType;
             }
             set viewType(value) {
                 if (value !== this._viewType) {
+                    if (value !== 'form')
+                        this.dataSource.recordId = null;
+                    this.dataSource.destroyChildren();
                     this._viewType = value;
                 }
                 return;
@@ -789,6 +812,7 @@ var Katrid;
                         view_type: 'form',
                         menu_id: Katrid.webApp.currentMenu.id,
                     };
+                    this.dataSource.recordId = row.id;
                     console.log(this.app.$location.$$search);
                     if (evt && evt.ctrlKey) {
                         const url = '#/app/?' + $.param(search);
@@ -799,12 +823,6 @@ var Katrid;
                         Katrid.app.loadPage('#/app/?' + $.param(search), false);
                     this.dataSource.recordIndex = index;
                 }
-            }
-            get recordIndex() {
-                return this._recordIndex;
-            }
-            set recordIndex(value) {
-                this._recordIndex = value;
             }
             onDataStateChange(event, dataSource) {
                 let self = dataSource.scope.action;
@@ -2199,6 +2217,7 @@ var Katrid;
                 this.fieldWatchers = [];
                 this._pendingChanges = false;
                 this.recordId = null;
+                this.scope.$fieldLog = {};
                 this._records = [];
                 this.pendingPromises = [];
             }
@@ -2207,22 +2226,8 @@ var Katrid;
             }
             set pageIndex(page) {
                 this._pageIndex = page;
+                console.log('goto page', page);
                 this.search(this._params, page, this._fields, DEFAULT_REQUEST_INTERVAL);
-            }
-            get loadingRecord() {
-                return this._loadingRecord;
-            }
-            set loadingRecord(value) {
-                this._loadingRecord = value;
-                this.state = this.state;
-            }
-            get pendingRequest() {
-                return this._pendingRequest;
-            }
-            set pendingRequest(value) {
-                this._pendingRequest = value;
-                if (this.requestCallback)
-                    this.requestCallback(value);
             }
             get fields() {
                 return this.scope.view.fields;
@@ -2240,13 +2245,15 @@ var Katrid;
             async cancel() {
                 if (!this.changing)
                     return;
-                let editing = this.state === DataSourceState.editing;
-                this.state = DataSourceState.browsing;
                 this._recordIndex = null;
                 this._pendingChanges = false;
+                let editing = this.state === DataSourceState.editing;
+                this.state = DataSourceState.browsing;
                 if (editing)
-                    return this.refreshRecord();
-                return;
+                    await this.refresh();
+                else if (this.action)
+                    this.action.switchView('list');
+                this.scope.$emit('afterCancel', this);
             }
             _createRecord(obj) {
                 let rec = Data.createRecord(obj, this);
@@ -2290,17 +2297,12 @@ var Katrid;
                 if (data === true)
                     r = this.search(this._params, this._page);
                 else if (data) {
-                    r = this.get(data[0]);
+                    r = this.get(data);
                 }
                 else if (this.record && this.record.id) {
                     r = this.get(this.record.id);
                 }
                 return r;
-            }
-            refreshRecord(id) {
-                if (id === undefined)
-                    id = this._recordId;
-                return this.get(id);
             }
             _validateForm(elForm, form, errorMsgs) {
                 let elfield;
@@ -2363,24 +2365,26 @@ var Katrid;
                             else {
                                 this.offset = 1;
                             }
-                            if (res.count != null)
-                                this.recordCount = res.count;
-                            let data = res.data;
-                            this.rawData = data;
-                            if (this.readonly)
-                                this.records = data;
-                            else
-                                this.records = data.map((obj) => this._createRecord(obj));
-                            if (this.pageIndex === 1) {
-                                return this.offsetLimit = this._records.length;
-                            }
-                            else {
-                                return this.offsetLimit = (this.offset + this._records.length) - 1;
-                            }
+                            this.scope.$apply(() => {
+                                if (res.count != null)
+                                    this.recordCount = res.count;
+                                let data = res.data;
+                                this.rawData = data;
+                                if (this.readonly)
+                                    this.records = data;
+                                else
+                                    this.records = data.map((obj) => this._createRecord(obj));
+                                if (this.pageIndex === 1) {
+                                    return this.offsetLimit = this._records.length;
+                                }
+                                else {
+                                    return this.offsetLimit = (this.offset + this._records.length) - 1;
+                                }
+                            });
                             return resolve(res);
                         })
                             .finally(() => {
-                            this.pendingRequest = false;
+                            this.scope.$apply(() => this.pendingRequest = false);
                         });
                     };
                     this.pendingPromises.push(controller);
@@ -2449,28 +2453,30 @@ var Katrid;
                             else {
                                 this.offset = 1;
                             }
-                            if (res.count != null)
-                                this.recordCount = res.count;
-                            let data = res.data;
-                            this.rawData = data;
-                            if (this.pageIndex === 1) {
-                                this.offsetLimit = data.length;
-                            }
-                            else {
-                                this.offsetLimit = (this.offset + data.length) - 1;
-                            }
-                            if (this.readonly)
-                                this.records = data;
-                            else
-                                this.records = data.map((obj, idx) => {
-                                    let rec = this._createRecord(obj);
-                                    rec.$index = idx;
-                                    return rec;
-                                });
+                            this.scope.$apply(() => {
+                                if (res.count != null)
+                                    this.recordCount = res.count;
+                                let data = res.data;
+                                this.rawData = data;
+                                if (this.readonly)
+                                    this.records = data;
+                                else
+                                    this.records = data.map((obj, idx) => {
+                                        let rec = this._createRecord(obj);
+                                        rec.$index = idx;
+                                        return rec;
+                                    });
+                                if (this.pageIndex === 1) {
+                                    return this.offsetLimit = this._records.length;
+                                }
+                                else {
+                                    return this.offsetLimit = (this.offset + this._records.length) - 1;
+                                }
+                            });
                             return resolve(res);
                         })
                             .finally(() => {
-                            this.pendingRequest = false;
+                            this.scope.$apply(() => this.pendingRequest = false);
                         });
                     };
                     this.pendingPromises.push(controller);
@@ -2533,8 +2539,6 @@ var Katrid;
                 const newIndex = (this._recordIndex + index);
                 if ((newIndex > -1) && (newIndex < this._records.length))
                     this.recordIndex = newIndex;
-                if (this.scrollCallback)
-                    this.scrollCallback(this.recordIndex, this.record);
             }
             _clearTimeout() {
                 this.loading = false;
@@ -2586,15 +2590,25 @@ var Katrid;
                 const el = this.action.$form;
                 if (this.validate()) {
                     const data = this.record.$record.serialize();
+                    console.log(data);
+                    let beforeSubmit = el.attr('before-submit');
+                    if (beforeSubmit)
+                        beforeSubmit = this.scope.$eval(beforeSubmit);
                     if (data) {
                         this.uploading++;
                         return this.model.write([data])
                             .then((res) => {
+                                console.log('model write', res);
+                            if (this.action && this.action.viewType && (this.action.viewType === 'form'))
+                                Katrid.webApp.changeUrl('id', res);
+                            if (this.action.form) {
+                                this.action.form.$setPristine();
+                                this.action.form.$setUntouched();
+                            }
                             this._pendingChanges = false;
                             this.state = DataSourceState.browsing;
-                            console.log('record saved', res);
                             if (autoRefresh)
-                                return this.refreshRecord(res);
+                                return this.refresh(res);
                             else
                                 return res;
                         })
@@ -2641,7 +2655,7 @@ var Katrid;
                 }
             }
             async delete(sel) {
-                await this.model.delete(sel);
+                await this.model.destroy(sel);
             }
             _getNested(recs) {
                 let res = [];
@@ -2718,6 +2732,8 @@ var Katrid;
                         })
                             .finally(() => {
                             this.loadingRecord = false;
+                            if (apply)
+                                return this.scope.$apply();
                         });
                     };
                     if (!timeout && !this.requestInterval)
@@ -2804,7 +2820,10 @@ var Katrid;
                 return value;
             }
             fieldByName(fieldName) {
-                return this.action.view.fields[fieldName];
+                if (this.scope.views)
+                    return this.scope.views.form.fields[fieldName];
+                else
+                    return this.action.view.fields[fieldName];
             }
             set state(state) {
                 this._modifiedFields = [];
@@ -2813,8 +2832,6 @@ var Katrid;
                 this.editing = state === DataSourceState.editing;
                 this.loading = state === DataSourceState.loading;
                 this.changing = [DataSourceState.editing, DataSourceState.inserting].includes(this.state);
-                if (this.stateChangeCallback)
-                    this.stateChangeCallback(state);
             }
             get browsing() {
                 return this._state === DataSourceState.browsing;
@@ -2829,23 +2846,22 @@ var Katrid;
                 return this._state;
             }
             get record() {
-                return this._record;
+                return this.scope.record;
             }
             set recordId(value) {
-                this._recordId = value;
-                this.action.recordId = value;
+                this.scope.recordId = value;
             }
             get recordId() {
-                return this._recordId;
+                return this.scope.recordId;
             }
             set record(rec) {
                 if (!rec.$record)
                     rec = this._createRecord(rec);
-                if (this.dataCallback)
-                    this.dataCallback(rec);
-                this._record = rec;
+                this.scope.record = rec;
                 this.recordId = rec.id;
                 this._pendingChanges = false;
+                if (this.scope.form)
+                    this.scope.form.$setPristine();
                 if (this.action && this.action.$element)
                     this.action.$element[0].dispatchEvent(new CustomEvent('recordLoaded', { 'detail': { record: rec } }));
                 this.childrenNotification(rec);
@@ -2858,8 +2874,6 @@ var Katrid;
                 this._records = recs;
                 if (('onLoadData' in this.action) && (this.action['onLoadData']))
                     this.action['onLoadData'](recs);
-                if (this.dataCallback)
-                    this.dataCallback(recs);
             }
             get records() {
                 return this._records;
@@ -2886,9 +2900,10 @@ var Katrid;
             }
             set recordIndex(index) {
                 this._recordIndex = index;
-                let rec = this._records[index];
-                if (this.action)
-                    this.action.changeUrl('id', this.recordId);
+                let rec = this.scope.record = this._records[index];
+                if (!this.parent)
+                    Katrid.webApp.changeUrl('id', this.scope.record.id);
+                this.scope.recordId = null;
                 this.get(rec.id);
             }
             get recordIndex() {
@@ -3221,7 +3236,7 @@ var Katrid;
                     let input = document.createElement('input');
                     input.type = 'text';
                     input.name = this.name;
-                    input.setAttribute('v-model', 'record.' + this.name);
+                    input.setAttribute('ng-model', 'record.' + this.name);
                     input.classList.add('form-field', 'form-control');
                     input.autocomplete = 'off';
                     input.spellcheck = false;
@@ -3241,7 +3256,6 @@ var Katrid;
                     let label = this.formLabel();
                     let control = this.formControl();
                     let section = document.createElement('section');
-                    section.innerHTML = `{{record.${this.name}}}`;
                     if (this.ngIf)
                         section.setAttribute('ng-if', this.ngIf);
                     if (this.ngShow)
@@ -3269,6 +3283,7 @@ var Katrid;
                         span.innerHTML = spanTempl;
                         section.append(span);
                     }
+                    this.createTooltip(section);
                     return section;
                 }
                 createTooltip(section) {
@@ -3277,7 +3292,7 @@ var Katrid;
                         if (this.helpText)
                             title += '<br>' + this.helpText;
                         title += '<br>Field: ' + this.name;
-                        title += `<br>Content: {{ record.${this.name} }}`;
+                        title += `<br>Content: \${record.${this.name}}`;
                         if (this.model)
                             title += '<br>Model: ' + this.model;
                         section.setAttribute('ui-tooltip', title);
@@ -3307,8 +3322,8 @@ var Katrid;
                 }
                 formSpanTemplate() {
                     if (this.hasChoices)
-                        return `{{ view.fields['${this.name}'].displayChoices[record.${this.name}] || '${this.emptyText}' }}`;
-                    return `<span>{{ record.${this.name} }}</span>`;
+                        return `\${ view.fields['${this.name}'].displayChoices[record.${this.name}] || '${this.emptyText}' }`;
+                    return `<span>\${ record.${this.name} }</span>`;
                 }
                 listSpanTemplate() {
                     return this.formSpanTemplate();
@@ -3359,7 +3374,7 @@ var Katrid;
                 }
                 cardCreate() {
                     let span = document.createElement('span');
-                    span.innerText = `{{ record.${this.name} }}`;
+                    span.innerText = `\$\{ record.${this.name} }`;
                     return span;
                 }
                 render(viewType, el, context) {
@@ -3495,7 +3510,7 @@ var Katrid;
             }
             class ChoiceField extends Field {
                 formSpanTemplate() {
-                    return `{{ view.fields.${this.name}.displayChoices[record.${this.name}] || '${this.emptyText}' }}`;
+                    return `\${ view.fields.${this.name}.displayChoices[record.${this.name}] || '${this.emptyText}' }`;
                 }
                 formControl() {
                     let control = document.createElement('select');
@@ -3503,9 +3518,9 @@ var Katrid;
                     control.name = this.name;
                     control.setAttribute('ng-model', 'record.' + this.name);
                     let option = document.createElement('option');
-                    option.setAttribute('v-for', `choice in view.fields.${this.name}.choices`);
-                    option.setAttribute(':value', "choice[0]");
-                    option.innerText = '{{ choice[1] }}';
+                    option.setAttribute('ng-repeat', `choice in view.fields.${this.name}.choices`);
+                    option.setAttribute('value', "${ choice[0] }");
+                    option.innerText = '${ choice[1] }';
                     control.append(option);
                     return control;
                 }
@@ -3545,7 +3560,7 @@ var Katrid;
                     this.nolabel = true;
                 }
                 formSpanTemplate() {
-                    return `{{ record.${this.name} ? '${_.gettext('yes')}' : '${_.gettext('no')}' }}`;
+                    return `\${ record.${this.name} ? '${_.gettext('yes')}' : '${_.gettext('no')}' }`;
                 }
                 create() {
                     super.create();
@@ -3575,9 +3590,9 @@ var Katrid;
                     let caption = this.caption;
                     if (this.helpText)
                         caption = this.helpText;
-                    label.setAttribute('v-show', 'changing');
+                    label.setAttribute('ng-show', 'action.dataSource.changing');
                     label.innerHTML =
-                        `<input type="checkbox" name="${this.name}" class="form-field form-control" v-model="record.${this.name}">${caption}<i class="fas"></i>`;
+                        `<input type="checkbox" name="${this.name}" class="form-field form-control" ng-model="record.${this.name}">${caption}<i class="fas"></i>`;
                     return label;
                 }
             }
@@ -3592,7 +3607,7 @@ var Katrid;
                     this.template.card = 'view.list.date-field.jinja2';
                 }
                 formSpanTemplate() {
-                    return `{{ (record.${this.name}|date:'shortDate') || '${this.emptyText}' }}`;
+                    return `\${ (record.${this.name}|date:'shortDate') || '${this.emptyText}' }`;
                 }
                 create() {
                     super.create();
@@ -3632,7 +3647,7 @@ var Katrid;
                     this.template.list = 'view.list.datetime-field.jinja2';
                 }
                 formSpanTemplate() {
-                    return `{{ (record.${this.name}|date:'short') || '${this.emptyText}' }}`;
+                    return `\${ (record.${this.name}|date:'short') || '${this.emptyText}' }`;
                 }
                 create() {
                     super.create();
@@ -3664,7 +3679,7 @@ var Katrid;
                     super.create();
                 }
                 formSpanTemplate() {
-                    return `{{ (record.${this.name}|date:'shortTime') || '${this.emptyText}' }}`;
+                    return `\${ (record.${this.name}|date:'shortTime') || '${this.emptyText}' }`;
                 }
                 formControl() {
                     let control = super.formControl();
@@ -3727,7 +3742,7 @@ var Katrid;
                     }
                 }
                 formSpanTemplate() {
-                    return `{{ record.${this.name}|toFixed(2) || '${this.emptyText}' }}`;
+                    return `\${ (record.${this.name}|number:${this.decimalPlaces || 0}) || '${this.emptyText}' }`;
                 }
                 formControl() {
                     let control = super.formControl();
@@ -3736,7 +3751,7 @@ var Katrid;
                     return control;
                 }
                 listSpanTemplate() {
-                    return `<span class="grid-field-readonly">{{ record.${this.name}|toFixed(2) }}</span>`;
+                    return `<span class="grid-field-readonly">\${ (record.${this.name}|number:${this.decimalPlaces || 0}) || '${this.emptyText}' }</span>`;
                 }
             }
             Fields.DecimalField = DecimalField;
@@ -3766,10 +3781,10 @@ spellcheck="false" input-field ng-model-options="{updateOn: 'selectItem'}" input
                     return control;
                 }
                 listSpanTemplate() {
-                    return `<a class="grid-field-readonly">{{ record.${this.name}.text||'${this.emptyText}' }}</a>`;
+                    return `<a class="grid-field-readonly">\${ record.${this.name}.text||'${this.emptyText}' } </a>`;
                 }
                 formSpanTemplate() {
-                    return `<a href="#/app/?menu_id=\${ ::action.params.menu_id }&model=${this.model}&view_type=form&id=\${ record.${this.name}.id }">{{ record.${this.name}.text||'${this.emptyText}' }} </a>`;
+                    return `<a href="#/app/?menu_id=\${ ::action.params.menu_id }&model=${this.model}&view_type=form&id=\${ record.${this.name}.id }">\${ record.${this.name}.text||'${this.emptyText}' } </a>`;
                 }
                 create() {
                     super.create();
@@ -3878,7 +3893,7 @@ spellcheck="false" input-field ng-model-options="{updateOn: 'selectItem'}" input
                     return `
       <a href="#/app/?menu_id=\${ ::action.params.menu_id }&model={{ field.model }}&view_type=form&id=\${ record.{{ field.name }}[0] }">
         <span ng-repeat="val in record.{{ field.name }}">
-        {{ val[1] }}
+        \${ val[1] }
         </span>
       </a>`;
                 }
@@ -3898,7 +3913,7 @@ spellcheck="false" input-field ng-model-options="{updateOn: 'selectItem'}" input
                     control.classList.add('form-field', 'form-control');
                     control.spellcheck = true;
                     control.name = this.name;
-                    control.setAttribute('v-model', 'record.' + this.name);
+                    control.setAttribute('ng-model', 'record.' + this.name);
                     return control;
                 }
             }
@@ -3944,27 +3959,8 @@ spellcheck="false" input-field ng-model-options="{updateOn: 'selectItem'}" input
                 }
                 get ngSrc() {
                     let ngSrc = this.attrs.ngEmptyImage || (this.attrs.emptyImage && (`'${this.attrs.emptyImage}`)) || `'${this.noImageUrl}'`;
-                    ngSrc = `{{ record.${this.name} || ${ngSrc} }}`;
+                    ngSrc = `\${ record.${this.name} || ${ngSrc} }`;
                     return ngSrc;
-                }
-                formSpanTemplate() {
-                    return '';
-                }
-                formControl() {
-                    let div = document.createElement('div');
-                    div.classList.add('image-box', 'image-field');
-                    div.innerHTML = `<img ng-src="${this.ngSrc}">
-        <div class="text-right image-box-buttons">
-          <button class="btn btn-default" type="button" title="${_.gettext('Change')}"
-                  onclick="$(this).closest('.image-box').find('input').trigger('click')">
-            <i class="fa fa-pen"></i>
-          </button>
-          <button class="btn btn-default" type="button" title="${_.gettext('Clear')}" ng-click="record.${this.name} = null">
-            <i class="fa fa-trash"></i>
-          </button>
-        </div>
-        <input type="file" name="${this.name}" file-reader accept="image/*" v-model="record.${this.name}">`;
-                    return div;
                 }
             }
             Fields.ImageField = ImageField;
@@ -4143,7 +4139,6 @@ var Katrid;
                 }
             }
             set(propKey, value) {
-                console.log('set record value', propKey, value);
                 let field = this.dataSource.fieldByName(propKey);
                 if (field) {
                     if (this.state === RecordState.unmodified)
@@ -4694,10 +4689,8 @@ var Katrid;
             Views.View = View;
             class WindowView {
                 constructor(config) {
-                    this.readonly = false;
                     this.config = config;
                     this.action = config.action;
-                    this.model = config.model || this.action.model;
                     this.viewInfo = config.viewInfo;
                     this.templateUrl = null;
                     this.create();
@@ -4708,28 +4701,12 @@ var Katrid;
                         Object.assign(this.context, this.config.context);
                     if (this.config.templateUrl)
                         this.templateUrl = this.config.templateUrl;
-                    this._dataSource = new Katrid.Data.DataSource({
-                        model: this.model,
-                        action: this.action,
-                        readonly: this.readonly,
-                    });
-                    this._dataSource.dataCallback = (data) => this.dataCallback(data);
-                    this._dataSource.requestCallback = (pending) => this.vm.$set(this.vm, 'pendingRequest', pending);
                 }
                 get content() {
                     return this.viewInfo.content;
                 }
                 get dataSource() {
-                    return this._dataSource;
-                }
-                createToolbarButtons(container) {
-                    let btnCreate = document.createElement('button');
-                    btnCreate.type = 'button';
-                    btnCreate.classList.add('btn', 'btn-primary', 'btn-action-create');
-                    btnCreate.innerText = _.gettext('Create');
-                    let parent = container.querySelector('.toolbar-action-buttons');
-                    parent.append(btnCreate);
-                    return parent;
+                    return this.action.dataSource;
                 }
                 template() {
                     let content = this.content;
@@ -4740,23 +4717,13 @@ var Katrid;
                     this.beforeRender(templ);
                     return templ;
                 }
-                createToolbar() {
-                    return document.createElement('div');
-                }
-                createActionView() {
-                    let actionView = document.createElement('action-view');
-                    let viewContent = document.createElement('div');
-                    viewContent.classList.add('action-view-content', 'content-scroll');
-                    actionView.append(this.createToolbar());
-                    actionView.append(viewContent);
-                    return actionView;
-                }
                 render(el) {
                     return;
                 }
                 renderTo(container) {
                     this.el = this.render(container);
-                    this.afterRender(this.el);
+                    container.append(this.el);
+                    this.afterRender(this.el[0]);
                 }
                 get fields() {
                     return this.viewInfo.fields;
@@ -4766,59 +4733,11 @@ var Katrid;
                         new customTag(template, this);
                 }
                 afterRender(container) {
-                    this.vm = this.createVm(container);
-                }
-                ready() {
-                }
-                createVm(el) {
-                    let me = this;
-                    let vm = new Vue({
-                        data: {
-                            action: {},
-                            record: {},
-                            records: [],
-                            view: this.viewInfo,
-                            pendingRequest: false,
-                            recordCount: 0,
-                            dataOffset: 0,
-                            dataOffsetLimit: 0,
-                        },
-                        methods: {
-                            actionRefresh() {
-                                me.dataSource.refresh();
-                            },
-                            recordClick(event, index, record) {
-                                me.action.record = record;
-                                me.action.recordId = record.id;
-                                me.action.recordIndex = index;
-                                let params = {
-                                    id: record.id,
-                                    action: me.action.info.id,
-                                    model: me.action.info.model,
-                                    view_type: 'form',
-                                    menu_id: me.action.app.$location.$$search.menu_id,
-                                };
-                                if (event && event.ctrlKey) {
-                                    const url = '#/app/?' + $.param(params);
-                                    window.open(url);
-                                    return;
-                                }
-                                else
-                                    Katrid.app.loadPage('#/app/?' + $.param(params), false);
-                            }
-                        }
-                    });
-                    vm.$mount(el);
-                    return vm;
-                }
-                dataCallback(data) {
-                    this.vm.$set(this.vm, 'records', data);
-                    this.vm.$set(this.vm, 'dataOffset', this._dataSource.offset);
-                    this.vm.$set(this.vm, 'dataOffsetLimit', this._dataSource.offsetLimit);
-                    this.vm.$set(this.vm, 'recordCount', this._dataSource.recordCount);
                 }
                 prepareAction(action) {
                     console.log('prepare action', action);
+                }
+                ready() {
                 }
                 createHeader(el) {
                     compileButtons($(el));
@@ -4836,102 +4755,6 @@ var Katrid;
             }
             Views.WindowView = WindowView;
             class RecordCollectionView extends WindowView {
-                constructor() {
-                    super(...arguments);
-                    this.readonly = true;
-                    this.autoLoad = true;
-                }
-                ready() {
-                    if (this.autoLoad)
-                        this.dataSource.open();
-                    this.action.dataSource = this._dataSource;
-                }
-                createToolbar() {
-                    let templ = `<div class="data-heading panel panel-default">
-      <div class="panel-body">
-        <div class="row">
-          <div class="col-sm-6 breadcrumb-nav"></div>
-          <search-view class="col-md-6"/>
-          <p class="help-block">${this.action.info.usage}&nbsp;</p>
-        </div>
-        <div class="toolbar row">
-          <div class="col-sm-6 toolbar-action-buttons"></div>
-          <div class="col-sm-6">
-            ${Katrid.app.getTemplate('view.search.buttons.jinja2')}
-            <div class="float-right">
-              <div class="btn-group pagination-area">
-                <span v-if="pendingRequest"><span class="fas fa-spinner fa-spin"/>  ${_.gettext('Loading...')}</span>
-                <div v-if="!pendingRequest">
-                <span class="paginator">{{dataOffset|number}} - {{dataOffsetLimit|number}}</span>
-                  /
-                  <span class="total-pages">{{recordCount|number}}</span>
-                </div>
-              </div>
-              <div class="btn-group">
-                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.prevPage()">
-                  <i class="fa fa-chevron-left"></i>
-                </button>
-                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.nextPage()">
-                  <i class="fa fa-chevron-right"></i>
-                </button>
-              </div>
-              <div id="btn-view-modes" class="btn-group" role="group"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-                    let toolbar = $(templ)[0];
-                    this.createToolbarButtons(toolbar);
-                    return toolbar;
-                }
-                createToolbarButtons(container) {
-                    let parent = super.createToolbarButtons(container);
-                    let btnPrint = document.createElement('div');
-                    btnPrint.classList.add('btn-group');
-                    btnPrint.innerHTML = `<button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">
-        ${_.gettext('Print')} <span class="caret"></span>
-      </button>
-      <div class="dropdown-menu">
-        <a class="dropdown-item" ng-click="actionAutoReport()">${_.gettext('Auto Report')}</a>
-      </div>`;
-                    let dropdown = btnPrint.querySelector('.dropdown-menu');
-                    for (let bindingAction of this.viewInfo.toolbar.print) {
-                        let a = document.createElement('a');
-                        a.classList.add('dropdown-item');
-                        a.setAttribute('data-id', bindingAction.id);
-                        a.innerText = bindingAction.name;
-                        dropdown.append(a);
-                    }
-                    parent.append(btnPrint);
-                    let btnRefresh = document.createElement('button');
-                    btnRefresh.type = 'button';
-                    btnRefresh.classList.add('btn', 'toolbtn');
-                    btnRefresh.innerHTML = '<i class="fas fa-redo-alt"></i>';
-                    btnRefresh.title = Katrid.i18n.gettext('Refresh');
-                    btnRefresh.setAttribute('v-on:click', 'actionRefresh()');
-                    parent.append(btnRefresh);
-                    let btnActions = document.createElement('div');
-                    btnActions.classList.add('btn-group');
-                    btnActions.innerHTML = `<div class="dropdown">
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" ng-show="action.selectionLength"
-                aria-haspopup="true">
-          ${_.gettext('Action')} <span class="caret"></span>
-        </button>
-        <div class="dropdown-menu dropdown-menu-actions">
-          <a class="dropdown-item" ng-click="action.deleteSelection()">
-            <i class="fa fa-fw fa-trash-o"></i> ${_.gettext('Delete')}
-          </a>
-          <a class="dropdown-item" ng-click="action.copy()">
-            <i class="fa fa-fw fa-files-o"></i>
-            ${_.gettext('Duplicate')}
-          </a>
-          <!-- replace-actions -->
-        </div>
-      </div>`;
-                    parent.append(btnActions);
-                    return parent;
-                }
             }
             Views.RecordCollectionView = RecordCollectionView;
             Katrid.UI.uiKatrid
@@ -5313,17 +5136,6 @@ var Katrid;
                     if (!this.templateUrl)
                         this.templateUrl = 'view.form.jinja2';
                     this.viewType = 'form';
-                    this.dataSource.scrollCallback = (index, rec) => {
-                        this.vm.$set(this.vm, 'recordIndex', index);
-                        this.vm.$set(this.vm, 'record', rec);
-                    };
-                    this.dataSource.stateChangeCallback = (state) => {
-                        this.vm.$set(this.vm, 'state', state);
-                        this.vm.$set(this.vm, 'changing', this.dataSource.changing);
-                        this.vm.$set(this.vm, 'editing', this.dataSource.editing);
-                        this.vm.$set(this.vm, 'browsing', this.dataSource.browsing);
-                        this.vm.$set(this.vm, 'loadingRecord', this.dataSource.loadingRecord);
-                    };
                 }
                 template() {
                     let form = super.template();
@@ -5343,19 +5155,6 @@ var Katrid;
                         }
                         else
                             console.error(`Field "${name}" not found`);
-                    }
-                }
-                dataCallback(data) {
-                    console.log('callback', data);
-                    this.vm.$set(this.vm, 'record', data);
-                }
-                ready() {
-                    if (this.action.dataSource && this.action.recordIndex) {
-                        this.dataSource._records = this.action.dataSource.records;
-                        this.dataSource.recordIndex = this.action.recordIndex;
-                    }
-                    else {
-                        console.log('start inserting record');
                     }
                 }
                 prepare(container) {
@@ -5379,117 +5178,17 @@ var Katrid;
                     });
                     let templ = $(Katrid.app.getTemplate(this.templateUrl, context));
                     templ.find('.template-placeholder').append(form);
-                    return templ[0];
-                }
-                createToolbar() {
-                    let templ = `<div class="data-heading panel panel-default">
-      <div class="panel-body">
-        <div class="row">
-          <div class="col-sm-6 breadcrumb-nav"></div>
-          <p class="help-block">${this.action.info.usage}&nbsp;</p>
-        </div>
-        <div class="toolbar row">
-          <div class="col-sm-6 toolbar-action-buttons"></div>
-          <div class="col-sm-6">
-            <div class="float-right">
-              <div class="btn-group pagination-area">
-              <span v-if="recordCount">
-                {{ recordIndex + 1 }} / {{ recordCount }}
-              </span>
-              </div>
-              <div class="btn-group" role="group">
-                <button id="btn-form-prior" class="btn btn-outline-secondary" type="button" v-on:click="prior()">
-                  <i class="fa fa-chevron-left"></i>
-                </button>
-                <button id="btn-form-next" class="btn btn-outline-secondary" type="button" v-on:click="next()">
-                  <i class="fa fa-chevron-right"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-                    let toolbar = $(templ)[0];
-                    this.createToolbarButtons(toolbar);
-                    return toolbar;
-                }
-                createVm(el) {
-                    let me = this;
-                    let vm = new Vue({
-                        data: {
-                            action: {},
-                            record: {},
-                            records: [],
-                            changing: false,
-                            editing: false,
-                            browsing: false,
-                            state: null,
-                            view: this.viewInfo,
-                            loadingRecord: false,
-                            recordIndex: me.action.recordIndex,
-                            recordCount: me.action.dataSource.recordCount,
-                        },
-                        methods: {
-                            actionRefresh() {
-                                me.dataSource.refresh();
-                            },
-                            prior() {
-                                me.dataSource.prior();
-                            },
-                            next() {
-                                me.dataSource.next();
-                            },
-                            new() {
-                                me.dataSource.insert();
-                            },
-                            save() {
-                                me.dataSource.save();
-                            },
-                            cancel() {
-                                me.dataSource.cancel();
-                            },
-                            edit() {
-                                console.log('edit', me.dataSource);
-                                me.dataSource.edit();
-                            },
-                        }
-                    });
-                    vm.$mount(el);
-                    return vm;
+                    if (this.action)
+                        this.action.$form = templ.find('form:first').first();
+                    this.el = templ;
+                    return templ;
                 }
                 render(container) {
-                    let actionView = this.createActionView();
-                    let contentView = actionView.querySelector('.action-view-content');
-                    let el = this.prepare(actionView.querySelector('.action-view-content'));
-                    contentView.append(el);
-                    if (container)
-                        container.append(actionView);
-                    return actionView;
-                }
-                createToolbarButtons(container) {
-                    let parent = container.querySelector('.toolbar-action-buttons');
-                    let div = document.createElement('div');
-                    div.classList.add('btn-toolbar');
-                    div.innerHTML = `
-    <button class="btn btn-primary toolbutton-action-save" type="button" v-bind:disabled="loadingRecord"
-      v-on:click="save()" v-show="changing">
-        ${_.gettext('Save')}
-      </button>
-      <button class="btn btn-primary toolbutton-action-edit" type="button" v-bind:disabled="loadingRecord"
-      v-on:click="edit()" v-show="!changing">
-        ${_.gettext('Edit')}
-      </button>
-      <button class="btn btn-outline-secondary toolbutton-action-create" type="button" v-bind:disabled="loadingRecord"
-      v-on:click="insert()" v-show="!changing">
-        ${_.gettext('Create')}
-      </button>
-      <button class="btn btn-outline-secondary toolbutton-action-cancel" type="button" v-on:click="cancel()"
-      v-show="changing">
-        ${_.gettext('Cancel')}
-      </button>`;
-                    parent.append(div);
-                    return parent;
+                    let templ = this.prepare(container);
+                    templ = Katrid.Core.$compile(templ)(this.action.scope);
+                    this.action.form = angular.element(this.action.$form).controller('form');
+                    templ.addClass('ng-form');
+                    return templ;
                 }
             }
             Views.FormView = FormView;
@@ -5509,7 +5208,7 @@ var Katrid;
     (function (Forms) {
         var Views;
         (function (Views) {
-            class ListView extends Views.RecordCollectionView {
+            class ListView extends Views.WindowView {
                 create() {
                     super.create();
                     this.viewType = 'list';
@@ -5522,7 +5221,6 @@ var Katrid;
                         .replace('</list', '</list-view');
                 }
                 render(container) {
-                    let actionView = this.createActionView();
                     let list = this.template();
                     let context = {};
                     Object.assign(context, this.context);
@@ -5535,9 +5233,8 @@ var Katrid;
                     templ.find('list')
                         .attr('ng-row-click', 'action.listRowClick($index, record, $event)')
                         .attr('list-options', '{"rowSelector": true}');
-                    actionView.querySelector('.action-view-content').append(templ[0]);
-                    container.append(actionView);
-                    return actionView;
+                    templ = Katrid.Core.$compile(templ)(this.action.scope);
+                    return templ;
                 }
                 afterRender(container) {
                     super.afterRender(container);
@@ -5545,7 +5242,8 @@ var Katrid;
                     this.selection.element = this.element;
                     this.selection.dataSource = this.action.dataSource;
                 }
-                groupBy(data) { }
+                ready() {
+                }
             }
             Views.ListView = ListView;
             class ListViewElement extends Views.WindowElement {
@@ -5574,16 +5272,16 @@ var Katrid;
                         this.tHeadRow.innerHTML = `<th class="list-record-selector">
         <input type="checkbox" ng-model="action.selection.allSelected" ng-click="action.selection.toggleAll()" onclick="event.stopPropagation()">
           </th>`;
-                        this.tRow.innerHTML = `<th class="list-record-selector" v-if="!record.$hasChildren" onclick="event.stopPropagation()" v-on:click="action.selection.selectToggle(record)">
-        <input type="checkbox" v-model="record.$selected">
+                        this.tRow.innerHTML = `<th class="list-record-selector" ng-if="::!record.$hasChildren" onclick="event.stopPropagation()" ng-click="action.selection.selectToggle(record)">
+        <input type="checkbox" ng-model="record.$selected">
           </th>`;
                     }
                     let groupHeader = document.createElement('th');
-                    groupHeader.setAttribute('v-if', 'record.$hasChildren');
+                    groupHeader.setAttribute('ng-if', '::record.$hasChildren');
                     groupHeader.colSpan = 2;
-                    groupHeader.innerHTML = `<i class="indent-{{::record.$level}}">&nbsp;</i>
+                    groupHeader.innerHTML = `<i class="indent-\${::record.$level}">&nbsp;</i>
       <span class="fas fa-fw fa-caret-right" ng-class="{'fa-caret-down': record.$expanded, 'fa-caret-right': !record.$expanded}"></span>
-          {{record.__str__}}`;
+          \${record.__str__}`;
                     this.tRow.append(groupHeader);
                     if (options.showStar) {
                         let th = document.createElement('th');
@@ -5592,7 +5290,7 @@ var Katrid;
                         let td = document.createElement('th');
                         td.classList.add('list-record-star');
                         td.title = 'Mark with star';
-                        td.setAttribute('v-click', '$event.stopPropagation();action.markStar(record);');
+                        td.setAttribute('ng-click', '$event.stopPropagation();action.markStar(record);');
                         td.innerHTML = `<i class="far fa-fw fa-star"></i>`;
                         this.tRow.append(td);
                     }
@@ -5600,10 +5298,10 @@ var Katrid;
                         this.addField(f);
                         f.remove();
                     }
-                    this.tRow.querySelector('td').setAttribute('v-if', '!record.$hasChildren');
-                    this.tRow.setAttribute(':data-id', 'record.id');
-                    this.tRow.setAttribute('v-for', '(record, index) in records');
-                    this.tRow.setAttribute('v-on:click', 'recordClick(event, index, record)');
+                    this.tRow.querySelector('td').setAttribute('ng-if', '::!record.$hasChildren');
+                    this.tRow.setAttribute('data-id', '${ ::record.id }');
+                    this.tRow.setAttribute('ng-repeat', 'record in records');
+                    this.tRow.setAttribute('ng-click', 'action.listRowClick(record.$index, record, $event)');
                     if (this.inlineEditor)
                         this.tRow.setAttribute('ng-class', `{
           'form-data-changing': (dataSource.changing && dataSource.recordIndex === $index),
@@ -5622,6 +5320,7 @@ var Katrid;
                     table.append(this.tHead);
                     table.append(this.tBody);
                     this.append(table);
+                    let el = Katrid.Core.$compile(this)(this.action.scope);
                     this.table = table;
                     this.createContextMenu();
                 }
@@ -5760,29 +5459,8 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
-    let _intlCache = {};
-    function getNumberFormat(config) {
-        let key = config.toString();
-        let intl = _intlCache[key];
-        if (!intl) {
-            if (typeof config === 'number')
-                intl = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: config, maximumFractionDigits: config, });
-            else
-                intl = new Intl.NumberFormat('pt-BR', config);
-            _intlCache[key] = intl;
-        }
-        return intl;
-    }
     Katrid.intl = {
-        number: (config) => {
-            let cfg = {};
-            if (typeof config === 'number')
-                cfg.minimumFractionDigits = config;
-            if (!config)
-                cfg.maximumFractionDigits = 2;
-            return getNumberFormat(cfg);
-        },
-        toFixed: (length) => getNumberFormat(length),
+        number: new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }),
     };
     Katrid.i18n = {
         languageCode: 'pt-BR',
@@ -5884,7 +5562,7 @@ var Katrid;
             };
         }
     };
-    if (KATRID_I18N)
+    if (window.KATRID_I18N)
         Katrid.i18n.initialize(KATRID_I18N.plural, KATRID_I18N.catalog, KATRID_I18N.formats);
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -7776,7 +7454,6 @@ var Katrid;
                     else if (this.inlineEditor === '')
                         this.inlineEditor = 'inline';
                     this._model = new Katrid.Services.Model(this.field.info.model);
-                    return;
                     this._scope = this.actionView.action.scope.$new(true);
                     this._scope.model = this._model;
                     this._action = new OneToManyAction(this);
@@ -7899,6 +7576,7 @@ var Katrid;
                 }
                 destroy() {
                     super.destroy();
+                    this._dataSource.destroy();
                 }
             }
             Widgets.OneToManyWidget = OneToManyWidget;
@@ -10392,7 +10070,7 @@ var Katrid;
                             }
                         };
                         this.actionView = this.closest('action-view');
-                        if (this.actionView && this.name && this.actionView.action && this.actionView.action.view) {
+                        if (this.actionView && this.name) {
                             this.field = this.actionView.action.view.fields[this.name];
                         }
                     }
@@ -11489,18 +11167,23 @@ var Katrid;
         })
     ]);
 })();
-Vue.filter('date', function (value, fmt = 'MM/DD/YYYY') {
-    if (value)
-        return moment(value).format(fmt);
-});
-Vue.filter('number', function (value, digits) {
-    if (value !== null)
-        return Katrid.intl.number(digits).format(value);
-});
-Vue.filter('toFixed', function (value, digits) {
-    if (value !== null)
-        return Katrid.intl.toFixed(digits).format(value);
-});
+(function () {
+    Katrid.UI.uiKatrid.filter('numberFormat', () => {
+        return (value, maxDigits = 3) => {
+            if (value == null)
+                return '';
+            return new Intl.NumberFormat('pt-br', { maximumSignificantDigits: maxDigits }).format(value);
+        };
+    });
+    Vue.filter('date', function (value, fmt = 'MM/DD/YYYY') {
+        if (value)
+            return moment(value).format(fmt);
+    });
+    Vue.filter('number', function (value, digits) {
+        if (value !== null)
+            return Katrid.intl.number.format(value);
+    });
+})();
 (function () {
     class Grid {
         constructor($compile) {
