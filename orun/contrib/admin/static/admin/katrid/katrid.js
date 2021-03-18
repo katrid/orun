@@ -4572,7 +4572,7 @@ var Katrid;
                 create() {
                     super.create();
                     if (!this._field)
-                        this.bind(this.view.viewInfo.fields[this.name]);
+                        this.bind(this.view.fields[this.name]);
                     this._id = ++ID;
                     let cols = this._field.cols || 12;
                     this.classList.add('col-md-' + cols.toString());
