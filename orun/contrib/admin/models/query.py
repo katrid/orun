@@ -112,8 +112,8 @@ class Query(models.Model):
             'data': [[float(col) if isinstance(col, Decimal) else col for col in row] for row in cur.fetchall()],
         }
 
-    @api.method
-    def list_all(self):
+    @api.classmethod
+    def list_all(cls):
         return {
             'data': [
                 {
@@ -122,11 +122,11 @@ class Query(models.Model):
                     'name': q.name,
                     'params': q.params,
                 }
-                for q in self.objects.all()
+                for q in cls.objects.all()
             ]
         }
 
-    @api.method
+    @api.classmethod
     def clone(cls, id, data):
         old_query = cls.objects.get(pk=id)
         new_query = cls.objects.create()
