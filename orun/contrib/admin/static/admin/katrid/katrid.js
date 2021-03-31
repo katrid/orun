@@ -110,8 +110,8 @@ var Katrid;
             }
             refreshBreadcrumb() {
                 this.$element.find('.breadcrumb-nav')
-                    .empty()
-                    .append(Katrid.Core.$compile(this.createBreadcrumb())(this.scope));
+                  .empty()
+                  .append(Katrid.Core.$compile(this.createBreadcrumb())(this.scope));
                 return;
                 let templ = Katrid.app.getTemplate('view.breadcrumb.jinja2', {
                     breadcrumb: this.app.actionManager.breadcrumb,
@@ -559,7 +559,7 @@ var Katrid;
                 if (!sel)
                     return false;
                 if (((sel.length === 1) && confirm(Katrid.i18n.gettext('Confirm delete record?'))) ||
-                    ((sel.length > 1) && confirm(Katrid.i18n.gettext('Confirm delete records?')))) {
+                  ((sel.length > 1) && confirm(Katrid.i18n.gettext('Confirm delete records?')))) {
                     await this.dataSource.delete(sel);
                     if (backToSearch) {
                         this.dataSource.refresh();
@@ -645,14 +645,14 @@ var Katrid;
                     this.fieldList = res.fieldList;
                     this.views = res.views;
                     if (res.views.form) {
-                        console.log('this.model.info', this.model);
-                        let copyTo = new Katrid.Services.Model('ui.copy.to');
-                        copyTo.rpc('get_by_model', [this.model.name])
-                            .then(res => {
-                            this.scope.copyToOptions = res;
-                            console.log('copy to options', res);
-                            this.scope.$apply();
-                        });
+                        // console.log('this.model.info', this.model);
+                        // let copyTo = new Katrid.Services.Model('ui.copy.to');
+                        // copyTo.rpc('get_by_model', [this.model.name])
+                        //   .then(res => {
+                        //       this.scope.copyToOptions = res;
+                        //       console.log('copy to options', res);
+                        //       this.scope.$apply();
+                        //   });
                     }
                     let templ = Katrid.app.getTemplate('ui.action.window.jinja2', { action: this });
                     templ = Katrid.Core.$compile(templ)(this.scope);
@@ -765,11 +765,11 @@ var Katrid;
                 }
                 if (!confirmation || (confirmation && confirm(confirmation))) {
                     return this.model.doViewAction({ action_name: viewAction, target, prompt: promptValue })
-                        .then(function (res) {
-                        let msg, result;
-                        if (res.status === 'open') {
-                        }
-                    });
+                      .then(function (res) {
+                          let msg, result;
+                          if (res.status === 'open') {
+                          }
+                      });
                 }
             }
             async formButtonClick(id, meth, self) {
@@ -795,10 +795,10 @@ var Katrid;
             ;
             doBindingAction(evt) {
                 Katrid.Services.Actions.load($(evt.currentTarget).data('id'))
-                    .then((action) => {
-                    if (action.action_type === 'ui.action.report')
-                        Katrid.Actions.ReportAction.dispatchBindingAction(this, action);
-                });
+                  .then((action) => {
+                      if (action.action_type === 'ui.action.report')
+                          Katrid.Actions.ReportAction.dispatchBindingAction(this, action);
+                  });
             }
             listRowClick(index, row, evt) {
                 if (row.$hasChildren) {
@@ -840,11 +840,11 @@ var Katrid;
             }
             autoReport() {
                 return this.model.autoReport()
-                    .then(function (res) {
-                    if (res.ok && res.result.open) {
-                        return window.open(res.result.open);
-                    }
-                });
+                  .then(function (res) {
+                      if (res.ok && res.result.open) {
+                          return window.open(res.result.open);
+                      }
+                  });
             }
             showDefaultValueDialog() {
             }
@@ -1116,10 +1116,10 @@ var Katrid;
                 }
                 return {
                     traces: [{
-                            values: values,
-                            labels: labels,
-                            type: this.type,
-                        }]
+                        values: values,
+                        labels: labels,
+                        type: this.type,
+                    }]
                 };
             }
         };
@@ -1150,10 +1150,10 @@ var Katrid;
                 }
                 return {
                     traces: [{
-                            y,
-                            x,
-                            type: this.type,
-                        }]
+                        y,
+                        x,
+                        type: this.type,
+                    }]
                 };
             }
         };
@@ -1442,12 +1442,12 @@ var Katrid;
                         overlay.show();
                     }, 2500);
                 })
-                    .ajaxStop(function () {
-                    clearTimeout(loadingTimeout);
-                    clearTimeout(overlayTimeout);
-                    loadingMsg.hide();
-                    overlay.hide();
-                });
+                  .ajaxStop(function () {
+                      clearTimeout(loadingTimeout);
+                      clearTimeout(overlayTimeout);
+                      loadingMsg.hide();
+                      overlay.hide();
+                  });
             }
             create() {
                 $(Katrid).on('app.ready', () => {
@@ -1461,14 +1461,14 @@ var Katrid;
             }
             createApp() {
                 this.ngApp = angular.module('katridApp', this.ngModules)
-                    .config(['$locationProvider', '$interpolateProvider', function ($locationProvider, $interpolateProvider) {
-                        $locationProvider.hashPrefix('');
-                        $interpolateProvider.startSymbol('${');
-                        $interpolateProvider.endSymbol('}');
-                    }])
-                    .run(['$templateCache', ($templateCache) => {
-                        this.$templateCache = $templateCache;
-                    }]);
+                  .config(['$locationProvider', '$interpolateProvider', function ($locationProvider, $interpolateProvider) {
+                      $locationProvider.hashPrefix('');
+                      $interpolateProvider.startSymbol('${');
+                      $interpolateProvider.endSymbol('}');
+                  }])
+                  .run(['$templateCache', ($templateCache) => {
+                      this.$templateCache = $templateCache;
+                  }]);
                 this.createControllers(this.ngApp);
                 $(this).trigger('loaded', [Katrid.app]);
             }
@@ -1476,12 +1476,12 @@ var Katrid;
             }
             loadTemplates() {
                 return fetch(this.config.templates || '/web/js/templates/')
-                    .then((res) => res.text())
-                    .then((templates) => {
-                    if (templates)
-                        templates = '<templates>' + templates + '</templates>';
-                    Katrid.Forms.templates = new Katrid.Forms.Templates(this, templates);
-                });
+                  .then((res) => res.text())
+                  .then((templates) => {
+                      if (templates)
+                          templates = '<templates>' + templates + '</templates>';
+                      Katrid.Forms.templates = new Katrid.Forms.Templates(this, templates);
+                  });
             }
             static bootstrap(opts) {
                 let app = new this(opts);
@@ -1529,16 +1529,16 @@ var Katrid;
             }
             createControllers(app) {
                 app
-                    .controller('AppController', ['$scope', '$compile', '$location', function ($scope, $compile, $location) {
-                        Katrid.Core.$compile = $compile;
-                        Katrid.app.$scope = $scope;
-                        Katrid.app.$location = $location;
-                        $scope._ = _;
-                        Katrid.app.$element = $('#action-view');
-                        $(Katrid).trigger('app.ready', [Katrid.app]);
-                    }])
-                    .controller('ActionController', ['$scope', function ($scope) {
-                    }]);
+                  .controller('AppController', ['$scope', '$compile', '$location', function ($scope, $compile, $location) {
+                      Katrid.Core.$compile = $compile;
+                      Katrid.app.$scope = $scope;
+                      Katrid.app.$location = $location;
+                      $scope._ = _;
+                      Katrid.app.$element = $('#action-view');
+                      $(Katrid).trigger('app.ready', [Katrid.app]);
+                  }])
+                  .controller('ActionController', ['$scope', function ($scope) {
+                  }]);
             }
             get currentMenu() {
                 return this._currentMenu;
@@ -1608,26 +1608,26 @@ var Katrid;
         }
         Core.WebApplication = WebApplication;
         angular.module('basicApp', [])
-            .controller('LoginController', ['$scope', function ($scope) {
-                $scope.login = async (username, password, multidb, db, next) => {
-                    next = next || new URLSearchParams(window.location.search).get('next');
-                    let res;
-                    if (multidb)
-                        res = await Katrid.Services.post('/web/db/', { db });
-                    if ((multidb && res.redirect) || !multidb) {
-                        res = await Katrid.Services.post('/web/login/', { username, password, next });
-                        if (res.error) {
-                            $scope.messages = [{ type: 'danger', message: res.message }];
-                            $scope.$apply();
-                        }
-                        else {
-                            $scope.messages = [{ type: 'success', message: res.message }];
-                            $scope.$apply();
-                            setTimeout(() => window.location.href = res.redirect);
-                        }
-                    }
-                };
-            }]);
+          .controller('LoginController', ['$scope', function ($scope) {
+              $scope.login = async (username, password, multidb, db, next) => {
+                  next = next || new URLSearchParams(window.location.search).get('next');
+                  let res;
+                  if (multidb)
+                      res = await Katrid.Services.post('/web/db/', { db });
+                  if ((multidb && res.redirect) || !multidb) {
+                      res = await Katrid.Services.post('/web/login/', { username, password, next });
+                      if (res.error) {
+                          $scope.messages = [{ type: 'danger', message: res.message }];
+                          $scope.$apply();
+                      }
+                      else {
+                          $scope.messages = [{ type: 'success', message: res.message }];
+                          $scope.$apply();
+                          setTimeout(() => window.location.href = res.redirect);
+                      }
+                  }
+              };
+          }]);
     })(Core = Katrid.Core || (Katrid.Core = {}));
 })(Katrid || (Katrid = {}));
 (function (Katrid) {
@@ -2355,37 +2355,37 @@ var Katrid;
                             filter: where,
                         };
                         this.parent.model.getFieldChoices(args)
-                            .catch((res) => {
-                            return reject(res);
-                        })
-                            .then((res) => {
-                            if (this.pageIndex > 1) {
-                                this.offset = ((this.pageIndex - 1) * this.pageLimit) + 1;
-                            }
-                            else {
-                                this.offset = 1;
-                            }
-                            this.scope.$apply(() => {
-                                if (res.count != null)
-                                    this.recordCount = res.count;
-                                let data = res.data;
-                                this.rawData = data;
-                                if (this.readonly)
-                                    this.records = data;
-                                else
-                                    this.records = data.map((obj) => this._createRecord(obj));
-                                if (this.pageIndex === 1) {
-                                    return this.offsetLimit = this._records.length;
-                                }
-                                else {
-                                    return this.offsetLimit = (this.offset + this._records.length) - 1;
-                                }
-                            });
-                            return resolve(res);
-                        })
-                            .finally(() => {
-                            this.scope.$apply(() => this.pendingRequest = false);
-                        });
+                          .catch((res) => {
+                              return reject(res);
+                          })
+                          .then((res) => {
+                              if (this.pageIndex > 1) {
+                                  this.offset = ((this.pageIndex - 1) * this.pageLimit) + 1;
+                              }
+                              else {
+                                  this.offset = 1;
+                              }
+                              this.scope.$apply(() => {
+                                  if (res.count != null)
+                                      this.recordCount = res.count;
+                                  let data = res.data;
+                                  this.rawData = data;
+                                  if (this.readonly)
+                                      this.records = data;
+                                  else
+                                      this.records = data.map((obj) => this._createRecord(obj));
+                                  if (this.pageIndex === 1) {
+                                      return this.offsetLimit = this._records.length;
+                                  }
+                                  else {
+                                      return this.offsetLimit = (this.offset + this._records.length) - 1;
+                                  }
+                              });
+                              return resolve(res);
+                          })
+                          .finally(() => {
+                              this.scope.$apply(() => this.pendingRequest = false);
+                          });
                     };
                     this.pendingPromises.push(controller);
                     timeout = 0;
@@ -2443,41 +2443,41 @@ var Katrid;
                     let controller = new AbortController();
                     let req = () => {
                         this.model.search(params, null, { signal: controller.signal }, this.action.context)
-                            .catch((res) => {
-                            return reject(res);
-                        })
-                            .then((res) => {
-                            if (this.pageIndex > 1) {
-                                this.offset = ((this.pageIndex - 1) * this.pageLimit) + 1;
-                            }
-                            else {
-                                this.offset = 1;
-                            }
-                            this.scope.$apply(() => {
-                                if (res.count != null)
-                                    this.recordCount = res.count;
-                                let data = res.data;
-                                this.rawData = data;
-                                if (this.readonly)
-                                    this.records = data;
-                                else
-                                    this.records = data.map((obj, idx) => {
-                                        let rec = this._createRecord(obj);
-                                        rec.$index = idx;
-                                        return rec;
-                                    });
-                                if (this.pageIndex === 1) {
-                                    return this.offsetLimit = this._records.length;
-                                }
-                                else {
-                                    return this.offsetLimit = (this.offset + this._records.length) - 1;
-                                }
-                            });
-                            return resolve(res);
-                        })
-                            .finally(() => {
-                            this.scope.$apply(() => this.pendingRequest = false);
-                        });
+                          .catch((res) => {
+                              return reject(res);
+                          })
+                          .then((res) => {
+                              if (this.pageIndex > 1) {
+                                  this.offset = ((this.pageIndex - 1) * this.pageLimit) + 1;
+                              }
+                              else {
+                                  this.offset = 1;
+                              }
+                              this.scope.$apply(() => {
+                                  if (res.count != null)
+                                      this.recordCount = res.count;
+                                  let data = res.data;
+                                  this.rawData = data;
+                                  if (this.readonly)
+                                      this.records = data;
+                                  else
+                                      this.records = data.map((obj, idx) => {
+                                          let rec = this._createRecord(obj);
+                                          rec.$index = idx;
+                                          return rec;
+                                      });
+                                  if (this.pageIndex === 1) {
+                                      return this.offsetLimit = this._records.length;
+                                  }
+                                  else {
+                                      return this.offsetLimit = (this.offset + this._records.length) - 1;
+                                  }
+                              });
+                              return resolve(res);
+                          })
+                          .finally(() => {
+                              this.scope.$apply(() => this.pendingRequest = false);
+                          });
                     };
                     this.pendingPromises.push(controller);
                     timeout = 0;
@@ -2597,58 +2597,58 @@ var Katrid;
                     if (data) {
                         this.uploading++;
                         return this.model.write([data])
-                            .then((res) => {
-                                console.log('model write', res);
-                            if (this.action && this.action.viewType && (this.action.viewType === 'form'))
-                                Katrid.webApp.changeUrl('id', res);
-                            if (this.action.form) {
-                                this.action.form.$setPristine();
-                                this.action.form.$setUntouched();
-                            }
-                            this._pendingChanges = false;
-                            this.state = DataSourceState.browsing;
-                            if (autoRefresh)
-                                return this.refresh(res);
-                            else
-                                return res;
-                        })
-                            .catch((error) => {
-                            let s = `<span>${Katrid.i18n.gettext('The following fields are invalid:')}<hr></span>`;
-                            if (error.message)
-                                s = error.message;
-                            else if (error.messages) {
-                                let elfield;
-                                for (let fld of Object.keys(error.messages)) {
-                                    const msgs = error.messages[fld];
-                                    let field;
-                                    if (fld.indexOf('.') > -1) {
-                                        let sfld = fld.split('.');
-                                        let subField = sfld[1];
-                                        for (let child of this.children)
-                                            if (child.scope.fieldName === sfld[0]) {
-                                                field = child.scope.view.fields[subField];
-                                            }
-                                    }
-                                    else
-                                        field = this.scope.view.fields[fld];
-                                    console.log('field invalid', field);
-                                    if (!field || !field.name)
-                                        continue;
-                                    elfield = el.find(`.form-field[name="${field.name}"]`);
-                                    elfield.addClass('ng-invalid ng-touched');
-                                    s += `<strong>${field.caption}</strong><ul>`;
-                                    for (let msg of msgs) {
-                                        s += `<li>${msg}</li>`;
-                                    }
-                                    s += '</ul>';
-                                }
-                                if (elfield)
-                                    elfield.focus();
-                            }
-                            Katrid.Forms.Dialogs.Alerts.error(s);
-                            throw new Error(s);
-                        })
-                            .finally(() => this.scope.$apply(() => this.uploading--));
+                          .then((res) => {
+                              console.log('model write', res);
+                              if (this.action && this.action.viewType && (this.action.viewType === 'form'))
+                                  Katrid.webApp.changeUrl('id', res);
+                              if (this.action.form) {
+                                  this.action.form.$setPristine();
+                                  this.action.form.$setUntouched();
+                              }
+                              this._pendingChanges = false;
+                              this.state = DataSourceState.browsing;
+                              if (autoRefresh)
+                                  return this.refresh(res);
+                              else
+                                  return res;
+                          })
+                          .catch((error) => {
+                              let s = `<span>${Katrid.i18n.gettext('The following fields are invalid:')}<hr></span>`;
+                              if (error.message)
+                                  s = error.message;
+                              else if (error.messages) {
+                                  let elfield;
+                                  for (let fld of Object.keys(error.messages)) {
+                                      const msgs = error.messages[fld];
+                                      let field;
+                                      if (fld.indexOf('.') > -1) {
+                                          let sfld = fld.split('.');
+                                          let subField = sfld[1];
+                                          for (let child of this.children)
+                                              if (child.scope.fieldName === sfld[0]) {
+                                                  field = child.scope.view.fields[subField];
+                                              }
+                                      }
+                                      else
+                                          field = this.scope.view.fields[fld];
+                                      console.log('field invalid', field);
+                                      if (!field || !field.name)
+                                          continue;
+                                      elfield = el.find(`.form-field[name="${field.name}"]`);
+                                      elfield.addClass('ng-invalid ng-touched');
+                                      s += `<strong>${field.caption}</strong><ul>`;
+                                      for (let msg of msgs) {
+                                          s += `<li>${msg}</li>`;
+                                      }
+                                      s += '</ul>';
+                                  }
+                                  if (elfield)
+                                      elfield.focus();
+                              }
+                              Katrid.Forms.Dialogs.Alerts.error(s);
+                              throw new Error(s);
+                          })
+                          .finally(() => this.scope.$apply(() => this.uploading--));
                     }
                     else
                         Katrid.Forms.Dialogs.Alerts.warn(Katrid.i18n.gettext('No pending changes'));
@@ -2713,28 +2713,28 @@ var Katrid;
                         let controller = new AbortController();
                         this.pendingPromises.push(controller);
                         return this.model.getById(id, { signal: controller.signal })
-                            .catch((err) => {
-                            if (err.name === 'AbortError')
-                                return reject();
-                            return reject(err);
-                        })
-                            .then((res) => {
-                            if (!res)
-                                return;
-                            if (this.state === DataSourceState.loading)
-                                this.state = DataSourceState.browsing;
-                            else if (this.state === DataSourceState.inserting)
-                                return;
-                            this.record = res.data[0];
-                            if (index !== false)
-                                this._records[index] = this.record;
-                            return resolve(this.record);
-                        })
-                            .finally(() => {
-                            this.loadingRecord = false;
-                            if (apply)
-                                return this.scope.$apply();
-                        });
+                          .catch((err) => {
+                              if (err.name === 'AbortError')
+                                  return reject();
+                              return reject(err);
+                          })
+                          .then((res) => {
+                              if (!res)
+                                  return;
+                              if (this.state === DataSourceState.loading)
+                                  this.state = DataSourceState.browsing;
+                              else if (this.state === DataSourceState.inserting)
+                                  return;
+                              this.record = res.data[0];
+                              if (index !== false)
+                                  this._records[index] = this.record;
+                              return resolve(this.record);
+                          })
+                          .finally(() => {
+                              this.loadingRecord = false;
+                              if (apply)
+                                  return this.scope.$apply();
+                          });
                     };
                     if (!timeout && !this.requestInterval)
                         return _get();
@@ -3592,7 +3592,7 @@ var Katrid;
                         caption = this.helpText;
                     label.setAttribute('ng-show', 'action.dataSource.changing');
                     label.innerHTML =
-                        `<input type="checkbox" name="${this.name}" class="form-field form-control" ng-model="record.${this.name}">${caption}<i class="fas"></i>`;
+                      `<input type="checkbox" name="${this.name}" class="form-field form-control" ng-model="record.${this.name}">${caption}<i class="fas"></i>`;
                     return label;
                 }
             }
@@ -4758,19 +4758,19 @@ var Katrid;
             }
             Views.RecordCollectionView = RecordCollectionView;
             Katrid.UI.uiKatrid
-                .directive('smartForm', () => ({
-                restrict: 'A',
-                link(scope, el, attrs) {
-                    if ('edit' in attrs) {
-                        attrs.$observe('edit', (v) => {
-                            if (v === 'false')
-                                $('.action-view:first').find('.toolbutton-action-edit').hide();
-                            else
-                                $('.action-view:first').find('.toolbutton-action-edit').show();
-                        });
-                    }
-                }
-            }));
+              .directive('smartForm', () => ({
+                  restrict: 'A',
+                  link(scope, el, attrs) {
+                      if ('edit' in attrs) {
+                          attrs.$observe('edit', (v) => {
+                              if (v === 'false')
+                                  $('.action-view:first').find('.toolbutton-action-edit').hide();
+                              else
+                                  $('.action-view:first').find('.toolbutton-action-edit').show();
+                          });
+                      }
+                  }
+              }));
             Views.customTagRegistry = {};
             class CustomTag {
                 constructor(template, view) {
@@ -4884,7 +4884,7 @@ var Katrid;
                         this.$compile(this.el)(this.scope);
                     }
                     this.el.modal('show')
-                        .on('shown.bs.modal', () => Katrid.UI.uiKatrid.setFocus(this.el.find('.form-field').first()));
+                      .on('shown.bs.modal', () => Katrid.UI.uiKatrid.setFocus(this.el.find('.form-field').first()));
                     return this.el;
                 }
             }
@@ -4926,7 +4926,7 @@ var Katrid;
                     elScope.isDialog = true;
                     let caption = this.dialogTitle;
                     let dataSource = this.action.dataSource = this.scope.dataSource =
-                        new Katrid.Data.DataSource({ scope: this.scope, action: this.action, model: this.options.model });
+                      new Katrid.Data.DataSource({ scope: this.scope, action: this.action, model: this.options.model });
                     let formView = new Katrid.Forms.Views.FormDialog({ action: this.action, viewInfo: this.view, templateUrl: 'view.form.empty.jinja2' });
                     let el = formView.prepare();
                     let form = el.find('form:first');
@@ -4938,9 +4938,9 @@ var Katrid;
                     dlg.find('.modal-body').append(el);
                     Katrid.Core.$compile(dlg)(this.scope);
                     dlg.modal({ backdrop: 'static' })
-                        .on('hidden.bs.modal', function () {
-                        $(this).modal('dispose').remove();
-                    });
+                      .on('hidden.bs.modal', function () {
+                          $(this).modal('dispose').remove();
+                      });
                     this.dialog = dlg;
                     this.scope.form = form.controller('form');
                     this.scope.formElement = form;
@@ -5009,8 +5009,8 @@ var Katrid;
                 }
                 get content() {
                     return super.content
-                        .replace('<calendar', '<calendar-view')
-                        .replace('</calendar', '</calendar-view');
+                      .replace('<calendar', '<calendar-view')
+                      .replace('</calendar', '</calendar-view');
                 }
                 render(container) {
                     let content = this.template();
@@ -5217,8 +5217,8 @@ var Katrid;
                 }
                 get content() {
                     return super.content
-                        .replace('<list', '<list-view')
-                        .replace('</list', '</list-view');
+                      .replace('<list', '<list-view')
+                      .replace('</list', '</list-view');
                 }
                 render(container) {
                     let list = this.template();
@@ -5231,8 +5231,8 @@ var Katrid;
                     templ.find('header:first').append($(header));
                     templ.find('.template-placeholder').append(list);
                     templ.find('list')
-                        .attr('ng-row-click', 'action.listRowClick($index, record, $event)')
-                        .attr('list-options', '{"rowSelector": true}');
+                      .attr('ng-row-click', 'action.listRowClick($index, record, $event)')
+                      .attr('list-options', '{"rowSelector": true}');
                     templ = Katrid.Core.$compile(templ)(this.action.scope);
                     return templ;
                 }
@@ -5777,17 +5777,17 @@ var Katrid;
                     _loadChildren() {
                         this.loading = true;
                         this.view.scope.model.getFieldChoices({ field: this.name, term: this.view.text })
-                            .then((res) => {
-                            this.children = res.items;
-                            let index = this.view.$items.indexOf(this);
-                            if (index > -1) {
-                                for (let obj of this.children) {
-                                    index++;
-                                    this.view.$items.splice(index, 0, new SearchResult(this, obj));
-                                }
-                            }
-                        })
-                            .finally(() => this.view.scope.$apply(() => this.loading = false));
+                          .then((res) => {
+                              this.children = res.items;
+                              let index = this.view.$items.indexOf(this);
+                              if (index > -1) {
+                                  for (let obj of this.children) {
+                                      index++;
+                                      this.view.$items.splice(index, 0, new SearchResult(this, obj));
+                                  }
+                              }
+                          })
+                          .finally(() => this.view.scope.$apply(() => this.loading = false));
                     }
                     get facet() {
                         if (!this._facet)
@@ -6139,8 +6139,8 @@ var Katrid;
                             this.values = values;
                         else
                             this.values = [{
-                                    searchString: this.item.getDisplayValue(), value: this.item.value
-                                }];
+                                searchString: this.item.getDisplayValue(), value: this.item.value
+                            }];
                     }
                     addValue(value) {
                         return this.values.push(value);
@@ -6613,43 +6613,43 @@ var Katrid;
             var Search;
             (function (Search) {
                 Katrid.UI.uiKatrid.controller('CustomFilterController', ['$scope', '$element', '$filter', function ($scope, $element, $filter) {
+                    $scope.tempFilter = null;
+                    $scope.customFilter = [];
+                    $scope.fieldChange = function (field) {
+                        $scope.field = field;
+                        $scope.condition = field.defaultCondition;
+                        $scope.conditionChange($scope.condition);
+                    };
+                    $scope.conditionChange = (condition) => {
+                        $scope.controlVisible = $scope.field.isControlVisible(condition);
+                    };
+                    $scope.valueChange = (value) => {
+                        $scope.searchValue = value;
+                    };
+                    $scope.addCondition = (field, condition, value) => {
+                        if (!$scope.tempFilter)
+                            $scope.tempFilter = new Search.SearchFilters($scope.$parent.action.searchView);
+                        $scope.tempFilter.push(new Search.CustomFilterItem($scope.$parent.action.searchView, field, condition, value, $scope.tempFilter));
+                        $scope.field = null;
+                        $scope.condition = null;
+                        $scope.controlVisible = false;
+                        $scope.searchValue = undefined;
+                    };
+                    $scope.applyFilter = (field, condition, searchValue) => {
+                        if ($scope.searchValue)
+                            $scope.addCondition(field, condition, searchValue);
+                        $scope.customFilter.push($scope.tempFilter);
+                        $scope.tempFilter.selectAll();
                         $scope.tempFilter = null;
-                        $scope.customFilter = [];
-                        $scope.fieldChange = function (field) {
-                            $scope.field = field;
-                            $scope.condition = field.defaultCondition;
-                            $scope.conditionChange($scope.condition);
-                        };
-                        $scope.conditionChange = (condition) => {
-                            $scope.controlVisible = $scope.field.isControlVisible(condition);
-                        };
-                        $scope.valueChange = (value) => {
-                            $scope.searchValue = value;
-                        };
-                        $scope.addCondition = (field, condition, value) => {
-                            if (!$scope.tempFilter)
-                                $scope.tempFilter = new Search.SearchFilters($scope.$parent.action.searchView);
-                            $scope.tempFilter.push(new Search.CustomFilterItem($scope.$parent.action.searchView, field, condition, value, $scope.tempFilter));
-                            $scope.field = null;
-                            $scope.condition = null;
-                            $scope.controlVisible = false;
-                            $scope.searchValue = undefined;
-                        };
-                        $scope.applyFilter = (field, condition, searchValue) => {
-                            if ($scope.searchValue)
-                                $scope.addCondition(field, condition, searchValue);
-                            $scope.customFilter.push($scope.tempFilter);
-                            $scope.tempFilter.selectAll();
-                            $scope.tempFilter = null;
-                            $scope.customSearchExpanded = false;
-                        };
-                    }])
-                    .directive('customFilter', () => ({
-                    restrict: 'A',
-                    scope: {
-                        action: '=',
-                    },
-                }));
+                        $scope.customSearchExpanded = false;
+                    };
+                }])
+                  .directive('customFilter', () => ({
+                      restrict: 'A',
+                      scope: {
+                          action: '=',
+                      },
+                  }));
                 class SearchView {
                     constructor(scope, element, view) {
                         this.scope = scope;
@@ -6693,39 +6693,39 @@ var Katrid;
                                 }
                             }
                             this.input
-                                .on('input', (evt) => {
-                                if (this.input.val().length) {
-                                    return this.show();
-                                }
-                                else {
-                                    return this.close();
-                                }
-                            })
-                                .on('keydown', (evt) => {
-                                switch (evt.which) {
-                                    case Katrid.UI.keyCode.DOWN:
-                                        this.move(1);
-                                        evt.preventDefault();
-                                        break;
-                                    case Katrid.UI.keyCode.UP:
-                                        this.move(-1);
-                                        evt.preventDefault();
-                                        break;
-                                    case Katrid.UI.keyCode.ENTER:
-                                        this.scope.$apply(() => angular.element(this.menu.find('li.active a.search-menu-item')).scope().item.select(evt));
-                                        break;
-                                    case Katrid.UI.keyCode.BACKSPACE:
-                                        if (this.input.val() === '') {
-                                            this.scope.$apply(() => this.facets.splice(this.facets.length - 1, 1).map(facet => facet.clear()));
-                                            this.update();
-                                        }
-                                        break;
-                                }
-                            })
-                                .on('blur', (evt) => {
-                                this.input.val('');
-                                return this.close();
-                            });
+                              .on('input', (evt) => {
+                                  if (this.input.val().length) {
+                                      return this.show();
+                                  }
+                                  else {
+                                      return this.close();
+                                  }
+                              })
+                              .on('keydown', (evt) => {
+                                  switch (evt.which) {
+                                      case Katrid.UI.keyCode.DOWN:
+                                          this.move(1);
+                                          evt.preventDefault();
+                                          break;
+                                      case Katrid.UI.keyCode.UP:
+                                          this.move(-1);
+                                          evt.preventDefault();
+                                          break;
+                                      case Katrid.UI.keyCode.ENTER:
+                                          this.scope.$apply(() => angular.element(this.menu.find('li.active a.search-menu-item')).scope().item.select(evt));
+                                          break;
+                                      case Katrid.UI.keyCode.BACKSPACE:
+                                          if (this.input.val() === '') {
+                                              this.scope.$apply(() => this.facets.splice(this.facets.length - 1, 1).map(facet => facet.clear()));
+                                              this.update();
+                                          }
+                                          break;
+                                  }
+                              })
+                              .on('blur', (evt) => {
+                                  this.input.val('');
+                                  return this.close();
+                              });
                         }
                     }
                     addCustomGroup(field) {
@@ -6896,7 +6896,7 @@ var Katrid;
                     }
                 }
                 Katrid.UI.uiKatrid.controller('SearchMenuController', ['$scope', function ($scope) {
-                    }]);
+                }]);
                 Katrid.UI.uiKatrid.directive('searchView', SearchViewComponent);
                 Katrid.UI.uiKatrid.directive('searchViewArea', SearchViewArea);
             })(Search = Views.Search || (Views.Search = {}));
@@ -6976,8 +6976,8 @@ var Katrid;
                     if (inplaceEditor)
                         return `<${templTag} class="${cls}" ${templAttrs.join('')}>${this.template(this.scope, this.element, this.attrs, this.field)}</${templTag}>`;
                     return `<${templTag} class="${this.field.type} section-field-${this.field.name} form-group" ${templAttrs.join('')}>` +
-                        this.template(this.scope, this.element, this.attrs, this.field) +
-                        `</${templTag}>`;
+                      this.template(this.scope, this.element, this.attrs, this.field) +
+                      `</${templTag}>`;
                 }
                 get ngModel() {
                     return `record.${this.field.name}`;
@@ -7095,7 +7095,7 @@ var Katrid;
                                     result.push(scope.$watch(`record.${dep}`, function (newValue, oldValue) {
                                         if ((newValue !== oldValue) && scope.dataSource.changing) {
                                             return scope.model.onFieldChange(dep, scope.record)
-                                                .done(scope.dataSource.onFieldChange);
+                                              .done(scope.dataSource.onFieldChange);
                                         }
                                     }));
                                 }
@@ -8248,10 +8248,10 @@ var Katrid;
                 }
                 $(Katrid).trigger('fetch.before');
                 return fetch(url, config)
-                    .then(response => {
-                    $(Katrid).trigger('fetch.done');
-                    return response;
-                });
+                  .then(response => {
+                      $(Katrid).trigger('fetch.done');
+                      return response;
+                  });
             }
             static $post(url, data, params) {
                 return this.$fetch(url, {
@@ -8262,7 +8262,7 @@ var Katrid;
                         'content-type': 'application/json',
                     }
                 }, params)
-                    .then(res => res.json());
+                  .then(res => res.json());
             }
             delete(name, params, data) {
             }
@@ -8299,68 +8299,68 @@ var Katrid;
                 }
                 return new Promise((resolve, reject) => {
                     fetch(rpcName, config)
-                        .then(async (res) => {
-                        if (res.status === 500) {
-                            reject(await res.json());
-                        }
-                        return res.json();
-                    })
-                        .then(res => {
-                        if (res.error)
-                            reject(res.error);
-                        else {
-                            if (res.result) {
-                                let result = res.result;
-                                if (Array.isArray(result) && (result.length === 1))
-                                    result = result[0];
-                                let messages;
-                                if (result.messages)
-                                    messages = result.messages;
-                                else
-                                    messages = [];
-                                if (result.message)
-                                    messages.push(result.message);
-                                else if (result.warn)
-                                    messages.push({ type: 'warn', message: result.warn });
-                                else if (result.info)
-                                    messages.push({ type: 'info', message: result.info });
-                                else if (result.error)
-                                    messages.push({ type: 'error', message: result.error });
-                                messages.forEach(function (msg) {
-                                    if (_.isString(msg))
-                                        Katrid.Forms.Dialogs.Alerts.success(msg);
-                                    else if (msg.type === 'warn')
-                                        Katrid.Forms.Dialogs.Alerts.warn(msg.message);
-                                    else if (msg.type === 'info')
-                                        Katrid.Forms.Dialogs.Alerts.info(msg.message);
-                                    else if ((msg.type === 'error') || (msg.type === 'danger'))
-                                        Katrid.Forms.Dialogs.Alerts.error(msg.message);
-                                    else if (msg.type === 'toast')
-                                        Katrid.Forms.Dialogs.toast(msg.message);
-                                    else if (msg.type === 'alert')
-                                        Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
-                                });
-                                if (result) {
-                                    if (result.open)
-                                        window.open(result.open);
-                                    if (result.download) {
-                                        console.log(result.result);
-                                        let a = document.createElement('a');
-                                        a.href = result.download;
-                                        a.target = '_blank';
-                                        a.click();
-                                        return;
-                                    }
-                                }
-                                resolve(result);
-                            }
-                            else
-                                resolve(res);
-                        }
-                    })
-                        .then(res => {
-                    })
-                        .catch(res => reject(res));
+                      .then(async (res) => {
+                          if (res.status === 500) {
+                              reject(await res.json());
+                          }
+                          return res.json();
+                      })
+                      .then(res => {
+                          if (res.error)
+                              reject(res.error);
+                          else {
+                              if (res.result) {
+                                  let result = res.result;
+                                  if (Array.isArray(result) && (result.length === 1))
+                                      result = result[0];
+                                  let messages;
+                                  if (result.messages)
+                                      messages = result.messages;
+                                  else
+                                      messages = [];
+                                  if (result.message)
+                                      messages.push(result.message);
+                                  else if (result.warn)
+                                      messages.push({ type: 'warn', message: result.warn });
+                                  else if (result.info)
+                                      messages.push({ type: 'info', message: result.info });
+                                  else if (result.error)
+                                      messages.push({ type: 'error', message: result.error });
+                                  messages.forEach(function (msg) {
+                                      if (_.isString(msg))
+                                          Katrid.Forms.Dialogs.Alerts.success(msg);
+                                      else if (msg.type === 'warn')
+                                          Katrid.Forms.Dialogs.Alerts.warn(msg.message);
+                                      else if (msg.type === 'info')
+                                          Katrid.Forms.Dialogs.Alerts.info(msg.message);
+                                      else if ((msg.type === 'error') || (msg.type === 'danger'))
+                                          Katrid.Forms.Dialogs.Alerts.error(msg.message);
+                                      else if (msg.type === 'toast')
+                                          Katrid.Forms.Dialogs.toast(msg.message);
+                                      else if (msg.type === 'alert')
+                                          Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
+                                  });
+                                  if (result) {
+                                      if (result.open)
+                                          window.open(result.open);
+                                      if (result.download) {
+                                          console.log(result.result);
+                                          let a = document.createElement('a');
+                                          a.href = result.download;
+                                          a.target = '_blank';
+                                          a.click();
+                                          return;
+                                      }
+                                  }
+                                  resolve(result);
+                              }
+                              else
+                                  resolve(res);
+                          }
+                      })
+                      .then(res => {
+                      })
+                      .catch(res => reject(res));
                 });
             }
         }
@@ -8396,14 +8396,14 @@ var Katrid;
                     processData: false,
                     contentType: false
                 })
-                    .done((res) => {
-                    if (!scope.attachments)
-                        scope.attachments = [];
-                    if (res && res.result)
-                        for (let obj of res.result)
-                            scope.attachments.push(obj);
-                    scope.$apply();
-                });
+                  .done((res) => {
+                      if (!scope.attachments)
+                          scope.attachments = [];
+                      if (res && res.result)
+                          for (let obj of res.result)
+                              scope.attachments.push(obj);
+                      scope.$apply();
+                  });
             }
         }
         Services.Attachments = Attachments;
@@ -8515,15 +8515,15 @@ var Katrid;
             }
             getViewInfo(data) {
                 return this.post('admin_get_view_info', { kwargs: data })
-                    .then(this.constructor._prepareFields);
+                  .then(this.constructor._prepareFields);
             }
             async loadViews(data) {
                 return this.post('admin_load_views', { kwargs: data })
-                    .then(this.constructor._prepareFields);
+                  .then(this.constructor._prepareFields);
             }
             getFieldsInfo(data) {
                 return this.post('admin_get_fields_info', { kwargs: data })
-                    .then(this.constructor._prepareFields);
+                  .then(this.constructor._prepareFields);
             }
             getFieldChoices(config) {
                 let kwargs = config.kwargs || {};
@@ -8539,21 +8539,21 @@ var Katrid;
             write(data, params) {
                 return new Promise((resolve, reject) => {
                     this.post('api_write', { kwargs: { data } }, params)
-                        .then((res) => {
-                        Katrid.Forms.Dialogs.Alerts.success(Katrid.i18n.gettext('Record saved successfully.'));
-                        resolve(res);
-                    })
-                        .catch(res => {
-                        if ((res.status === 500) && res.responseText)
-                            alert(res.responseText);
-                        else {
-                            Katrid.Forms.Dialogs.Alerts.error(Katrid.i18n.gettext('Error saving record changes'));
-                            console.log('error', res);
-                            if (res.error)
-                                Katrid.Forms.Dialogs.Alerts.error(res.error);
-                        }
-                        reject(res);
-                    });
+                      .then((res) => {
+                          Katrid.Forms.Dialogs.Alerts.success(Katrid.i18n.gettext('Record saved successfully.'));
+                          resolve(res);
+                      })
+                      .catch(res => {
+                          if ((res.status === 500) && res.responseText)
+                              alert(res.responseText);
+                          else {
+                              Katrid.Forms.Dialogs.Alerts.error(Katrid.i18n.gettext('Error saving record changes'));
+                              console.log('error', res);
+                              if (res.error)
+                                  Katrid.Forms.Dialogs.Alerts.error(res.error);
+                          }
+                          reject(res);
+                      });
                 });
             }
             groupBy(grouping, params) {
@@ -8565,23 +8565,23 @@ var Katrid;
             rpc(meth, args, kwargs, action) {
                 return new Promise((resolve, reject) => {
                     this.post(meth, { args: args, kwargs: kwargs })
-                        .then((res) => {
-                        if ((res?.tag === 'refresh') && action)
-                            action.refresh();
-                        resolve(res);
-                    })
-                        .catch(res => {
-                        if (res.messages && _.isObject(res.messages)) {
-                            for (let msg of Object.values(res.messages))
-                                if (typeof msg === 'string')
-                                    Katrid.Forms.Dialogs.Alerts.error(msg);
-                                else if (msg instanceof Array)
-                                    Katrid.Forms.Dialogs.Alerts.error(msg.join('\n'));
-                        }
-                        else
-                            Katrid.Forms.Dialogs.Alerts.error(res.message);
-                        reject(res);
-                    });
+                      .then((res) => {
+                          if ((res?.tag === 'refresh') && action)
+                              action.refresh();
+                          resolve(res);
+                      })
+                      .catch(res => {
+                          if (res.messages && _.isObject(res.messages)) {
+                              for (let msg of Object.values(res.messages))
+                                  if (typeof msg === 'string')
+                                      Katrid.Forms.Dialogs.Alerts.error(msg);
+                                  else if (msg instanceof Array)
+                                      Katrid.Forms.Dialogs.Alerts.error(msg.join('\n'));
+                          }
+                          else
+                              Katrid.Forms.Dialogs.Alerts.error(res.message);
+                          reject(res);
+                      });
                 });
             }
         }
@@ -8643,13 +8643,13 @@ var Katrid;
             this.$scope = opts.scope;
             this.service = this.$element.attr('service');
             $.get(this.service)
-                .then(res => {
-                this.$scope.dirs = res.content.filter(obj => obj.type === 'dir');
-                this.$scope.files = res.content.filter(obj => obj.type === 'file');
-                this.$scope.items = res.content;
-                this.$scope.levels[this.$scope.level] = this.$scope.items;
-                this.$scope.$apply();
-            });
+              .then(res => {
+                  this.$scope.dirs = res.content.filter(obj => obj.type === 'dir');
+                  this.$scope.files = res.content.filter(obj => obj.type === 'file');
+                  this.$scope.items = res.content;
+                  this.$scope.levels[this.$scope.level] = this.$scope.items;
+                  this.$scope.$apply();
+              });
         }
         getPath(item) {
             let url = item.name;
@@ -8664,14 +8664,14 @@ var Katrid;
             let url = this.getPath(item);
             url = this.service + '?path=' + url;
             $.get(url)
-                .then(res => {
-                this.$scope.items = res.content;
-                this.$scope.dirs = res.content.filter(obj => obj.type === 'dir');
-                this.$scope.files = res.content.filter(obj => obj.type === 'file');
-                res.content.map(obj => obj.parent = item);
-                this.$scope.levels[this.$scope.level] = this.$scope.items;
-                this.$scope.$apply();
-            });
+              .then(res => {
+                  this.$scope.items = res.content;
+                  this.$scope.dirs = res.content.filter(obj => obj.type === 'dir');
+                  this.$scope.files = res.content.filter(obj => obj.type === 'file');
+                  res.content.map(obj => obj.parent = item);
+                  this.$scope.levels[this.$scope.level] = this.$scope.items;
+                  this.$scope.$apply();
+              });
         }
     }
     Katrid.UI.uiKatrid.directive('fileManager', () => ({
@@ -8699,82 +8699,82 @@ var Katrid;
             scope.uploadFile = file => {
                 console.log('current path', scope.currentPath);
                 Katrid.Services.Upload.uploadTo('/pwapec/file-manager/upload/?path=' + (scope.currentPath || ''), file)
-                    .then(() => {
-                    fm.expand(scope.currentItem);
-                });
+                  .then(() => {
+                      fm.expand(scope.currentItem);
+                  });
             };
         }
     }));
 })();
 Katrid.UI.uiKatrid.directive("pwaAutocomplete", ['$controller', ($controller) => ({
-        restrict: "A",
-        require: "ngModel",
-        link(scope, el, attrs, controller) {
-            $(el).autocomplete({
-                source: async (req, res) => {
-                    let conn = new Katrid.Pwa.Data.Connection(scope, 'orun.pwa');
-                    let objs = await conn.listStatic(attrs.service, { 'text.startsWith': req.term });
-                    let items = [];
-                    for (let obj of objs)
-                        items.push({ value: obj.id, label: obj.text });
-                    res(items);
-                    return;
-                    let domain;
-                    if (field && field.domain) {
-                        domain = field.domain;
-                        if (_.isString(domain))
-                            domain = scope.$eval(domain);
-                    }
-                    let data = {
-                        args: [req.term],
-                        kwargs: {
-                            filter: domain,
-                            limit: DEFAULT_PAGE_SIZE,
-                            name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
-                        }
-                    };
-                    let svc;
-                    if (fieldName)
-                        svc = new Katrid.Services.Model(modelName).getFieldChoices({
-                            field: fieldName, term: req.term, kwargs: data.kwargs
-                        });
-                    else if (scope.model)
-                        svc = scope.model.getFieldChoices({ field: field.name, term: req.term, kwargs: data.kwargs });
-                    else
-                        svc = new Katrid.Services.Model(field.model).searchByName(data);
-                    svc.then(r => {
-                        let items = [];
-                        for (let obj of r.items)
-                            items.push({ value: obj[0], label: obj[1] });
-                        res(items);
-                    });
-                },
-                minLength: 1,
-                select: (event, ui) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    el.val(ui.item.label);
-                    scope.$apply(() => {
-                        let obj = [ui.item.value, ui.item.label];
-                        el.data('value', obj);
-                        controller.$setViewValue(obj);
-                        controller.$setDirty();
-                        return false;
-                    });
-                    return false;
+    restrict: "A",
+    require: "ngModel",
+    link(scope, el, attrs, controller) {
+        $(el).autocomplete({
+            source: async (req, res) => {
+                let conn = new Katrid.Pwa.Data.Connection(scope, 'orun.pwa');
+                let objs = await conn.listStatic(attrs.service, { 'text.startsWith': req.term });
+                let items = [];
+                for (let obj of objs)
+                    items.push({ value: obj.id, label: obj.text });
+                res(items);
+                return;
+                let domain;
+                if (field && field.domain) {
+                    domain = field.domain;
+                    if (_.isString(domain))
+                        domain = scope.$eval(domain);
                 }
-            });
-            controller.$parsers.push(value => {
-                value = el.data('value');
-                return value;
-            });
-            controller.$formatters.push(value => {
-                if (_.isArray(value))
-                    return value[1];
-                return value;
-            });
-        }
-    })]);
+                let data = {
+                    args: [req.term],
+                    kwargs: {
+                        filter: domain,
+                        limit: DEFAULT_PAGE_SIZE,
+                        name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
+                    }
+                };
+                let svc;
+                if (fieldName)
+                    svc = new Katrid.Services.Model(modelName).getFieldChoices({
+                        field: fieldName, term: req.term, kwargs: data.kwargs
+                    });
+                else if (scope.model)
+                    svc = scope.model.getFieldChoices({ field: field.name, term: req.term, kwargs: data.kwargs });
+                else
+                    svc = new Katrid.Services.Model(field.model).searchByName(data);
+                svc.then(r => {
+                    let items = [];
+                    for (let obj of r.items)
+                        items.push({ value: obj[0], label: obj[1] });
+                    res(items);
+                });
+            },
+            minLength: 1,
+            select: (event, ui) => {
+                event.preventDefault();
+                event.stopPropagation();
+                el.val(ui.item.label);
+                scope.$apply(() => {
+                    let obj = [ui.item.value, ui.item.label];
+                    el.data('value', obj);
+                    controller.$setViewValue(obj);
+                    controller.$setDirty();
+                    return false;
+                });
+                return false;
+            }
+        });
+        controller.$parsers.push(value => {
+            value = el.data('value');
+            return value;
+        });
+        controller.$formatters.push(value => {
+            if (_.isArray(value))
+                return value[1];
+            return value;
+        });
+    }
+})]);
 class PwaAutocomplete extends HTMLElement {
     connectedCallback() {
         this.classList.add('form-group', 'col-6');
@@ -8844,7 +8844,7 @@ var Katrid;
                     if (!this._db) {
                         this._db = new Dexie(this.dbName);
                         this._db.version(5)
-                            .stores({ records: '++$id, service, values, uuid, status, id', variables: 'name, value', staticData: '$id, service, id, text, data' });
+                          .stores({ records: '++$id, service, values, uuid, status, id', variables: 'name, value', staticData: '$id, service, id, text, data' });
                     }
                     return this._db;
                 }
@@ -9070,7 +9070,7 @@ var Katrid;
                         let content = $(await fetch(path).then(res => res.text()))[0];
                         let ngView = document.querySelector('pwa-view');
                         $(ngView).empty()
-                            .append(content);
+                          .append(content);
                         $compile(content)($scope);
                     };
                     $scope.list = async (service, member = 'records', where = null) => {
@@ -9345,18 +9345,18 @@ var Katrid;
         }
         Reports.Param = Param;
         Katrid.UI.uiKatrid.controller('ReportController', ['$scope', '$element', '$compile', function ($scope, $element, $compile) {
-                const xmlReport = $scope.$parent.action.info.content;
-                const report = new Reports.Report($scope.$parent.action, $scope);
-                $scope.report = report;
-                report.loadFromXml(xmlReport);
-                report.render($element);
-                return report.loadParams();
-            }]);
+            const xmlReport = $scope.$parent.action.info.content;
+            const report = new Reports.Report($scope.$parent.action, $scope);
+            $scope.report = report;
+            report.loadFromXml(xmlReport);
+            report.render($element);
+            return report.loadParams();
+        }]);
         Katrid.UI.uiKatrid.controller('ReportParamController', ['$scope', '$element', function ($scope, $element) {
-                $scope.$parent.param.el = $element;
-                $scope.$parent.param.scope = $scope;
-                return $scope.$parent.param.setOperation($scope.$parent.param.operation, false);
-            }]);
+            $scope.$parent.param.el = $element;
+            $scope.$parent.param.scope = $scope;
+            return $scope.$parent.param.setOperation($scope.$parent.param.operation, false);
+        }]);
         class ReportEngine {
             static load(el) {
                 $('row').each((idx, el) => {
@@ -9570,27 +9570,27 @@ var Katrid;
                 el = this.container.find('#report-params');
                 let sel = el.find('#report-id-fields');
                 sel.append($(flds))
-                    .select2({ tags: ((() => {
-                        const result2 = [];
-                        for (let p of Array.from(this.fields))
-                            result2.push({ id: p.name, text: p.label });
-                        return result2;
-                    })()) });
+                  .select2({ tags: ((() => {
+                          const result2 = [];
+                          for (let p of Array.from(this.fields))
+                              result2.push({ id: p.name, text: p.label });
+                          return result2;
+                      })()) });
                 if (Katrid.Reports.currentUserReport.params && Katrid.Reports.currentUserReport.params.fields) {
                     console.log(Katrid.Reports.currentUserReport.params.fields);
                     sel.select2('val', Katrid.Reports.currentUserReport.params.fields);
                 }
                 sel = el.find('#report-id-totals');
                 sel.append(aggs)
-                    .select2({ tags: ((() => {
-                        const result3 = [];
-                        for (let p of Array.from(this.fields)) {
-                            if (p.total) {
-                                result3.push({ id: p.name, text: p.label });
-                            }
-                        }
-                        return result3;
-                    })()) });
+                  .select2({ tags: ((() => {
+                          const result3 = [];
+                          for (let p of Array.from(this.fields)) {
+                              if (p.total) {
+                                  result3.push({ id: p.name, text: p.label });
+                              }
+                          }
+                          return result3;
+                      })()) });
                 return el;
             }
             renderParams(container) {
@@ -9617,22 +9617,22 @@ var Katrid;
                 const el = container.find("#params-grouping");
                 const sel = el.find('select').select2();
                 return sel.append(opts)
-                    .select2("container").find("ul.select2-choices").sortable({
-                    containment: 'parent',
-                    start() { return sel.select2("onSortStart"); },
-                    update() { return sel.select2("onSortEnd"); }
-                });
+                  .select2("container").find("ul.select2-choices").sortable({
+                      containment: 'parent',
+                      start() { return sel.select2("onSortStart"); },
+                      update() { return sel.select2("onSortEnd"); }
+                  });
             }
             renderSorting(container) {
                 const opts = (Array.from(this.sortables).filter((p) => p.sortable).map((p) => `<option value="${p.name}">${p.label}</option>`)).join('');
                 const el = container.find("#params-sorting");
                 const sel = el.find('select').select2();
                 return sel.append(opts)
-                    .select2("container").find("ul.select2-choices").sortable({
-                    containment: 'parent',
-                    start() { return sel.select2("onSortStart"); },
-                    update() { return sel.select2("onSortEnd"); }
-                });
+                  .select2("container").find("ul.select2-choices").sortable({
+                      containment: 'parent',
+                      start() { return sel.select2("onSortStart"); },
+                      update() { return sel.select2("onSortEnd"); }
+                  });
             }
             render(container) {
                 this.container = container;
@@ -9915,11 +9915,11 @@ var Katrid;
                         return new Promise((resolve, reject) => {
                             this._pendingTimeout = setTimeout(() => {
                                 resolve(this._source({ term: this.input.term })
-                                    .then((items) => {
-                                    this.clearItems();
-                                    this.loadItems(items);
-                                })
-                                    .finally(() => this.loading = false));
+                                  .then((items) => {
+                                      this.clearItems();
+                                      this.loadItems(items);
+                                  })
+                                  .finally(() => this.loading = false));
                             }, this.delay);
                         });
                     }
@@ -10187,86 +10187,86 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 (function () {
     Katrid.UI.uiKatrid
-        .directive('codeEditor', [function () {
-            return {
-                restrict: 'EA',
-                require: 'ngModel',
-                link: function (scope, elm, attrs, ngModel) {
-                    let editor;
-                    require.config({
-                        paths: {
-                            vs: '/static/web/monaco/min/vs',
-                        }
-                    });
-                    console.log('set language', attrs.language);
-                    require(['vs/editor/editor.main'], function () {
-                        editor = monaco.editor.create(elm[0], {
-                            value: '',
-                            language: attrs.language || 'xml',
-                            minimap: {
-                                enabled: false,
-                            },
-                            automaticLayout: true,
-                        });
-                        editor.getModel().onDidChangeContent(evt => {
-                            ngModel.$setViewValue(editor.getValue());
-                        });
-                        ngModel.$render = function () {
-                            setTimeout(() => {
-                                editor.setValue(ngModel.$viewValue);
-                            }, 300);
-                        };
-                    });
-                }
-            };
-        }]);
+      .directive('codeEditor', [function () {
+          return {
+              restrict: 'EA',
+              require: 'ngModel',
+              link: function (scope, elm, attrs, ngModel) {
+                  let editor;
+                  require.config({
+                      paths: {
+                          vs: '/static/web/monaco/min/vs',
+                      }
+                  });
+                  console.log('set language', attrs.language);
+                  require(['vs/editor/editor.main'], function () {
+                      editor = monaco.editor.create(elm[0], {
+                          value: '',
+                          language: attrs.language || 'xml',
+                          minimap: {
+                              enabled: false,
+                          },
+                          automaticLayout: true,
+                      });
+                      editor.getModel().onDidChangeContent(evt => {
+                          ngModel.$setViewValue(editor.getValue());
+                      });
+                      ngModel.$render = function () {
+                          setTimeout(() => {
+                              editor.setValue(ngModel.$viewValue);
+                          }, 300);
+                      };
+                  });
+              }
+          };
+      }]);
 })();
 (function () {
     let uiKatrid = Katrid.UI.uiKatrid;
     let formCount = 0;
     uiKatrid.directive('formField2', ['$compile', function ($compile) {
-            return {
-                restrict: 'A',
-                priority: 99,
-                replace: true,
-                compile(el, attrs) {
-                    return function (scope, element, attrs, ctrl) {
-                        let field = scope.view.fields[attrs.name];
-                        if (_.isUndefined(field))
-                            throw Error('Invalid field name "' + attrs.name + '"');
-                        let templ = field.template.form;
-                        field.assign(element);
-                        if (!field.visible) {
-                            el.remove();
-                            return;
-                        }
-                        let fieldAttributes = field.getAttributes(attrs);
-                        let sectionAttrs = {};
-                        if (fieldAttributes['ng-readonly'])
-                            sectionAttrs['ng-readonly'] = fieldAttributes['ng-readonly'].toString();
-                        if (attrs.ngShow)
-                            sectionAttrs['ng-show'] = attrs.ngShow;
-                        if (field.helpText) {
-                            sectionAttrs['title'] = field.helpText;
-                        }
-                        let content = element.html();
-                        templ = Katrid.app.getTemplate(templ, {
-                            name: attrs.name, field, attrs: fieldAttributes, content, fieldAttributes: attrs, sectionAttrs,
-                        });
-                        templ = $compile(templ)(scope);
-                        element.replaceWith(templ);
-                        let fcontrol = templ.find('.form-field');
-                        if (fcontrol.length) {
-                            fcontrol = fcontrol[fcontrol.length - 1];
-                            const form = templ.controller('form');
-                            ctrl = angular.element(fcontrol).data().$ngModelController;
-                            if (ctrl)
-                                form.$addControl(ctrl);
-                        }
-                    };
-                },
-            };
-        }]);
+        return {
+            restrict: 'A',
+            priority: 99,
+            replace: true,
+            compile(el, attrs) {
+                return function (scope, element, attrs, ctrl) {
+                    let field = scope.view.fields[attrs.name];
+                    if (_.isUndefined(field))
+                        throw Error('Invalid field name "' + attrs.name + '"');
+                    let templ = field.template.form;
+                    field.assign(element);
+                    if (!field.visible) {
+                        el.remove();
+                        return;
+                    }
+                    let fieldAttributes = field.getAttributes(attrs);
+                    let sectionAttrs = {};
+                    if (fieldAttributes['ng-readonly'])
+                        sectionAttrs['ng-readonly'] = fieldAttributes['ng-readonly'].toString();
+                    if (attrs.ngShow)
+                        sectionAttrs['ng-show'] = attrs.ngShow;
+                    if (field.helpText) {
+                        sectionAttrs['title'] = field.helpText;
+                    }
+                    let content = element.html();
+                    templ = Katrid.app.getTemplate(templ, {
+                        name: attrs.name, field, attrs: fieldAttributes, content, fieldAttributes: attrs, sectionAttrs,
+                    });
+                    templ = $compile(templ)(scope);
+                    element.replaceWith(templ);
+                    let fcontrol = templ.find('.form-field');
+                    if (fcontrol.length) {
+                        fcontrol = fcontrol[fcontrol.length - 1];
+                        const form = templ.controller('form');
+                        ctrl = angular.element(fcontrol).data().$ngModelController;
+                        if (ctrl)
+                            form.$addControl(ctrl);
+                    }
+                };
+            },
+        };
+    }]);
     uiKatrid.directive('inputField', () => ({
         restrict: 'A',
         scope: false,
@@ -10326,91 +10326,91 @@ var Katrid;
     if ($.fn.modal)
         $.fn.modal.Constructor.prototype._enforceFocus = function () { };
     uiKatrid.directive('ajaxChoices', ['$location', $location => ({
-            restrict: 'A',
-            require: '?ngModel',
-            link(scope, element, attrs, controller) {
-                const { multiple } = attrs;
-                const serviceName = attrs.ajaxChoices;
-                let field = attrs.field;
-                let _timeout = null;
-                let domain;
-                const cfg = {
-                    allowClear: true,
-                    query(query) {
-                        let data = {
-                            args: [query.term],
-                            kwargs: {
-                                count: 1,
-                                page: query.page,
-                                name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
-                            }
-                        };
-                        if (domain)
-                            data.domain = domain;
-                        const f = () => {
-                            let svc = new Katrid.Services.Model(serviceName);
-                            if (field)
-                                svc = svc.getFieldChoices({ field, term: query.term, kwargs: data.kwargs });
-                            else
-                                svc = new Katrid.Services.Model(attrs.modelChoices).searchByName(data);
-                            svc.then(res => {
-                                let data = res.items;
-                                const r = data.map(item => ({
-                                    id: item.id,
-                                    text: item.text
-                                }));
-                                const more = query.page * Katrid.settings.services.choicesPageLimit < res.count;
-                                return query.callback({
-                                    results: r,
-                                    more: more
-                                });
+        restrict: 'A',
+        require: '?ngModel',
+        link(scope, element, attrs, controller) {
+            const { multiple } = attrs;
+            const serviceName = attrs.ajaxChoices;
+            let field = attrs.field;
+            let _timeout = null;
+            let domain;
+            const cfg = {
+                allowClear: true,
+                query(query) {
+                    let data = {
+                        args: [query.term],
+                        kwargs: {
+                            count: 1,
+                            page: query.page,
+                            name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
+                        }
+                    };
+                    if (domain)
+                        data.domain = domain;
+                    const f = () => {
+                        let svc = new Katrid.Services.Model(serviceName);
+                        if (field)
+                            svc = svc.getFieldChoices({ field, term: query.term, kwargs: data.kwargs });
+                        else
+                            svc = new Katrid.Services.Model(attrs.modelChoices).searchByName(data);
+                        svc.then(res => {
+                            let data = res.items;
+                            const r = data.map(item => ({
+                                id: item.id,
+                                text: item.text
+                            }));
+                            const more = query.page * Katrid.settings.services.choicesPageLimit < res.count;
+                            return query.callback({
+                                results: r,
+                                more: more
                             });
-                        };
-                        if (_timeout)
-                            clearTimeout(_timeout);
-                        _timeout = setTimeout(f, 400);
-                    },
-                    escapeMarkup(m) {
-                        return m;
-                    },
-                    initSelection(element, callback) {
-                        const v = controller.$modelValue;
-                        if (v) {
-                            if (multiple) {
-                                const values = [];
-                                for (let i of Array.from(v)) {
-                                    values.push({ id: i.id, text: i.text });
-                                }
-                                return callback(values);
+                        });
+                    };
+                    if (_timeout)
+                        clearTimeout(_timeout);
+                    _timeout = setTimeout(f, 400);
+                },
+                escapeMarkup(m) {
+                    return m;
+                },
+                initSelection(element, callback) {
+                    const v = controller.$modelValue;
+                    if (v) {
+                        if (multiple) {
+                            const values = [];
+                            for (let i of Array.from(v)) {
+                                values.push({ id: i.id, text: i.text });
                             }
-                            else {
-                                return callback({ id: v.id, text: v.text });
-                            }
+                            return callback(values);
+                        }
+                        else {
+                            return callback({ id: v.id, text: v.text });
                         }
                     }
-                };
-                if (multiple)
-                    cfg['multiple'] = true;
-                const el = element.select2(cfg);
-                let sel = el;
-                element.on('$destroy', function () {
-                    $('.select2-hidden-accessible').remove();
-                    $('.select2-drop').remove();
-                    return $('.select2-drop-mask').remove();
-                });
-                el.on('change', function (e) {
-                    const v = el.select2('data');
-                    controller.$setDirty();
-                    if (v)
-                        controller.$viewValue = v;
-                    return scope.$apply();
-                });
-                controller.$render = () => {
-                    if (controller.$viewValue)
-                        return element.select2('val', controller.$viewValue);
-                };
-            }
-        })]);
+                }
+            };
+            if (multiple)
+                cfg['multiple'] = true;
+            const el = element.select2(cfg);
+            let sel = el;
+            element.on('$destroy', function () {
+                $('.select2-hidden-accessible').remove();
+                $('.select2-drop').remove();
+                return $('.select2-drop-mask').remove();
+            });
+            el.on('change', function (e) {
+                const v = el.select2('data');
+                controller.$setDirty();
+                if (v)
+                    controller.$viewValue = v;
+                return scope.$apply();
+            });
+            controller.$render = () => {
+                if (controller.$viewValue)
+                    return element.select2('val', controller.$viewValue);
+            };
+        }
+    })]);
     uiKatrid.directive('inputMask', () => ({
         restrict: 'A',
         link(scope, el, attrs) {
@@ -10478,55 +10478,55 @@ var Katrid;
         }
     }));
     uiKatrid.directive('dateInput', ['$filter', ($filter) => ({
-            restrict: 'A',
-            require: '?ngModel',
-            link(scope, element, attrs, controller) {
-                let setNow = () => {
-                    let value;
-                    if (attrs.type === 'date')
-                        value = (new Date()).toISOString().split('T')[0];
-                    else
-                        value = moment(new Date()).format('YYYY-MM-DD HH:mm').replace(' ', 'T');
-                    $(element).val(value);
-                    controller.$setViewValue(value);
-                    _focus = false;
-                };
-                let _focus = true;
-                element
-                    .focus(function () {
-                    if (($(this).val() === ''))
-                        _focus = true;
-                })
-                    .keypress(function (evt) {
-                    if (evt.key.toLowerCase() === 'h') {
-                        setNow();
-                        evt.stopPropagation();
-                        evt.preventDefault();
-                    }
-                })
-                    .keydown(function (evt) {
-                    if (/\d/.test(evt.key)) {
-                        if (($(this).val() === '') && (_focus))
-                            setNow();
-                    }
-                });
-                controller.$formatters.push(function (value) {
-                    if (value) {
-                        return new Date(value);
-                    }
-                });
-                controller.$parsers.push(function (value) {
-                    if (_.isDate(value)) {
-                        let v = moment.utc(value).format('YYYY-MM-DD');
-                        if (controller.$modelValue)
-                            v += 'T' + controller.$modelValue.split('T', 1)[1];
-                        let r = moment.utc(v).format('YYYY-MM-DDTHH:mm:ss');
-                        console.log('ret', value, v, r);
-                        return r;
-                    }
-                });
-            }
-        })]);
+        restrict: 'A',
+        require: '?ngModel',
+        link(scope, element, attrs, controller) {
+            let setNow = () => {
+                let value;
+                if (attrs.type === 'date')
+                    value = (new Date()).toISOString().split('T')[0];
+                else
+                    value = moment(new Date()).format('YYYY-MM-DD HH:mm').replace(' ', 'T');
+                $(element).val(value);
+                controller.$setViewValue(value);
+                _focus = false;
+            };
+            let _focus = true;
+            element
+              .focus(function () {
+                  if (($(this).val() === ''))
+                      _focus = true;
+              })
+              .keypress(function (evt) {
+                  if (evt.key.toLowerCase() === 'h') {
+                      setNow();
+                      evt.stopPropagation();
+                      evt.preventDefault();
+                  }
+              })
+              .keydown(function (evt) {
+                  if (/\d/.test(evt.key)) {
+                      if (($(this).val() === '') && (_focus))
+                          setNow();
+                  }
+              });
+            controller.$formatters.push(function (value) {
+                if (value) {
+                    return new Date(value);
+                }
+            });
+            controller.$parsers.push(function (value) {
+                if (_.isDate(value)) {
+                    let v = moment.utc(value).format('YYYY-MM-DD');
+                    if (controller.$modelValue)
+                        v += 'T' + controller.$modelValue.split('T', 1)[1];
+                    let r = moment.utc(v).format('YYYY-MM-DDTHH:mm:ss');
+                    console.log('ret', value, v, r);
+                    return r;
+                }
+            });
+        }
+    })]);
     uiKatrid.directive('timeInput', () => ({
         restrict: 'A',
         require: '?ngModel',
@@ -10571,9 +10571,9 @@ var Katrid;
                         $.extend(data, parent.group.$params[0]);
                         console.log(data);
                         parent.model.write([data])
-                            .then(res => {
-                            console.log('write ok', res);
-                        });
+                          .then(res => {
+                              console.log('write ok', res);
+                          });
                     };
                 if (!_.isUndefined(attrs.cardGroup))
                     cfg['update'] = (event, ui) => {
@@ -10584,9 +10584,9 @@ var Katrid;
                         let groupName = element.find('.card-group').first().data('group-name');
                         let modelName = scope.$parent.$parent.view.fields[groupName].model;
                         Katrid.Services.data.reorder(modelName, ids)
-                            .done(res => {
-                            console.log(res);
-                        });
+                          .done(res => {
+                              console.log(res);
+                          });
                     };
                 console.log(cfg);
                 element.sortable(cfg).disableSelection();
@@ -10627,24 +10627,24 @@ var Katrid;
             el.focus();
     };
     uiKatrid.directive('action', ['$compile', ($compile) => ({
-            restrict: 'E',
-            priority: 99,
-            link: (scope, el, attrs) => {
-                console.log('define action', attrs.ngClick);
-                let div = el.closest('div.data-form');
-                let actions = div.find('.dropdown-menu-actions');
-                let name = attrs.name;
-                let label = el.html();
-                let html = `<li><a href="javascript:void(0)">${label}</a></li>`;
-                let newItem = $(html);
-                newItem.click(() => {
-                    if (attrs.object)
-                        scope.model.rpc(attrs.object, [scope.$parent.record.id]);
-                });
-                actions.append(newItem);
-                el.remove();
-            }
-        })]);
+        restrict: 'E',
+        priority: 99,
+        link: (scope, el, attrs) => {
+            console.log('define action', attrs.ngClick);
+            let div = el.closest('div.data-form');
+            let actions = div.find('.dropdown-menu-actions');
+            let name = attrs.name;
+            let label = el.html();
+            let html = `<li><a href="javascript:void(0)">${label}</a></li>`;
+            let newItem = $(html);
+            newItem.click(() => {
+                if (attrs.object)
+                    scope.model.rpc(attrs.object, [scope.$parent.record.id]);
+            });
+            actions.append(newItem);
+            el.remove();
+        }
+    })]);
     class CardView {
         constructor() {
             this.restrict = 'E';
@@ -10663,9 +10663,9 @@ var Katrid;
                 let svc = new Katrid.Services.Model(field.model);
                 console.log('the name is', name);
                 svc.createName(name)
-                    .done((res) => {
-                    console.log(res);
-                });
+                  .done((res) => {
+                      console.log(res);
+                  });
             };
             $scope.cardAddItem = (event, name) => {
                 if (name) {
@@ -10673,21 +10673,21 @@ var Katrid;
                     let g = $(event.target).closest('.card-group');
                     ctx['default_' + g.data('group-name')] = g.data('sequence-id');
                     scope.model.createName(name, ctx)
-                        .done((res) => {
-                        if (res.ok) {
-                            let id = res.result[0];
-                            scope.model.getById(id)
+                      .done((res) => {
+                          if (res.ok) {
+                              let id = res.result[0];
+                              scope.model.getById(id)
                                 .done((res) => {
-                                if (res.ok) {
-                                    let s = angular.element(event.target).scope();
-                                    let g = s.group;
-                                    s.$apply(() => {
-                                        g.records.push(res.result.data[0]);
-                                    });
-                                }
-                            });
-                        }
-                    });
+                                    if (res.ok) {
+                                        let s = angular.element(event.target).scope();
+                                        let g = s.group;
+                                        s.$apply(() => {
+                                            g.records.push(res.result.data[0]);
+                                        });
+                                    }
+                                });
+                          }
+                      });
                 }
                 $scope.kanbanHideAddGroupItemDlg(event);
             };
@@ -10697,70 +10697,70 @@ var Katrid;
 (function () {
     let uiKatrid = Katrid.UI.uiKatrid;
     uiKatrid.directive('datePicker', ['$filter', $filter => ({
-            restrict: 'A',
-            require: '?ngModel',
-            link(scope, el, attrs, controller) {
-                let mask = '99/99/9999';
-                let format = attrs.datePicker || 'L';
-                if (format === 'L LT')
-                    mask = '99/99/9999 99:99';
-                el.inputmask({
-                    mask,
-                    insertMode: false,
-                });
-                let calendar = $(el.parent()).datetimepicker({
-                    useCurrent: false,
-                    format,
-                    icons: {
-                        time: 'fa fa-clock',
-                    },
-                })
-                    .on('dp.change', function (evt) {
-                    calendar.datetimepicker('hide');
-                })
-                    .on('dp.hide', function (evt) {
-                    controller.$setDirty();
-                    controller.$setViewValue(el.val());
-                });
-                el.on('focus', () => el.select());
-                controller.$render = function () {
-                    if (controller.$modelValue) {
-                        calendar.datetimepicker('date', moment.utc(controller.$modelValue));
-                    }
-                    else
-                        el.val('');
-                };
-                el.on('blur', () => {
-                    let v = moment(el.val(), format);
-                    if (v.isValid())
-                        controller.$modelValue = v.format('YYYY-MM-DD');
-                    else
-                        controller.$modelValue = null;
-                });
-                controller.$parsers.push(value => {
-                    let v = moment(el.val(), format);
-                    if (v.isValid()) {
-                        if (format === 'L')
-                            return v.format('YYYY-MM-DD');
-                        else if (format === 'L LT')
-                            return v.format('YYYY-MM-DD HH:mm');
-                    }
-                    return null;
-                });
-            }
-        })]);
+        restrict: 'A',
+        require: '?ngModel',
+        link(scope, el, attrs, controller) {
+            let mask = '99/99/9999';
+            let format = attrs.datePicker || 'L';
+            if (format === 'L LT')
+                mask = '99/99/9999 99:99';
+            el.inputmask({
+                mask,
+                insertMode: false,
+            });
+            let calendar = $(el.parent()).datetimepicker({
+                useCurrent: false,
+                format,
+                icons: {
+                    time: 'fa fa-clock',
+                },
+            })
+              .on('dp.change', function (evt) {
+                  calendar.datetimepicker('hide');
+              })
+              .on('dp.hide', function (evt) {
+                  controller.$setDirty();
+                  controller.$setViewValue(el.val());
+              });
+            el.on('focus', () => el.select());
+            controller.$render = function () {
+                if (controller.$modelValue) {
+                    calendar.datetimepicker('date', moment.utc(controller.$modelValue));
+                }
+                else
+                    el.val('');
+            };
+            el.on('blur', () => {
+                let v = moment(el.val(), format);
+                if (v.isValid())
+                    controller.$modelValue = v.format('YYYY-MM-DD');
+                else
+                    controller.$modelValue = null;
+            });
+            controller.$parsers.push(value => {
+                let v = moment(el.val(), format);
+                if (v.isValid()) {
+                    if (format === 'L')
+                        return v.format('YYYY-MM-DD');
+                    else if (format === 'L LT')
+                        return v.format('YYYY-MM-DD HH:mm');
+                }
+                return null;
+            });
+        }
+    })]);
     uiKatrid.directive('timePicker', ['$filter', $filter => ({
-            restrict: 'A',
-            require: '?ngModel',
-            link(scope, el, attrs, controller) {
-                let mask = '99:99';
-                el.inputmask({
-                    mask,
-                    insertMode: false,
-                });
-                el.on('focus', () => el.select());
-            }
-        })]);
+        restrict: 'A',
+        require: '?ngModel',
+        link(scope, el, attrs, controller) {
+            let mask = '99:99';
+            el.inputmask({
+                mask,
+                insertMode: false,
+            });
+            el.on('focus', () => el.select());
+        }
+    })]);
 })();
 (function () {
     const DEFAULT_PAGE_SIZE = 12;
@@ -10778,231 +10778,265 @@ var Katrid;
     }
     Katrid.settings.ui.foreignKey = { allowCreate: true, allowCreateEdit: true };
     Katrid.UI.uiKatrid.directive('inputAutocomplete', ['$controller', ($controller) => ({
-            restrict: 'A',
-            scope: false,
-            require: 'ngModel',
-            link: function (scope, element, attrs, ngModel) {
-                ngModel.$formatters.push(function (value) {
-                    if (value) {
-                        element[0].$selectedItem = value;
-                        return value.text;
-                    }
-                    element[0].selectedItem = null;
-                    return '';
-                });
-                element[0].addEventListener('selectItem', function (evt) {
-                    if (evt.detail.item)
-                        ngModel.$setViewValue(evt.detail.item);
-                    else
-                        ngModel.$setViewValue(null);
-                });
-            }
-        })]);
-    Katrid.UI.uiKatrid.directive("fkAutocomplete", ['$controller', ($controller) => ({
-            restrict: "A",
-            require: "ngModel",
-            link(scope, el, attrs, controller) {
-                let fieldName = attrs.field;
-                let modelName = attrs.modelName;
-                let field;
-                if (!fieldName) {
-                    field = scope.view.fields[attrs.name];
-                    if (!field)
-                        field = scope.action.fields[attrs.name];
+        restrict: 'A',
+        scope: false,
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            ngModel.$formatters.push(function (value) {
+                if (value) {
+                    element[0].$selectedItem = value;
+                    return value.text;
                 }
-                $(el).autocomplete({
-                    source: (req, res) => {
-                        let domain;
-                        if (field && field.domain) {
-                            domain = field.domain;
-                            if (_.isString(domain))
-                                domain = scope.$eval(domain);
+                element[0].selectedItem = null;
+                return '';
+            });
+            element[0].addEventListener('selectItem', function (evt) {
+                if (evt.detail.item)
+                    ngModel.$setViewValue(evt.detail.item);
+                else
+                    ngModel.$setViewValue(null);
+            });
+        }
+    })]);
+    Katrid.UI.uiKatrid.directive("fkAutocomplete", ['$controller', ($controller) => ({
+        restrict: "A",
+        require: "ngModel",
+        link(scope, el, attrs, controller) {
+            let fieldName = attrs.field;
+            let modelName = attrs.modelName;
+            let field;
+            if (!fieldName) {
+                field = scope.view.fields[attrs.name];
+                if (!field)
+                    field = scope.action.fields[attrs.name];
+            }
+            $(el).autocomplete({
+                source: (req, res) => {
+                    let domain;
+                    if (field && field.domain) {
+                        domain = field.domain;
+                        if (_.isString(domain))
+                            domain = scope.$eval(domain);
+                    }
+                    let data = {
+                        args: [req.term],
+                        kwargs: {
+                            filter: domain,
+                            limit: DEFAULT_PAGE_SIZE,
+                            name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
                         }
-                        let data = {
-                            args: [req.term],
-                            kwargs: {
-                                filter: domain,
-                                limit: DEFAULT_PAGE_SIZE,
-                                name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
-                            }
-                        };
+                    };
+                    let svc;
+                    if (fieldName)
+                        svc = new Katrid.Services.Model(modelName).getFieldChoices({
+                            field: fieldName, term: req.term, kwargs: data.kwargs
+                        });
+                    else if (scope.model)
+                        svc = scope.model.getFieldChoices({ field: field.name, term: req.term, kwargs: data.kwargs });
+                    else
+                        svc = new Katrid.Services.Model(field.model).searchByName(data);
+                    svc.then(r => {
+                        let items = [];
+                        for (let obj of r.items)
+                            items.push({ value: obj[0], label: obj[1] });
+                        res(items);
+                    });
+                },
+                minLength: 1,
+                select: (event, ui) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    el.val(ui.item.label);
+                    scope.$apply(() => {
+                        let obj = [ui.item.value, ui.item.label];
+                        el.data('value', obj);
+                        controller.$setViewValue(obj);
+                        controller.$setDirty();
+                        return false;
+                    });
+                    return false;
+                }
+            });
+            controller.$parsers.push(value => {
+                value = el.data('value');
+                return value;
+            });
+            controller.$formatters.push(value => {
+                if (_.isArray(value))
+                    return value[1];
+                return value;
+            });
+        }
+    })]);
+    Katrid.UI.uiKatrid.directive("foreignkey", ['$controller', ($controller) => ({
+        restrict: "A",
+        require: "ngModel",
+        link(scope, el, attrs, controller) {
+            let serviceName;
+            let sel = el;
+            let _shown = false;
+            const field = scope.view.fields[attrs.name];
+            el.addClass("form-field");
+            if (attrs.serviceName)
+                serviceName = attrs;
+            else if (scope.action && scope.action.model)
+                serviceName = scope.action.model.name;
+            else
+                serviceName = attrs.foreignkey;
+            const newItem = function () {
+            };
+            const newEditItem = function () {
+            };
+            let _timeout = null;
+            let config = {
+                allowClear: true,
+                query(query) {
+                    let domain = attrs.filter || field.filter;
+                    if (domain && _.isString(domain))
+                        domain = scope.$eval(domain);
+                    let format = 'html';
+                    let data = {
+                        args: [query.term],
+                        kwargs: {
+                            count: 1,
+                            page: query.page,
+                            filter: domain,
+                            format,
+                            name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
+                        }
+                    };
+                    const f = () => {
                         let svc;
-                        if (fieldName)
-                            svc = new Katrid.Services.Model(modelName).getFieldChoices({
-                                field: fieldName, term: req.term, kwargs: data.kwargs
+                        if (scope.model)
+                            svc = scope.model.getFieldChoices({
+                                field: field.name,
+                                term: query.term,
+                                kwargs: data.kwargs
                             });
-                        else if (scope.model)
-                            svc = scope.model.getFieldChoices({ field: field.name, term: req.term, kwargs: data.kwargs });
                         else
                             svc = new Katrid.Services.Model(field.model).searchByName(data);
-                        svc.then(r => {
-                            let items = [];
-                            for (let obj of r.items)
-                                items.push({ value: obj[0], label: obj[1] });
-                            res(items);
-                        });
-                    },
-                    minLength: 1,
-                    select: (event, ui) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        el.val(ui.item.label);
-                        scope.$apply(() => {
-                            let obj = [ui.item.value, ui.item.label];
-                            el.data('value', obj);
-                            controller.$setViewValue(obj);
-                            controller.$setDirty();
-                            return false;
-                        });
-                        return false;
-                    }
-                });
-                controller.$parsers.push(value => {
-                    value = el.data('value');
-                    return value;
-                });
-                controller.$formatters.push(value => {
-                    if (_.isArray(value))
-                        return value[1];
-                    return value;
-                });
-            }
-        })]);
-    Katrid.UI.uiKatrid.directive("foreignkey", ['$controller', ($controller) => ({
-            restrict: "A",
-            require: "ngModel",
-            link(scope, el, attrs, controller) {
-                let serviceName;
-                let sel = el;
-                let _shown = false;
-                const field = scope.view.fields[attrs.name];
-                el.addClass("form-field");
-                if (attrs.serviceName)
-                    serviceName = attrs;
-                else if (scope.action && scope.action.model)
-                    serviceName = scope.action.model.name;
-                else
-                    serviceName = attrs.foreignkey;
-                const newItem = function () {
-                };
-                const newEditItem = function () {
-                };
-                let _timeout = null;
-                let config = {
-                    allowClear: true,
-                    query(query) {
-                        let domain = attrs.filter || field.filter;
-                        if (domain && _.isString(domain))
-                            domain = scope.$eval(domain);
-                        let format = 'html';
-                        let data = {
-                            args: [query.term],
-                            kwargs: {
-                                count: 1,
-                                page: query.page,
-                                filter: domain,
-                                format,
-                                name_fields: attrs.nameFields && attrs.nameFields.split(",") || null
-                            }
-                        };
-                        const f = () => {
-                            let svc;
-                            if (scope.model)
-                                svc = scope.model.getFieldChoices({
-                                    field: field.name,
-                                    term: query.term,
-                                    kwargs: data.kwargs
-                                });
-                            else
-                                svc = new Katrid.Services.Model(field.model).searchByName(data);
-                            svc.then(res => {
-                                let data = res.items;
-                                const r = data.map(item => ({
-                                    id: item[0],
-                                    text: item[2] || item[1],
-                                    str: item[1],
-                                }));
-                                const more = query.page * Katrid.settings.services.choicesPageLimit < res.count;
-                                if (!multiple && !more) {
-                                    let msg;
-                                    let fkSettings = { allowCreate: Katrid.settings.ui.foreignKey.allowCreate };
-                                    const v = sel.data("select2").search.val();
-                                    if ((attrs.allowCreate && attrs.allowCreate !== "false" || attrs.allowCreate == null) && v)
-                                        fkSettings.allowCreate = false;
-                                    if (fkSettings.allowCreate) {
-                                        msg = Katrid.i18n.gettext('Create <i>"%s"</i>...');
-                                        r.push({
-                                            id: newItem,
-                                            text: msg
-                                        });
-                                    }
-                                }
-                                return query.callback({
-                                    results: r,
-                                    more: more
-                                });
-                            });
-                        };
-                        if (_timeout)
-                            clearTimeout(_timeout);
-                        _timeout = setTimeout(f, 400);
-                    },
-                    ajax: {
-                        url: `/api/rpc/${serviceName}/get_field_choices/`,
-                        contentType: "application/json",
-                        dataType: "json",
-                        type: "POST"
-                    },
-                    formatSelection(val) {
-                        if (val.id === newItem || val.id === newEditItem)
-                            return Katrid.i18n.gettext("Creating...");
-                        return val.text;
-                    },
-                    formatResult(state) {
-                        const s = sel.data("select2").search.val();
-                        if (state.id === newItem) {
-                            state.str = s;
-                            return `<strong>${sprintf(state.text, s)}</strong>`;
-                        }
-                        else if (state.id === newEditItem) {
-                            state.str = s;
-                            return `<strong>${sprintf(state.text, s)}</strong>`;
-                        }
-                        return state.text;
-                    },
-                    initSelection(el, cb) {
-                        let v = controller.$modelValue;
-                        if (multiple) {
-                            v = v.map(obj => ({
-                                id: obj[0],
-                                text: obj[1]
+                        svc.then(res => {
+                            let data = res.items;
+                            const r = data.map(item => ({
+                                id: item[0],
+                                text: item[2] || item[1],
+                                str: item[1],
                             }));
-                            return cb(v);
-                        }
-                        else if (_.isArray(v)) {
-                            return cb({
-                                id: v[0],
-                                text: v[1]
+                            const more = query.page * Katrid.settings.services.choicesPageLimit < res.count;
+                            if (!multiple && !more) {
+                                let msg;
+                                let fkSettings = { allowCreate: Katrid.settings.ui.foreignKey.allowCreate };
+                                const v = sel.data("select2").search.val();
+                                if ((attrs.allowCreate && attrs.allowCreate !== "false" || attrs.allowCreate == null) && v)
+                                    fkSettings.allowCreate = false;
+                                if (fkSettings.allowCreate) {
+                                    msg = Katrid.i18n.gettext('Create <i>"%s"</i>...');
+                                    r.push({
+                                        id: newItem,
+                                        text: msg
+                                    });
+                                }
+                            }
+                            return query.callback({
+                                results: r,
+                                more: more
                             });
-                        }
+                        });
+                    };
+                    if (_timeout)
+                        clearTimeout(_timeout);
+                    _timeout = setTimeout(f, 400);
+                },
+                ajax: {
+                    url: `/api/rpc/${serviceName}/get_field_choices/`,
+                    contentType: "application/json",
+                    dataType: "json",
+                    type: "POST"
+                },
+                formatSelection(val) {
+                    if (val.id === newItem || val.id === newEditItem)
+                        return Katrid.i18n.gettext("Creating...");
+                    return val.text;
+                },
+                formatResult(state) {
+                    const s = sel.data("select2").search.val();
+                    if (state.id === newItem) {
+                        state.str = s;
+                        return `<strong>${sprintf(state.text, s)}</strong>`;
                     }
-                };
-                let allowCreateEdit = attrs.noCreateEdit;
-                if (allowCreateEdit === undefined)
-                    allowCreateEdit = Katrid.settings.ui.foreignKey.allowCreateEdit;
-                else
-                    allowCreateEdit = !Boolean(allowCreateEdit);
-                let { multiple: multiple } = attrs;
-                if (multiple) {
-                    config["multiple"] = true;
+                    else if (state.id === newEditItem) {
+                        state.str = s;
+                        return `<strong>${sprintf(state.text, s)}</strong>`;
+                    }
+                    return state.text;
+                },
+                initSelection(el, cb) {
+                    let v = controller.$modelValue;
+                    if (multiple) {
+                        v = v.map(obj => ({
+                            id: obj[0],
+                            text: obj[1]
+                        }));
+                        return cb(v);
+                    }
+                    else if (_.isArray(v)) {
+                        return cb({
+                            id: v[0],
+                            text: v[1]
+                        });
+                    }
                 }
-                sel = sel.select2(config);
-                let createNew = () => {
-                    sel.select2('close');
-                    let service = new Katrid.Services.Model(field.info.model);
-                    return service.getViewInfo({
-                        view_type: "form"
-                    }).then(function (res) {
+            };
+            let allowCreateEdit = attrs.noCreateEdit;
+            if (allowCreateEdit === undefined)
+                allowCreateEdit = Katrid.settings.ui.foreignKey.allowCreateEdit;
+            else
+                allowCreateEdit = !Boolean(allowCreateEdit);
+            let { multiple: multiple } = attrs;
+            if (multiple) {
+                config["multiple"] = true;
+            }
+            sel = sel.select2(config);
+            let createNew = () => {
+                sel.select2('close');
+                let service = new Katrid.Services.Model(field.info.model);
+                return service.getViewInfo({
+                    view_type: "form"
+                }).then(function (res) {
+                    let title = _.sprintf(Katrid.i18n.gettext('Create: %(title)s'), { title: field.caption });
+                    let options = {
+                        scope: scope.$new(true),
+                        $controller: $controller,
+                        sel: sel, field: field,
+                        title: title,
+                        view: res,
+                        model: service,
+                        caption: field.caption,
+                    };
+                    let wnd = new Katrid.Forms.Dialogs.Window(options);
+                    wnd.createNew();
+                });
+            };
+            console.log('allow create edit', allowCreateEdit);
+            if (allowCreateEdit)
+                sel.parent().find('div.select2-container>div.select2-drop')
+                  .append(`<div style="padding: 4px;"><button type="button" class="btn btn-link btn-sm">${Katrid.i18n.gettext('Create New...')}</button></div>`)
+                  .find('button').click(createNew);
+            sel.on("change", async (e) => {
+                let v = e.added;
+                if (v && v.id === newItem) {
+                    let service = new Katrid.Services.Model(field.model);
+                    try {
+                        let res = await service.createName(v.str);
+                        let vals = {};
+                        vals[field.name] = res;
+                        scope.dataSource.setValues(vals);
+                        sel.select2('data', { id: res[0], text: res[1] });
+                    }
+                    catch (err) {
+                        let res = await service.getViewInfo({
+                            view_type: "form"
+                        });
                         let title = _.sprintf(Katrid.i18n.gettext('Create: %(title)s'), { title: field.caption });
                         let options = {
                             scope: scope.$new(true),
@@ -11011,106 +11045,72 @@ var Katrid;
                             title: title,
                             view: res,
                             model: service,
-                            caption: field.caption,
+                            action: scope.action,
                         };
                         let wnd = new Katrid.Forms.Dialogs.Window(options);
-                        wnd.createNew();
-                    });
-                };
-                console.log('allow create edit', allowCreateEdit);
-                if (allowCreateEdit)
-                    sel.parent().find('div.select2-container>div.select2-drop')
-                        .append(`<div style="padding: 4px;"><button type="button" class="btn btn-link btn-sm">${Katrid.i18n.gettext('Create New...')}</button></div>`)
-                        .find('button').click(createNew);
-                sel.on("change", async (e) => {
-                    let v = e.added;
-                    if (v && v.id === newItem) {
-                        let service = new Katrid.Services.Model(field.model);
-                        try {
-                            let res = await service.createName(v.str);
-                            let vals = {};
-                            vals[field.name] = res;
-                            scope.dataSource.setValues(vals);
-                            sel.select2('data', { id: res[0], text: res[1] });
-                        }
-                        catch (err) {
-                            let res = await service.getViewInfo({
-                                view_type: "form"
-                            });
-                            let title = _.sprintf(Katrid.i18n.gettext('Create: %(title)s'), { title: field.caption });
-                            let options = {
-                                scope: scope.$new(true),
-                                $controller: $controller,
-                                sel: sel, field: field,
-                                title: title,
-                                view: res,
-                                model: service,
-                                action: scope.action,
-                            };
-                            let wnd = new Katrid.Forms.Dialogs.Window(options);
-                            wnd.createNew({ creationName: v.str });
-                            sel.select2('data', null);
-                        }
+                        wnd.createNew({ creationName: v.str });
+                        sel.select2('data', null);
                     }
-                    else if (v && v.id === newEditItem) {
-                    }
-                    else if (multiple && e.val.length) {
-                        return controller.$setViewValue(e.val);
+                }
+                else if (v && v.id === newEditItem) {
+                }
+                else if (multiple && e.val.length) {
+                    return controller.$setViewValue(e.val);
+                }
+                else {
+                    controller.$setDirty();
+                    if (v) {
+                        return controller.$setViewValue([v.id, v.str]);
                     }
                     else {
-                        controller.$setDirty();
-                        if (v) {
-                            return controller.$setViewValue([v.id, v.str]);
-                        }
-                        else {
-                            return controller.$setViewValue(null);
-                        }
+                        return controller.$setViewValue(null);
                     }
-                }).on("select2-open", () => {
-                    if (!_shown) {
-                        _shown = true;
-                        let parentModal = el.closest("div.modal");
-                        if (parentModal.length)
-                            parentModal.on("hide.bs.modal", () => sel.select2("destroy"));
+                }
+            }).on("select2-open", () => {
+                if (!_shown) {
+                    _shown = true;
+                    let parentModal = el.closest("div.modal");
+                    if (parentModal.length)
+                        parentModal.on("hide.bs.modal", () => sel.select2("destroy"));
+                }
+            });
+            controller.$parsers.push(value => {
+                if (value) {
+                    if (_.isArray(value))
+                        return value;
+                    else if (_.isObject(value))
+                        return [value.id, value.text];
+                    else
+                        return value;
+                }
+                return null;
+            });
+            if (!multiple)
+                scope.$watch(attrs.ngModel, (newValue, oldValue) => sel.select2("val", newValue));
+            return controller.$render = function () {
+                if (multiple) {
+                    if (controller.$modelValue) {
+                        const v = Array.from(controller.$modelValue).map(obj => obj[0]);
+                        sel.select2("val", controller.$modelValue);
                     }
-                });
-                controller.$parsers.push(value => {
-                    if (value) {
-                        if (_.isArray(value))
-                            return value;
-                        else if (_.isObject(value))
-                            return [value.id, value.text];
-                        else
-                            return value;
-                    }
-                    return null;
-                });
-                if (!multiple)
-                    scope.$watch(attrs.ngModel, (newValue, oldValue) => sel.select2("val", newValue));
-                return controller.$render = function () {
-                    if (multiple) {
-                        if (controller.$modelValue) {
-                            const v = Array.from(controller.$modelValue).map(obj => obj[0]);
-                            sel.select2("val", controller.$modelValue);
-                        }
-                    }
-                    else if (controller.$viewValue) {
-                        return sel.select2("val", controller.$viewValue[0]);
-                    }
-                    else {
-                        return sel.select2("val", null);
-                    }
-                };
-            }
-        })]);
+                }
+                else if (controller.$viewValue) {
+                    return sel.select2("val", controller.$viewValue[0]);
+                }
+                else {
+                    return sel.select2("val", null);
+                }
+            };
+        }
+    })]);
     Katrid.UI.uiKatrid.directive('multipleTags', ['$controller', ($controller) => ({
-            restrict: 'A',
-            scope: false,
-            require: 'ngModel',
-            link: (scope, element, attrs, ngModel) => {
-                element.select2();
-            }
-        })]);
+        restrict: 'A',
+        scope: false,
+        require: 'ngModel',
+        link: (scope, element, attrs, ngModel) => {
+            element.select2();
+        }
+    })]);
     Katrid.UI.uiKatrid.filter('m2m', () => function (input) {
         if (_.isArray(input))
             return input.map((obj) => obj ? obj[1] : null).join(', ');
@@ -11118,53 +11118,53 @@ var Katrid;
 })();
 (function () {
     Katrid.UI.uiKatrid.directive('sortableField', ['$compile', '$timeout', ($compile, $timeout) => ({
-            restrict: 'E',
-            require: 'ngModel',
-            replace: true,
-            scope: {},
-            link: {
-                post: function (scope, el, attrs) {
-                    let tbl = el.closest('tbody');
-                    let fixHelperModified = function (e, tr) {
-                        let $originals = tr.children();
-                        let $helper = tr.clone();
-                        $helper.children().each(function (index) {
-                            $(this).width($originals.eq(index).width());
-                        });
-                        return $helper;
-                    }, updateIndex = function (e, ui) {
-                        $('td.list-column-sortable', ui.item.parent()).each(function (i) {
-                        });
-                    };
-                    tbl.sortable({
-                        helper: fixHelperModified,
-                        stop: updateIndex
-                    }).disableSelection();
-                }
-            },
-            template(element, attrs) {
-                return sprintf(Katrid.$templateCache.get('view.field.SortableField'), { fieldName: attrs.name });
+        restrict: 'E',
+        require: 'ngModel',
+        replace: true,
+        scope: {},
+        link: {
+            post: function (scope, el, attrs) {
+                let tbl = el.closest('tbody');
+                let fixHelperModified = function (e, tr) {
+                    let $originals = tr.children();
+                    let $helper = tr.clone();
+                    $helper.children().each(function (index) {
+                        $(this).width($originals.eq(index).width());
+                    });
+                    return $helper;
+                }, updateIndex = function (e, ui) {
+                    $('td.list-column-sortable', ui.item.parent()).each(function (i) {
+                    });
+                };
+                tbl.sortable({
+                    helper: fixHelperModified,
+                    stop: updateIndex
+                }).disableSelection();
             }
-        })
+        },
+        template(element, attrs) {
+            return sprintf(Katrid.$templateCache.get('view.field.SortableField'), { fieldName: attrs.name });
+        }
+    })
     ]);
 })();
 (function () {
     Katrid.UI.uiKatrid.directive('statusField', ['$compile', ($compile) => ({
-            restrict: 'A',
-            priority: 1,
-            replace: true,
-            link(scope, element, attrs, controller) {
-                const field = scope.view.fields[attrs.name];
-                scope.choices = field.choices;
-                if (!attrs.readonly) {
-                    scope.itemClick = () => console.log('status field item click');
-                }
-                element.closest('header').prepend(element);
-            },
-            template(element, attrs) {
-                return sprintf(Katrid.app.$templateCache.get('view.field.StatusField'), { fieldName: attrs.name });
+        restrict: 'A',
+        priority: 1,
+        replace: true,
+        link(scope, element, attrs, controller) {
+            const field = scope.view.fields[attrs.name];
+            scope.choices = field.choices;
+            if (!attrs.readonly) {
+                scope.itemClick = () => console.log('status field item click');
             }
-        })
+            element.closest('header').prepend(element);
+        },
+        template(element, attrs) {
+            return sprintf(Katrid.app.$templateCache.get('view.field.StatusField'), { fieldName: attrs.name });
+        }
+    })
     ]);
 })();
 (function () {
@@ -11435,12 +11435,12 @@ var Katrid;
                         if (key) {
                             scope.dataSource.pageLimit = 1000;
                             return scope.dataSource.search(data)
-                                .then((data) => {
-                                scope.$parent.$fieldLog[field.name] = { count: 0, value: data.data };
-                                scope.$parent.record[field.name] = data.data;
-                                scope.$apply();
-                            })
-                                .finally(() => scope.dataSource.state = Katrid.Data.DataSourceState.browsing);
+                              .then((data) => {
+                                  scope.$parent.$fieldLog[field.name] = { count: 0, value: data.data };
+                                  scope.$parent.record[field.name] = data.data;
+                                  scope.$apply();
+                              })
+                              .finally(() => scope.dataSource.state = Katrid.Data.DataSourceState.browsing);
                         }
                     }
                     else {
@@ -11504,102 +11504,102 @@ var Katrid;
         ;
     }
     Katrid.UI.uiKatrid
-        .directive('grid', ['$compile', Grid])
-        .directive('list', ['$compile', $compile => ({
-            restrict: 'E',
-            scope: false,
-            compile(el, attrs) {
-                el.addClass('table-responsive');
-                let rowClick = attrs.ngRowClick;
-                let records = attrs.records || 'records';
-                let content = el.html();
-                let options = {};
-                if (attrs.listOptions)
-                    options = JSON.parse(attrs.listOptions);
-                let template = Katrid.app.getTemplate('view.list.table.jinja2', { attrs, rowClick, options, records });
-                return function (scope, el, attrs, controller) {
-                    let templ = $(template);
-                    let tr = templ.find('tbody>tr:first');
-                    let thead = templ.find('thead>tr:first');
-                    let tfoot = templ.find('tfoot>tr:first');
-                    let formView;
-                    let ngTrClass = attrs.ngTrClass;
-                    if (ngTrClass)
-                        ngTrClass = ',' + ngTrClass;
-                    else
-                        ngTrClass = '';
-                    if (attrs.inlineEditor) {
-                        templ.addClass('inline-editor');
-                        formView = $(scope.views.form.content);
-                        tr
-                            .attr('ng-form', "grid-row-form-{{$index}}")
-                            .attr('id', 'grid-row-form-{{$index}}');
-                    }
-                    else
-                        tr.attr('ng-class', "{" +
-                            "'group-header': record.$hasChildren, " +
-                            "'form-data-changing': (dataSource.changing && dataSource.recordIndex === $index), " +
-                            "'form-data-readonly': !(dataSource.changing && dataSource.recordIndex === $index)" +
-                            ngTrClass +
-                            "}");
-                    let fields = $('<div>').append(content);
-                    let totals = [];
-                    let hasTotal = false;
-                    let td, th;
-                    for (let fld of fields.children('field')) {
-                        let fieldName = fld.getAttribute('name');
-                        let field = scope.view.fields[fieldName];
-                        if (field) {
-                            field.assign(scope.action.view, fld);
-                            let total = fld.getAttribute('total');
-                            if (total) {
-                                hasTotal = true;
-                                totals.push({
-                                    field: field,
-                                    name: fieldName,
-                                    total: total,
-                                });
-                            }
-                            else
-                                totals.push(false);
-                            if (!field.visible)
-                                continue;
-                            let inplaceEditor = false;
-                            if (formView) {
-                                inplaceEditor = formView.find(`field[name="${fieldName}"]`);
-                                inplaceEditor = $(inplaceEditor[0].outerHTML).attr('form-field', 'form-field').attr('inline-editor', attrs.inlineEditor)[0].outerHTML;
-                            }
-                            let fieldEl = $(field.render('list', fld, { view: scope.view }));
-                            th = fieldEl.first();
-                            td = $(th).next();
-                        }
-                        else {
-                            th = '<th></th>';
-                            td = `<td>${fld.innerHTML}</td>`;
-                        }
-                        tr.append(td);
-                        thead.append(th);
-                    }
-                    if (hasTotal)
-                        for (total of totals)
-                            tfoot.append(Katrid.app.getTemplate('view.list.table.total.jinja2', { field: total.field }));
-                    else
-                        tfoot.remove();
-                    if (options.deleteRow) {
-                        let delRow = $(Katrid.app.getTemplate('view.list.table.delete.jinja2'));
-                        for (let child of delRow)
-                            if (child.tagName === 'TD')
-                                tr.append(child);
-                            else if (child.tagName === 'TH')
-                                thead.append(child);
-                        if (hasTotal)
-                            tfoot.append('<td class="list-column-delete" ng-show="dataSource.parent.changing && !dataSource.readonly"></td>');
-                    }
-                    el.html('');
-                    el.append($compile(templ)(scope));
-                };
-            }
-        })]);
+      .directive('grid', ['$compile', Grid])
+      .directive('list', ['$compile', $compile => ({
+          restrict: 'E',
+          scope: false,
+          compile(el, attrs) {
+              el.addClass('table-responsive');
+              let rowClick = attrs.ngRowClick;
+              let records = attrs.records || 'records';
+              let content = el.html();
+              let options = {};
+              if (attrs.listOptions)
+                  options = JSON.parse(attrs.listOptions);
+              let template = Katrid.app.getTemplate('view.list.table.jinja2', { attrs, rowClick, options, records });
+              return function (scope, el, attrs, controller) {
+                  let templ = $(template);
+                  let tr = templ.find('tbody>tr:first');
+                  let thead = templ.find('thead>tr:first');
+                  let tfoot = templ.find('tfoot>tr:first');
+                  let formView;
+                  let ngTrClass = attrs.ngTrClass;
+                  if (ngTrClass)
+                      ngTrClass = ',' + ngTrClass;
+                  else
+                      ngTrClass = '';
+                  if (attrs.inlineEditor) {
+                      templ.addClass('inline-editor');
+                      formView = $(scope.views.form.content);
+                      tr
+                        .attr('ng-form', "grid-row-form-{{$index}}")
+                        .attr('id', 'grid-row-form-{{$index}}');
+                  }
+                  else
+                      tr.attr('ng-class', "{" +
+                        "'group-header': record.$hasChildren, " +
+                        "'form-data-changing': (dataSource.changing && dataSource.recordIndex === $index), " +
+                        "'form-data-readonly': !(dataSource.changing && dataSource.recordIndex === $index)" +
+                        ngTrClass +
+                        "}");
+                  let fields = $('<div>').append(content);
+                  let totals = [];
+                  let hasTotal = false;
+                  let td, th;
+                  for (let fld of fields.children('field')) {
+                      let fieldName = fld.getAttribute('name');
+                      let field = scope.view.fields[fieldName];
+                      if (field) {
+                          field.assign(scope.action.view, fld);
+                          let total = fld.getAttribute('total');
+                          if (total) {
+                              hasTotal = true;
+                              totals.push({
+                                  field: field,
+                                  name: fieldName,
+                                  total: total,
+                              });
+                          }
+                          else
+                              totals.push(false);
+                          if (!field.visible)
+                              continue;
+                          let inplaceEditor = false;
+                          if (formView) {
+                              inplaceEditor = formView.find(`field[name="${fieldName}"]`);
+                              inplaceEditor = $(inplaceEditor[0].outerHTML).attr('form-field', 'form-field').attr('inline-editor', attrs.inlineEditor)[0].outerHTML;
+                          }
+                          let fieldEl = $(field.render('list', fld, { view: scope.view }));
+                          th = fieldEl.first();
+                          td = $(th).next();
+                      }
+                      else {
+                          th = '<th></th>';
+                          td = `<td>${fld.innerHTML}</td>`;
+                      }
+                      tr.append(td);
+                      thead.append(th);
+                  }
+                  if (hasTotal)
+                      for (total of totals)
+                          tfoot.append(Katrid.app.getTemplate('view.list.table.total.jinja2', { field: total.field }));
+                  else
+                      tfoot.remove();
+                  if (options.deleteRow) {
+                      let delRow = $(Katrid.app.getTemplate('view.list.table.delete.jinja2'));
+                      for (let child of delRow)
+                          if (child.tagName === 'TD')
+                              tr.append(child);
+                          else if (child.tagName === 'TH')
+                              thead.append(child);
+                      if (hasTotal)
+                          tfoot.append('<td class="list-column-delete" ng-show="dataSource.parent.changing && !dataSource.readonly"></td>');
+                  }
+                  el.html('');
+                  el.append($compile(templ)(scope));
+              };
+          }
+      })]);
 })();
 (function () {
     class Total {
@@ -11742,9 +11742,9 @@ var Katrid;
                         if (code !== 8 && chara != dec_point && !chara.match(/[0-9]/)) {
                             var key = (e.keyCode ? e.keyCode : e.which);
                             if (key == 46 || key == 8 || key == 9 || key == 27 || key == 13 ||
-                                ((key == 65 || key == 82) && (e.ctrlKey || e.metaKey) === true) ||
-                                ((key == 86 || key == 67) && (e.ctrlKey || e.metaKey) === true) ||
-                                ((key >= 35 && key <= 39))) {
+                              ((key == 65 || key == 82) && (e.ctrlKey || e.metaKey) === true) ||
+                              ((key == 86 || key == 67) && (e.ctrlKey || e.metaKey) === true) ||
+                              ((key >= 35 && key <= 39))) {
                                 return;
                             }
                             e.preventDefault();
@@ -11804,10 +11804,10 @@ var Katrid;
                             setPos = this.value.length + data.c;
                         }
                         else if (decimals > 0 &&
-                            start == end &&
-                            this.value.length > decimals + 1 &&
-                            start > this.value.length - decimals - 1 && isFinite(+chara) &&
-                            !e.metaKey && !e.ctrlKey && !e.altKey && chara.length === 1) {
+                          start == end &&
+                          this.value.length > decimals + 1 &&
+                          start > this.value.length - decimals - 1 && isFinite(+chara) &&
+                          !e.metaKey && !e.ctrlKey && !e.altKey && chara.length === 1) {
                             if (end === this.value.length) {
                                 val = this.value.slice(0, start - 1);
                             }
@@ -11861,20 +11861,20 @@ var Katrid;
                         return false;
                     }
                 })
-                    .each(function () {
-                    var $this = $(this).data('numFormat', {
-                        c: -(decimals + 1),
-                        decimals: decimals,
-                        thousands_sep: thousands_sep,
-                        dec_point: dec_point,
-                        regex_dec_num: regex_dec_num,
-                        regex_dec: regex_dec,
-                        init: false
-                    });
-                    if (this.value === '')
-                        return;
-                    $this.val($this.val());
-                });
+                  .each(function () {
+                      var $this = $(this).data('numFormat', {
+                          c: -(decimals + 1),
+                          decimals: decimals,
+                          thousands_sep: thousands_sep,
+                          dec_point: dec_point,
+                          regex_dec_num: regex_dec_num,
+                          regex_dec: regex_dec,
+                          init: false
+                      });
+                      if (this.value === '')
+                          return;
+                      $this.val($this.val());
+                  });
             }
             else {
                 return this.each(function () {
@@ -11909,8 +11909,8 @@ var Katrid;
             if (el.value === '')
                 return '';
             num = +(el.value
-                .replace(data.regex_dec_num, '')
-                .replace(data.regex_dec, '.'));
+              .replace(data.regex_dec_num, '')
+              .replace(data.regex_dec, '.'));
             return '' + (isFinite(num) ? num : 0);
         }
     };
@@ -11935,10 +11935,10 @@ var Katrid;
         var u_dec = ('\\u' + ('0000' + (dec_point.charCodeAt(0).toString(16))).slice(-4));
         var u_sep = ('\\u' + ('0000' + (thousands_sep.charCodeAt(0).toString(16))).slice(-4));
         number = (number + '')
-            .replace('\.', dec_point)
-            .replace(new RegExp(u_sep, 'g'), '')
-            .replace(new RegExp(u_dec, 'g'), '.')
-            .replace(new RegExp('[^0-9+\-Ee.]', 'g'), '');
+          .replace('\.', dec_point)
+          .replace(new RegExp(u_sep, 'g'), '')
+          .replace(new RegExp(u_dec, 'g'), '.')
+          .replace(new RegExp('[^0-9+\-Ee.]', 'g'), '');
         var n = !isFinite(+number) ? 0 : +number, s = '', toFixedFix = function (n, decimals) {
             var k = Math.pow(10, decimals);
             return '' + Math.round(n * k) / k;
@@ -11978,10 +11978,10 @@ var Katrid;
                 const svc = new Katrid.Services.Model('mail.message');
                 if (this.scope.$parent.record)
                     return svc.post('get_messages', { args: [this.scope.$parent.model.name, this.scope.$parent.recordId] })
-                        .then(res => {
-                        this.items = res;
-                        this.scope.$apply();
-                    });
+                      .then(res => {
+                          this.items = res;
+                          this.scope.$apply();
+                      });
             }
         }
         async _sendMesage(msg, attachments) {
@@ -12005,9 +12005,9 @@ var Katrid;
                     files.push(f.file);
                 var me = this;
                 Katrid.Services.Attachments.upload({ files: files }, this.scope.$parent)
-                    .done((res) => {
-                    me._sendMesage(msg, res);
-                });
+                  .done((res) => {
+                      me._sendMesage(msg, res);
+                  });
             }
             else
                 this._sendMesage(msg);
@@ -12028,28 +12028,28 @@ var Katrid;
     Katrid.UI.uiKatrid.directive('mailComments', () => ({
         restrict: 'E',
         controller: ['$scope', ($scope) => {
-                $scope.comments = new Comments($scope);
-                $scope.files = [];
-                $scope.showEditor = () => {
-                    $($scope.el).find('#mail-editor').show();
-                    $($scope.el).find('#mail-msgEditor').focus();
-                };
-                $scope.hideEditor = () => {
-                    $($scope.el).find('#mail-editor').hide();
-                };
-                $scope.attachFile = (file) => {
-                    for (let f of file.files)
-                        $scope.files.push({
-                            name: f.name,
-                            type: f.type,
-                            file: f
-                        });
-                    $scope.$apply();
-                };
-                $scope.deleteFile = (idx) => {
-                    $scope.files.splice(idx, 1);
-                };
-            }],
+            $scope.comments = new Comments($scope);
+            $scope.files = [];
+            $scope.showEditor = () => {
+                $($scope.el).find('#mail-editor').show();
+                $($scope.el).find('#mail-msgEditor').focus();
+            };
+            $scope.hideEditor = () => {
+                $($scope.el).find('#mail-editor').hide();
+            };
+            $scope.attachFile = (file) => {
+                for (let f of file.files)
+                    $scope.files.push({
+                        name: f.name,
+                        type: f.type,
+                        file: f
+                    });
+                $scope.$apply();
+            };
+            $scope.deleteFile = (idx) => {
+                $scope.files.splice(idx, 1);
+            };
+        }],
         replace: true,
         link(scope, element, attrs) {
             scope.el = element;
@@ -12139,11 +12139,11 @@ var Katrid;
                         let method = this.getAttribute('data-method');
                         let service = new Katrid.Services.Model(serviceName);
                         service.rpc(method)
-                            .then((res) => {
-                            if (_.isString(res))
-                                res = JSON.parse(res);
-                            Plotly.plot(this, JSON.parse(res), layout, { responsive: true });
-                        });
+                          .then((res) => {
+                              if (_.isString(res))
+                                  res = JSON.parse(res);
+                              Plotly.plot(this, JSON.parse(res), layout, { responsive: true });
+                          });
                     }
                     else if (queryId) {
                         let x = this.getAttribute('data-x');
@@ -12159,14 +12159,14 @@ var Katrid;
                         if (!y)
                             y = 1;
                         Katrid.Services.Query.read({ id: queryId, as_dict: false, fields })
-                            .then((res) => {
-                            let chartType = this.getAttribute('chart-type');
-                            if (!chartType)
-                                chartType = 'bar';
-                            let axis = this.transformData(res.data, x, y);
-                            let data = { chartType, x: axis.x, y: axis.y, marker };
-                            Plotly.plot(this, data, layout, { responsive: true });
-                        });
+                          .then((res) => {
+                              let chartType = this.getAttribute('chart-type');
+                              if (!chartType)
+                                  chartType = 'bar';
+                              let axis = this.transformData(res.data, x, y);
+                              let data = { chartType, x: axis.x, y: axis.y, marker };
+                              Plotly.plot(this, data, layout, { responsive: true });
+                          });
                     }
                 }
                 transformData(data, x, y) {
