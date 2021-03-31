@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <data>
-  <object id="us" model="res.country">
+  <object id="us" model="res.country" no-update="1">
     <field name="name">United States</field>
     <field name="code">us</field>
     <field name="currency" ref="USD"/>
   </object>
-  <object id="br" model="res.country">
+  <object id="br" model="res.country" no-update="1">
     <field name="name">Brazil</field>
     <field name="code">br</field>
     <field name="currency" ref="BRL"/>
