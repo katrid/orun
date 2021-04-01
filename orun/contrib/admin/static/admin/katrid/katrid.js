@@ -3770,7 +3770,7 @@ var Katrid;
                 formControl() {
                     let control = document.createElement('div');
                     control.innerHTML = `
-<input is="input-autocomplete" class="form-field form-control" name="${this.name}" ng-model="record.${this.name}" 
+<input is="input-autocomplete" class="form-field form-control" ng-model="record.${this.name}" 
 autocomplete="off"
 spellcheck="false" input-field ng-model-options="{updateOn: 'selectItem'}" input-autocomplete>
 <span class="caret"></span>
