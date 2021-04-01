@@ -137,7 +137,7 @@ class AdminModel(models.Model, helper=True):
         if q is not None:
             kwargs = {'where': q}
         qs = cls._api_search(*args, **kwargs)
-        limit = kwargs.get('limit') or 10
+        limit = kwargs.get('limit') or 20
         if count:
             count = qs.count()
         if page:
