@@ -66,32 +66,52 @@
 
 {% endblock %}
 {% block content %}
-  <div class="login-form" ng-app="basicApp">
+  <div id="login-form" class="login-form">
     <img class="mb-4" src="/static/admin/assets/img/logo.png" alt="" style="max-height: 80px;">
-    <form class="form-signin"
-          ng-submit="login(username, password, false, null, '{{ request.GET.get("next", "/web/") }}')"
-          ng-controller="LoginController">
+    <form class="form-signin" @submit.prevent="login(username, password, '{{ request.GET.get("next", "/web/") }}')">
       {% raw %}
-      <div class="alert alert-{{ message.type }}" ng-cloak ng-repeat="message in messages">{{ message.message }}</div>
+      <div class="alert" :class="'alert-' + message.type" v-for="message in messages">{{ message.message }}</div>
       {% endraw %}
-      {% if config.MULTI_DB %}
-        <div class="form-group">
-          <input type="text" class="form-control" name="database" placeholder="{{ gettext('Database') }}"
-                 ng-model="database" {% if current_db %}ng-init="database='{{ current_db }}'"{% endif %}>
-        </div>
-      {% endif %}
       <div class="form-group">
         <label for="id-username" class="sr-only">{{ gettext('Email address') }}</label>
-        <input id="id-username" class="form-control form-control-lg" name="username" ng-model="username"
+        <input id="id-username" class="form-control form-control-lg" name="username" v-model="username"
                placeholder="{{ gettext('Email address') }}" autofocus>
         <label for="id-password" class="sr-only">{{ _('Password') }}</label>
-        <input id="id-password" class="form-control form-control-lg" type="password" ng-model="password" name="password"
+        <input id="id-password" class="form-control form-control-lg" type="password" v-model="password" name="password"
                placeholder="{{ gettext('Password') }}">
       </div>
       <div class="form-group">
-        <button ng-disabled="loading" type="submit"
-                class="btn btn-primary btn-block btn-lg">{{ gettext('Sign in') }}</button>
+        <button :disabled="loading" type="submit"
+                class="btn btn-primary btn-block btn-lg">
+          {{ gettext('Sign in') }}
+        </button>
       </div>
     </form>
   </div>
+{% endblock %}
+{% block page_loaded %}
+  <script>
+  let loginApp = Vue.createApp({
+    data() {
+      return {
+        messages: [],
+        loading: false,
+        username: '',
+        password: '',
+      }
+    },
+    methods: {
+      async login(username, password, next) {
+        console.log('login', username, password, next);
+        let res = await Katrid.Services.post('/web/login/', {username, password, next});
+        if (res.ok) {
+          this.messages = [{type: 'success', message: res.message}];
+          setTimeout(() => location.href = next || '/web/');
+        }
+        else
+          this.messages = [{type: 'danger', message: res.message}];
+      }
+    }
+  }).mount('#login-form');
+  </script>
 {% endblock %}

@@ -54,8 +54,9 @@ class ReportAction(Action):
                     data['content'] = params
 
         if rep_type != 'jinja2' and rep_type != 'pug':
-            xml = self.view.get_xml(model)
-            print(xml)
+            from lxml import etree
+            xml = etree.fromstring(self.view._get_content({}))
+            # xml = self.view.get_xml(model)
             if model:
                 data['fields'] = model.get_fields_info(xml=xml)
             params = xml.find('params')

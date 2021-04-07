@@ -5,6 +5,7 @@ from jinja2 import Environment, FunctionLoader, Template
 import logging
 
 from orun.apps import apps
+from orun import api
 from orun.shortcuts import ref
 from orun.template import loader
 from orun.conf import settings
@@ -156,6 +157,8 @@ class View(models.Model):
     def compile(self, context, parent=None):
         view_cls = self.__class__
         children = view_cls.objects.filter(parent_id=self.pk, mode='extension')
+        xml = self._get_content(context)
+        print('report', etree.tostring(etree.fromstring(xml)))
         xml = etree.fromstring(self._get_content(context))
         if self.parent:
             parent_xml = etree.fromstring(self.parent.render(context))

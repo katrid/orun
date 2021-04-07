@@ -78,7 +78,7 @@
 
     <div id="main-content" role="main">
 
-      <div id="action-view" ng-controller="AppController"></div>
+      <div id="action-manager" class="action-manager"></div>
       {#    <div ui-view id="katrid-action-view">#}
       {#      <h4 id="h-loading" class="ajax-loading-animation"><i class="fa fa-refresh fa-spin"></i> <span ng-bind="::_.gettext('Loading...')"></span></h4>#}
       {#    </div>#}
@@ -93,8 +93,7 @@
   <script src="/static/admin/assets/js/fullcalendar/locales/pt-br.js"></script>
   <script>
     // start katrid application
-    Katrid.Core.WebApplication.bootstrap({
-      templates: '/web/js/templates/',
+    let app = new Katrid.Core.WebApplication({
       menu: {{ menu }},
       userInfo: {{ user_info }},
     });
@@ -108,7 +107,6 @@
       el = $(el);
       items.push({href: el.attr('href'), name: el.text().trim()});
     });
-    $('#navbar-search').setSource(items);
   </script>
 
   {# plotly #}
