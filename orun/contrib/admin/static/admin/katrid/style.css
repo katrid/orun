@@ -10034,10 +10034,6 @@ h3, h4, h5, h6 {
   padding: 4px 8px;
 }
 
-.form-control:focus {
-  box-shadow: none;
-}
-
 input[type=number].form-control, input[type=TIME].form-control {
   padding: 4px 2px 4px 8px;
 }
@@ -10477,6 +10473,10 @@ body.page .login-logo {
   text-align: justify;
 }
 
+.status-field {
+  display: inline-block;
+  float: right;
+}
 .status-field > button {
   min-height: 33px;
   font-size: 11px;
@@ -10503,7 +10503,7 @@ body.page .login-logo {
   text-align: center;
   font-size: 14px;
   color: #FFFFFF;
-  background: #8BBFE6;
+  background: #c0c0c2;
   cursor: pointer;
 }
 .status-field .steps > a:first-child {
@@ -10511,7 +10511,7 @@ body.page .login-logo {
 }
 .status-field .steps > a span {
   margin: 2px 0 0 12px;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 18px;
 }
 
@@ -10601,7 +10601,7 @@ body.page .login-logo {
 }
 
 .status-field.status-field-sm a {
-  padding: 8px 12px 6px;
+  padding: 8px 12px 4px;
 }
 
 .status-field.status-field-sm:not(.left-arrow) a:before {
@@ -10613,14 +10613,14 @@ body.page .login-logo {
 .status-field.status-field-sm:not(.left-arrow) a:after {
   border-top: 15px inset transparent;
   border-bottom: 15px inset transparent;
-  border-left: 15px solid #8BBFE6;
+  border-left: 15px solid #c0c0c2;
   right: -15px;
 }
 
 .status-field.status-field-sm.left-arrow a:before {
   border-top: 15px inset transparent;
   border-bottom: 15px inset transparent;
-  border-right: 15px solid #8BBFE6;
+  border-right: 15px solid #c0c0c2;
   left: -15px;
   z-index: 2;
 }
@@ -10921,10 +10921,6 @@ label.radio > i:after {
   color: silver;
 }
 
-.data-heading .toolbar .btn {
-  margin-top: 8px;
-}
-
 .data-panel fieldset {
   margin-top: 0;
   padding-bottom: 0;
@@ -10969,7 +10965,7 @@ header.content-container-heading {
   background-color: #f8f9fa;
 }
 header.content-container-heading > .btn {
-  margin: 3px 12px;
+  margin: 3px 0 3px 12px;
 }
 header.content-container-heading:empty {
   display: none;
@@ -11863,16 +11859,15 @@ nav#header .nav-item .dropdown-menu {
   padding: 0.3rem 0.75rem;
 }
 
-.input-dropdown {
-  flex: 1 1 auto;
+.input-autocomplete.input-dropdown {
+  display: block;
   width: 100%;
   position: relative;
 }
-.input-dropdown .caret {
-  display: inline-block;
+.input-autocomplete.input-dropdown .caret {
   position: absolute;
   top: 12px;
-  right: 6px;
+  right: 8px;
   cursor: pointer;
   margin-left: 0.255em;
   vertical-align: 0.255em;
@@ -11882,9 +11877,29 @@ nav#header .nav-item .dropdown-menu {
   border-bottom: 0;
   border-left: 0.3em solid transparent;
 }
-.input-dropdown input[input-autocomplete] {
+.input-autocomplete.input-dropdown .autocomplete-open {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 6px;
+  cursor: pointer;
+  color: #7b7b7b;
+  padding: 6px 2px;
+}
+.input-autocomplete.input-dropdown input {
   cursor: pointer;
   padding-right: 16px;
+}
+
+.input-autocomplete[allow-open].input-dropdown {
+  padding-right: 26px;
+}
+.input-autocomplete[allow-open].input-dropdown .caret {
+  top: 12px;
+  right: 32px;
+}
+.input-autocomplete[allow-open].input-dropdown .autocomplete-open {
+  display: block;
 }
 
 .font-300 {
@@ -12459,8 +12474,8 @@ select.form-field:required,
   background-color: #eaebff;
 }
 
-input.form-field.ng-dirty,
-select.form-field.ng-dirty {
+input.form-field.v-dirty,
+select.form-field.v-dirty {
   background-color: #fffdf1;
 }
 
@@ -12573,7 +12588,7 @@ table.grid.inline-editor .grid-field-readonly {
   margin: 0;
 }
 
-#action-view {
+#action-manager {
   width: 100%;
   display: flex;
   flex: 1 1 auto;
@@ -12731,22 +12746,6 @@ list-view .list-record-star {
 }
 list-view .list-record-star:hover {
   color: #2b2b2b;
-}
-
-.btn-toolbar {
-  display: inline;
-}
-
-.toolbar .toolbtn {
-  color: #8d8d8d;
-  font-size: 16px;
-}
-.toolbar .toolbtn:hover {
-  color: #2b2b2b;
-}
-
-.grid-toolbar {
-  margin-bottom: 5px;
 }
 
 .list-record-selector {
@@ -13337,6 +13336,29 @@ query-view search-view {
 query-view .table-responsive {
   flex: 1 1 auto;
   overflow: auto;
+}
+
+.toolbar-action-buttons {
+  display: inline;
+}
+.toolbar-action-buttons .btn {
+  margin-right: 8px;
+}
+
+.toolbar .toolbtn {
+  color: #8d8d8d;
+  font-size: 16px;
+}
+.toolbar .toolbtn:hover {
+  color: #2b2b2b;
+}
+
+.grid-toolbar {
+  margin-bottom: 5px;
+}
+
+.data-heading .toolbar .btn {
+  margin-top: 8px;
 }
 
 pwa-form {

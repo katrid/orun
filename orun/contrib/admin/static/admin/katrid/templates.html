@@ -744,118 +744,15 @@
 </templates>
 
 <templates>
-  <script id="view.form.jinja2.old" type="text/ng-template">
-    <div ng-form="form" class="form-view data-form"
-         ng-class="{'form-data-changing': action.dataSource.changing, 'form-data-readonly': !action.dataSource.changing}"
-    >
-      <toolbar>
-        <div>
-          {#          <a href="#" onclick="event.preventDefault()" title="{{ _.gettext('Add to favorite') }}">#}
-          {#            <i class="fa star fa-star-o pull-right"></i>#}
-          {#          </a>#}
-          {{ breadcrumbs }}
-          <p class="help-block">${ ::action.info.usage }</p>
-        </div>
-        <div class="toolbar row">
-          <div class="col-md-8">
-            <button class="btn btn-primary" type="button" ng-disabled="action.dataSource.uploading"
-                    ng-click="action.dataSource.save()" ng-show="action.dataSource.changing">
-              {{ _.gettext('Save') }}
-            </button>
-            <button class="btn btn-primary" type="button" ng-disabled="action.dataSource.uploading"
-                    ng-click="action.dataSource.edit()" ng-show="!action.dataSource.changing">
-              {{ _.gettext('Edit') }}
-            </button>
-            <button class="btn btn-outline-secondary" type="button" ng-disabled="action.dataSource.uploading"
-                    ng-click="action.dataSource.insert()" ng-show="!action.dataSource.changing">
-              {{ _.gettext('Create') }}
-            </button>
-            <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.cancel()"
-                    ng-show="action.dataSource.changing">
-              {{ _.gettext('Cancel') }}
-            </button>
-
-            <div class="btn-group">
-              <div class="dropdown">
-                <button id="attachments-button" attachments-button="" ng-show="!action.dataSource.inserting"
-                        type="button" class="btn btn-outline-secondary dropdown-toggle"
-                        data-toggle="dropdown" aria-haspopup="true">
-                  <span ng-if="!attachments.length">{{ _.gettext('Attachments') }} </span>
-                  <span
-                      ng-if="attachments.length">${ ::_.sprintf(_.gettext('%d Attachment(s)'), attachments.length) }</span>
-                  <span class="caret"></span>
-                </button>
-                <div class="dropdown-menu attachments-menu">
-                  <a class="dropdown-item position-relative" ng-repeat="attachment in attachments"
-                     href="${ ::attachment.download_url }">
-                    ${ ::attachment.name } <span
-                      class="fa fa-times remove-attachment-button" title="{{ _.gettext('Delete attachment') }}"
-                      ng-click="$event.preventDefault();action.deleteAttachment(attachments, $index);$event.stopPropagation();"></span>
-                  </a>
-                  <div role="separator" class="dropdown-divider" ng-show="attachments.length"></div>
-                  <a class="dropdown-item" onclick="$(this).next().click();">
-                    {{ _.gettext('Add...') }}
-                  </a>
-                  <input type="file" class="input-file-hidden" multiple="multiple"
-                         onchange="Katrid.Services.Attachments.upload(this)"/>
-                </div>
-              </div>
-            </div>
-            <div class="btn-group">
-              <div class="dropdown">
-                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown"
-                        aria-haspopup="true">
-                  {{ _.gettext('Action') }} <span class="caret"></span>
-                </button>
-                <div class="dropdown-menu dropdown-menu-actions">
-                  <a class="dropdown-item" ng-click="action.deleteSelection(true)">
-                    <i class="fa fa-fw fa-trash-o"></i> {{ _.gettext('Delete') }}
-                  </a>
-                  <a class="dropdown-item" ng-click="action.copy()">
-                    <i class="fa fa-fw fa-files-o"></i>
-                    {{ _.gettext('Duplicate') }}
-                  </a>
-                  <a class="dropdown-item" ng-if="$parent.record.id" ng-repeat="opt in ::copyToOptions"
-                     ng-click="action.copyTo(opt.id)">
-                    <i class="fa fa-fw fa-files-o"></i>
-                    {{ _.sprintf(_.gettext('Copy To %s'), opt.name) }}
-                  </a>
-                  <!-- replace-actions -->
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="float-right">
-              <div class="btn-group pagination-area">
-              <span ng-show="records.length">
-                ${ action.dataSource.recordIndex + 1 } / ${ records.length }
-              </span>
-              </div>
-              <div class="btn-group" role="group">
-                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.prior('form')">
-                  <i class="fa fa-chevron-left"></i>
-                </button>
-                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.next('form')">
-                  <i class="fa fa-chevron-right"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </toolbar>
-
-  </script>
-
   <script id="view.form.jinja2" type="text/ng-template">
-    <div ng-form="form" class="form-view data-form"
-         ng-class="{'form-data-changing': action.dataSource.changing, 'form-data-readonly': !action.dataSource.changing}"
+    <div ng-form="form" class="ng-form form-view data-form"
+         v-bind:class="{'form-data-changing': changing, 'form-data-readonly': !changing}"
     >
       <div class="content">
         <div class="clearfix"></div>
         {% if header %}
         <header class="content-container-heading">
-          <div class="header-buttons" ng-show="!action.dataSource.editing">
+          <div class="header-buttons" ng-show="!editing">
             {{ header }}
           </div>
         </header>
@@ -864,7 +761,7 @@
         <div class="page-sheet">
           <div class="content container">
             <div class="card panel-default data-panel browsing"
-                 ng-class="{ browsing: action.dataSource.browsing, editing: action.dataSource.changing }">
+                 v-bind:class="{ browsing: browsing, editing: changing }">
               <div class="card-body template-placeholder">
                 <a class="maximize-button" role="button" title="Maximizar"
                    onclick="$(this).closest('div.card.data-panel').toggleClass('box-fullscreen');$(this).find('i').toggleClass('fa-compress fa-expand')">
@@ -1279,7 +1176,7 @@
   </script>
 
   <script id="view.search.buttons.jinja2" type="text/ng-template">
-    <div class="btn-group search-view-more-area" ng-show="(action.viewType !== 'form') && action.searchView.viewMoreButtons">
+    <div class="btn-group search-view-more-area" ng-show="action.searchView.viewMoreButtons">
       <div custom-filter class="btn-group">
         <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" type="button"
                 aria-expanded="false">
@@ -1592,7 +1489,7 @@
   <script id="view.form.selection-field.jinja2" type="text/ng-template">
     {% extends "view.form.field.jinja2" %}
     {% block readonly %}
-      ${ view.fields.{{ field.name }}.displayChoices[record.{{ field.name }}] || '{{ field.emptyText }}' }
+    {{ view.fields.{{ field.name }}.displayChoices[record.{{ field.name }}] || '{{ field.emptyText }}' }}
     {% endblock %}
     {% block field %}
       <select class="form-field form-control" name="{{ field.name }}" ng-model="record.{{ field.name }}">
@@ -1922,7 +1819,7 @@
                 </button>
               </div>
 
-              <div class="btn-group" role="group">
+              <div id="btn-view-modes" class="btn-group" role="group">
                 {% if action.viewModes.includes('card') %}
                   <button class="btn btn-outline-secondary" type="button" ng-click="action.switchView('card')">
                     <i class="fa fa-th-large"></i>
@@ -1946,21 +1843,6 @@
               </div>
 
             </div>
-            <div class="float-right" ng-if="action.viewType === 'form'">
-              <div class="btn-group pagination-area">
-              <span ng-if="action.dataSource.records.length">
-                ${ action.dataSource.recordIndex + 1 } / ${ records.length }
-              </span>
-              </div>
-              <div class="btn-group" role="group">
-                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.prior('form')">
-                  <i class="fa fa-chevron-left"></i>
-                </button>
-                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.next('form')">
-                  <i class="fa fa-chevron-right"></i>
-                </button>
-              </div>
-            </div>
           </div>
 
         </div>
@@ -1969,11 +1851,9 @@
   </script>
 
   <script id="view.buttons.jinja2" type="text/ng-template">
-    <div ng-show="action.viewType !== 'form'" class="btn-toolbar">
-      <button class="btn btn-primary toolbutton-action-create" type="button" ng-click="action.createNew()">
-        {{ _.gettext('Create') }}
-      </button>
-    </div>
+    <button class="btn btn-primary toolbutton-action-create" type="button" ng-click="action.createNew()">
+      {{ _.gettext('Create') }}
+    </button>
 
     <div ng-if="action.viewType === 'form'" class="btn-toolbar">
       <button class="btn btn-primary toolbutton-action-save" ng-if="action.viewType" type="button" ng-disabled="action.dataSource.uploading"
@@ -2020,7 +1900,7 @@
 
   <script id="view.buttons.attachments.jinja2" type="text/ng-template">
 
-    <attachments-button class="btn-group" ng-if="action.viewType === 'form'">
+    <attachments-button class="btn-group">
       <div class="dropdown">
         <button id="attachments-button" attachments-button="" ng-show="!action.dataSource.inserting"
                 type="button" class="btn btn-outline-secondary dropdown-toggle"
@@ -2064,11 +1944,11 @@
           <a class="dropdown-item" ng-click="action.deleteSelection()">
             <i class="fa fa-fw fa-trash-o"></i> {{ _.gettext('Delete') }}
           </a>
-          <a class="dropdown-item" ng-click="action.copy()" ng-if="action.viewType === 'form'">
+          <a class="dropdown-item" ng-click="action.copy()">
             <i class="fa fa-fw fa-files-o"></i>
             {{ _.gettext('Duplicate') }}
           </a>
-          <a class="dropdown-item" ng-if="(action.viewType === 'form') && $parent.record.id" ng-repeat="opt in ::copyToOptions"
+          <a class="dropdown-item" ng-if="$parent.record.id" ng-repeat="opt in ::copyToOptions"
              ng-click="action.copyTo(opt.id)">
             <i class="fa fa-fw fa-files-o"></i>
             ${ ::_.sprintf(_.gettext('Copy To %s'), opt.name) }
