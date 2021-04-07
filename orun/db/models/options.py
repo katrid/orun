@@ -357,6 +357,7 @@ class Options:
             self.__class__.name_field = field.name
         elif self.status_field is None and field.name == 'status':
             self.__class__.status_field = field.name
+            field.widget = 'StatusField'
         elif self.sequence_field is None and field.name == 'sequence':
             self.__class__.sequence_field = field.name
         elif self.active_field is None and field.name == 'active':

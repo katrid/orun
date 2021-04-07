@@ -163,6 +163,7 @@ class BaseField(RegisterLookupMixin):
     db_default = NOT_PROVIDED
     db_compute = None
     db_tablespace = None
+    widget: str = None
 
     def __new__(cls, *args, **kwargs):
         field = super().__new__(cls)
@@ -254,7 +255,7 @@ class Field(BaseField):
                  unique_for_year=None, choices: Optional[Union[dict, list, tuple]] = None, help_text=None,
                  db_column: Optional[str] = None, db_tablespace=None, db_compute=None, db_default=NOT_PROVIDED,
                  stored: Optional[bool] = None,
-                 translate=None, copy=None, widget_attrs=None, readonly=None,
+                 translate=None, copy=None, widget=None, widget_attrs=None, readonly=None,
                  defer=False,
                  auto_created=False, validators=(), error_messages=None, concrete=None,
                  getter: Union[str, Callable, None] = None, setter: Union[str, Callable, None] = None,
@@ -280,6 +281,7 @@ class Field(BaseField):
         self.unique_for_date = unique_for_date
         self.unique_for_month = unique_for_month
         self.unique_for_year = unique_for_year
+        self.widget = widget
         self.widget_attrs = widget_attrs
         self.on_insert_value = on_insert_value
         self.on_update_value = on_update_value
@@ -1024,6 +1026,7 @@ class Field(BaseField):
             'choices': choices,
             'onchange': self.name in self.model._meta.field_change_event if self.model else None,
             'attrs': self.widget_attrs,
+            'widget': self.widget,
         }
         if self.max_length:
             info['max_length'] = self.max_length
