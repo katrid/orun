@@ -103,7 +103,6 @@ def onchange(*fields):
                 if fn not in lst:
                     lst.append(fn)
 
-        # fn._onchange = fields
         fn.contribute_to_class = partial(contribute_to_class, fields)
         return fn
 
