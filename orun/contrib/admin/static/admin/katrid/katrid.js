@@ -6663,6 +6663,8 @@ var Katrid;
                     'in': '__in',
                     'not in': '__not_in',
                     'range': '__range',
+                    'is null': '__isnull',
+                    'is not null': '__isnnull',
                 };
                 class SearchItem {
                     constructor(view, name, el) {
@@ -6778,6 +6780,7 @@ var Katrid;
                         if (this._selection.indexOf(item) > -1)
                             return;
                         this._selection.push(item);
+                        console.log('custom filter', this._selection);
                         this._facet.values = this._selection.map(item => (new SearchObject(item.toString(), item.value)));
                         this._refresh();
                     }
@@ -7608,6 +7611,7 @@ var Katrid;
                         return res;
                     }
                     update() {
+                        console.log('get params', this.getParams());
                         if (this.groupLength !== this._groupLength) {
                             this._groupLength = this.groupLength;
                             this.view.action.applyGroups(this.groupBy(), this.getParams());
@@ -7694,6 +7698,7 @@ var Katrid;
             </div>
             <div class="form-group filter-condition" v-if="fieldName">
             <select class="form-control" v-model="tempCondition">
+              <option value=""></option>
               <option v-for="(name, value, index) in fieldConditions" :value="value">{{name}}</option>
             </select>
             </div>
@@ -7780,8 +7785,9 @@ var Katrid;
                                 this.addCondition(this.field, this.tempCondition, this.searchValue);
                             this.customFilter.push(this.tempFilter);
                             this.tempFilter.selected = true;
+                            this.tempCondition = null;
                             this.tempFilter = new Search.SearchFilters(this.$search);
-                            this.expanded = false;
+                            this.customSearchExpanded = false;
                         },
                         setSearchText(text) {
                             if (text.length) {
@@ -7810,8 +7816,8 @@ var Katrid;
                             if (field) {
                                 if (field.info.type === 'CharField') {
                                     this.fieldConditions = {
-                                        'like': _.gettext('Contains'),
-                                        'not like': _.gettext('Not contains'),
+                                        '%': _.gettext('Contains'),
+                                        '!%': _.gettext('Not contains'),
                                         '=': _.gettext('Is equal'),
                                         '!=': _.gettext('Is different'),
                                         'is not null': _.gettext('Is defined'),
