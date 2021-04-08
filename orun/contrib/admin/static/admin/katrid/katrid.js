@@ -2816,6 +2816,7 @@ var Katrid;
             set recordIndex(index) {
                 this._recordIndex = index;
                 let rec = this._records[index];
+                this.record = rec;
                 if (this.action)
                     this.action.changeUrl('id', this.recordId);
                 this.get(rec.id);
@@ -3872,7 +3873,7 @@ var Katrid;
                     if (this.required)
                         control.setAttribute('required', null);
                     if (this.attrs.nolabel === 'placeholder')
-                        control.querySelector('input').placeholder = this.caption;
+                        control.setAttribute('placeholder', this.caption);
                     control.classList.add('input-dropdown', 'form-field');
                     return control;
                 }
@@ -5365,6 +5366,8 @@ var Katrid;
                 this.input.addEventListener('click', () => this.onClick());
                 this.input.addEventListener('focusout', () => this.onFocusout());
                 this.input.addEventListener('keydown', (event) => this.onKeyDown(event));
+                if (this.hasAttribute('placeholder'))
+                    this.input.placeholder = this.getAttribute('placeholder');
             }
             onInput() {
                 this.term = this.input.value;
