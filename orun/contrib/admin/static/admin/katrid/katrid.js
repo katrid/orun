@@ -3863,20 +3863,12 @@ var Katrid;
                 }
                 formControl() {
                     let control = document.createElement('field-autocomplete');
-                    let append = '';
                     control.setAttribute('v-model', 'record.' + this.name);
-                    if ('allow-open' in this.attrs) {
+                    if ('allow-open' in this.attrs)
                         control.setAttribute('allow-open', null);
-                        append = `<span class="fa fa-fw fa-folder-open autocomplete-open" v-on:click="openObject('${this.model}', record.${this.name}.id)"></span>`;
-                    }
                     if (this.attrs['v-on:change'])
                         control.setAttribute('v-on:change', this.attrs['v-on:change']);
                     control.setAttribute('name', this.name);
-                    control.innerHTML = `<input class="form-control" field-name="${this.name}" 
-autocomplete="nope"
-spellcheck="false">
-<span class="caret"></span>
-` + append;
                     if (this.required)
                         control.setAttribute('required', null);
                     if (this.attrs.nolabel === 'placeholder')
@@ -4822,7 +4814,8 @@ var Katrid;
                     this.vm = this.createVm(el);
                     return this.actionView;
                 }
-                ready() { }
+                ready() {
+                }
                 createVm(el) {
                     let me = this;
                     let vm = Katrid.createView({
@@ -4915,33 +4908,15 @@ var Katrid;
                     let templ = `<div class="data-heading panel panel-default">
       <div class="panel-body">
         <div class="row">
-          <div class="col-md-6 breadcrumb-nav"></div>
-          <search-view class="col-md-6"/>
+        <div class="col-md-6">
+        
+          <div class="breadcrumb-nav"></div>
           <p class="help-block">${this.action.info.usage || ''}&nbsp;</p>
+          <div class="toolbar col-sm-6">
+            <div class="toolbar-action-buttons"></div>
         </div>
-        <div class="toolbar row">
-          <div class="col-sm-6 toolbar-action-buttons"></div>
-          <div class="col-sm-6">
-            <div class="float-right">
-              <div class="btn-group pagination-area">
-                <span v-if="pendingRequest"><span class="fas fa-spinner fa-spin"/>  ${_.gettext('Loading...')}</span>
-                <div v-if="!pendingRequest">
-                <span class="paginator">{{dataOffset|number}} - {{dataOffsetLimit|number}}</span>
-                  /
-                  <span class="total-pages">{{recordCount|number}}</span>
-                </div>
-              </div>
-              <div class="btn-group">
-                <button class="btn btn-outline-secondary" type="button" v-on:click="action.dataSource.prevPage()">
-                  <i class="fa fa-chevron-left"></i>
-                </button>
-                <button class="btn btn-outline-secondary" type="button" v-on:click="action.dataSource.nextPage()">
-                  <i class="fa fa-chevron-right"></i>
-                </button>
-              </div>
-              <div id="btn-view-modes" class="btn-group" role="group"></div>
-            </div>
-          </div>
+      </div>
+          <search-view class="col-md-6"/>
         </div>
       </div>
     </div>`;
@@ -5302,9 +5277,10 @@ var Katrid;
                 $(this.el).append(template);
                 let el = this.el.querySelector('.dropdown-item:last-child');
                 $(el).data('item', item);
-                el.addEventListener('mousedown', evt => {
+                el.addEventListener('mouseup', evt => {
                     this.input.input.focus();
                     evt.preventDefault();
+                    evt.stopPropagation();
                     let target = evt.target;
                     if (target.tagName != 'A')
                         target = target.closest('a.dropdown-item');
@@ -5359,7 +5335,7 @@ var Katrid;
             }
         }
         UI.DropdownMenu = DropdownMenu;
-        class InputAutoComplete extends HTMLElement {
+        class BaseAutoComplete extends HTMLElement {
             constructor() {
                 super(...arguments);
                 this.menu = null;
@@ -5373,6 +5349,13 @@ var Katrid;
             create() {
                 if (this._created)
                     return;
+                this.classList.add('input-autocomplete', 'input-dropdown');
+                let append = '';
+                let name = this.getAttribute('name');
+                let model = this.getAttribute('data-model');
+                if (this.hasAttribute('allow-open'))
+                    append = `<span class="fa fa-fw fa-folder-open autocomplete-open" v-on:click="openObject('${model}', record.${name}.id)"></span>`;
+                this.innerHTML = `<input class="form-control" autocomplete="nope" spellcheck="false"> <span class="caret"></span>` + append;
                 this._created = true;
                 this.input = this.querySelector('input');
                 let caret = this.querySelector('.caret');
@@ -5485,8 +5468,39 @@ var Katrid;
                     return this.$selectedItem.id;
             }
         }
-        UI.InputAutoComplete = InputAutoComplete;
+        UI.BaseAutoComplete = BaseAutoComplete;
+        class InputAutoComplete extends BaseAutoComplete {
+            create() {
+                super.create();
+                let model = this.getAttribute('data-model');
+                let svc = new Katrid.Services.Model(model);
+                if (model)
+                    this.setSource(async (query) => {
+                        console.log('query', query);
+                        let res = await svc.searchByName({
+                            args: [query.term]
+                        });
+                        return res.items;
+                    });
+            }
+        }
         Katrid.define('input-autocomplete', InputAutoComplete);
+        Katrid.component('input-autocomplete', {
+            props: ['modelValue'],
+            template: '<input-autocomplete/>',
+            mounted() {
+                this.$el.create();
+                this.$el.addEventListener('selectItem', (evt) => {
+                    this.$emit('update:modelValue', evt.detail.item);
+                });
+            },
+            watch: {
+                modelValue: function (value) {
+                    if (value !== this.$el.selectedItem)
+                        this.$el.selectedItem = value;
+                }
+            }
+        });
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -5495,7 +5509,12 @@ var Katrid;
     (function (Forms) {
         var Controls;
         (function (Controls) {
-            class InputForeignKeyElement extends Katrid.UI.InputAutoComplete {
+            class InputForeignKeyElement extends Katrid.UI.BaseAutoComplete {
+                constructor() {
+                    super(...arguments);
+                    this.allowSearchMode = true;
+                    this.allowCreateNew = true;
+                }
                 create(field) {
                     super.create();
                     let name = this.getAttribute('name');
@@ -5528,6 +5547,8 @@ var Katrid;
                                 let res = await scope.model.getFieldChoices({
                                     field: this.field.name, term: query.term, kwargs: data.kwargs
                                 });
+                                let items = res.items;
+                                items.push({ template: '<a class="dropdown-item">Criar novo...</a>' });
                                 return res.items;
                             }
                         }
@@ -6754,7 +6775,7 @@ var Katrid;
                     }
                     static fromGroup(view, el) {
                         let group = new SearchFilters(view);
-                        for (let child of el.children())
+                        for (let child of $(el).children())
                             group.push(SearchFilter.fromItem(view, $(child), group));
                         return group;
                     }
@@ -7331,13 +7352,13 @@ var Katrid;
                     constructor(view, name, caption, group, el) {
                         super(view, name, caption, null, group, el);
                         this.group = group;
-                        if (el && el.attr('context'))
-                            this.context = eval(`(${el.attr('context')})`);
+                        if (el && el.getAttribute('context'))
+                            this.context = eval(`(${el.getAttribute('context')})`);
                         this.groupBy = this.context?.group_by || name;
                         this._selected = false;
                     }
                     static fromItem(view, el, group) {
-                        return new SearchGroup(view, el.attr('name'), el.attr('caption'), group, el);
+                        return new SearchGroup(view, el.getAttribute('name'), el.getAttribute('caption'), group, el);
                     }
                     toString() {
                         return this.caption;
@@ -7692,19 +7713,21 @@ var Katrid;
           <div class="col-12">
             <div class="form-group">
               <select class="form-control" v-model="fieldName" v-on:change="fieldChange(info.fields[fieldName])">
-                <option value=""></option>
+                <option></option>
                 <option v-for="field in action.fieldList" :value="field.name">{{ field.caption }}</option>
               </select>
             </div>
             <div class="form-group filter-condition" v-if="fieldName">
             <select class="form-control" v-model="tempCondition">
-              <option value=""></option>
+              <option></option>
               <option v-for="(name, value, index) in fieldConditions" :value="value">{{name}}</option>
             </select>
             </div>
             <div class="form-group" v-if="field">
               <input class="form-control" v-model="searchValue" type="text" v-if="tempCondition && (field.info.type === 'CharField')">
               <input class="form-control" v-model="searchValue" type="text" v-else-if="tempCondition && (field.info.type === 'IntegerField')">
+              <input class="form-control" v-model="searchValue" type="text" v-else-if="tempCondition && (field.info.type === 'IntegerField')">
+              <input-autocomplete v-model="searchValue" :data-model="field.info.model" v-else-if="(tempCondition === '=') && (field.info.type === 'ForeignKey')"/>
             </div>
             <div class="form-group">
               <button class="btn btn-primary" type="button" v-on:click="applyFilter()" v-show="searchValue!==undefined">
@@ -7730,6 +7753,25 @@ var Katrid;
         <span class="fa fa-star"></span> ${_.gettext('Favorites')} <span class="caret"></span>
       </button>
     </div>
+            <div class="float-right">
+              <div class="btn-group pagination-area">
+                <span v-if="pendingRequest"><span class="fas fa-spinner fa-spin"/>  ${_.gettext('Loading...')}</span>
+                <div v-if="!pendingRequest">
+                <span class="paginator">{{$parent.dataOffset|number}} - {{$parent.dataOffsetLimit|number}}</span>
+                  /
+                  <span class="total-pages">{{$parent.recordCount|number}}</span>
+                </div>
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-outline-secondary" type="button" v-on:click="$parent.prevPage()">
+                  <i class="fa fa-chevron-left"></i>
+                </button>
+                <button class="btn btn-outline-secondary" type="button" v-on:click="$parent.nextPage()">
+                  <i class="fa fa-chevron-right"></i>
+                </button>
+              </div>
+              <div id="btn-view-modes" class="btn-group" role="group"></div>
+            </div>
     
     </div>`,
                     mounted() {
@@ -7786,6 +7828,7 @@ var Katrid;
                             this.customFilter.push(this.tempFilter);
                             this.tempFilter.selected = true;
                             this.tempCondition = null;
+                            this.fieldName = null;
                             this.tempFilter = new Search.SearchFilters(this.$search);
                             this.customSearchExpanded = false;
                         },
@@ -7824,7 +7867,15 @@ var Katrid;
                                         'is null': _.gettext('Is not defined'),
                                     };
                                 }
-                                else if (field.type.info.type === 'IntegerField') {
+                                else if (field.info.type === 'ForeignKey') {
+                                    this.fieldConditions = {
+                                        '=': _.gettext('Is equal'),
+                                        '!=': _.gettext('Is different'),
+                                        'is not null': _.gettext('Is defined'),
+                                        'is null': _.gettext('is not defined'),
+                                    };
+                                }
+                                else if (field.info.type === 'IntegerField') {
                                     this.fieldConditions = {
                                         '=': _.gettext('Is equal'),
                                         '!=': _.gettext('Is different'),
@@ -7854,7 +7905,8 @@ var Katrid;
                             tempFilter: null,
                             searchValue: null,
                         };
-                    }
+                    },
+                    components: Katrid.componentsRegistry,
                 });
             })(Search = Views.Search || (Views.Search = {}));
         })(Views = Forms.Views || (Forms.Views = {}));
@@ -8118,7 +8170,7 @@ var Katrid;
                     }
                     reset() {
                         for (let i of this.fields)
-                            if (i && i.children && i.children.length)
+                            if (i.children?.length)
                                 i.expanded = false;
                     }
                     clear() {

@@ -11005,6 +11005,7 @@ header.content-container-heading:empty {
   -webkit-align-items: flex-end;
   align-items: flex-end;
   position: relative;
+  margin-bottom: 10px;
 }
 .search-area .search-view .search-view-more {
   font-size: 16px;
