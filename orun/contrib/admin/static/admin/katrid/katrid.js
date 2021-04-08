@@ -439,8 +439,7 @@ var Katrid;
                     }
                 }
                 else {
-                    let el = Katrid.Core.$compile(content)(this.scope);
-                    $(Katrid.app.element).html(el);
+                    $(Katrid.app.element).html(content);
                 }
             }
         }
@@ -4845,7 +4844,7 @@ var Katrid;
                                 me.dataSource.refresh();
                             },
                             backTo(index, viewType) {
-                                me.action.back();
+                                me.action.back(index);
                             },
                             recordClick(event, index, record) {
                                 me.action.record = record;
@@ -4923,71 +4922,6 @@ var Katrid;
         <div class="toolbar row">
           <div class="col-sm-6 toolbar-action-buttons"></div>
           <div class="col-sm-6">
-    <div class="btn-group search-view-more-area" ng-show="search.viewMoreButtons">
-      <div custom-filter class="btn-group">
-        <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" type="button" aria-expanded="false">
-          <span class="fa fa-filter"></span> ${_.gettext('Filters')} <span class="caret"></span>
-        </button>
-        
-    <div class="dropdown-menu search-view-filter-menu">
-      <div>
-        <div ng-repeat="group in search.filterGroups">
-          <a class="dropdown-item" ng-class="{'selected': filter.selected}" ng-repeat="filter in group" ng-click="filter.toggle();$event.stopPropagation();">
-            { filter.toString() }
-          </a>
-          <div class="dropdown-divider"></div>
-        </div>
-      </div>
-      <div ng-controller="CustomFilterController">
-        <div ng-repeat="filter in customFilter">
-          <a class="dropdown-item" ng-class="{'selected': filterItem.selected}" ng-click="filterItem.toggle();$event.stopPropagation();$event.preventDefault();" ng-repeat="filterItem in filter" ng-bind-html="filterItem.toString()"></a>
-          <div class="dropdown-divider"></div>
-        </div>
-        <a class="dropdown-item dropdown-search-item" onclick="event.stopPropagation();event.preventDefault();" ng-click="customSearchExpanded=!customSearchExpanded">
-          <i ng-class="{ 'fa-caret-right': !customSearchExpanded, 'fa-caret-down': customSearchExpanded }" class="fa expandable"></i>
-          ${_.gettext('Add Custom Filter')}
-        </a>
-        <div ng-if="customSearchExpanded" onclick="event.stopPropagation();event.preventDefault();">
-          <div ng-show="tempFilter.length" class="margin-bottom-8">
-            <a href="#" onclick="$event.preventDefault()" class="dropdown-item" ng-repeat="filter in tempFilter" ng-bind-html="filter.toString()" title="${_.gettext('Remove item')}"></a>
-          </div>
-          <div class="col-12">
-            <div class="form-group">
-              <select class="form-control" ng-model="fieldName" ng-change="fieldChange(action.fields[fieldName])">
-                <option value=""></option>
-                <option ng-repeat="field in action.fieldList|orderBy:'caption'" value="{ field.name }">{ field.caption }</option>
-              </select>
-            </div>
-            <div class="form-group">
-<!--              <ng-include src="field.paramTemplate + '.conditions'"/>-->
-            </div>
-            <div class="form-group">
-<!--              <ng-include src="field.paramTemplate" ng-show="controlVisible"/>-->
-            </div>
-            <div class="form-group">
-              <button class="btn btn-primary" type="button" ng-click="applyFilter()" ng-show="searchValue!==undefined">
-                ${_.gettext('Apply')}
-              </button>
-              <button class="btn btn-outline-secondary" type="button" ng-click="addCondition(field, condition, searchValue);fieldName='';" ng-show="searchValue">
-                ${_.gettext('Add a condition')}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-      </div>
-      <div class="btn-group">
-        <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" type="button">
-          <span class="fa fa-bars"></span> ${_.gettext('Group By')} <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu search-view-groups-menu"></ul>
-      </div>
-      <button class="btn btn-secondary">
-        <span class="fa fa-star"></span> ${_.gettext('Favorites')} <span class="caret"></span>
-      </button>
-    </div>
             <div class="float-right">
               <div class="btn-group pagination-area">
                 <span v-if="pendingRequest"><span class="fas fa-spinner fa-spin"/>  ${_.gettext('Loading...')}</span>
@@ -4998,10 +4932,10 @@ var Katrid;
                 </div>
               </div>
               <div class="btn-group">
-                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.prevPage()">
+                <button class="btn btn-outline-secondary" type="button" v-on:click="action.dataSource.prevPage()">
                   <i class="fa fa-chevron-left"></i>
                 </button>
-                <button class="btn btn-outline-secondary" type="button" ng-click="action.dataSource.nextPage()">
+                <button class="btn btn-outline-secondary" type="button" v-on:click="action.dataSource.nextPage()">
                   <i class="fa fa-chevron-right"></i>
                 </button>
               </div>
@@ -5025,7 +4959,7 @@ var Katrid;
         ${_.gettext('Print')} <span class="caret"></span>
       </button>
       <div class="dropdown-menu">
-        <a class="dropdown-item" ng-click="actionAutoReport()">${_.gettext('Auto Report')}</a>
+        <a class="dropdown-item" v-on:click="actionAutoReport()">${_.gettext('Auto Report')}</a>
       </div>`;
                         let dropdown = btnPrint.querySelector('.dropdown-menu');
                         for (let bindingAction of this.viewInfo.toolbar.print) {
@@ -5047,15 +4981,15 @@ var Katrid;
                     let btnActions = document.createElement('div');
                     btnActions.classList.add('btn-group');
                     btnActions.innerHTML = `<div class="dropdown">
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" ng-show="action.selectionLength"
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" v-show="action.selectionLength"
                 aria-haspopup="true">
           ${_.gettext('Action')} <span class="caret"></span>
         </button>
         <div class="dropdown-menu dropdown-menu-actions">
-          <a class="dropdown-item" ng-click="action.deleteSelection()">
+          <a class="dropdown-item" v-on:click="action.deleteSelection()">
             <i class="fa fa-fw fa-trash-o"></i> ${_.gettext('Delete')}
           </a>
-          <a class="dropdown-item" ng-click="action.copy()">
+          <a class="dropdown-item" v-on:click="action.copy()">
             <i class="fa fa-fw fa-files-o"></i>
             ${_.gettext('Duplicate')}
           </a>
@@ -6715,6 +6649,7 @@ var Katrid;
                     '%': Katrid.i18n.gettext('Contains'),
                     '!%': Katrid.i18n.gettext('Not contains'),
                     'range': Katrid.i18n.gettext('Between'),
+                    'like': Katrid.i18n.gettext('Like'),
                 };
                 Search.conditionSuffix = {
                     '=': '',
@@ -6801,8 +6736,9 @@ var Katrid;
                 }
                 Search.SearchFilter = SearchFilter;
                 class SearchFilters {
-                    constructor(view, facet) {
+                    constructor(view, facet, group) {
                         this.items = [];
+                        this._selected = false;
                         this.view = view;
                         this._selection = [];
                         if (!facet)
@@ -6820,7 +6756,27 @@ var Katrid;
                             group.push(SearchFilter.fromItem(view, $(child), group));
                         return group;
                     }
+                    get selected() {
+                        return this._selected;
+                    }
+                    set selected(value) {
+                        this._selected = value;
+                        if (value)
+                            for (let item of this.items)
+                                this.addValue(item);
+                        else {
+                            for (let item of this.items)
+                                this.removeValue(item);
+                            this._facet.values = [];
+                        }
+                        this.view.update();
+                    }
+                    toggle() {
+                        this.selected = !this.selected;
+                    }
                     addValue(item) {
+                        if (this._selection.indexOf(item) > -1)
+                            return;
                         this._selection.push(item);
                         this._facet.values = this._selection.map(item => (new SearchObject(item.toString(), item.value)));
                         this._refresh();
@@ -6837,6 +6793,9 @@ var Katrid;
                     }
                     get caption() {
                         return '<span class="fa fa-filter"></span>';
+                    }
+                    toString() {
+                        return this.items.join(' OR ');
                     }
                     _refresh() {
                         if (this._selection.length) {
@@ -7002,7 +6961,6 @@ var Katrid;
                     }
                     toString() {
                         let s = this.field.format(this._value);
-                        console.log(this.condition);
                         return this.field.caption + ' ' + Search.conditionsLabels[this.condition].toLowerCase() + ' "' + s + '"';
                     }
                     get value() {
@@ -7023,21 +6981,21 @@ var Katrid;
     <div class="dropdown-menu search-view-filter-menu">
       <div>
         <div v-for="group in filterGroups">
-          <a class="dropdown-item" ng-class="{'selected': filter.selected}" v-for="filter in group" ng-click="filter.toggle();$event.stopPropagation();">
-            \${filter.toString()}
+          <a class="dropdown-item" ng-class="{'selected': filter.selected}" v-for="filter in group" v-on:click.prevent="filter.toggle()">
+            {{filter.toString()}}
           </a>
           <div class="dropdown-divider"></div>
         </div>
       </div>
       <div>
         <div v-for="filter in filters">
-          <a class="dropdown-item" v-bind:class="{'selected': filterItem.selected}"
+          <a class="dropdown-item" :class="{'selected': filterItem.selected}"
              v-on:click.stop.prevent="filterItem.toggle()"
              v-for="filterItem in filter.items">{{filterItem.toString()}}</a>
           <div class="dropdown-divider"></div>
         </div>
         <a class="dropdown-item dropdown-search-item" v-on:click.stop="expanded=!expanded">
-          <i v-bind:class="{ 'fa-caret-right': !expanded, 'fa-caret-down': expanded }" class="fa expandable"></i>
+          <i :class="{ 'fa-caret-right': !expanded, 'fa-caret-down': expanded }" class="fa expandable"></i>
           ${_.gettext('Add Custom Filter')}
         </a>
 
@@ -7056,13 +7014,13 @@ var Katrid;
             </div>
             <div class="form-group">
               <select class="form-control" v-model="conditionName" v-if="field" v-on:change="condition=conditions[conditionName]">
-                <option v-bind:value="cond.name" v-for="cond in conditionList">{{ cond.label }}</option>
+                <option :value="cond.name" v-for="cond in conditionList">{{ cond.label }}</option>
               </select>
             </div>
             <div class="form-group">
               <input class="form-control" v-model="value" v-if="condition.input === 'input'">
               <select class="form-control" v-model="value" v-if="condition.input === 'select'">
-                <option v-bind:value="value" v-for="(value, name) in condition.options">{{ name }}</option>
+                <option :value="value" v-for="(value, name) in condition.options">{{ name }}</option>
               </select>
             </div>
             <div class="form-group">
@@ -7145,15 +7103,15 @@ var Katrid;
           <div>
             <div v-for="group in groups">
               <a class="dropdown-item" ng-class="{'selected': filter.selected}" v-for="filter in group"
-                 v-on:click="filter.toggle();$event.stopPropagation();">
-                \${filter.toString()}
+                 v-on:click.prevent="filter.toggle()">
+                {{filter.toString()}}
               </a>
               <div class="dropdown-divider" v-if="groups.length"></div>
             </div>
           </div>
 
           <a class="dropdown-item dropdown-search-item" v-on:click.stop="expanded=!expanded">
-            <i v-bind:class="{ 'fa-caret-right': !expanded, 'fa-caret-down': expanded }"
+            <i :class="{ 'fa-caret-right': !expanded, 'fa-caret-down': expanded }"
                class="fa expandable"></i>
             ${_.gettext('Add Custom Group')}
           </a>
@@ -7163,7 +7121,7 @@ var Katrid;
               <div class="form-group">
                 <select class="form-control" v-model="fieldName" v-change="fieldChange(fields[fieldName])">
                   <option value=""></option>
-                  <option v-for="field in fieldList" value="\${field.name}">\${field.caption}</option>
+                  <option v-for="field in fieldList" :value="field.name">{{field.caption}}</option>
                 </select>
               </div>
               <div class="form-group">
@@ -7186,22 +7144,22 @@ var Katrid;
         </button>
         <div class="dropdown-menu search-favorite-menu" style="min-width: 300px">
           <a class="dropdown-item dropdown-search-item" v-on:click.stop="expanded=!expanded">
-            <i v-bind:class="{ 'fa-caret-right': !expanded, 'fa-caret-down': expanded }"
+            <i :class="{ 'fa-caret-right': !expanded, 'fa-caret-down': expanded }"
                class="fa expandable"></i>
             ${_.gettext('Save current search')}
           </a>
           <div v-if="expanded" v-on:click.stop>
             <div class="col-12">
               <div class="form-group">
-                <input type="text" class="form-control" ng-model="saveSearch.name" placeholder="${_.gettext('Search name')}">
+                <input type="text" class="form-control" v-model="saveSearch.name" placeholder="${_.gettext('Search name')}">
               </div>
               <div class="form-group" ng-init="saveSearch.is_default=false;saveSearch.is_shared=true;">
                 <label>
-                  <input type="checkbox" ng-model="saveSearch.is_default" v-on:click.stop="">
+                  <input type="checkbox" v-model="saveSearch.is_default" v-on:click.stop>
                   ${_.gettext("Use by default")}
                 </label>
                 <label>
-                  <input type="checkbox" ng-model="saveSearch.is_shared">
+                  <input type="checkbox" v-model="saveSearch.is_shared">
                   ${_.gettext("Share with all users")}
                 </label>
               </div>
@@ -7383,6 +7341,79 @@ var Katrid;
                     }
                 }
                 Search.SearchGroup = SearchGroup;
+            })(Search = Views.Search || (Views.Search = {}));
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            var Search;
+            (function (Search) {
+                Katrid.component('filter-menu', {
+                    props: ['search', 'action'],
+                    template: '<div></div>',
+                    template_: `<div class="dropdown-menu search-view-filter-menu">
+      <div>
+        <div v-for="group in search.filterGroups">
+          <a class="dropdown-item" ng-class="{'selected': filter.selected}" v-for="filter in group" v-on:click.stop="filter.toggle()">
+            {{ filter.toString() }}
+          </a>
+          <div class="dropdown-divider"></div>
+        </div>
+      </div>
+      <div ng-controller="CustomFilterController">
+        <div v-for="filter in customFilter">
+          <a class="dropdown-item" ng-class="{'selected': filterItem.selected}" v-on:click.stop="filterItem.toggle()" v-for="filterItem in filter" v-html="filterItem.toString()"></a>
+          <div class="dropdown-divider"></div>
+        </div>
+        <a class="dropdown-item dropdown-search-item" onclick="event.stopPropagation();event.preventDefault();" ng-click="customSearchExpanded=!customSearchExpanded">
+          <i ng-class="{ 'fa-caret-right': !customSearchExpanded, 'fa-caret-down': customSearchExpanded }" class="fa expandable"></i>
+          ${_.gettext('Add Custom Filter')}
+        </a>
+        <div ng-if="customSearchExpanded" onclick="event.stopPropagation();event.preventDefault();">
+          <div v-show="tempFilter.length" class="margin-bottom-8">
+            <a href="#" onclick="$event.preventDefault()" class="dropdown-item" v-for="filter in tempFilter" v-html="filter.toString()" title="${_.gettext('Remove item')}"></a>
+          </div>
+          <div class="col-12">
+            <div class="form-group">
+              <select class="form-control" v-model="fieldName" ng-change="fieldChange(action.fields[fieldName])">
+                <option value=""></option>
+                <option v-for="field in action.fieldList" :value="field.name">{{ field.caption }</option>
+              </select>
+            </div>
+            <div class="form-group">
+<!--              <ng-include src="field.paramTemplate + '.conditions'"/>-->
+            </div>
+            <div class="form-group">
+<!--              <ng-include src="field.paramTemplate" ng-show="controlVisible"/>-->
+            </div>
+            <div class="form-group">
+              <button class="btn btn-primary" type="button" v-on:click="applyFilter()" v-show="searchValue!==undefined">
+                ${_.gettext('Apply')}
+              </button>
+              <button class="btn btn-outline-secondary" type="button" v-on:click="addCondition(field, condition, searchValue);fieldName='';" v-show="searchValue">
+                ${_.gettext('Add a condition')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+</div>    
+    `,
+                    mounted() {
+                        console.log('mounted');
+                    },
+                    data() {
+                        return {
+                            tempFilter: {},
+                        };
+                    }
+                });
+                console.log('register filter-menu');
             })(Search = Views.Search || (Views.Search = {}));
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -7590,15 +7621,6 @@ var Katrid;
                     }
                 }
                 Search.SearchViewElement = SearchViewElement;
-                class SearchViewFacet extends HTMLElement {
-                    connectedCallback() {
-                        this.innerHTML = `<span class="facet-label" ng-bind-html="${this.caption}"></span>
-            <span class="facet-value" ng-bind-html="facet.templateValue"></span>
-            <span class="fas fa-times facet-remove" ng-click="action.searchView.remove($index)">
-        </span>`;
-                    }
-                }
-                Search.SearchViewFacet = SearchViewFacet;
                 Katrid.component('search-view', {
                     template: `<div class="search-view"><div search-view-area class="search-area">
       <div class="search-view">
@@ -7632,10 +7654,84 @@ var Katrid;
       <div class="btn-group search-filter-button"></div>
       <div class="btn-group search-groupby-button"></div>
       <div class="btn-group search-filter-favorites"></div>
-    </div></div>`,
+    </div>
+    
+    <div class="btn-group search-view-more-area">
+      <div custom-filter class="btn-group">
+        <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" type="button" aria-expanded="false">
+          <span class="fa fa-filter"></span> ${_.gettext('Filters')} <span class="caret"></span>
+        </button>
+        
+    
+<div class="dropdown-menu search-view-filter-menu">
+      <div>
+        <div v-for="group in search.filterGroups">
+          <a class="dropdown-item" :class="{'selected': item.selected}" v-for="item in group" v-on:click.stop="item.toggle()">
+            {{ item.toString() }}
+          </a>
+          <div class="dropdown-divider"></div>
+        </div>
+      </div>
+      <div>
+        <div v-for="filter in customFilter">
+          <a class="dropdown-item" :class="{'selected': filter.selected}" v-on:click.stop="filter.toggle()" v-html="filter.toString()"></a>
+          <div class="dropdown-divider"></div>
+        </div>
+        <a class="dropdown-item dropdown-search-item" v-on:click.stop.prevent="customSearchExpanded=!customSearchExpanded">
+          <i :class="{ 'fa-caret-right': !customSearchExpanded, 'fa-caret-down': customSearchExpanded }" class="fa expandable"></i>
+          ${_.gettext('Add Custom Filter')}
+        </a>
+        <div v-if="customSearchExpanded" v-on:click.stop.prevent>
+          <div v-show="tempFilter && tempFilter.length" class="margin-bottom-8">
+            <a href="#" v-on:click.prevent class="dropdown-item" v-for="filter in tempFilter" v-html="filter.toString()" title="${_.gettext('Remove item')}"></a>
+          </div>
+          <div class="col-12">
+            <div class="form-group">
+              <select class="form-control" v-model="fieldName" v-on:change="fieldChange(info.fields[fieldName])">
+                <option value=""></option>
+                <option v-for="field in action.fieldList" :value="field.name">{{ field.caption }}</option>
+              </select>
+            </div>
+            <div class="form-group filter-condition" v-if="fieldName">
+            <select class="form-control" v-model="tempCondition">
+              <option v-for="(name, value, index) in fieldConditions" :value="value">{{name}}</option>
+            </select>
+            </div>
+            <div class="form-group" v-if="field">
+              <input class="form-control" v-model="searchValue" type="text" v-if="tempCondition && (field.info.type === 'CharField')">
+              <input class="form-control" v-model="searchValue" type="text" v-else-if="tempCondition && (field.info.type === 'IntegerField')">
+            </div>
+            <div class="form-group">
+              <button class="btn btn-primary" type="button" v-on:click="applyFilter()" v-show="searchValue!==undefined">
+                ${_.gettext('Apply')}
+              </button>
+              <button class="btn btn-outline-secondary" type="button" v-on:click="addCondition(field, condition, searchValue);fieldName='';" v-show="searchValue">
+                ${_.gettext('Add a condition')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+</div>    
+    
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" type="button">
+          <span class="fa fa-bars"></span> ${_.gettext('Group By')} <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu search-view-groups-menu"></ul>
+      </div>
+      <button class="btn btn-secondary">
+        <span class="fa fa-star"></span> ${_.gettext('Favorites')} <span class="caret"></span>
+      </button>
+    </div>
+    
+    </div>`,
                     mounted() {
                         this.$viewInfo = this.$parent.action.views.search;
-                        this.$search = new SearchViewElement(this);
+                        let search = this.$search = new SearchViewElement(this);
+                        this.facets = search.facets;
+                        this.$parent.search = this.$search;
                         this.$search.model = this.$parent.action.model;
                         this.$search.action = this.$parent.action;
                         this.$search.fields = this.$viewInfo.fields;
@@ -7670,6 +7766,23 @@ var Katrid;
                         });
                     },
                     methods: {
+                        addCondition(field, condition, value) {
+                            if (!this.tempFilter)
+                                this.tempFilter = new Search.SearchFilters(this.$search);
+                            this.tempFilter.push(new Search.CustomFilterItem(this.$search, field, condition, value, this.tempFilter));
+                            this.field = null;
+                            this.condition = null;
+                            this.controlVisible = false;
+                            this.searchValue = undefined;
+                        },
+                        applyFilter() {
+                            if (this.searchValue)
+                                this.addCondition(this.field, this.tempCondition, this.searchValue);
+                            this.customFilter.push(this.tempFilter);
+                            this.tempFilter.selected = true;
+                            this.tempFilter = new Search.SearchFilters(this.$search);
+                            this.expanded = false;
+                        },
                         setSearchText(text) {
                             if (text.length) {
                                 return this.$search.show();
@@ -7691,14 +7804,49 @@ var Katrid;
                                 this.currentIndex = 0;
                             else if (this.currentIndex < 0)
                                 this.currentIndex = this.availableItems.length - 1;
+                        },
+                        fieldChange(field) {
+                            this.field = field;
+                            if (field) {
+                                if (field.info.type === 'CharField') {
+                                    this.fieldConditions = {
+                                        'like': _.gettext('Contains'),
+                                        'not like': _.gettext('Not contains'),
+                                        '=': _.gettext('Is equal'),
+                                        '!=': _.gettext('Is different'),
+                                        'is not null': _.gettext('Is defined'),
+                                        'is null': _.gettext('Is not defined'),
+                                    };
+                                }
+                                else if (field.type.info.type === 'IntegerField') {
+                                    this.fieldConditions = {
+                                        '=': _.gettext('Is equal'),
+                                        '!=': _.gettext('Is different'),
+                                        '>': _.gettext('Greater-than'),
+                                        '<': _.gettext('Less-than'),
+                                        'is not null': _.gettext('Is defined'),
+                                        'is null': _.gettext('is not defined'),
+                                    };
+                                }
+                            }
                         }
                     },
                     data() {
                         return {
+                            search: {},
+                            fieldConditions: {},
+                            info: this.$parent.action.views.search,
+                            action: this.$parent.action,
+                            fieldName: null,
                             currentIndex: 0,
                             searchText: '',
                             facets: [],
                             availableItems: [],
+                            customFilter: [],
+                            customSearchExpanded: false,
+                            tempCondition: null,
+                            tempFilter: null,
+                            searchValue: null,
                         };
                     }
                 });
@@ -7935,7 +8083,7 @@ var Katrid;
                             this.scope.action.applyGroups(this.groupBy(), this.getParams());
                         }
                         else
-                            this.scope.action.setSearchParams(this.getParams());
+                            this.action.setSearchParams(this.getParams());
                     }
                     groupBy() {
                         return this.facetGrouping.values.map(obj => obj._ref.groupBy);
