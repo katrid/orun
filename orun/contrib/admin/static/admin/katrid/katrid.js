@@ -59,13 +59,14 @@ var Katrid;
                 else if (this.isLeaf)
                     li.innerText = this.text;
                 else
-                    li.innerHTML = `<a href="${this.url}" v-on:click.prevent="backTo(${index})">${this.text}</a>`;
+                    li.innerHTML = `<a href="${this.url}" v-on:click.prevent="backTo(${index})"><i class="fa fa-fw fa-chevron-left"></i> ${this.text}</a>`;
                 return li;
             }
         }
         Actions.Breadcrumb = Breadcrumb;
         class Action {
             constructor(config) {
+                this.state = null;
                 this.info = config.info;
                 this.location = config.location;
                 this.app = Katrid.webApp;
@@ -231,8 +232,12 @@ var Katrid;
             }
             clear() {
                 Katrid.app.element.innerHTML = '';
-                for (let action of this.actions)
+                for (let action of this.actions) {
+                    console.log('clear', action);
+                    action.state = { clear: true };
                     action.$destroy();
+                }
+                this.actions = [];
                 this.actions.length = 0;
                 this.mainAction = null;
                 this.currentAction = null;
@@ -250,6 +255,7 @@ var Katrid;
                 let oldActionId;
                 if (oldAction)
                     oldActionId = oldAction.info.id;
+                console.log('state', history.state);
                 if (reset) {
                     this.clear();
                     if (this.currentAction)
@@ -473,8 +479,6 @@ var Katrid;
                     this.showView(this.lastViewType || this.searchModes[0]);
             }
             async onHashChange(params) {
-                console.log('hash change', params);
-                this._breadcrumbs = null;
                 let invalidate = false;
                 let allowedParams = ['action', 'view_type', 'menu_id', 'model'];
                 let loadRecord = (this.params && (this.params.id !== params.id));
@@ -572,8 +576,11 @@ var Katrid;
                 }
             }
             async showView(viewType) {
-                if (viewType !== this.viewType)
-                    history.replaceState({ viewType }, '', this.makeUrl(viewType));
+                this._breadcrumbs = null;
+                if (viewType !== this.viewType) {
+                    this.state = { viewType };
+                    history.replaceState(this.state, '', this.makeUrl(viewType));
+                }
                 if (viewType !== 'form') {
                     this.lastViewType = viewType;
                 }
@@ -1493,7 +1500,8 @@ var Katrid;
                 this.appReady();
                 let _hash;
                 window.addEventListener('popstate', event => {
-                    this.loadPage(location.hash, event.state === null);
+                    console.log(event);
+                    this.loadPage(location.hash, (event.state === null) || (event.state?.clear));
                 });
             }
             appReady() {
@@ -4784,7 +4792,6 @@ var Katrid;
                     let nav = container.querySelector('.breadcrumb-nav');
                     let ol = document.createElement('ol');
                     ol.classList.add('breadcrumb');
-                    console.log(this.action.breadcrumbs);
                     this.action.breadcrumbs.forEach((bc, index) => ol.append(bc.render(index)));
                     nav.append(ol);
                     return nav;
@@ -4922,8 +4929,8 @@ var Katrid;
         <div class="col-md-6">
         
           <div class="breadcrumb-nav"></div>
-          <p class="help-block">${this.action.info.usage || ''}&nbsp;</p>
-          <div class="toolbar col-sm-6">
+          <p class="help-block"></p>
+          <div class="toolbar">
             <div class="toolbar-action-buttons"></div>
         </div>
       </div>
@@ -7818,6 +7825,7 @@ var Katrid;
                                     break;
                                 case Katrid.UI.keyCode.BACKSPACE:
                                     if (this.searchText === '') {
+                                        this.facets[this.facets.length - 1].clear();
                                         this.facets.splice(this.facets.length - 1, 1).map(facet => facet.clear());
                                         this.$search.update();
                                     }
@@ -7854,8 +7862,11 @@ var Katrid;
                             }
                         },
                         removeFacet(facet) {
-                            this.facets.splice(this.facets.indexOf(facet), 1);
+                            let i = this.facets.indexOf(facet);
+                            this.facets[i].clear();
+                            this.facets.splice(i, 1);
                             this.$search.input.focus();
+                            this.$search.update();
                         },
                         update() {
                             this.$emit('searchUpdate');
@@ -11802,7 +11813,6 @@ var Katrid;
 (function (Katrid) {
     var UI;
     (function (UI) {
-        console.log('register component form-login');
         Katrid.component('form-login', {
             template: '<form><slot></slot></form>',
             methods: {
