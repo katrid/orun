@@ -244,13 +244,17 @@ var Katrid;
             }
             async onHashChange(params, reset) {
                 let actionId = params.action;
+                console.log('reset', reset);
                 let oldAction, action;
                 action = oldAction = this.currentAction;
                 let oldActionId;
                 if (oldAction)
                     oldActionId = oldAction.info.id;
-                if (reset && actionId && !(oldActionId == params.action)) {
+                if (reset) {
                     this.clear();
+                    if (this.currentAction)
+                        this.currentAction.$destroy();
+                    this.currentAction = null;
                 }
                 if (actionId in this.$cachedActions) {
                     let actionInfo = this.$cachedActions[actionId];
@@ -262,8 +266,6 @@ var Katrid;
                     action = new Katrid.Actions.registry[actionInfo.action_type]({ info: actionInfo, location: params });
                 }
                 else if (!(this.currentAction && (this.currentAction.info.id == actionId))) {
-                    if (this.currentAction && reset)
-                        this.currentAction.$destroy();
                     let actionInfo = await Katrid.Services.Actions.load(actionId);
                     action = new Katrid.Actions.registry[actionInfo.action_type]({ info: actionInfo, location: params });
                 }
@@ -471,12 +473,14 @@ var Katrid;
                     this.showView(this.lastViewType || this.searchModes[0]);
             }
             async onHashChange(params) {
+                console.log('hash change', params);
                 this._breadcrumbs = null;
                 let invalidate = false;
                 let allowedParams = ['action', 'view_type', 'menu_id', 'model'];
                 let loadRecord = (this.params && (this.params.id !== params.id));
                 this.params = {};
                 if (!params.view_type) {
+                    console.log('view type', params.view_type);
                     this.params.view_type = this.viewModes[0];
                     invalidate = true;
                 }
@@ -498,10 +502,12 @@ var Katrid;
                         this.params[k] = oldParams[k];
                     if (!this.params.action)
                         delete this.params.action;
-                    console.log($.param(this.params));
-                    history.replaceState(null, null, '#/app/?' + $.param(this.params));
+                    let url = this.makeUrl(this.params.view_type);
+                    console.log('replace state', url);
+                    history.replaceState(null, null, url);
                 }
                 let viewType = this.params.view_type;
+                console.log(viewType, this.viewType);
                 if (viewType !== this.viewType) {
                     await this.showView(viewType);
                 }
@@ -566,8 +572,8 @@ var Katrid;
                 }
             }
             async showView(viewType) {
-                if (this.viewType !== viewType)
-                    history.pushState(null, '', this.makeUrl(viewType));
+                if (viewType !== this.viewType)
+                    history.replaceState({ viewType }, '', this.makeUrl(viewType));
                 if (viewType !== 'form') {
                     this.lastViewType = viewType;
                 }
@@ -577,6 +583,7 @@ var Katrid;
                 this.viewInfo = this.views[this.viewType];
                 if (this.viewType in this._cachedViews) {
                     this.view = this._cachedViews[this.viewType];
+                    console.log('cached view', this.view);
                     this.element = this.view.actionView;
                     this.container.append(this.view.actionView);
                 }
@@ -671,7 +678,6 @@ var Katrid;
                 let idx = this.$index;
                 let actions = Katrid.webApp.actionManager.actions;
                 let isLeaf = (actions.length - 1) === idx;
-                console.log('root viwe type', this.lastViewType);
                 if (this.searchModes.length) {
                     if (this.viewType === 'form')
                         res.push(new Actions.Breadcrumb(this, this.makeUrl(this.rootViewType), this.info.name, false, true));
@@ -1485,8 +1491,9 @@ var Katrid;
                 Katrid.webApp = this;
                 this.actionManager = new Katrid.Actions.ActionManager();
                 this.appReady();
-                window.addEventListener('hashchange', (event) => {
-                    this.loadPage(location.hash);
+                let _hash;
+                window.addEventListener('popstate', event => {
+                    this.loadPage(location.hash, event.state === null);
                 });
             }
             appReady() {
@@ -4844,6 +4851,9 @@ var Katrid;
                                 me.action.record = record;
                                 me.action.recordId = record.id;
                                 me.action.recordIndex = index;
+                                history.pushState(null, '', me.action.makeUrl('form'));
+                                me.action.showView('form');
+                                return;
                                 let params = {
                                     id: record.id,
                                     model: me.action.info.model,
