@@ -12552,7 +12552,7 @@ grid[readonly] .grid-editor-control {
 table.grid.inline-editor .form-data-changing td {
   padding: 0;
 }
-table.grid.inline-editor .form-data-changing .grid-field-readonly {
+table.grid.inline-editor .form-data-changing section[readonly] .grid-toolbar {
   display: none;
 }
 table.grid.inline-editor .form-data-changing section[readonly] .grid-field-readonly {
@@ -12579,6 +12579,10 @@ table.grid .form-data-readonly td {
 }
 table.grid .form-data-readonly .grid-field-readonly {
   margin: 4px;
+}
+
+.form-data-readonly .grid-toolbar {
+  display: none;
 }
 
 table.grid.inline-editor .grid-field-readonly {

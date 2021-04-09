@@ -3291,6 +3291,8 @@ var Katrid;
                         this.ngMinLength = info.ngMinLength;
                     if ('widget' in info)
                         this.widget = info.widget;
+                    if ('nolabel' in info)
+                        this.nolabel = info.nolabel ? info.nolabel : true;
                 }
                 assign(el) {
                     for (let attr of el.attributes) {
@@ -3309,7 +3311,7 @@ var Katrid;
                     this._fieldEl = value;
                 }
                 formLabel() {
-                    if (!this.attrs.nolabel) {
+                    if (!this.nolabel) {
                         let label = document.createElement('label');
                         label.innerText = this.caption;
                         label.classList.add('form-label');
@@ -4099,9 +4101,7 @@ var Katrid;
                     return;
                 }
                 formControl() {
-                    if (this.viewMode === 'card')
-                        return;
-                    let grid = document.createElement('field-grid');
+                    let grid = document.createElement('field-grid-view');
                     grid.setAttribute('name', this.name);
                     grid.setAttribute('v-model', 'record.' + this.name);
                     if (this.attrs['v-on:change'])
@@ -4349,11 +4349,24 @@ var Katrid;
         Forms.ListRenderer = ListRenderer;
         function renderOneToManyField(field) {
             let grid = document.createElement('div');
-            let viewInfo = field.views['list'];
-            let renderer = new ListRenderer(viewInfo);
-            grid.setAttribute('field-name', field.name);
-            let table = renderer.render(viewInfo.template, 'records');
-            grid.append(table);
+            let toolbar = document.createElement('div');
+            toolbar.classList.add('grid-toolbar');
+            toolbar.innerHTML = `<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="createNew()">${_.gettext('Add')}</button>`;
+            grid.append(toolbar);
+            let viewInfo = field.views[field.viewMode];
+            if (field.viewMode == 'list') {
+                let renderer = new ListRenderer(viewInfo);
+                grid.setAttribute('field-name', field.name);
+                let table = renderer.render(viewInfo.template, 'records');
+                grid.append(table);
+            }
+            else if (field.viewMode == 'card') {
+                console.log('view info', viewInfo);
+                let renderer = new Katrid.Forms.Views.CardRenderer(viewInfo.fields);
+                grid.setAttribute('field-name', field.name);
+                let table = renderer.render(viewInfo.template);
+                grid.append(table);
+            }
             return grid;
         }
         Forms.renderOneToManyField = renderOneToManyField;
@@ -4385,14 +4398,15 @@ var Katrid;
             view.renderTo();
             return view;
         }
-        Katrid.component('field-grid', {
+        Katrid.component('field-grid-view', {
             props: ['modelValue'],
             render() {
                 let name = this.$attrs.name;
                 let field = this.$parent.view.fields[name];
+                let viewMode = field.viewMode;
                 if (!this.$grid)
                     this.$grid = renderOneToManyField(field);
-                this.view = field.views.list;
+                this.view = field.views[viewMode];
                 this.$data.field = field;
                 return Vue.compile(this.$grid)(this);
             },
@@ -4422,6 +4436,19 @@ var Katrid;
                     let res = await form.showDialog({ backdrop: 'static' });
                     if (res) {
                         this.records[index] = res;
+                        this.record = res;
+                        this.$emit('change', this.record);
+                    }
+                },
+                async createNew() {
+                    let form = await createDialog({
+                        field: this.field,
+                        master: this.$data.dataSource.masterSource,
+                    });
+                    form.dataSource.insert();
+                    let res = await form.showDialog({ backdrop: 'static' });
+                    if (res) {
+                        this.records[0] = res;
                         this.record = res;
                         this.$emit('change', this.record);
                     }
@@ -5771,15 +5798,14 @@ var Katrid;
     (function (Forms) {
         var Views;
         (function (Views) {
-            class Card extends Views.RecordCollectionView {
-                create() {
-                    super.create();
-                    this.viewType = 'card';
-                    this.action.view = this;
+            class CardRenderer {
+                constructor(fields) {
+                    this.fields = fields;
                 }
                 renderField(fieldEl) {
                     let name = fieldEl.getAttribute('name');
                     if (name) {
+                        console.log(this.fields, name);
                         let fld = this.fields[name];
                         if (fld) {
                             fld.view = this;
@@ -5792,7 +5818,7 @@ var Katrid;
                             console.error(`Field "${name}" not found`);
                     }
                 }
-                renderTemplate(template) {
+                render(template) {
                     let templ = Katrid.element(`
     <div class="content no-padding">
       <div class="data-panel col-12">
@@ -5824,6 +5850,18 @@ var Katrid;
                     }
                     templ.querySelector('#template-placeholder').replaceWith(template);
                     return templ;
+                }
+            }
+            Views.CardRenderer = CardRenderer;
+            class Card extends Views.RecordCollectionView {
+                create() {
+                    super.create();
+                    this.viewType = 'card';
+                    this.action.view = this;
+                }
+                renderTemplate(template) {
+                    let cardRenderer = new CardRenderer(this.fields);
+                    return cardRenderer.render(template);
                 }
                 groupBy(data) {
                     for (let group of data)
@@ -5982,14 +6020,14 @@ var Katrid;
                     }
                     if (this.toolbarVisible) {
                         let templ = Katrid.element(`<div ng-form="form" class="ng-form form-view data-form"
-         v-bind:class="{'form-data-changing': changing, 'form-data-readonly': !changing}"
+         v-bind:class="{'form-data-changing': dataSource.changing, 'form-data-readonly': !dataSource.changing}"
     >
       <div class="content">
         <header class="content-container-heading"></header>
         <div class="page-sheet">
           <div class="content container">
             <div class="card panel-default data-panel browsing"
-                 v-bind:class="{ browsing: browsing, editing: changing }">
+                 v-bind:class="{ browsing: browsing, editing: dataSource.changing }">
               <div class="card-body template-placeholder">
                 <a class="maximize-button" role="button" title="${_.gettext('Maximize')}"
                    onclick="$(this).closest('div.card.data-panel').toggleClass('box-fullscreen');$(this).find('i').toggleClass('fa-compress fa-expand')">
@@ -6053,9 +6091,10 @@ var Katrid;
                                 action: {},
                                 record: {},
                                 records: [],
-                                changing: me.dataSource.changing,
+                                dataSource: me.dataSource,
                                 editing: me.dataSource.editing,
                                 browsing: me.dataSource.browsing,
+                                inserting: me.dataSource.inserting,
                                 state: me.dataSource.state,
                                 view: me.viewInfo,
                                 actionView: me,
@@ -6070,7 +6109,7 @@ var Katrid;
                                 me.dataSource.refresh();
                             },
                             openObject(model, id, target) {
-                                if (this.changing)
+                                if (this.dataSource.changing)
                                     target = 'dialog';
                                 openObject(model, id, { target });
                             },
@@ -6130,19 +6169,19 @@ var Katrid;
                     div.classList.add('btn-toolbar');
                     div.innerHTML = `
     <button class="btn btn-primary btn-action-save" type="button" v-bind:disabled="loadingRecord"
-      v-on:click="save()" v-show="changing">
+      v-on:click="save()" v-show="dataSource.changing">
         ${_.gettext('Save')}
       </button>
       <button class="btn btn-primary btn-action-edit" type="button" v-bind:disabled="loadingRecord"
-      v-on:click="edit()" v-show="!changing">
+      v-on:click="edit()" v-show="!dataSource.changing">
         ${_.gettext('Edit')}
       </button>
       <button class="btn btn-outline-secondary btn-action-create" type="button" v-bind:disabled="loadingRecord"
-      v-on:click="insert()" v-show="!changing">
+      v-on:click="insert()" v-show="!dataSource.changing">
         ${_.gettext('Create')}
       </button>
       <button class="btn btn-outline-secondary btn-action-cancel" type="button" v-on:click="cancel()"
-      v-show="changing">
+      v-show="dataSource.changing">
         ${_.gettext('Cancel')}
       </button>`;
                     parent.append(div);
@@ -6183,7 +6222,7 @@ var Katrid;
                     let templ = $(`
     <action-view class="modal" tabindex="-1" role="dialog">
       <div class="modal-dialog modal-lg form-view ng-form" role="document"
-        :class="{'form-data-changing': changing, 'form-data-readonly': !changing}"
+        :class="{'form-data-changing': dataSource.changing, 'form-data-readonly': !dataSource.changing}"
       >
         <div class="modal-content">
           <div class="modal-header">
@@ -6199,19 +6238,19 @@ var Katrid;
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-primary" type="button" @click="actionView.saveAndClose()"
-                    v-if="changing">
+                    v-if="dataSource.changing">
               ${Katrid.i18n.gettext('Save')}
             </button>
             <button type="button" class="btn btn-outline-secondary" type="button" data-dismiss="modal"
-                    v-if="changing">
+                    v-if="dataSource.changing">
               ${Katrid.i18n.gettext('Cancel')}
             </button>
             <button type="button" class="btn btn-outline-secondary" type="button" @click="actionView.deleteAndClose()"
-                    v-if="changing">
+                    v-if="dataSource.changing && !dataSource.inserting">
               ${Katrid.i18n.gettext('Remove')}
             </button>
             <button type="button" class="btn btn-secondary" type="button" data-dismiss="modal"
-                    v-if="!changing">
+                    v-if="!dataSource.changing">
               ${Katrid.i18n.gettext('Close')}
             </button>
           </div>
@@ -7777,9 +7816,9 @@ var Katrid;
               <div class="btn-group pagination-area">
                 <span v-if="pendingRequest"><span class="fas fa-spinner fa-spin"/>  ${_.gettext('Loading...')}</span>
                 <div v-if="!pendingRequest">
-                <span class="paginator">{{$parent.dataOffset|number}} - {{$parent.dataOffsetLimit|number}}</span>
+                <span class="paginator">{{$parent.dataOffset}} - {{$parent.dataOffsetLimit}}</span>
                   /
-                  <span class="total-pages">{{$parent.recordCount|number}}</span>
+                  <span class="total-pages">{{$parent.recordCount}}</span>
                 </div>
               </div>
               <div class="btn-group">
