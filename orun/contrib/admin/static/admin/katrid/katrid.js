@@ -5944,7 +5944,7 @@ var Katrid;
             Views.CustomTag = CustomTag;
             class ActionsTag extends CustomTag {
                 prepare(elements) {
-                    let atts = this.view.templateView.querySelector('.toolbar-action-buttons');
+                    let atts = this.view.templateView.querySelector('.btn-toolbar');
                     for (let actions of elements.values()) {
                         if (!this.view.toolbarVisible) {
                             actions.remove();
