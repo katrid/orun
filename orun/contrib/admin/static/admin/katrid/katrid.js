@@ -2683,7 +2683,7 @@ var Katrid;
                 this._records = oldRecs;
                 let res;
                 for (let child of this.children)
-                    child.scope.records = [];
+                    child.vm.records = [];
                 if (loadDefaults) {
                     if (!kwargs)
                         kwargs = {};
@@ -4898,9 +4898,11 @@ var Katrid;
                         },
                         methods: {
                             createNew() {
-                                console.log('form', me.action);
+                                me.action.recordIndex = -1;
                                 me.action.showView('form');
-                                me.action.view.ready();
+                                setTimeout(() => {
+                                    me.action.view.dataSource.insert();
+                                });
                             },
                             actionRefresh() {
                                 me.dataSource.refresh();
@@ -6023,14 +6025,12 @@ var Katrid;
                 }
                 ready() {
                     if (this.action.dataSource && (this.action.recordIndex >= 0)) {
-                        console.log('load record', this.action.recordIndex);
                         this.dataSource._records = this.action.dataSource.records;
                         this.dataSource.recordIndex = this.action.recordIndex;
                     }
-                    else if (this.action.params?.id) {
+                    else if (this.action.params?.id && !this.dataSource.inserting)
                         this.dataSource.get(this.action.params.id);
-                    }
-                    else
+                    else if (!this.dataSource.inserting)
                         this.dataSource.insert();
                 }
                 renderTemplate(template) {
