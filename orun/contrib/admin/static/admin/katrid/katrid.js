@@ -5351,7 +5351,7 @@ var Katrid;
                 $(this.el).append(template);
                 let el = this.el.querySelector('.dropdown-item:last-child');
                 $(el).data('item', item);
-                el.addEventListener('mouseup', evt => {
+                el.addEventListener('mousedown', evt => {
                     this.input.input.focus();
                     evt.preventDefault();
                     evt.stopPropagation();
