@@ -2718,7 +2718,6 @@ var Katrid;
             }
             setValues(values) {
                 Object.entries(values).forEach(([k, v]) => {
-                    console.log('set field value', k, v);
                     let fld = this.fields[k];
                     if (fld)
                         fld.setValue(this.record, v);
@@ -5933,7 +5932,6 @@ var Katrid;
                     }
                 }
                 selector() {
-                    return ':scope > actions';
                 }
                 prepare(elements) {
                 }
@@ -5966,22 +5964,26 @@ var Katrid;
                             btn.innerHTML = caption + ' ';
                         else
                             btn.innerHTML = actions.innerHTML;
-                        actionsButton.setAttribute('ng-if', `action.viewType === '${this.view.viewType}'`);
-                        let ngShow = actions.getAttribute('ng-show');
-                        if (ngShow)
-                            actionsButton.setAttribute('ng-show', ngShow);
+                        let vShow = actions.getAttribute('v-show');
+                        if (vShow)
+                            actionsButton.setAttribute('v-show', vShow);
+                        let vIf = actions.getAttribute('v-if');
+                        if (vIf)
+                            actionsButton.setAttribute('v-if', vIf);
                         atts.append(actionsButton);
-                        Katrid.Core.$compile(actionsButton)(this.view.action.scope);
                     }
+                }
+                selector() {
+                    return 'actions';
                 }
                 prepareAction(action) {
                     let el = document.createElement('a');
                     el.classList.add('dropdown-item');
                     this.assign(action, el);
                     if (el.hasAttribute('data-action'))
-                        el.setAttribute('ng-click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
+                        el.setAttribute('v-on:click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
                     else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name')))
-                        el.setAttribute('ng-click', `action.formButtonClick(action.selection, '${el.getAttribute('name')}', $event.target)`);
+                        el.setAttribute('v-on:click', `action.formButtonClick(action.selection, '${el.getAttribute('name')}', $event.target)`);
                     if (action.hasAttribute('id'))
                         el.setAttribute('id', action.id);
                     return el;
