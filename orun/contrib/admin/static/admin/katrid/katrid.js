@@ -2718,9 +2718,10 @@ var Katrid;
             }
             setValues(values) {
                 Object.entries(values).forEach(([k, v]) => {
+                    console.log('set field value', k, v);
                     let fld = this.fields[k];
                     if (fld)
-                        fld.fromJSON(v, this);
+                        fld.setValue(this.record, v);
                     else
                         this.record[k] = v;
                 });
@@ -3428,8 +3429,8 @@ var Katrid;
                     span.innerText = `{{ record.${this.name} }}`;
                     return span;
                 }
-                fromJSON(value, dataSource) {
-                    dataSource.record[this.name] = value;
+                setValue(record, value) {
+                    record[this.name] = value;
                 }
                 get hasChoices() {
                     return this.info.choices && this.info.choices.length > 0;
@@ -3721,8 +3722,8 @@ var Katrid;
                 create() {
                     super.create();
                 }
-                fromJSON(value, dataSource) {
-                    dataSource.record[this.name] = parseFloat(value);
+                setValue(record, value) {
+                    record[this.name] = parseFloat(value);
                 }
                 toJSON(val) {
                     if (val && _.isString(val))
@@ -3922,6 +3923,11 @@ var Katrid;
                         return val.id;
                     return val;
                 }
+                setValue(record, value) {
+                    if (Array.isArray(value))
+                        record[this.name] = { id: value[0], text: value[1] };
+                    return value;
+                }
             }
             Fields.ForeignKey = ForeignKey;
             Katrid.filter('foreignKey', value => value?.text);
@@ -4074,15 +4080,15 @@ var Katrid;
                         res.views[k].fields = res.fields;
                     }
                 }
-                fromJSON(val, dataSource) {
-                    if (val && val instanceof Array) {
-                        let child = dataSource.childByName(this.name);
-                        val.map((obj) => {
+                setValue(record, value) {
+                    if (value && value instanceof Array) {
+                        let child = record.$record.dataSource.childByName(this.name);
+                        value.map((obj) => {
                             if (obj.action === 'CLEAR') {
                                 for (let rec of child.scope.records)
                                     rec.$record.delete();
                                 child.scope.records = [];
-                                dataSource.record[this.name] = [];
+                                record.$record.dataSource.record[this.name] = [];
                             }
                             else if (obj.action === 'CREATE') {
                                 child.addRecord(obj.values);
@@ -5742,9 +5748,9 @@ var Katrid;
                     this._loading = false;
                 }
                 setFieldValue(field, value) {
-                    console.log('set field value', field, value);
                     let f = this.fields[field.name];
-                    f.dirty = true;
+                    if (f)
+                        f.dirty = true;
                 }
                 setTouched(value) {
                     this.touched = value;
