@@ -5186,7 +5186,7 @@ var Katrid;
                     modelValue(value) {
                         if (value) {
                             if ((this.$input.value === '') || (value !== moment(this.$input.value, Katrid.i18n.formats.shortDateTimeFormat).toISOString()))
-                                this.$input.value = value;
+                                this.$input.value = moment(value).format(Katrid.i18n.formats.shortDateTimeFormat);
                         }
                         else
                             this.$input.value = '';
