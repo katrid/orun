@@ -4793,6 +4793,7 @@ var Katrid;
                     btnCreate.type = 'button';
                     btnCreate.classList.add('btn', 'btn-primary', 'btn-action-create');
                     btnCreate.innerText = _.gettext('Create');
+                    btnCreate.setAttribute('v-on:click', 'createNew()');
                     let parent = container.querySelector('.toolbar-action-buttons');
                     parent.append(btnCreate);
                     return parent;
@@ -4875,6 +4876,11 @@ var Katrid;
                             };
                         },
                         methods: {
+                            createNew() {
+                                console.log('form', me.action);
+                                me.action.showView('form');
+                                me.action.view.ready();
+                            },
                             actionRefresh() {
                                 me.dataSource.refresh();
                             },
@@ -6003,6 +6009,8 @@ var Katrid;
                     else if (this.action.params?.id) {
                         this.dataSource.get(this.action.params.id);
                     }
+                    else
+                        this.dataSource.insert();
                 }
                 renderTemplate(template) {
                     let form = template;
