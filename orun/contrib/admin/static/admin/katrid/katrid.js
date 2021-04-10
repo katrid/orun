@@ -3197,13 +3197,7 @@ var Katrid;
             }
             return new Proxy(rec, {
                 set(target, propKey, value, receiver) {
-                    if (propKey === '$selected') {
-                        if (value)
-                            dataSource.action.selection.selectRecord(receiver);
-                        else
-                            dataSource.action.selection.unselectRecord(receiver);
-                    }
-                    else if (!propKey.startsWith('$$')) {
+                    if (!propKey.startsWith('$$')) {
                         let scope = dataSource.vm;
                         let field = dataSource.fieldByName(propKey);
                         if (!propKey.startsWith('$') && scope && field && !(field instanceof Katrid.Data.Fields.OneToManyField)) {
@@ -4257,6 +4251,7 @@ var Katrid;
             constructor(viewInfo) {
                 this.viewInfo = viewInfo;
                 this.inlineEditor = false;
+                this.rowSelector = false;
                 this.columns = [];
             }
             render(list, records) {
@@ -4275,9 +4270,9 @@ var Katrid;
                 this.tRow = document.createElement('tr');
                 if (options.rowSelector) {
                     this.tHeadRow.innerHTML = `<th class="list-record-selector">
-        <input type="checkbox" ng-model="action.selection.allSelected" ng-click="action.selection.toggleAll()" onclick="event.stopPropagation()">
+        <input type="checkbox" v-model="allSelected" v-on:click.stop="toggleAll()">
           </th>`;
-                    this.tRow.innerHTML = `<th class="list-record-selector" onclick="event.stopPropagation()" v-on:click="action.selection.selectToggle(record)">
+                    this.tRow.innerHTML = `<th class="list-record-selector" v-on:click.stop="selectToggle(record)">
         <input type="checkbox" v-model="record.$selected">
           </th>`;
                 }
@@ -4351,7 +4346,10 @@ var Katrid;
             let grid = document.createElement('div');
             let toolbar = document.createElement('div');
             toolbar.classList.add('grid-toolbar');
-            toolbar.innerHTML = `<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="createNew()">${_.gettext('Add')}</button>`;
+            toolbar.innerHTML = `
+<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="createNew()">${_.gettext('Add')}</button>
+<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="deleteSelection()">${_.gettext('Delete')}</button>
+`;
             grid.append(toolbar);
             let viewInfo = field.views[field.viewMode];
             if (field.viewMode == 'list') {
@@ -4412,6 +4410,7 @@ var Katrid;
             },
             data() {
                 return {
+                    allSelected: false,
                     action: {},
                     record: {},
                     records: [],
@@ -4452,7 +4451,20 @@ var Katrid;
                         this.record = res;
                         this.$emit('change', this.record);
                     }
-                }
+                },
+                toggleAll() {
+                    this.allSelected = !this.allSelected;
+                    for (let rec of this.records)
+                        rec.$selected = this.allSelected;
+                },
+                deleteSelection() {
+                    this.allSelected = false;
+                    for (let rec of this.records)
+                        if (rec.$selected) {
+                            rec.$record.delete();
+                            this.records.splice(this.records.indexOf(rec), 1);
+                        }
+                },
             },
             mounted() {
                 let model = new Katrid.Services.Model(this.field.model);
@@ -4465,6 +4477,13 @@ var Katrid;
                     action: {},
                     pageLimit: this.$data.field.info.page_limit,
                 });
+                this.$selection = new Katrid.Forms.Views.SelectionHelper();
+                this.$selection.dataSource = this.$data.dataSource;
+            },
+            watch: {
+                records(value) {
+                    this.allSelected = false;
+                },
             },
         });
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -4502,13 +4521,15 @@ var Katrid;
                     record.$selected = !record.$selected;
                 }
                 selectRecord(record) {
-                    $(this._element).find(`tr[data-id=${record.id}]`).addClass('selected');
+                    console.log('select record', record);
+                    record.$selected = true;
                     this.push(record);
                 }
                 toggleAll() {
                     this.allSelected = !this.allSelected;
-                    for (let rec of this.dataSource.records)
+                    for (let rec of this.dataSource.records) {
                         rec.$selected = this.allSelected;
+                    }
                     if (!this.allSelected)
                         this.length = 0;
                 }
