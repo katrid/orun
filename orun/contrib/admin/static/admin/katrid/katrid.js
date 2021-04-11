@@ -802,8 +802,6 @@ var Katrid;
             async formButtonClick(id, meth, self) {
                 try {
                     this.pendingOperation = true;
-                    if (id instanceof Katrid.Forms.Views.SelectionHelper)
-                        id = id.map(obj => obj.id);
                     let res = await this.model.rpc(meth, [id], null, this);
                     if (res.tag === 'refresh')
                         this.refresh();
@@ -891,7 +889,7 @@ var Katrid;
                         return;
                 }
                 if (this.selection)
-                    return Array.from(this.selection).map((obj) => obj.id);
+                    return this.dataSource.records.map((obj) => obj.id);
             }
             set attachments(value) {
                 this.scope.$apply(() => this.scope.attachments = value);
@@ -4713,7 +4711,7 @@ var Katrid;
                         let sendFile = $btn.attr('send-file');
                         $btn.attr('button-object', $btn.attr('name'));
                         if (sendFile === undefined) {
-                            $btn.attr('ng-click', `action.formButtonClick(action.selection, '${$btn.attr('name')}', $event.target);$event.stopPropagation();`);
+                            $btn.attr('v-on:click', `actionClick(selection, '${$btn.attr('name')}', $event)`);
                         }
                         else {
                             let idSendFile = `__send_file_${++sendFileCounter}`;
@@ -4890,6 +4888,8 @@ var Katrid;
                     let vm = Katrid.createView({
                         data() {
                             return {
+                                allSelected: false,
+                                selection: [],
                                 action: me.action,
                                 record: {},
                                 records: [],
@@ -4899,6 +4899,7 @@ var Katrid;
                                 recordCount: 0,
                                 dataOffset: 0,
                                 dataOffsetLimit: 0,
+                                selectionLength: 0,
                             };
                         },
                         methods: {
@@ -4936,8 +4937,32 @@ var Katrid;
                                 }
                                 else
                                     Katrid.app.loadPage('#/app/?' + $.param(params), false);
-                            }
-                        }
+                            },
+                            actionClick(selection, methodName, event) {
+                                me.action.formButtonClick(selection.map(obj => obj.id), methodName);
+                            },
+                            selectToggle(record) {
+                                record.$selected = !record.$selected;
+                                if (record.$selected && !this.selection.includes(record))
+                                    this.selection.push(record);
+                                else if (!record.$selected && this.selection.includes(record))
+                                    this.selection.splice(this.selection.indexOf(record), 1);
+                                this.selectionLength = this.selection.length;
+                            },
+                            toggleAll() {
+                                this.allSelected = !this.allSelected;
+                                for (let rec of this.records)
+                                    rec.$selected = this.allSelected;
+                                if (this.allSelected) {
+                                    this.selectionLength = this.records.length;
+                                    this.selection = [...this.records];
+                                }
+                                else {
+                                    this.selection = [];
+                                    this.selectionLength = 0;
+                                }
+                            },
+                        },
                     }).mount(el);
                     this.dataSource.vm = vm;
                     this.actionView = el;
@@ -6232,7 +6257,6 @@ var Katrid;
                 let res = await svc.loadViews({
                     views: { form: null },
                 });
-                console.log('open object', model, id);
                 if (target === 'dialog') {
                     let dlg = new FormViewDialog({
                         model: svc,
@@ -6354,13 +6378,6 @@ var Katrid;
                     templ.querySelector('.template-placeholder').append(this.element);
                     return templ;
                 }
-                afterRender(el) {
-                    let actionView = super.afterRender(el);
-                    this.selection = new Katrid.Forms.Views.SelectionHelper();
-                    this.selection.element = this.element;
-                    this.selection.dataSource = this.action.dataSource;
-                    return actionView;
-                }
                 groupBy(data) {
                 }
             }
@@ -6389,9 +6406,9 @@ var Katrid;
                     this.tRow = document.createElement('tr');
                     if (options.rowSelector) {
                         this.tHeadRow.innerHTML = `<th class="list-record-selector">
-        <input type="checkbox" ng-model="action.selection.allSelected" ng-click="action.selection.toggleAll()" onclick="event.stopPropagation()">
+        <input type="checkbox" v-model="allSelected" v-on:click.stop="toggleAll()">
           </th>`;
-                        this.tRow.innerHTML = `<th class="list-record-selector" v-if="!record.$hasChildren" onclick="event.stopPropagation()" v-on:click="action.selection.selectToggle(record)">
+                        this.tRow.innerHTML = `<th class="list-record-selector" v-if="!record.$hasChildren" v-on:click.stop="selectToggle(record)">
         <input type="checkbox" v-model="record.$selected">
           </th>`;
                     }
@@ -6399,7 +6416,7 @@ var Katrid;
                     groupHeader.setAttribute('v-if', 'record.$hasChildren');
                     groupHeader.colSpan = 2;
                     groupHeader.innerHTML = `<i class="indent-::record.$level">&nbsp;</i>
-      <span class="fas fa-fw fa-caret-right" ng-class="{'fa-caret-down': record.$expanded, 'fa-caret-right': !record.$expanded}"></span>
+      <span class="fas fa-fw fa-caret-right" :class="{'fa-caret-down': record.$expanded, 'fa-caret-right': !record.$expanded}"></span>
           {{record.__str__}}`;
                     this.tRow.append(groupHeader);
                     if (options.showStar) {
@@ -6409,7 +6426,7 @@ var Katrid;
                         let td = document.createElement('th');
                         td.classList.add('list-record-star');
                         td.title = 'Mark with star';
-                        td.setAttribute('v-click', '$event.stopPropagation();action.markStar(record);');
+                        td.setAttribute('v-on:click.stop', 'action.markStar(record)');
                         td.innerHTML = `<i class="far fa-fw fa-star"></i>`;
                         this.tRow.append(td);
                     }
