@@ -3584,7 +3584,7 @@ var Katrid;
                     super.create();
                 }
                 formSpanTemplate() {
-                    return `{{ (record.${this.name} || '${this.emptyText}' }}`;
+                    return `{{ record.${this.name} || '${this.emptyText}' }}`;
                 }
                 formControl() {
                     let control = super.formControl();
@@ -6232,6 +6232,7 @@ var Katrid;
                 let res = await svc.loadViews({
                     views: { form: null },
                 });
+                console.log('open object', model, id);
                 if (target === 'dialog') {
                     let dlg = new FormViewDialog({
                         model: svc,
