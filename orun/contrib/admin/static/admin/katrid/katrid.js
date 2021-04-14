@@ -4379,7 +4379,7 @@ var Katrid;
         function renderGrid(el, viewInfo) {
         }
         Forms.renderGrid = renderGrid;
-        async function createDialog(config) {
+        function createDialog(config) {
             let formInfo = config.field.views.form;
             let relField = formInfo.fields[config.field.info.field];
             if (relField)
@@ -4427,7 +4427,7 @@ var Katrid;
             },
             methods: {
                 async recordClick(event, index, record) {
-                    let form = await createDialog({
+                    let form = createDialog({
                         field: this.field, record, index,
                         master: this.$data.dataSource.masterSource,
                     });
@@ -5373,23 +5373,26 @@ var Katrid;
             }
             addItem(item) {
                 this.items.push(item);
-                let template = item.template || item.text;
+                let template = item.template;
                 if (typeof template === 'function')
                     template = template();
-                else
-                    template = `<a class="dropdown-item">${template}</a>`;
+                else if (!template)
+                    template = `<a class="dropdown-item">${item.text}</a>`;
                 $(this.el).append(template);
                 let el = this.el.querySelector('.dropdown-item:last-child');
                 $(el).data('item', item);
-                el.addEventListener('mousedown', evt => {
-                    this.input.input.focus();
-                    evt.preventDefault();
-                    evt.stopPropagation();
-                    let target = evt.target;
-                    if (target.tagName != 'A')
-                        target = target.closest('a.dropdown-item');
-                    this.onSelectItem(target);
-                });
+                if (item.click)
+                    el.addEventListener('mousedown', item.click);
+                else
+                    el.addEventListener('mousedown', evt => {
+                        this.input.input.focus();
+                        evt.preventDefault();
+                        evt.stopPropagation();
+                        let target = evt.target;
+                        if (target.tagName != 'A')
+                            target = target.closest('a.dropdown-item');
+                        this.onSelectItem(target);
+                    });
                 this._elements.push(el);
                 return el;
             }
@@ -5453,6 +5456,7 @@ var Katrid;
             create() {
                 if (this._created)
                     return;
+                this._created = true;
                 this.classList.add('input-autocomplete', 'input-dropdown');
                 let append = '';
                 let name = this.getAttribute('name');
@@ -5460,7 +5464,6 @@ var Katrid;
                 if (this.hasAttribute('allow-open'))
                     append = `<span class="fa fa-fw fa-folder-open autocomplete-open" v-on:click="openObject('${model}', record.${name}.id)"></span>`;
                 this.innerHTML = `<input class="form-control" autocomplete="nope" spellcheck="false"> <span class="caret"></span>` + append;
-                this._created = true;
                 this.input = this.querySelector('input');
                 let caret = this.querySelector('.caret');
                 caret.addEventListener('click', evt => this.click());
@@ -5618,11 +5621,14 @@ var Katrid;
             class InputForeignKeyElement extends Katrid.UI.BaseAutoComplete {
                 constructor() {
                     super(...arguments);
-                    this.allowSearchMode = true;
+                    this.allowSearchMore = true;
                     this.allowCreateNew = true;
                 }
                 create(field) {
+                    if (this._created)
+                        return;
                     super.create();
+                    this.allowCreateNew = this.getAttribute('allow-create') !== 'false';
                     let name = this.getAttribute('name');
                     this.field = field;
                     this.actionView = this.closest('action-view');
@@ -5645,7 +5651,19 @@ var Katrid;
                             let res = await this.actionView.view.model.getFieldChoices({
                                 field: this.field.name, term: query.term, kwargs: data.kwargs
                             });
-                            return res.items;
+                            let items = res.items;
+                            if (this.allowCreateNew)
+                                items.push({
+                                    template: '<a class="dropdown-item"><i>Criar novo...</i></a>', click: async (event) => {
+                                        event.stopPropagation();
+                                        let dlg = await Katrid.Forms.Views.FormViewDialog.createNew({ model: field.model });
+                                        console.log('show dialog', dlg);
+                                        let res = await dlg.showDialog();
+                                        if (res)
+                                            dlg.dataSource.save();
+                                    }
+                                });
+                            return items;
                         }
                         else {
                             let scope = angular.element(this.parentElement).scope();
@@ -5653,8 +5671,6 @@ var Katrid;
                                 let res = await scope.model.getFieldChoices({
                                     field: this.field.name, term: query.term, kwargs: data.kwargs
                                 });
-                                let items = res.items;
-                                items.push({ template: '<a class="dropdown-item">Criar novo...</a>' });
                                 return res.items;
                             }
                         }
@@ -6337,6 +6353,21 @@ var Katrid;
                             $(el).data('modal', null);
                         });
                     });
+                }
+                static async createNew(config) {
+                    let formInfo = config.viewInfo;
+                    let model = new Katrid.Services.Model(config.model);
+                    if (!formInfo)
+                        formInfo = new Views.ViewInfo(await model.getViewInfo({ view_type: 'form' }));
+                    let dlg = new Katrid.Forms.Views.FormViewDialog({
+                        action: {
+                            model,
+                        },
+                        viewInfo: formInfo,
+                    });
+                    dlg.renderTo();
+                    await dlg.dataSource.insert();
+                    return dlg;
                 }
                 closeDialog() {
                     $(this.actionView).modal('hide');
