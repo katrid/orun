@@ -748,17 +748,7 @@ var Katrid;
                 return r;
             }
             async setSearchParams(params) {
-                console.log('set search params', params);
-                let p = {};
-                if (this.info.domain)
-                    p = JSON.parse(this.info.domain);
-                for (let [k, v] of Object.entries(p)) {
-                    let arg = {};
-                    arg[k] = v;
-                    params.push(arg);
-                }
-                console.log('search params', params);
-                await this.dataSource.search(params);
+                this.view.setSearchParams(params);
             }
             async applyGroups(groups, params) {
                 let res = await this.dataSource.groupBy(groups, params);
@@ -4789,6 +4779,7 @@ var Katrid;
                     this.action = config.action;
                     this.model = config.model || this.action.model;
                     this.viewInfo = config.viewInfo;
+                    this.caption = config.caption;
                     this.create();
                 }
                 create() {
@@ -4807,10 +4798,13 @@ var Katrid;
                     this._dataSource.requestCallback = (pending) => this.vm.pendingRequest = pending;
                 }
                 get content() {
+                    console.log('view info', this.viewInfo);
                     return this.viewInfo.content;
                 }
                 get dataSource() {
                     return this._dataSource;
+                }
+                setSearchParams(params) {
                 }
                 createToolbarButtons(container) {
                     let btnCreate = document.createElement('button');
@@ -5007,6 +5001,17 @@ var Katrid;
                     if (this.autoLoad)
                         this.dataSource.open();
                     this.action.dataSource = this._dataSource;
+                }
+                async setSearchParams(params) {
+                    let p = {};
+                    if (this.action.info?.domain)
+                        p = JSON.parse(this.action.info.domain);
+                    for (let [k, v] of Object.entries(p)) {
+                        let arg = {};
+                        arg[k] = v;
+                        params.push(arg);
+                    }
+                    await this.dataSource.search(params);
                 }
                 createToolbar() {
                     let templ = `<div class="data-heading panel panel-default">
@@ -5621,7 +5626,7 @@ var Katrid;
             class InputForeignKeyElement extends Katrid.UI.BaseAutoComplete {
                 constructor() {
                     super(...arguments);
-                    this.allowSearchMore = true;
+                    this.allowAdvancedSearch = true;
                     this.allowCreateNew = true;
                 }
                 create(field) {
@@ -5629,6 +5634,7 @@ var Katrid;
                         return;
                     super.create();
                     this.allowCreateNew = this.getAttribute('allow-create') !== 'false';
+                    this.allowAdvancedSearch = this.getAttribute('allow-search') !== 'false';
                     let name = this.getAttribute('name');
                     this.field = field;
                     this.actionView = this.closest('action-view');
@@ -5652,12 +5658,22 @@ var Katrid;
                                 field: this.field.name, term: query.term, kwargs: data.kwargs
                             });
                             let items = res.items;
+                            if (this.allowAdvancedSearch)
+                                items.push({
+                                    template: '<a class="dropdown-item"><i>Pesquisar mais...</i></a>',
+                                    click: async (event) => {
+                                        event.stopPropagation();
+                                        let dlg = await Katrid.Forms.Views.ListViewDialog.showDialog({
+                                            model: field.model,
+                                            caption: field.caption,
+                                        });
+                                    },
+                                });
                             if (this.allowCreateNew)
                                 items.push({
                                     template: '<a class="dropdown-item"><i>Criar novo...</i></a>', click: async (event) => {
                                         event.stopPropagation();
                                         let dlg = await Katrid.Forms.Views.FormViewDialog.createNew({ model: field.model });
-                                        console.log('show dialog', dlg);
                                         let res = await dlg.showDialog();
                                         if (res)
                                             dlg.dataSource.save();
@@ -6390,12 +6406,17 @@ var Katrid;
         var Views;
         (function (Views) {
             class ListView extends Views.RecordCollectionView {
+                constructor() {
+                    super(...arguments);
+                    this.rowSelector = true;
+                }
                 create() {
                     super.create();
                     this.viewType = 'list';
                     this.action.view = this;
                 }
                 renderTemplate(template) {
+                    template.setAttribute('data-options', JSON.stringify({ rowSelector: this.rowSelector }));
                     let renderer = new Forms.ListRenderer(this.viewInfo);
                     let templ = Katrid.element(`<div class="content no-padding">
       <div class="clearfix"></div>
@@ -6404,7 +6425,8 @@ var Katrid;
       <div class="panel-body no-padding">
       <div class="form-inline footer template-placeholder"></div>
         </div></div></div>`);
-                    this.mergeHeader(templ.querySelector('header'), template);
+                    if (this.toolbarVisible)
+                        this.mergeHeader(templ.querySelector('header'), template);
                     this.element = renderer.render(template);
                     templ.querySelector('.template-placeholder').append(this.element);
                     return templ;
@@ -6413,6 +6435,75 @@ var Katrid;
                 }
             }
             Views.ListView = ListView;
+            class ListViewDialog extends ListView {
+                constructor() {
+                    super(...arguments);
+                    this.toolbarVisible = false;
+                    this.rowSelector = false;
+                }
+                createActionView(content) {
+                    let templ = $(`
+    <action-view class="modal" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-lg form-view ng-form" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              ${this.caption}
+            </h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                aria-hidden="true">&times;</span></button>
+          </div>
+          <div class="modal-body data-form data-panel">
+            <search-view class="col-12"/>
+               
+            <div class="clearfix"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" type="button" @click="actionView.deleteAndClose()">
+              OK
+            </button>
+            <button type="button" class="btn btn-secondary" type="button" data-dismiss="modal">
+              ${Katrid.i18n.gettext('Close')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </action-view>
+      `)[0];
+                    this.templateView = templ;
+                    templ.querySelector('.modal-body').append(content);
+                    return templ;
+                }
+                static showDialog(config) {
+                    return new Promise(async (resolve, reject) => {
+                        let viewInfo = config.viewInfo;
+                        let model = new Katrid.Services.Model(config.model);
+                        if (!viewInfo)
+                            viewInfo = await model.loadViews({
+                                views: { list: null, search: null },
+                            });
+                        let dlg = new ListViewDialog({
+                            caption: config.caption,
+                            model, viewInfo: viewInfo.views.list,
+                            action: {
+                                views: viewInfo.views,
+                                setSearchParams(params) {
+                                    dlg.setSearchParams(params);
+                                },
+                            },
+                        });
+                        dlg.renderTo();
+                        let el = dlg.actionView;
+                        $(el).modal(config.options)
+                            .on('hidden.bs.modal', () => {
+                            resolve(true);
+                            $(el).data('modal', null);
+                        });
+                        return dlg;
+                    });
+                }
+            }
+            Views.ListViewDialog = ListViewDialog;
             class ListViewElement extends Views.WindowElement {
                 constructor() {
                     super(...arguments);
@@ -6581,7 +6672,6 @@ var Katrid;
                 }
                 filterByFieldContent(td, record) {
                     let name = td.getAttribute('data-name');
-                    console.log('field name', td);
                     if (name) {
                         let val = record[name];
                         this._action.addFilter(name, val);
