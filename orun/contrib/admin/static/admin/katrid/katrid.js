@@ -4424,11 +4424,17 @@ var Katrid;
                     form.dataSource.record = record;
                     form.vm.parent = this.$parent;
                     record = await record.$record.load(record);
-                    form.dataSource.edit();
-                    let res = await form.showDialog({ backdrop: 'static' });
+                    let res = await form.showDialog({ edit: this.$parent.changing, backdrop: 'static' });
                     if (res) {
-                        this.records[index] = res;
-                        this.record = res;
+                        if (res.$record.state === Katrid.Data.RecordState.destroyed)
+                            this.records.reverse().forEach((rec, idx) => {
+                                if (rec.$record.state === Katrid.Data.RecordState.destroyed)
+                                    this.records.splice(idx, 1);
+                            });
+                        else {
+                            this.records[index] = res;
+                            this.record = res;
+                        }
                         this.$emit('change', this.record);
                     }
                 },
@@ -6190,6 +6196,7 @@ var Katrid;
                                 browsing: me.dataSource.browsing,
                                 inserting: me.dataSource.inserting,
                                 state: me.dataSource.state,
+                                name: '',
                                 view: me.viewInfo,
                                 actionView: me,
                                 loadingRecord: false,
@@ -6248,6 +6255,7 @@ var Katrid;
                         this.vm.editing = this.dataSource.editing;
                         this.vm.browsing = this.dataSource.browsing;
                         this.vm.loadingRecord = this.dataSource.loadingRecord;
+                        console.log('state change', this.dataSource.changing);
                     };
                     this.dataSource.vm = vm;
                     let vForm = el.querySelector('.v-form');
@@ -6276,7 +6284,7 @@ var Katrid;
       </button>
       <button class="btn btn-outline-secondary btn-action-cancel" type="button" v-on:click="cancel()"
       v-show="dataSource.changing">
-        ${_.gettext('Cancel')}
+        ${_.gettext('Discard')}
       </button>`;
                     parent.append(div);
                     return parent;
@@ -6316,7 +6324,7 @@ var Katrid;
                     let templ = $(`
     <action-view class="modal" tabindex="-1" role="dialog">
       <div class="modal-dialog modal-lg form-view ng-form" role="document"
-        :class="{'form-data-changing': dataSource.changing, 'form-data-readonly': !dataSource.changing}"
+        :class="{'form-data-changing': changing, 'form-data-readonly': !changing}"
       >
         <div class="modal-content">
           <div class="modal-header">
@@ -6337,7 +6345,7 @@ var Katrid;
             </button>
             <button type="button" class="btn btn-outline-secondary" type="button" data-dismiss="modal"
                     v-if="dataSource.changing">
-              ${Katrid.i18n.gettext('Cancel')}
+              ${Katrid.i18n.gettext('Discard')}
             </button>
             <button type="button" class="btn btn-outline-secondary" type="button" @click="actionView.deleteAndClose()"
                     v-if="dataSource.changing && !dataSource.inserting">
@@ -6359,15 +6367,17 @@ var Katrid;
                 showDialog(options) {
                     return new Promise(async (resolve, reject) => {
                         let el = this.actionView;
-                        if (!el)
-                            el = this.renderTo();
                         if (options?.id)
                             await this.dataSource.get(options.id);
+                        if (!el)
+                            el = this.renderTo();
                         $(el).modal(options)
                             .on('hidden.bs.modal', () => {
                             resolve(this.$result);
                             $(el).data('modal', null);
                         });
+                        if (options?.edit)
+                            this.vm.dataSource.edit();
                     });
                 }
                 static async createNew(config) {
@@ -6392,6 +6402,13 @@ var Katrid;
                     this.$result = this.dataSource.flush(true, false);
                     if (this.$result)
                         this.closeDialog();
+                }
+                recordClick(event, index, record) {
+                }
+                deleteAndClose() {
+                    this.vm.record.$record.delete();
+                    this.$result = this.vm.record;
+                    this.closeDialog();
                 }
             }
             Views.FormViewDialog = FormViewDialog;
