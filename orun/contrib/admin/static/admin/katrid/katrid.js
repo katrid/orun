@@ -5085,7 +5085,7 @@ var Katrid;
                     let btnActions = document.createElement('div');
                     btnActions.classList.add('btn-group');
                     btnActions.innerHTML = `<div class="dropdown">
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" v-show="action.selectionLength"
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" v-show="selectionLength"
                 aria-haspopup="true">
           ${_.gettext('Action')} <span class="caret"></span>
         </button>
