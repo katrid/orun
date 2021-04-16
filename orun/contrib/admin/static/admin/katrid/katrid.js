@@ -4427,10 +4427,7 @@ var Katrid;
                     let res = await form.showDialog({ edit: this.$parent.changing, backdrop: 'static' });
                     if (res) {
                         if (res.$record.state === Katrid.Data.RecordState.destroyed)
-                            this.records.reverse().forEach((rec, idx) => {
-                                if (rec.$record.state === Katrid.Data.RecordState.destroyed)
-                                    this.records.splice(idx, 1);
-                            });
+                            this.records.splice(index, 1);
                         else {
                             this.records[index] = res;
                             this.record = res;
