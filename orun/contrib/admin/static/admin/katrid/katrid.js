@@ -4341,7 +4341,7 @@ var Katrid;
             toolbar.classList.add('grid-toolbar');
             toolbar.innerHTML = `
 <button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="createNew()">${_.gettext('Add')}</button>
-<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="deleteSelection()">${_.gettext('Delete')}</button>
+<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="deleteSelection()" v-show="selectionLength">${_.gettext('Delete')}</button>
 `;
             grid.append(toolbar);
             let viewInfo = field.views[field.viewMode];
@@ -4352,7 +4352,6 @@ var Katrid;
                 grid.append(table);
             }
             else if (field.viewMode == 'card') {
-                console.log('view info', viewInfo);
                 let renderer = new Katrid.Forms.Views.CardRenderer(viewInfo.fields);
                 grid.setAttribute('field-name', field.name);
                 let table = renderer.render(viewInfo.template);
@@ -4404,6 +4403,7 @@ var Katrid;
             data() {
                 return {
                     allSelected: false,
+                    selection: [],
                     action: {},
                     record: {},
                     records: [],
@@ -4412,6 +4412,7 @@ var Katrid;
                     recordCount: 0,
                     dataOffset: 0,
                     dataOffsetLimit: 0,
+                    selectionLength: 0,
                     parent: null,
                 };
             },
@@ -4452,14 +4453,30 @@ var Katrid;
                     this.allSelected = !this.allSelected;
                     for (let rec of this.records)
                         rec.$selected = this.allSelected;
+                    if (this.allSelected)
+                        this.selection = this.records;
+                    else
+                        this.selection = [];
+                    this.selectionLength = this.selection.length;
+                },
+                selectToggle(record) {
+                    record.$selected = !record.$selected;
+                    if (record.$selected && !this.selection.includes(record))
+                        this.selection.push(record);
+                    else if (!record.$selected && this.selection.includes(record))
+                        this.selection.splice(this.selection.indexOf(record), 1);
+                    this.selectionLength = this.selection.length;
                 },
                 deleteSelection() {
                     this.allSelected = false;
-                    for (let rec of this.records)
-                        if (rec.$selected) {
-                            rec.$record.delete();
-                            this.records.splice(this.records.indexOf(rec), 1);
-                        }
+                    for (let rec of this.selection)
+                        rec.$record.delete();
+                    this.records.reverse().map((rec, idx) => {
+                        if (rec.$record.state === Katrid.Data.RecordState.destroyed)
+                            this.records.splice(idx, 1);
+                    });
+                    this.selection = [];
+                    this.selectionLength = 0;
                 },
             },
             mounted() {
