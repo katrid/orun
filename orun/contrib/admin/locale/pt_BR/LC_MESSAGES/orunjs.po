@@ -24,6 +24,9 @@ msgstr "Finalizar Sessão"
 msgid "Delete"
 msgstr "Excluir"
 
+msgid "Remove"
+msgstr "Remover"
+
 msgid "Delete selection"
 msgstr "Excluir seleção"
 
@@ -35,6 +38,9 @@ msgstr "Salvar"
 
 msgid "Cancel"
 msgstr "Cancelar"
+
+msgid "Discard"
+msgstr "Descartar"
 
 msgid "Add"
 msgstr "Adicionar"
