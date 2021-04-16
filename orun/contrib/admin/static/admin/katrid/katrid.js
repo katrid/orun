@@ -120,7 +120,6 @@ var Katrid;
                 Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx);
             }
             openObject(service, objectId, evt) {
-                console.log('open object');
                 evt.preventDefault();
                 evt.stopPropagation();
                 let href = evt.target.href;
@@ -233,7 +232,6 @@ var Katrid;
             clear() {
                 Katrid.app.element.innerHTML = '';
                 for (let action of this.actions) {
-                    console.log('clear', action);
                     action.state = { clear: true };
                     action.$destroy();
                 }
@@ -249,13 +247,11 @@ var Katrid;
             }
             async onHashChange(params, reset) {
                 let actionId = params.action;
-                console.log('reset', reset);
                 let oldAction, action;
                 action = oldAction = this.currentAction;
                 let oldActionId;
                 if (oldAction)
                     oldActionId = oldAction.info.id;
-                console.log('state', history.state);
                 if (reset) {
                     this.clear();
                     if (this.currentAction)
@@ -1488,7 +1484,6 @@ var Katrid;
                 this.appReady();
                 let _hash;
                 window.addEventListener('popstate', event => {
-                    console.log(event);
                     this.loadPage(location.hash, (event.state === null) || (event.state?.clear));
                 });
             }
@@ -1526,7 +1521,6 @@ var Katrid;
                 let params = {};
                 for (let [k, v] of _hash.entries())
                     params[k] = v;
-                console.log('params', params);
                 if (!this.currentMenu || (params.menu_id && (this.currentMenu.id != params.menu_id))) {
                     this.currentMenu = {
                         id: params.menu_id,
@@ -5874,7 +5868,6 @@ var Katrid;
             Katrid.component('status-field', {
                 template: `<div><slot></slot></div>`,
                 mounted() {
-                    console.log(this.$el.parent);
                 }
             });
         })(Controls = Forms.Controls || (Forms.Controls = {}));
@@ -6242,11 +6235,8 @@ var Katrid;
                             sum(obj, field) {
                                 let res = 0;
                                 if (obj)
-                                    for (let record of obj) {
+                                    for (let record of obj)
                                         res += record[field] || 0;
-                                        console.log('sum line', record[field], record);
-                                    }
-                                console.log('sum', res);
                                 return res;
                             }
                         }
@@ -6258,7 +6248,6 @@ var Katrid;
                         this.vm.editing = this.dataSource.editing;
                         this.vm.browsing = this.dataSource.browsing;
                         this.vm.loadingRecord = this.dataSource.loadingRecord;
-                        console.log('state change', this.dataSource.changing);
                     };
                     this.dataSource.vm = vm;
                     let vForm = el.querySelector('.v-form');
@@ -6300,6 +6289,7 @@ var Katrid;
                 let res = await svc.loadViews({
                     views: { form: null },
                 });
+                await res.views.form.loadPendingViews();
                 if (target === 'dialog') {
                     let dlg = new FormViewDialog({
                         model: svc,
@@ -6388,6 +6378,7 @@ var Katrid;
                     let model = new Katrid.Services.Model(config.model);
                     if (!formInfo)
                         formInfo = new Views.ViewInfo(await model.getViewInfo({ view_type: 'form' }));
+                    await formInfo.loadPendingViews();
                     let dlg = new Katrid.Forms.Views.FormViewDialog({
                         action: {
                             model,
@@ -6475,7 +6466,6 @@ var Katrid;
           </div>
           <div class="modal-body data-form data-panel">
             <search-view class="col-12"/>
-               
             <div class="table-responsive"></div>
           </div>
           <div class="modal-footer">
@@ -6717,7 +6707,6 @@ var Katrid;
     function expandFormats(fmts) {
         fmts.shortDateFormat = convertFormat(fmts.SHORT_DATE_FORMAT);
         fmts.shortDateTimeFormat = convertFormat(fmts.SHORT_DATETIME_FORMAT);
-        console.log(fmts);
         return fmts;
     }
     Katrid.i18n = {
@@ -7602,7 +7591,6 @@ var Katrid;
 </div>    
     `,
                     mounted() {
-                        console.log('mounted');
                     },
                     data() {
                         return {
@@ -7610,7 +7598,6 @@ var Katrid;
                         };
                     }
                 });
-                console.log('register filter-menu');
             })(Search = Views.Search || (Views.Search = {}));
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
