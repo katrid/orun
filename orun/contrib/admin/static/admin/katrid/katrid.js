@@ -3708,6 +3708,8 @@ var Katrid;
                 }
                 create() {
                     super.create();
+                    this.decimalPlaces = 2;
+                    this.tag = 'input-decimal';
                 }
                 setValue(record, value) {
                     record[this.name] = parseFloat(value);
@@ -3717,26 +3719,25 @@ var Katrid;
                         return parseFloat(val);
                     return val;
                 }
+                formSpanTemplate() {
+                    return `{{ $filters.toFixed(record.${this.name}, ${this.decimalPlaces}) || '${this.emptyText}' }}`;
+                }
             }
             Fields.NumericField = NumericField;
-            class IntegerField extends Fields.Field {
+            class IntegerField extends NumericField {
                 constructor(info) {
                     if (!info.cols)
                         info.cols = 3;
                     super(info);
-                    this.template.form = 'view.form.numeric-field.jinja2';
-                    this.template.list = 'view.list.numeric-field.jinja2';
                 }
                 create() {
                     super.create();
+                    this.decimalPlaces = 0;
                 }
                 toJSON(val) {
                     if (val && _.isString(val))
                         return parseInt(val);
                     return val;
-                }
-                getParamTemplate() {
-                    return 'view.param.Integer';
                 }
             }
             Fields.IntegerField = IntegerField;
@@ -3746,14 +3747,10 @@ var Katrid;
             class DecimalField extends NumericField {
                 constructor(info) {
                     super(info);
-                    this.tag = 'input-decimal';
                     this.decimalPlaces = 2;
                     if (this.info.attrs) {
                         this.decimalPlaces = this.info.attrs.decimal_places || 2;
                     }
-                }
-                formSpanTemplate() {
-                    return `{{ $filters.toFixed(record.${this.name}, 2) || '${this.emptyText}' }}`;
                 }
                 formControl() {
                     let control = super.formControl();
@@ -4088,7 +4085,7 @@ var Katrid;
                     return;
                 }
                 formControl() {
-                    let grid = document.createElement('field-grid-view');
+                    let grid = document.createElement('onetomany-field');
                     grid.setAttribute('name', this.name);
                     grid.setAttribute('v-model', 'record.' + this.name);
                     if (this.attrs['v-on:change'])
@@ -4286,7 +4283,8 @@ var Katrid;
                 }
                 this.tRow.setAttribute(':data-id', 'record.id');
                 this.tRow.setAttribute('v-for', `(record, index) in ${records || 'records'}`);
-                this.tRow.setAttribute('v-on:click', 'recordClick(event, index, record)');
+                this.tRow.setAttribute('v-on:contextmenu', 'recordContextMenu(record, index, $event)');
+                this.tRow.setAttribute('v-on:click', 'recordClick(record, index, $event)');
                 if (this.inlineEditor)
                     this.tRow.setAttribute(':class', `{
           'form-data-changing': (dataSource.changing && dataSource.recordIndex === $index),
@@ -4335,170 +4333,6 @@ var Katrid;
             }
         }
         Forms.ListRenderer = ListRenderer;
-        function renderOneToManyField(field) {
-            let grid = document.createElement('div');
-            let toolbar = document.createElement('div');
-            toolbar.classList.add('grid-toolbar');
-            toolbar.innerHTML = `
-<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="createNew()">${_.gettext('Add')}</button>
-<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="deleteSelection()" v-show="selectionLength">${_.gettext('Delete')}</button>
-`;
-            grid.append(toolbar);
-            let viewInfo = field.views[field.viewMode];
-            if (field.viewMode == 'list') {
-                let renderer = new ListRenderer(viewInfo);
-                grid.setAttribute('field-name', field.name);
-                let table = renderer.render(viewInfo.template, 'records');
-                grid.append(table);
-            }
-            else if (field.viewMode == 'card') {
-                let renderer = new Katrid.Forms.Views.CardRenderer(viewInfo.fields);
-                grid.setAttribute('field-name', field.name);
-                let table = renderer.render(viewInfo.template);
-                grid.append(table);
-            }
-            return grid;
-        }
-        Forms.renderOneToManyField = renderOneToManyField;
-        class SubWindowAction {
-            constructor(config) {
-                this.model = config.model;
-            }
-        }
-        function renderGrid(el, viewInfo) {
-        }
-        Forms.renderGrid = renderGrid;
-        function createDialog(config) {
-            let formInfo = config.field.views.form;
-            let relField = formInfo.fields[config.field.info.field];
-            if (relField)
-                relField.visible = false;
-            let view = new Katrid.Forms.Views.FormViewDialog({
-                master: config.master,
-                field: config.field,
-                action: {
-                    model: new Katrid.Services.Model(config.field.model),
-                    recordId: config.record?.id,
-                    record: config.record,
-                    records: [config.record],
-                    recordIndex: config.recordIndex,
-                },
-                viewInfo: formInfo,
-            });
-            view.renderTo();
-            return view;
-        }
-        Katrid.component('field-grid-view', {
-            props: ['modelValue'],
-            render() {
-                let name = this.$attrs.name;
-                let field = this.$parent.view.fields[name];
-                let viewMode = field.viewMode;
-                if (!this.$grid)
-                    this.$grid = renderOneToManyField(field);
-                this.view = field.views[viewMode];
-                this.$data.field = field;
-                return Vue.compile(this.$grid)(this);
-            },
-            data() {
-                return {
-                    allSelected: false,
-                    selection: [],
-                    action: {},
-                    record: {},
-                    records: [],
-                    view: null,
-                    pendingRequest: false,
-                    recordCount: 0,
-                    dataOffset: 0,
-                    dataOffsetLimit: 0,
-                    selectionLength: 0,
-                    parent: null,
-                };
-            },
-            methods: {
-                async recordClick(event, index, record) {
-                    let form = createDialog({
-                        field: this.field, record, index,
-                        master: this.$data.dataSource.masterSource,
-                    });
-                    form.dataSource.record = record;
-                    form.vm.parent = this.$parent;
-                    record = await record.$record.load(record);
-                    let res = await form.showDialog({ edit: this.$parent.changing, backdrop: 'static' });
-                    if (res) {
-                        if (res.$record.state === Katrid.Data.RecordState.destroyed)
-                            this.records.splice(index, 1);
-                        else {
-                            this.records[index] = res;
-                            this.record = res;
-                        }
-                        this.$emit('change', this.record);
-                    }
-                },
-                async createNew() {
-                    let form = await createDialog({
-                        field: this.field,
-                        master: this.$data.dataSource.masterSource,
-                    });
-                    form.dataSource.insert();
-                    let res = await form.showDialog({ backdrop: 'static' });
-                    if (res) {
-                        this.records[0] = res;
-                        this.record = res;
-                        this.$emit('change', this.record);
-                    }
-                },
-                toggleAll() {
-                    this.allSelected = !this.allSelected;
-                    for (let rec of this.records)
-                        rec.$selected = this.allSelected;
-                    if (this.allSelected)
-                        this.selection = this.records;
-                    else
-                        this.selection = [];
-                    this.selectionLength = this.selection.length;
-                },
-                selectToggle(record) {
-                    record.$selected = !record.$selected;
-                    if (record.$selected && !this.selection.includes(record))
-                        this.selection.push(record);
-                    else if (!record.$selected && this.selection.includes(record))
-                        this.selection.splice(this.selection.indexOf(record), 1);
-                    this.selectionLength = this.selection.length;
-                },
-                deleteSelection() {
-                    this.allSelected = false;
-                    for (let rec of this.selection)
-                        rec.$record.delete();
-                    this.records.reverse().map((rec, idx) => {
-                        if (rec.$record.state === Katrid.Data.RecordState.destroyed)
-                            this.records.splice(idx, 1);
-                    });
-                    this.selection = [];
-                    this.selectionLength = 0;
-                },
-            },
-            mounted() {
-                let model = new Katrid.Services.Model(this.field.model);
-                let actionView = this.$parent.actionView;
-                this.$data.dataSource = new Katrid.Data.DataSource({
-                    vm: this,
-                    model,
-                    field: this.$data.field,
-                    master: actionView.dataSource,
-                    action: {},
-                    pageLimit: this.$data.field.info.page_limit,
-                });
-                this.$selection = new Katrid.Forms.Views.SelectionHelper();
-                this.$selection.dataSource = this.$data.dataSource;
-            },
-            watch: {
-                records(value) {
-                    this.allSelected = false;
-                },
-            },
-        });
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -4930,7 +4764,7 @@ var Katrid;
                             backTo(index, viewType) {
                                 me.action.back(index);
                             },
-                            recordClick(event, index, record) {
+                            recordClick(record, index, event) {
                                 me.action.record = record;
                                 me.action.recordId = record.id;
                                 me.action.recordIndex = index;
@@ -4956,26 +4790,17 @@ var Katrid;
                                 me.action.formButtonClick(selection.map(obj => obj.id), methodName);
                             },
                             selectToggle(record) {
-                                record.$selected = !record.$selected;
-                                if (record.$selected && !this.selection.includes(record))
-                                    this.selection.push(record);
-                                else if (!record.$selected && this.selection.includes(record))
-                                    this.selection.splice(this.selection.indexOf(record), 1);
-                                this.selectionLength = this.selection.length;
+                                Views.selectionSelectToggle.call(this, ...arguments);
                             },
-                            toggleAll() {
-                                this.allSelected = !this.allSelected;
-                                for (let rec of this.records)
-                                    rec.$selected = this.allSelected;
-                                if (this.allSelected) {
-                                    this.selectionLength = this.records.length;
-                                    this.selection = [...this.records];
-                                }
-                                else {
-                                    this.selection = [];
-                                    this.selectionLength = 0;
-                                }
+                            toggleAll(sel) {
+                                Views.selectionToggleAll.call(this, ...arguments);
                             },
+                            unselectAll() {
+                                this.toggleAll(false);
+                            },
+                            recordContextMenu(record, index, event) {
+                                Views.listRecordContextMenu.call(this, ...arguments);
+                            }
                         },
                     }).mount(el);
                     this.dataSource.vm = vm;
@@ -5882,6 +5707,170 @@ var Katrid;
     (function (Forms) {
         var Controls;
         (function (Controls) {
+            function renderOneToManyField(field) {
+                let grid = document.createElement('div');
+                let toolbar = document.createElement('div');
+                toolbar.classList.add('grid-toolbar');
+                toolbar.innerHTML = `
+<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="createNew()">${_.gettext('Add')}</button>
+<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="deleteSelection()" v-show="selectionLength">${_.gettext('Delete')}</button>
+`;
+                grid.append(toolbar);
+                let viewInfo = field.views[field.viewMode];
+                if (field.viewMode == 'list') {
+                    let renderer = new Forms.ListRenderer(viewInfo);
+                    grid.setAttribute('field-name', field.name);
+                    let table = renderer.render(viewInfo.template, 'records');
+                    grid.append(table);
+                }
+                else if (field.viewMode == 'card') {
+                    let renderer = new Katrid.Forms.Views.CardRenderer(viewInfo.fields);
+                    grid.setAttribute('field-name', field.name);
+                    let table = renderer.render(viewInfo.template);
+                    grid.append(table);
+                }
+                return grid;
+            }
+            class SubWindowAction {
+                constructor(config) {
+                    this.model = config.model;
+                }
+            }
+            function createDialog(config) {
+                let formInfo = config.field.views.form;
+                let relField = formInfo.fields[config.field.info.field];
+                if (relField)
+                    relField.visible = false;
+                let view = new Katrid.Forms.Views.FormViewDialog({
+                    master: config.master,
+                    field: config.field,
+                    action: {
+                        model: new Katrid.Services.Model(config.field.model),
+                        recordId: config.record?.id,
+                        record: config.record,
+                        records: [config.record],
+                        recordIndex: config.recordIndex,
+                    },
+                    viewInfo: formInfo,
+                });
+                view.renderTo();
+                return view;
+            }
+            Katrid.component('onetomany-field', {
+                props: ['modelValue'],
+                render() {
+                    let name = this.$attrs.name;
+                    let field = this.$parent.view.fields[name];
+                    let viewMode = field.viewMode;
+                    if (!this.$grid)
+                        this.$grid = renderOneToManyField(field);
+                    this.view = field.views[viewMode];
+                    this.$data.field = field;
+                    return Vue.compile(this.$grid)(this);
+                },
+                data() {
+                    return {
+                        allSelected: false,
+                        selection: [],
+                        action: {},
+                        record: {},
+                        records: [],
+                        view: null,
+                        pendingRequest: false,
+                        recordCount: 0,
+                        dataOffset: 0,
+                        dataOffsetLimit: 0,
+                        selectionLength: 0,
+                        parent: null,
+                    };
+                },
+                methods: {
+                    async recordClick(record, index, event) {
+                        let form = createDialog({
+                            field: this.field, record, index,
+                            master: this.$data.dataSource.masterSource,
+                        });
+                        form.dataSource.record = record;
+                        form.vm.parent = this.$parent;
+                        record = await record.$record.load(record);
+                        let res = await form.showDialog({ edit: this.$parent.changing, backdrop: 'static' });
+                        if (res) {
+                            if (res.$record.state === Katrid.Data.RecordState.destroyed)
+                                this.records.splice(index, 1);
+                            else {
+                                this.records[index] = res;
+                                this.record = res;
+                            }
+                            this.$emit('change', this.record);
+                        }
+                    },
+                    recordContextMenu(record, index, event) {
+                        Katrid.Forms.Views.listRecordContextMenu.call(this, ...arguments);
+                    },
+                    async createNew() {
+                        let form = await createDialog({
+                            field: this.field,
+                            master: this.$data.dataSource.masterSource,
+                        });
+                        form.dataSource.insert();
+                        let res = await form.showDialog({ backdrop: 'static' });
+                        if (res) {
+                            this.records[0] = res;
+                            this.record = res;
+                            this.$emit('change', this.record);
+                        }
+                    },
+                    toggleAll() {
+                        Katrid.Forms.Views.selectionToggleAll.call(this, ...arguments);
+                    },
+                    selectToggle(record) {
+                        Katrid.Forms.Views.selectionSelectToggle.call(this, ...arguments);
+                    },
+                    unselectAll() {
+                        this.toggleAll(false);
+                    },
+                    deleteSelection() {
+                        this.allSelected = false;
+                        for (let rec of this.selection)
+                            rec.$record.delete();
+                        this.records.reverse().map((rec, idx) => {
+                            if (rec.$record.state === Katrid.Data.RecordState.destroyed)
+                                this.records.splice(idx, 1);
+                        });
+                        this.selection = [];
+                        this.selectionLength = 0;
+                    },
+                },
+                mounted() {
+                    let model = new Katrid.Services.Model(this.field.model);
+                    let actionView = this.$parent.actionView;
+                    this.$data.dataSource = new Katrid.Data.DataSource({
+                        vm: this,
+                        model,
+                        field: this.$data.field,
+                        master: actionView.dataSource,
+                        action: {},
+                        pageLimit: this.$data.field.info.page_limit,
+                    });
+                    this.$selection = new Katrid.Forms.Views.SelectionHelper();
+                    this.$selection.dataSource = this.$data.dataSource;
+                },
+                watch: {
+                    records(value) {
+                        this.allSelected = false;
+                    },
+                },
+                directives: Katrid.directivesRegistry,
+            });
+        })(Controls = Forms.Controls || (Forms.Controls = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Controls;
+        (function (Controls) {
             Katrid.component('status-field', {
                 template: `<div><slot></slot></div>`,
                 mounted() {
@@ -5935,7 +5924,7 @@ var Katrid;
       <div class="data-panel col-12">
         <div class="card-view card-deck">
           <div v-for="(record, index) in records" class="card panel-default card-item card-link"
-               v-on:click="recordClick(event, index, record)">
+               v-on:click="recordClick(record, index, event)">
             <div id="template-placeholder"></div>
           </div>
           <div class="card-item card-ghost"></div>
@@ -6487,7 +6476,7 @@ var Katrid;
           <div class="modal-body data-form data-panel">
             <search-view class="col-12"/>
                
-            <div class="clearfix"></div>
+            <div class="table-responsive"></div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-outline-secondary" type="button" @click="actionView.deleteAndClose()">
@@ -6502,7 +6491,7 @@ var Katrid;
     </action-view>
       `)[0];
                     this.templateView = templ;
-                    templ.querySelector('.modal-body').append(content);
+                    templ.querySelector('.table-responsive').append(content);
                     return templ;
                 }
                 static showDialog(config) {
@@ -6524,6 +6513,7 @@ var Katrid;
                             },
                         });
                         dlg.renderTo();
+                        dlg.dataSource.open();
                         let el = dlg.actionView;
                         $(el).modal(config.options)
                             .on('hidden.bs.modal', () => {
@@ -6535,182 +6525,6 @@ var Katrid;
                 }
             }
             Views.ListViewDialog = ListViewDialog;
-            class ListViewElement extends Views.WindowElement {
-                constructor() {
-                    super(...arguments);
-                    this.hasTotal = false;
-                    this.totals = [];
-                    this.columns = [];
-                    this.pasteAllowed = false;
-                }
-                create() {
-                    super.create();
-                    let options = { rowSelector: true, showStar: false };
-                    let _options = this.getAttribute('data-options');
-                    if (_options) {
-                        _options = JSON.parse(_options);
-                        Object.assign(options, _options);
-                    }
-                    let table = document.createElement('table');
-                    table.classList.add('table');
-                    this.tHead = document.createElement('thead');
-                    this.tHeadRow = document.createElement('tr');
-                    this.tBody = document.createElement('tbody');
-                    this.tRow = document.createElement('tr');
-                    if (options.rowSelector) {
-                        this.tHeadRow.innerHTML = `<th class="list-record-selector">
-        <input type="checkbox" v-model="allSelected" v-on:click.stop="toggleAll()">
-          </th>`;
-                        this.tRow.innerHTML = `<th class="list-record-selector" v-if="!record.$hasChildren" v-on:click.stop="selectToggle(record)">
-        <input type="checkbox" v-model="record.$selected">
-          </th>`;
-                    }
-                    let groupHeader = document.createElement('th');
-                    groupHeader.setAttribute('v-if', 'record.$hasChildren');
-                    groupHeader.colSpan = 2;
-                    groupHeader.innerHTML = `<i class="indent-::record.$level">&nbsp;</i>
-      <span class="fas fa-fw fa-caret-right" :class="{'fa-caret-down': record.$expanded, 'fa-caret-right': !record.$expanded}"></span>
-          {{record.__str__}}`;
-                    this.tRow.append(groupHeader);
-                    if (options.showStar) {
-                        let th = document.createElement('th');
-                        th.classList.add('list-record-star');
-                        this.tHeadRow.append(th);
-                        let td = document.createElement('th');
-                        td.classList.add('list-record-star');
-                        td.title = 'Mark with star';
-                        td.setAttribute('v-on:click.stop', 'action.markStar(record)');
-                        td.innerHTML = `<i class="far fa-fw fa-star"></i>`;
-                        this.tRow.append(td);
-                    }
-                    for (let f of this.querySelectorAll(':scope > field')) {
-                        this.addField(f);
-                        f.remove();
-                    }
-                    let td = this.tRow.querySelector('td');
-                    if (td)
-                        td.setAttribute('v-if', '!record.$hasChildren');
-                    this.tRow.setAttribute(':data-id', 'record.id');
-                    this.tRow.setAttribute('v-for', '(record, index) in records');
-                    this.tRow.setAttribute('v-on:click', 'recordClick(event, index, record)');
-                    if (this.inlineEditor)
-                        this.tRow.setAttribute('v-bind:class', `{
-          'form-data-changing': (dataSource.changing && dataSource.recordIndex === $index),
-          'form-data-readonly': !(dataSource.changing && dataSource.recordIndex === $index)
-          }`);
-                    else
-                        this.tRow.setAttribute('ng-class', `{'group-header': record.$hasChildren}`);
-                    let ngTrClass = this.getAttribute('ng-tr-class');
-                    if (ngTrClass) {
-                        if (!ngTrClass.startsWith('{'))
-                            ngTrClass = '{' + ngTrClass + '}';
-                        this.tRow.setAttribute('ng-class', ngTrClass);
-                    }
-                    this.tHead.append(this.tHeadRow);
-                    this.tBody.append(this.tRow);
-                    table.append(this.tHead);
-                    table.append(this.tBody);
-                    this.append(table);
-                    this.table = table;
-                    this.createContextMenu();
-                }
-                addField(fld) {
-                    if (fld.hasAttribute('invisible'))
-                        return;
-                    let fieldName = fld.getAttribute('name');
-                    let field = this._view.fields[fieldName];
-                    let html = fld.innerHTML;
-                    if ((field && field.visible) || !field)
-                        this.columns.push(field);
-                    if (!fieldName || html) {
-                        let td = document.createElement('td');
-                        let th = document.createElement('th');
-                        th.classList.add('grid-field-readonly');
-                        if (field) {
-                            th.innerHTML = `<span class="grid-field-readonly">${field.caption}</span>`;
-                        }
-                        else
-                            th.innerText = fld.getAttribute('header');
-                        td.innerHTML = html;
-                        this.tHeadRow.append(th);
-                        this.tRow.append(td);
-                    }
-                    else {
-                        if (!field.visible)
-                            return;
-                        field.assign(fld);
-                        field.listCreate(this);
-                    }
-                }
-                createContextMenu() {
-                    this.addEventListener('contextmenu', event => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        let scope = angular.element(event.target).scope();
-                        let rec = scope.record;
-                        let td = event.target;
-                        if (td.tagName !== 'TD')
-                            td = $(td).closest('td')[0];
-                        if (rec) {
-                            if (!rec.$selected) {
-                                this._action.selection.unselectAll();
-                                rec.$selected = true;
-                            }
-                            scope.$apply();
-                        }
-                        let menu = new Forms.ContextMenu();
-                        if (td && (td.tagName === 'TD'))
-                            menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => this.copyClick());
-                        if (this.pasteAllowed && this.action.scope.$parent.action.dataSource.changing)
-                            menu.add('<i class="fa fa-fw fa-paste"></i> Colar', (...args) => this.pasteClick());
-                        if (td && (td.tagName === 'TD')) {
-                            menu.addSeparator();
-                            menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => this.filterByFieldContent(td, rec));
-                        }
-                        if (rec) {
-                            menu.addSeparator();
-                            menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteRow());
-                        }
-                        menu.show(event.pageX, event.pageY);
-                    });
-                }
-                copyClick() {
-                    navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
-                }
-                async pasteClick() {
-                    let text = await navigator.clipboard.readText();
-                    let sep = '\t';
-                    if (!text.includes(sep))
-                        text = ';';
-                    text.split('\n').forEach((line, n) => {
-                        if (n > 0) {
-                            line = line.trim();
-                            if (line) {
-                                let record = {};
-                                line.split(sep).forEach((s, n) => {
-                                    let field = this.columns[n];
-                                    if (field)
-                                        record[field.name] = s;
-                                });
-                                this.action.dataSource.addRecord(record);
-                                this.action.scope.$apply();
-                            }
-                        }
-                    });
-                }
-                deleteRow() {
-                    console.log('delete selected row');
-                }
-                filterByFieldContent(td, record) {
-                    let name = td.getAttribute('data-name');
-                    if (name) {
-                        let val = record[name];
-                        this._action.addFilter(name, val);
-                    }
-                }
-            }
-            Views.ListViewElement = ListViewElement;
-            Katrid.define('list-view', ListViewElement);
             Views.registry['list'] = ListView;
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -6724,6 +6538,99 @@ var Katrid;
             class PortletView extends HTMLElement {
             }
             Views.PortletView = PortletView;
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            function selectionSelectToggle(record) {
+                record.$selected = !record.$selected;
+                if (record.$selected && !this.selection.includes(record))
+                    this.selection.push(record);
+                else if (!record.$selected && this.selection.includes(record))
+                    this.selection.splice(this.selection.indexOf(record), 1);
+                this.selectionLength = this.selection.length;
+            }
+            Views.selectionSelectToggle = selectionSelectToggle;
+            function selectionToggleAll(sel) {
+                if (sel === undefined)
+                    this.allSelected = !this.allSelected;
+                else
+                    this.allSelected = sel;
+                for (let rec of this.records)
+                    rec.$selected = this.allSelected;
+                if (this.allSelected) {
+                    this.selectionLength = this.records.length;
+                    this.selection = [...this.records];
+                }
+                else {
+                    this.selection = [];
+                    this.selectionLength = 0;
+                }
+            }
+            Views.selectionToggleAll = selectionToggleAll;
+            function listRecordContextMenu(record, index, event) {
+                event.preventDefault();
+                event.stopPropagation();
+                let td = event.target;
+                if (td.tagName !== 'TD')
+                    td = $(td).closest('td')[0];
+                if (record) {
+                    if (!record.$selected) {
+                        this.unselectAll();
+                        record.$selected = true;
+                    }
+                }
+                let menu = new Forms.ContextMenu();
+                if (td && (td.tagName === 'TD'))
+                    menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => copyClick(event.target.closest('table')));
+                if (this.pasteAllowed && this.action.scope.$parent.action.dataSource.changing)
+                    menu.add('<i class="fa fa-fw fa-paste"></i> Colar', (...args) => pasteClick(this));
+                if (td && (td.tagName === 'TD')) {
+                    menu.addSeparator();
+                    menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => filterByFieldContent(td, record));
+                }
+                if (record) {
+                    menu.addSeparator();
+                    menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteSelection());
+                }
+                menu.show(event.pageX, event.pageY);
+            }
+            Views.listRecordContextMenu = listRecordContextMenu;
+            function copyClick(table) {
+                navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(table));
+            }
+            async function pasteClick(vm) {
+                let text = await navigator.clipboard.readText();
+                let sep = '\t';
+                if (!text.includes(sep))
+                    text = ';';
+                text.split('\n').forEach((line, n) => {
+                    if (n > 0) {
+                        line = line.trim();
+                        if (line) {
+                            let record = {};
+                            line.split(sep).forEach((s, n) => {
+                                let field = vm.columns[n];
+                                if (field)
+                                    record[field.name] = s;
+                            });
+                            vm.dataSource.addRecord(record);
+                        }
+                    }
+                });
+            }
+            function filterByFieldContent(td, record) {
+                let name = td.getAttribute('data-name');
+                if (name) {
+                    let val = record[name];
+                    this._action.addFilter(name, val);
+                }
+            }
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
