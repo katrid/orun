@@ -6394,7 +6394,7 @@ var Katrid;
                             };
                         },
                         methods: {
-                            actionRefresh() {
+                            refresh() {
                                 me.dataSource.refresh();
                             },
                             openObject(model, id, target) {
@@ -6474,7 +6474,29 @@ var Katrid;
       v-show="dataSource.changing">
         ${_.gettext('Discard')}
       </button>
+    <div class="btn-group">
+      <div class="dropdown">
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown"
+                aria-haspopup="true">
+          ${_.gettext('Action')} <span class="caret"></span>
+        </button>
+        <button type="button" class="btn toolbtn" v-if="!changing" v-on:click="refresh()" title="${_.gettext('Refresh')}">
+          <i class="fa fa-fw fa-redo-alt"></i>
+        </button>
+        <div class="dropdown-menu dropdown-menu-actions">
+          <a class="dropdown-item" v-on:click="deleteSelection()">
+            <i class="fa fa-fw fa-trash-o"></i> ${_.gettext('Delete')}
+          </a>
+          <a class="dropdown-item" v-on:click="copy()">
+            <i class="fa fa-fw fa-files-o"></i>
+            {{ _.gettext('Duplicate') }}
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="btn-group">
       <button-attachments v-show="!inserting"></button-attachments>
+</div>
 `;
                     parent.append(div);
                     return parent;
