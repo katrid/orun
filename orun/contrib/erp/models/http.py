@@ -6,7 +6,7 @@ from orun.db import models
 class Http(models.Model):
     @classmethod
     def get_attachment(cls, attachment_id):
-        obj = apps['content.attachment'].get(attachment_id)
+        obj = apps['content.attachment'].objects.get(pk=attachment_id)
         headers = None
         res = HttpResponse(obj.content, content_type=obj.mimetype)
         if obj.file_name:
