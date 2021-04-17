@@ -6011,15 +6011,7 @@ var Katrid;
                         this.toggleAll(false);
                     },
                     deleteSelection() {
-                        this.allSelected = false;
-                        for (let rec of this.selection)
-                            rec.$record.delete();
-                        this.records.reverse().map((rec, idx) => {
-                            if (rec.$record.state === Katrid.Data.RecordState.destroyed)
-                                this.records.splice(idx, 1);
-                        });
-                        this.selection = [];
-                        this.selectionLength = 0;
+                        Katrid.Forms.Views.selectionDelete.call(this, ...arguments);
                     },
                 },
                 mounted() {
@@ -6841,6 +6833,16 @@ var Katrid;
                     this.action.addFilter(name, val);
                 }
             }
+            function selectionDelete() {
+                this.allSelected = false;
+                for (let rec of this.selection) {
+                    rec.$record.delete();
+                }
+                this.records = this.records.filter(rec => rec.$record.state !== Katrid.Data.RecordState.destroyed);
+                this.selection = [];
+                this.selectionLength = 0;
+            }
+            Views.selectionDelete = selectionDelete;
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
