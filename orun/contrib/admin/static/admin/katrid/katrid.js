@@ -3920,6 +3920,8 @@ var Katrid;
                 setValue(record, value) {
                     if (Array.isArray(value))
                         record[this.name] = { id: value[0], text: value[1] };
+                    else
+                        record[this.name] = value;
                     return value;
                 }
             }
