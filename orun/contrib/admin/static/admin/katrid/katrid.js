@@ -633,11 +633,6 @@ var Katrid;
                 if (this.selection)
                     return this.selection.length;
             }
-            async copy() {
-                this.viewType = 'form';
-                await this.dataSource.copy(this.scope.record.id);
-                return false;
-            }
             async copyTo(configId) {
                 if (this.scope.recordId) {
                     let svc = new Katrid.Services.Model('ui.copy.to');
@@ -6424,6 +6419,11 @@ var Katrid;
                             backTo(index) {
                                 me.action.back(index);
                             },
+                            async copy() {
+                                this.viewType = 'form';
+                                await this.dataSource.copy(this.record.id);
+                                return false;
+                            },
                             sendFile(name) {
                                 console.log('send file', name);
                             },
@@ -6489,7 +6489,7 @@ var Katrid;
           </a>
           <a class="dropdown-item" v-on:click="copy()">
             <i class="fa fa-fw fa-files-o"></i>
-            {{ _.gettext('Duplicate') }}
+            ${_.gettext('Duplicate')}
           </a>
         </div>
       </div>

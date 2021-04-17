@@ -66,6 +66,12 @@ msgstr "sim"
 msgid "no"
 msgstr "não"
 
+msgid "Yes"
+msgstr "Sim"
+
+msgid "No"
+msgstr "Não"
+
 msgid "Create <i>\"%s\"</i>..."
 msgstr "Criar <i>\"%s\"</i>..."
 
