@@ -5067,7 +5067,6 @@ var Katrid;
                     return Vue.compile(templ)(this);
                 },
                 mounted() {
-                    console.log(this.$el);
                     this.$actionView = this.$el.closest('action-view');
                     let timeout;
                     this.$recordLoadedHook = async (evt) => {
@@ -5985,7 +5984,7 @@ var Katrid;
                         form.dataSource.insert();
                         let res = await form.showDialog({ backdrop: 'static' });
                         if (res) {
-                            this.records[0] = res;
+                            this.records.push(res);
                             this.record = res;
                             this.$emit('change', this.record);
                         }
@@ -6518,7 +6517,7 @@ var Katrid;
                     v-if="dataSource.changing">
               ${Katrid.i18n.gettext('Save')}
             </button>
-            <button type="button" class="btn btn-outline-secondary" type="button" data-dismiss="modal"
+            <button type="button" class="btn btn-outline-secondary" type="button" data-dismiss="modal" @click="cancel()"
                     v-if="dataSource.changing">
               ${Katrid.i18n.gettext('Discard')}
             </button>
