@@ -8592,6 +8592,7 @@ var Katrid;
                 }
             }
             Widgets.StatusField = StatusField;
+            let RADIO_ID = 0;
             class RadioField extends Widget {
                 formRender(view) {
                     let label = document.createElement('div');
@@ -8601,14 +8602,14 @@ var Katrid;
                     if (css)
                         label.classList.add(css.split(' '));
                     let input = document.createElement('input');
-                    let id = `id-${this.field.name}-\${{index}}`;
-                    input.setAttribute('id', id);
+                    let id = `'RADIO_ID-${this.field.name}-${++RADIO_ID}-' + index`;
+                    input.setAttribute(':id', id);
                     input.setAttribute('type', 'radio');
                     input.setAttribute('v-model', `record.${this.field.name}`);
                     input.setAttribute(':value', `choice[0]`);
                     let txt = document.createElement('label');
                     txt.innerText = '{{ choice[1] }}';
-                    txt.setAttribute('for', id);
+                    txt.setAttribute(':for', id);
                     label.appendChild(input);
                     label.appendChild(txt);
                     return label;
