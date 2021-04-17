@@ -2770,8 +2770,8 @@ var Katrid;
                     this._record = rec;
                     this.recordId = rec.id;
                     this._pendingChanges = false;
-                    if (this.action && this.action.$element)
-                        this.action.$element[0].dispatchEvent(new CustomEvent('recordLoaded', { 'detail': { record: rec } }));
+                    if (this.action && this.action.view?.actionView)
+                        this.action.view.actionView.dispatchEvent(new CustomEvent('recordLoaded', { 'detail': { record: rec } }));
                 }
                 this.childrenNotification(rec);
             }
@@ -2928,7 +2928,6 @@ var Katrid;
                         let res = await this.getFieldChoices(data);
                         if (this.vm)
                             this.vm.records = res.data;
-                        console.log('vm', res.data);
                         parentRecord[this.field.name] = res.data;
                         this.state = Katrid.Data.DataSourceState.browsing;
                     }
@@ -5038,6 +5037,121 @@ var Katrid;
     (function (Forms) {
         var Controls;
         (function (Controls) {
+            Katrid.component('button-attachments', {
+                render() {
+                    let templ = `<div class="dropdown">
+        <button id="attachments-button"
+                type="button" class="btn btn-outline-secondary dropdown-toggle"
+                data-toggle="dropdown" aria-haspopup="true">
+          <span v-if="!attachments.length">${_.gettext('Attachments')} </span>
+          <span
+              v-if="attachments.length">{ _.sprintf(_.gettext('%d Attachment(s)'), attachments.length) }</span>
+          <span class="caret"></span>
+        </button>
+        <div class="dropdown-menu attachments-menu">
+          <a class="dropdown-item position-relative" v-for="attachment in attachments"
+             :href="attachment.download_url">
+            {{ attachment.name }} <span
+              class="fa fa-times remove-attachment-button" title="${_.gettext('Delete attachment')}"
+              v-on:click.prevent.stop="action.deleteAttachment(attachments, $index)"></span>
+          </a>
+          <div role="separator" class="dropdown-divider" v-show="attachments.length"></div>
+          <a class="dropdown-item" onclick="$(this).next().click();">
+            ${_.gettext('Add...')}
+          </a>
+          <input type="file" class="input-file-hidden" multiple="multiple"
+                 onchange="Katrid.Services.Attachments.upload(this)"/>
+        </div>
+      </div>`;
+                    return Vue.compile(templ)(this);
+                },
+                mounted() {
+                    console.log(this.$el);
+                },
+                data() {
+                    return {
+                        attachments: [],
+                    };
+                }
+            });
+            class AttachmentsButton extends HTMLElement {
+                connectedCallback() {
+                    this.innerHTML = `
+      <div class="dropdown">
+        <button id="attachments-button" v-show="!$parent.dataSource.inserting"
+                type="button" class="btn btn-outline-secondary dropdown-toggle"
+                data-toggle="dropdown" aria-haspopup="true">
+          <span v-if="!attachments.length">${_.gettext('Attachments')} </span>
+          <span
+              v-if="attachments.length">{ _.sprintf(_.gettext('%d Attachment(s)'), attachments.length) }</span>
+          <span class="caret"></span>
+        </button>
+        <div class="dropdown-menu attachments-menu">
+          <a class="dropdown-item position-relative" v-for="attachment in attachments"
+             :href="attachment.download_url">
+            {{ attachment.name }} <span
+              class="fa fa-times remove-attachment-button" title="${_.gettext('Delete attachment')}"
+              v-on:click.prevent.stop="action.deleteAttachment(attachments, $index)"></span>
+          </a>
+          <div role="separator" class="dropdown-divider" v-show="attachments.length"></div>
+          <a class="dropdown-item" onclick="$(this).next().click();">
+            ${_.gettext('Add...')}
+          </a>
+          <input type="file" class="input-file-hidden" multiple="multiple"
+                 onchange="Katrid.Services.Attachments.upload(this)"/>
+        </div>
+      </div>
+          
+      `;
+                    this.actionView = this.closest('action-view');
+                    this._recordLoadedHook = async (evt) => {
+                        clearTimeout(this._timeout);
+                        let rec = evt.detail.record;
+                        if (rec && rec.id)
+                            this._timeout = setTimeout(async () => {
+                                let model = new Katrid.Services.Model('content.attachment');
+                                let res = await model.search({ where: { model: this.actionView.action.model.name, object_id: evt.detail.record.id }, count: false });
+                                if (res && res.data)
+                                    this.actionView.action.attachments = res.data;
+                            }, 1000);
+                        else
+                            setTimeout(() => {
+                                this.actionView.action.attachments = [];
+                            });
+                    };
+                    this.actionView.addEventListener("recordLoaded", this._recordLoadedHook);
+                }
+                disconnectedCallback() {
+                    this.actionView.removeEventListener("recordLoaded", this._recordLoadedHook);
+                }
+                renderItems(items) {
+                    for (let item of items)
+                        this.renderItem(item);
+                }
+                renderItem(item) {
+                    let a = document.createElement('a');
+                    a.classList.add('dropdown-item position-relative');
+                    a.setAttribute('href', item.download_url);
+                    a.innerText = item.name;
+                    a.innerHTML = `<span class="fa fa-times remove-attachment-button" title="${Katrid.i18n.gettext('Delete attachment')}"></span>`;
+                    a.querySelector('span').onclick = (evt) => {
+                        evt.preventDefault();
+                        this.onDeleteAttachment(item);
+                        evt.stopPropagation();
+                    };
+                }
+                onDeleteAttachment(item) {
+                }
+            }
+        })(Controls = Forms.Controls || (Forms.Controls = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Controls;
+        (function (Controls) {
             Katrid.component('input-date', {
                 props: ['modelValue'],
                 template: '<div><slot></slot></div>',
@@ -6269,6 +6383,7 @@ var Katrid;
                         this.vm.state = state;
                         this.vm.changing = this.dataSource.changing;
                         this.vm.editing = this.dataSource.editing;
+                        this.vm.inserting = this.dataSource.inserting;
                         this.vm.browsing = this.dataSource.browsing;
                         this.vm.loadingRecord = this.dataSource.loadingRecord;
                     };
@@ -6300,7 +6415,9 @@ var Katrid;
       <button class="btn btn-outline-secondary btn-action-cancel" type="button" v-on:click="cancel()"
       v-show="dataSource.changing">
         ${_.gettext('Discard')}
-      </button>`;
+      </button>
+      <button-attachments v-show="!inserting"></button-attachments>
+`;
                     parent.append(div);
                     return parent;
                 }
@@ -12613,58 +12730,6 @@ var Katrid;
             }
         }
         UI.TreeView = TreeView;
-    })(UI = Katrid.UI || (Katrid.UI = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var UI;
-    (function (UI) {
-        var Web;
-        (function (Web) {
-            class AttachmentsButton extends HTMLElement {
-                connectedCallback() {
-                    this.actionView = this.closest('action-view');
-                    this._recordLoadedHook = async (evt) => {
-                        clearTimeout(this._timeout);
-                        let rec = evt.detail.record;
-                        if (rec && rec.id)
-                            this._timeout = setTimeout(async () => {
-                                let model = new Katrid.Services.Model('content.attachment');
-                                let res = await model.search({ where: { model: this.actionView.action.model.name, object_id: evt.detail.record.id }, count: false });
-                                if (res && res.data)
-                                    this.actionView.action.attachments = res.data;
-                            }, 1000);
-                        else
-                            setTimeout(() => {
-                                this.actionView.action.attachments = [];
-                            });
-                    };
-                    this.actionView.addEventListener("recordLoaded", this._recordLoadedHook);
-                }
-                disconnectedCallback() {
-                    this.actionView.removeEventListener("recordLoaded", this._recordLoadedHook);
-                }
-                renderItems(items) {
-                    for (let item of items)
-                        this.renderItem(item);
-                }
-                renderItem(item) {
-                    let a = document.createElement('a');
-                    a.classList.add('dropdown-item position-relative');
-                    a.setAttribute('href', item.download_url);
-                    a.innerText = item.name;
-                    a.innerHTML = `<span class="fa fa-times remove-attachment-button" title="${Katrid.i18n.gettext('Delete attachment')}"></span>`;
-                    a.querySelector('span').onclick = (evt) => {
-                        evt.preventDefault();
-                        this.onDeleteAttachment(item);
-                        evt.stopPropagation();
-                    };
-                }
-                onDeleteAttachment(item) {
-                }
-            }
-            customElements.define('attachments-button', AttachmentsButton);
-        })(Web = UI.Web || (UI.Web = {}));
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
 (function () {
