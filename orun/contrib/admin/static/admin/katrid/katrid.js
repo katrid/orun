@@ -5888,44 +5888,6 @@ var Katrid;
     (function (Forms) {
         var Controls;
         (function (Controls) {
-            class BaseControl {
-                constructor(field) {
-                    this.field = field;
-                }
-                formRender() {
-                }
-            }
-            class RadioField extends BaseControl {
-                formCreate() {
-                    let label = document.createElement('div');
-                    label.setAttribute('v-for', `choice in view.fields.${this.field.name}.choices`);
-                    label.classList.add('radio-button', 'radio-inline');
-                    let css = this.field.fieldEl.getAttribute('class');
-                    if (css)
-                        label.classList.add(css.split(' '));
-                    let input = document.createElement('input');
-                    let id = `id-${this.field.name}-\${$index}`;
-                    input.setAttribute('id', id);
-                    input.setAttribute('type', 'radio');
-                    input.setAttribute('v-model', `record.${this.field.name}`);
-                    input.setAttribute(':value', `choice[0]`);
-                    let txt = document.createElement('label');
-                    txt.innerText = '{{ choice[1] }}';
-                    txt.setAttribute('for', id);
-                    label.appendChild(input);
-                    label.appendChild(txt);
-                    return label;
-                }
-            }
-        })(Controls = Forms.Controls || (Forms.Controls = {}));
-    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Forms;
-    (function (Forms) {
-        var Controls;
-        (function (Controls) {
             Katrid.component('status-field', {
                 template: `<div><slot></slot></div>`,
                 mounted() {
@@ -8466,8 +8428,33 @@ var Katrid;
                 }
             }
             Widgets.StatusField = StatusField;
+            class RadioField extends Widget {
+                formRender(view) {
+                    let label = document.createElement('div');
+                    label.setAttribute('v-for', `(choice, index) in view.fields.${this.field.name}.choices`);
+                    label.classList.add('radio-button', 'radio-inline');
+                    let css = this.field.fieldEl.getAttribute('class');
+                    if (css)
+                        label.classList.add(css.split(' '));
+                    let input = document.createElement('input');
+                    let id = `id-${this.field.name}-\${{index}}`;
+                    input.setAttribute('id', id);
+                    input.setAttribute('type', 'radio');
+                    input.setAttribute('v-model', `record.${this.field.name}`);
+                    input.setAttribute(':value', `choice[0]`);
+                    let txt = document.createElement('label');
+                    txt.innerText = '{{ choice[1] }}';
+                    txt.setAttribute('for', id);
+                    label.appendChild(input);
+                    label.appendChild(txt);
+                    return label;
+                }
+            }
+            Widgets.RadioField = RadioField;
             Widgets.registry = {
                 StatusField,
+                RadioField,
+                radio: RadioField,
             };
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
