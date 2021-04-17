@@ -5067,6 +5067,28 @@ var Katrid;
                 },
                 mounted() {
                     console.log(this.$el);
+                    this.$actionView = this.$el.closest('action-view');
+                    let timeout;
+                    this.$recordLoadedHook = async (evt) => {
+                        clearTimeout(timeout);
+                        let rec = evt.detail.record;
+                        console.log(this.$parent.action);
+                        if (rec && rec.id)
+                            timeout = setTimeout(async () => {
+                                let model = new Katrid.Services.Model('content.attachment');
+                                let res = await model.search({ where: { model: this.$parent.action.model.name, object_id: evt.detail.record.id }, count: false });
+                                if (res && res.data)
+                                    this.attachments = res.data;
+                            }, 1000);
+                        else
+                            setTimeout(() => {
+                                this.attachments = [];
+                            });
+                    };
+                    this.$actionView.addEventListener("recordLoaded", this.$recordLoadedHook);
+                },
+                unmounted() {
+                    this.$actionView.removeEventListener("recordLoaded", this.$recordLoadedHook);
                 },
                 data() {
                     return {
@@ -6321,7 +6343,7 @@ var Katrid;
                         props,
                         data() {
                             return {
-                                action: {},
+                                action: me.action,
                                 record: {},
                                 records: [],
                                 dataSource: me.dataSource,
