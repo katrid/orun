@@ -4088,7 +4088,6 @@ var Katrid;
                                 child.addRecord(obj.values);
                             }
                         });
-                        child.scope.$apply();
                     }
                 }
                 formSpanTemplate() {
