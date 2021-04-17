@@ -5045,7 +5045,7 @@ var Katrid;
                 data-toggle="dropdown" aria-haspopup="true">
           <span v-if="!attachments.length">${_.gettext('Attachments')} </span>
           <span
-              v-if="attachments.length">{ _.sprintf(_.gettext('%d Attachment(s)'), attachments.length) }</span>
+              v-if="attachments.length">{{ $filters.sprintf('${_.gettext('%d Attachment(s)')}', attachments.length) }}</span>
           <span class="caret"></span>
         </button>
         <div class="dropdown-menu attachments-menu">
@@ -11783,6 +11783,9 @@ Katrid.filter('number', function (value, digits) {
 Katrid.filter('toFixed', function (value, digits) {
     if (value !== null)
         return Katrid.intl.toFixed(digits).format(value);
+});
+Katrid.filter('sprintf', function (fmt, ...args) {
+    return _.sprintf(fmt, ...args);
 });
 (function () {
     class Total {
