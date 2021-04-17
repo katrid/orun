@@ -5050,11 +5050,11 @@ var Katrid;
           <span class="caret"></span>
         </button>
         <div class="dropdown-menu attachments-menu">
-          <a class="dropdown-item position-relative" v-for="attachment in attachments"
+          <a class="dropdown-item position-relative" v-for="(attachment, index) in attachments"
              :href="attachment.download_url">
             {{ attachment.name }} <span
               class="fa fa-times remove-attachment-button" title="${_.gettext('Delete attachment')}"
-              v-on:click.prevent.stop="deleteAttachment(attachments, $index)"></span>
+              v-on:click.prevent.stop="deleteAttachment(index)"></span>
           </a>
           <div role="separator" class="dropdown-divider" v-show="attachments.length"></div>
           <a class="dropdown-item" onclick="$(this).next().click();">
@@ -5102,6 +5102,9 @@ var Katrid;
                         if (res && res.result)
                             for (let obj of res.result)
                                 this.attachments.push(obj);
+                    },
+                    deleteAttachment(index) {
+                        this.$parent.action.deleteAttachment(this.attachments, index);
                     }
                 },
                 data() {
