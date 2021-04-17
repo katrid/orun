@@ -8034,7 +8034,7 @@ var Katrid;
           </div>
           <div class="col-12">
             <div class="form-group">
-              <select class="form-control" v-model="fieldName" v-on:change="fieldChange(info.fields[fieldName])">
+              <select class="form-control" v-model="fieldName" v-on:change="fieldChange(fields[fieldName])">
                 <option></option>
                 <option v-for="field in action.fieldList" :value="field.name">{{ field.caption }}</option>
               </select>
@@ -8046,10 +8046,10 @@ var Katrid;
             </select>
             </div>
             <div class="form-group" v-if="field">
-              <input class="form-control" v-model="searchValue" type="text" v-if="tempCondition && (field.info.type === 'CharField')">
-              <input class="form-control" v-model="searchValue" type="text" v-else-if="tempCondition && (field.info.type === 'IntegerField')">
+              <input class="form-control" v-model="searchValue" type="text" v-if="tempCondition && (field.info.type === 'IntegerField')">
               <input class="form-control" v-model="searchValue" type="text" v-else-if="tempCondition && (field.info.type === 'IntegerField')">
               <input-autocomplete v-model="searchValue" :data-model="field.info.model" v-else-if="(tempCondition === '=') && (field.info.type === 'ForeignKey')"/>
+              <input class="form-control" v-model="searchValue" type="text" v-else-if="field.info.type !== 'BooleanField'">
             </div>
             <div class="form-group">
               <button class="btn btn-primary" type="button" v-on:click="applyFilter()" v-show="searchValue!==undefined">
@@ -8184,7 +8184,7 @@ var Katrid;
                         fieldChange(field) {
                             this.field = field;
                             if (field) {
-                                if (field.info.type === 'CharField') {
+                                if ((field.info.type === 'CharField') || (field.info.type === 'EmailField')) {
                                     this.fieldConditions = {
                                         '%': _.gettext('Contains'),
                                         '!%': _.gettext('Not contains'),
@@ -8212,14 +8212,20 @@ var Katrid;
                                         'is null': _.gettext('is not defined'),
                                     };
                                 }
+                                else if (field.info.type === 'BooleanField') {
+                                    this.fieldConditions = {
+                                        'true': _.gettext('Yes'),
+                                        'false': _.gettext('No'),
+                                    };
+                                }
                             }
                         }
                     },
                     data() {
                         return {
+                            fields: this.$parent.action.fields,
                             search: {},
                             fieldConditions: {},
-                            info: this.$parent.action.views.search,
                             action: this.$parent.action,
                             fieldName: null,
                             currentIndex: 0,
