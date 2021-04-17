@@ -896,6 +896,7 @@ var Katrid;
             }
             addFilter(field, value) {
                 let f = this.view.fields[field];
+                console.log(this.searchView);
                 this.searchView.addCustomFilter(f, value);
             }
             static async fromModel(model) {
@@ -3322,8 +3323,9 @@ var Katrid;
                     return value;
                 }
                 formCreate(view) {
-                    if (this.widget)
+                    if (this.widget) {
                         return this.createWidget(this.widget).formRender(view);
+                    }
                     let label = this.formLabel();
                     let control;
                     control = this.formControl();
@@ -3797,7 +3799,27 @@ var Katrid;
                 }
             }
             Fields.PythonCodeField = PythonCodeField;
-            class RadioField extends Fields.Field {
+            class RadioField extends ChoiceField {
+                formControl() {
+                    let label = document.createElement('div');
+                    label.setAttribute('v-for', `choice in view.fields.${this.name}.choices`);
+                    label.classList.add('radio-button', 'radio-inline');
+                    let css = this.fieldEl.getAttribute('class');
+                    if (css)
+                        label.classList.add(css.split(' '));
+                    let input = document.createElement('input');
+                    let id = `id-${this.name}-\${$index}`;
+                    input.setAttribute('id', id);
+                    input.setAttribute('type', 'radio');
+                    input.setAttribute('v-model', `record.${this.name}`);
+                    input.setAttribute(':value', `choice[0]`);
+                    let txt = document.createElement('label');
+                    txt.innerText = '{{ choice[1] }}';
+                    txt.setAttribute('for', id);
+                    label.appendChild(input);
+                    label.appendChild(txt);
+                    return label;
+                }
             }
             function fromInfo(config) {
                 let cls;
@@ -4727,6 +4749,7 @@ var Katrid;
                 }
                 createVm(el) {
                     let me = this;
+                    console.log('create vm', this.action);
                     let vm = Katrid.createView({
                         data() {
                             return {
@@ -5865,6 +5888,44 @@ var Katrid;
     (function (Forms) {
         var Controls;
         (function (Controls) {
+            class BaseControl {
+                constructor(field) {
+                    this.field = field;
+                }
+                formRender() {
+                }
+            }
+            class RadioField extends BaseControl {
+                formCreate() {
+                    let label = document.createElement('div');
+                    label.setAttribute('v-for', `choice in view.fields.${this.field.name}.choices`);
+                    label.classList.add('radio-button', 'radio-inline');
+                    let css = this.field.fieldEl.getAttribute('class');
+                    if (css)
+                        label.classList.add(css.split(' '));
+                    let input = document.createElement('input');
+                    let id = `id-${this.field.name}-\${$index}`;
+                    input.setAttribute('id', id);
+                    input.setAttribute('type', 'radio');
+                    input.setAttribute('v-model', `record.${this.field.name}`);
+                    input.setAttribute(':value', `choice[0]`);
+                    let txt = document.createElement('label');
+                    txt.innerText = '{{ choice[1] }}';
+                    txt.setAttribute('for', id);
+                    label.appendChild(input);
+                    label.appendChild(txt);
+                    return label;
+                }
+            }
+        })(Controls = Forms.Controls || (Forms.Controls = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Controls;
+        (function (Controls) {
             Katrid.component('status-field', {
                 template: `<div><slot></slot></div>`,
                 mounted() {
@@ -6582,7 +6643,7 @@ var Katrid;
                     menu.add('<i class="fa fa-fw fa-paste"></i> Colar', (...args) => pasteClick(this));
                 if (td && (td.tagName === 'TD')) {
                     menu.addSeparator();
-                    menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => filterByFieldContent(td, record));
+                    menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => filterByFieldContent.call(this, td, record));
                 }
                 if (record) {
                     menu.addSeparator();
@@ -6615,10 +6676,10 @@ var Katrid;
                 });
             }
             function filterByFieldContent(td, record) {
-                let name = td.getAttribute('data-name');
+                let name = td.getAttribute('field-name');
                 if (name) {
                     let val = record[name];
-                    this._action.addFilter(name, val);
+                    this.action.addFilter(name, val);
                 }
             }
         })(Views = Forms.Views || (Forms.Views = {}));
@@ -7937,6 +7998,7 @@ var Katrid;
                     mounted() {
                         this.$viewInfo = this.$parent.action.views.search;
                         let search = this.$search = new SearchViewElement(this);
+                        this.$parent.action.searchView = search;
                         this.facets = search.facets;
                         this.$parent.search = this.$search;
                         this.$search.model = this.$parent.action.model;
