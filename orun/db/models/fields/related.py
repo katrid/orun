@@ -960,6 +960,7 @@ class OneToOneField(ForeignKey):
 
     def __init__(self, to, on_delete=CASCADE, to_field=None, **kwargs):
         kwargs['unique'] = True
+        kwargs['copy'] = False
         super().__init__(to, on_delete, to_field=to_field, **kwargs)
 
     def deconstruct(self):
@@ -1070,6 +1071,7 @@ class ManyToManyField(RelatedField):
                 "Cannot specify a db_table if an intermediary model is used."
             )
 
+        kwargs.setdefault('copy', True)
         kwargs['rel'] = self.rel_class(
             self, to,
             related_name=related_name,
@@ -1580,6 +1582,7 @@ class OneToManyField(RelatedField):
     def __init__(self, to, to_fields=None, related_name=None, queryset: Callable = None, *args, **kwargs):
         kwargs['rel'] = self.rel_class(self, to, to_fields, related_name=related_name)
         kwargs['concrete'] = False
+        kwargs.setdefault('copy', True)
         self.queryset = queryset
         page_limit = kwargs.pop('page_limit', None)
         super().__init__(*args, **kwargs)

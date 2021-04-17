@@ -1869,7 +1869,7 @@ class Model(metaclass=ModelBase):
                     {
                         'action': 'CREATE',
                         # remove parent record information
-                        'values': {k: v for k, v in copy.copy(obj).items() if k != f.remote_field.field.name},
+                        'values': {k: v for k, v in copy.copy(obj).items() if k != f.remote_field.name},
                     }
                     for obj in v
                 ]
