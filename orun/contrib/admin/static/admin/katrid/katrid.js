@@ -712,7 +712,6 @@ var Katrid;
                 let firstTime = false;
             }
             changeUrl() {
-                console.log('change the url');
             }
             get viewType() {
                 return this._viewType;
@@ -2101,6 +2100,7 @@ var Katrid;
                 this.children = [];
                 this.modifiedData = null;
                 this.uploading = 0;
+                this.fields = config.fields;
                 this._state = null;
                 this.fieldWatchers = [];
                 this._pendingChanges = false;
@@ -2131,9 +2131,6 @@ var Katrid;
                 this._pendingRequest = value;
                 if (this.requestCallback)
                     this.requestCallback(value);
-            }
-            get fields() {
-                return this.config.fields;
             }
             get loadingAction() {
                 return this._loadingAction;
@@ -2611,7 +2608,6 @@ var Katrid;
                     let _get = () => {
                         let controller = new AbortController();
                         this.pendingPromises.push(controller);
-                        console.log('datasource model', this.model);
                         return this.model.getById(id, { signal: controller.signal })
                             .catch((err) => {
                             if (err.name === 'AbortError')
@@ -2818,7 +2814,7 @@ var Katrid;
                 return this._recordIndex;
             }
             addRecord(rec) {
-                let scope = this.scope;
+                let scope = this.vm;
                 let record = Katrid.Data.createRecord(null, this);
                 for (let [k, v] of Object.entries(rec))
                     record[k] = v;
@@ -4064,6 +4060,7 @@ var Katrid;
                     viewModes[this.viewMode] = null;
                     let res = await model.loadViews({ views: viewModes });
                     this.views = res.views;
+                    this.fields = res.fields;
                     Object.values(res.views).forEach((viewInfo) => {
                         let relField = viewInfo.fields[this.info.field];
                         if (relField)
@@ -4081,14 +4078,13 @@ var Katrid;
                         let child = record.$record.dataSource.childByName(this.name);
                         value.map((obj) => {
                             if (obj.action === 'CLEAR') {
-                                for (let rec of child.scope.records)
+                                for (let rec of child.vm.records)
                                     rec.$record.delete();
-                                child.scope.records = [];
+                                child.vm.records = [];
                                 record.$record.dataSource.record[this.name] = [];
                             }
-                            else if (obj.action === 'CREATE') {
+                            else if (obj.action === 'CREATE')
                                 child.addRecord(obj.values);
-                            }
                         });
                     }
                 }
@@ -4663,7 +4659,6 @@ var Katrid;
                     this._dataSource.requestCallback = (pending) => this.vm.pendingRequest = pending;
                 }
                 get content() {
-                    console.log('view info', this.viewInfo);
                     return this.viewInfo.content;
                 }
                 get dataSource() {
@@ -4744,7 +4739,6 @@ var Katrid;
                 }
                 createVm(el) {
                     let me = this;
-                    console.log('create vm', this.action);
                     let vm = Katrid.createView({
                         data() {
                             return {
@@ -5068,7 +5062,6 @@ var Katrid;
                     this.$recordLoadedHook = async (evt) => {
                         clearTimeout(timeout);
                         let rec = evt.detail.record;
-                        console.log(this.$parent.action);
                         if (rec && rec.id)
                             timeout = setTimeout(async () => {
                                 let model = new Katrid.Services.Model('content.attachment');
@@ -6021,6 +6014,7 @@ var Katrid;
                     this.$data.dataSource = new Katrid.Data.DataSource({
                         vm: this,
                         model,
+                        fields: this.$data.field.fields,
                         field: this.$data.field,
                         master: actionView.dataSource,
                         action: {},
