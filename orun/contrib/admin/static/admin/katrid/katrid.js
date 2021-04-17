@@ -5951,42 +5951,59 @@ var Katrid;
                         dataOffsetLimit: 0,
                         selectionLength: 0,
                         parent: null,
+                        $editing: false,
                     };
                 },
                 methods: {
                     async recordClick(record, index, event) {
-                        let form = createDialog({
-                            field: this.field, record, index,
-                            master: this.$data.dataSource.masterSource,
-                        });
-                        form.dataSource.record = record;
-                        form.vm.parent = this.$parent;
-                        record = await record.$record.load(record);
-                        let res = await form.showDialog({ edit: this.$parent.changing, backdrop: 'static' });
-                        if (res) {
-                            if (res.$record.state === Katrid.Data.RecordState.destroyed)
-                                this.records.splice(index, 1);
-                            else {
-                                this.records[index] = res;
-                                this.record = res;
+                        if (this.$editing)
+                            return;
+                        try {
+                            this.$editing = true;
+                            let form = createDialog({
+                                field: this.field, record, index,
+                                master: this.$data.dataSource.masterSource,
+                            });
+                            form.dataSource.record = record;
+                            form.vm.parent = this.$parent;
+                            record = await record.$record.load(record);
+                            let res = await form.showDialog({ edit: this.$parent.changing, backdrop: 'static' });
+                            if (res) {
+                                if (res.$record.state === Katrid.Data.RecordState.destroyed)
+                                    this.records.splice(index, 1);
+                                else {
+                                    this.records[index] = res;
+                                    this.record = res;
+                                }
+                                this.$emit('change', this.record);
                             }
-                            this.$emit('change', this.record);
+                        }
+                        finally {
+                            this.$editing = false;
                         }
                     },
                     recordContextMenu(record, index, event) {
                         Katrid.Forms.Views.listRecordContextMenu.call(this, ...arguments);
                     },
                     async createNew() {
-                        let form = await createDialog({
-                            field: this.field,
-                            master: this.$data.dataSource.masterSource,
-                        });
-                        form.dataSource.insert();
-                        let res = await form.showDialog({ backdrop: 'static' });
-                        if (res) {
-                            this.records.push(res);
-                            this.record = res;
-                            this.$emit('change', this.record);
+                        if (this.$editing)
+                            return;
+                        try {
+                            this.$editing = true;
+                            let form = await createDialog({
+                                field: this.field,
+                                master: this.$data.dataSource.masterSource,
+                            });
+                            form.dataSource.insert();
+                            let res = await form.showDialog({ backdrop: 'static' });
+                            if (res) {
+                                this.records.push(res);
+                                this.record = res;
+                                this.$emit('change', this.record);
+                            }
+                        }
+                        finally {
+                            this.$editing = false;
                         }
                     },
                     toggleAll() {
