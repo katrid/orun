@@ -4574,7 +4574,7 @@ var Katrid;
                         }
                         else {
                             let idSendFile = `__send_file_${++sendFileCounter}`;
-                            $btn.parent().append(`<input id="${idSendFile}" type="file" style="display: none" onchange="Katrid.Services.Upload.sendFile('${$btn.attr('name')}', this)"/>`);
+                            $btn.parent().append(`<input id="${idSendFile}" type="file" style="display: none" v-on:change="sendFile('${$btn.attr('name')}')"/>`);
                             $btn.attr('send-file', $btn.attr('name'));
                             $btn.attr('onclick', `$('#${idSendFile}').trigger('click')`);
                         }
@@ -5045,7 +5045,8 @@ var Katrid;
                 data-toggle="dropdown" aria-haspopup="true">
           <span v-if="!attachments.length">${_.gettext('Attachments')} </span>
           <span
-              v-if="attachments.length">{{ $filters.sprintf('${_.gettext('%d Attachment(s)')}', attachments.length) }}</span>
+              v-if="attachments.length">{{ $filters.sprintf('${_.gettext('%d Attachment(s)')}', attachments.length) }}
+          </span>
           <span class="caret"></span>
         </button>
         <div class="dropdown-menu attachments-menu">
@@ -5053,14 +5054,14 @@ var Katrid;
              :href="attachment.download_url">
             {{ attachment.name }} <span
               class="fa fa-times remove-attachment-button" title="${_.gettext('Delete attachment')}"
-              v-on:click.prevent.stop="action.deleteAttachment(attachments, $index)"></span>
+              v-on:click.prevent.stop="deleteAttachment(attachments, $index)"></span>
           </a>
           <div role="separator" class="dropdown-divider" v-show="attachments.length"></div>
           <a class="dropdown-item" onclick="$(this).next().click();">
             ${_.gettext('Add...')}
           </a>
           <input type="file" class="input-file-hidden" multiple="multiple"
-                 onchange="Katrid.Services.Attachments.upload(this)"/>
+                 v-on:change="upload($event)"/>
         </div>
       </div>`;
                     return Vue.compile(templ)(this);
@@ -5089,6 +5090,19 @@ var Katrid;
                 },
                 unmounted() {
                     this.$actionView.removeEventListener("recordLoaded", this.$recordLoadedHook);
+                },
+                methods: {
+                    async upload(event) {
+                        let res = await Katrid.Services.Attachments.upload(event.target, {
+                            model: this.$parent.action.model,
+                            recordId: this.$parent.action.recordId,
+                        });
+                        if (!this.attachments)
+                            this.attachments = [];
+                        if (res && res.result)
+                            for (let obj of res.result)
+                                this.attachments.push(obj);
+                    }
                 },
                 data() {
                     return {
@@ -6390,6 +6404,9 @@ var Katrid;
                             },
                             backTo(index) {
                                 me.action.back(index);
+                            },
+                            sendFile(name) {
+                                console.log('send file', name);
                             },
                             sum(obj, field) {
                                 let res = 0;
@@ -9332,29 +9349,23 @@ var Katrid;
                 let svc = new Katrid.Services.Model('content.attachment');
                 svc.delete(id);
             }
-            static upload(file, scope = null) {
-                let data = new FormData();
-                if (!scope)
-                    scope = angular.element(file).scope();
-                console.log(file);
-                data.append('model', scope.model.name);
-                data.append('id', scope.recordId);
-                for (let f of file.files)
-                    data.append('attachment', f, f.name);
-                return $.ajax({
-                    url: '/web/content/upload/',
-                    type: 'POST',
-                    data: data,
-                    processData: false,
-                    contentType: false
-                })
-                    .done((res) => {
-                    if (!scope.attachments)
-                        scope.attachments = [];
-                    if (res && res.result)
-                        for (let obj of res.result)
-                            scope.attachments.push(obj);
-                    scope.$apply();
+            static upload(file, config) {
+                return new Promise((resolve, reject) => {
+                    let data = new FormData();
+                    data.append('model', config.model.name);
+                    data.append('id', config.recordId);
+                    for (let f of file.files)
+                        data.append('attachment', f, f.name);
+                    return $.ajax({
+                        url: '/web/content/upload/',
+                        type: 'POST',
+                        data: data,
+                        processData: false,
+                        contentType: false
+                    })
+                        .done((res) => {
+                        resolve(res);
+                    });
                 });
             }
         }
