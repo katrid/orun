@@ -2487,10 +2487,8 @@ var Katrid;
                 for (let child of this.children)
                     if (child.changing)
                         child.flush();
-                const el = this.action.$form;
                 if (await this.validate()) {
                     const data = this.record.$record.serialize();
-                    console.log('serialized data', data);
                     if (data) {
                         this.uploading++;
                         return this.model.write([data])
@@ -2524,8 +2522,6 @@ var Katrid;
                                         field = this.scope.view.fields[fld];
                                     if (!field || !field.name)
                                         continue;
-                                    elfield = el.find(`.form-field[name="${field.name}"]`);
-                                    elfield.addClass('ng-invalid ng-touched');
                                     s += `<strong>${field.caption}</strong><ul>`;
                                     for (let msg of msgs) {
                                         s += `<li>${msg}</li>`;
@@ -5097,7 +5093,9 @@ var Katrid;
                         return $('.select2-drop-mask').remove();
                     });
                     el.on('change', event => {
-                        const v = el.select2('data');
+                        let v = el.select2('data');
+                        if (Array.isArray(v))
+                            v = v.map(obj => [obj.id, obj.text]);
                         this.$emit('update:modelValue', v);
                     });
                 },
@@ -10503,7 +10501,6 @@ var Katrid;
                     });
                 }
                 let params = Array.from(xml.querySelectorAll('param')).map(p => p.getAttribute('name'));
-                console.log(params);
                 return this.load(fields, params);
             }
             saveDialog() {
