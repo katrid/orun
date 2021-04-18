@@ -2238,21 +2238,12 @@ var Katrid;
                 return elfield;
             }
             validate(raiseError = true) {
-                let action = this.action;
-                if (action.form && action.form.$invalid) {
-                    let elfield;
-                    let errors = [];
-                    let s = `<span>${Katrid.i18n.gettext('The following fields are invalid:')}</span><hr>`;
-                    const el = this.scope.formElement;
-                    elfield = this._validateForm(el, this.scope.form, errors);
-                    Katrid.UI.uiKatrid.setFocus(elfield);
-                    s += errors.join('');
-                    Katrid.Forms.Dialogs.Alerts.error(s);
-                    if (raiseError)
-                        throw Error('Error validating form: ' + s);
-                    return false;
-                }
-                return true;
+                let ret;
+                if (this.vm?.validate)
+                    ret = this.vm.validate();
+                if (!ret)
+                    throw Error('Validation error');
+                return ret;
             }
             indexOf(obj) {
                 if (this._records)
@@ -2993,7 +2984,7 @@ var Katrid;
             RecordState[RecordState["created"] = 2] = "created";
             RecordState[RecordState["modified"] = 3] = "modified";
         })(RecordState = Data.RecordState || (Data.RecordState = {}));
-        class Record {
+        class DataRecord {
             constructor(data, dataSource, state) {
                 this.$loaded = false;
                 if (!data)
@@ -3125,7 +3116,7 @@ var Katrid;
                 return true;
             }
             $new() {
-                return new Record(this.pristine);
+                return new DataRecord(this.pristine);
             }
             serialize() {
                 let data = {};
@@ -3147,7 +3138,7 @@ var Katrid;
                 }
             }
         }
-        Data.Record = Record;
+        Data.DataRecord = DataRecord;
         class SubRecords {
             constructor(recs) {
                 this.recs = recs;
@@ -3159,7 +3150,7 @@ var Katrid;
         }
         Data.SubRecords = SubRecords;
         function createRecord(rec, dataSource) {
-            let record = new Record(rec, dataSource);
+            let record = new DataRecord(rec, dataSource);
             if (!rec)
                 rec = record.pristine;
             if (dataSource?.$form)
@@ -3440,7 +3431,18 @@ var Katrid;
                     let cls = Katrid.Forms.Widgets.registry[widget];
                     return new cls(this);
                 }
-                validate() {
+                validate(record) {
+                    let val = record[this.name];
+                    let msgs = [];
+                    if (this.required && (val == null)) {
+                        msgs.push(Katrid.i18n.gettext('This field cannot be empty.'));
+                    }
+                    if (msgs.length) {
+                        let res = {};
+                        res[this.name] = msgs;
+                        return res;
+                    }
+                    return true;
                 }
                 get defaultCondition() {
                     return '=';
@@ -4644,6 +4646,7 @@ var Katrid;
                     this.action = config.action;
                     this.model = config.model || this.action.model;
                     this.viewInfo = config.viewInfo;
+                    this.fields = config.fields || this.viewInfo.fields;
                     this.caption = config.caption;
                     this.create();
                 }
@@ -4728,9 +4731,6 @@ var Katrid;
                     if (container)
                         container.append(this.actionView);
                     return this.actionView;
-                }
-                get fields() {
-                    return this.viewInfo.fields;
                 }
                 applyCustomTags(template) {
                     Views.CustomTag.render(this, template);
@@ -6502,6 +6502,21 @@ var Katrid;
                             },
                             backTo(index) {
                                 me.action.back(index);
+                            },
+                            async validate() {
+                                let msgs = [];
+                                for (let f of Object.values(me.fields)) {
+                                    let v = f.validate(this.record);
+                                    if (v !== true)
+                                        msgs.push(`<span>${f.caption}</span><ul><li>${Katrid.i18n.gettext('This field cannot be empty.')}</li></ul>`);
+                                }
+                                if (msgs.length) {
+                                    let s = `<span>${Katrid.i18n.gettext('The following fields are invalid:')}</span><hr>`;
+                                    s += msgs.join('');
+                                    Katrid.Forms.Dialogs.Alerts.error(s);
+                                    return false;
+                                }
+                                return true;
                             },
                             async copy() {
                                 this.viewType = 'form';
