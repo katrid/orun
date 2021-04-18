@@ -529,12 +529,6 @@ var Katrid;
                     data = { args: [data] };
                 this.model.rpc(method, data.args, data.kwargs);
             }
-            refresh() {
-                if (this.viewType === 'form')
-                    this.dataSource.get(this.params.id);
-                else
-                    this.dataSource.refresh();
-            }
             getContext() {
                 let ctx = super.getContext();
                 let sel = this.view.getSelection();
@@ -787,7 +781,7 @@ var Katrid;
                     this.pendingOperation = true;
                     let res = await this.model.rpc(meth, [id], null, this);
                     if (res.tag === 'refresh')
-                        this.refresh();
+                        this.view.refresh();
                     else if (res.tag == 'new') {
                         this.dataSource.insert(true, res.values);
                     }
@@ -4826,6 +4820,9 @@ var Katrid;
                     this.actionView.view = this;
                     return vm;
                 }
+                refresh() {
+                    this.dataSource.refresh();
+                }
                 getSelection() {
                     if (this.vm.selection)
                         return this.dataSource.records.map((obj) => obj.id);
@@ -6516,8 +6513,11 @@ var Katrid;
                     return toolbar;
                 }
                 getSelection() {
-                    if (this.vm.recordId)
-                        return [this.vm.recordId];
+                    if (this.dataSource.recordId)
+                        return [this.dataSource.recordId];
+                }
+                refresh() {
+                    this.dataSource.get(this.dataSource.recordId);
                 }
                 createVm(el) {
                     let me = this;
@@ -9828,8 +9828,6 @@ var Katrid;
                 return new Promise((resolve, reject) => {
                     this.post(meth, { args: args, kwargs: kwargs })
                         .then((res) => {
-                        if ((res?.tag === 'refresh') && action)
-                            action.refresh();
                         resolve(res);
                     })
                         .catch(res => {
