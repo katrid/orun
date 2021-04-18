@@ -6566,6 +6566,9 @@ var Katrid;
                             backTo(index) {
                                 me.action.back(index);
                             },
+                            actionClick(selection, methodName, event) {
+                                me.action.formButtonClick(selection.map(obj => obj.id), methodName);
+                            },
                             async validate() {
                                 let msgs = [];
                                 for (let f of Object.values(me.fields)) {
@@ -6596,7 +6599,12 @@ var Katrid;
                                         res += record[field] || 0;
                                 return res;
                             }
-                        }
+                        },
+                        computed: {
+                            selection() {
+                                return [this.record];
+                            }
+                        },
                     }).mount(el);
                     this.vm = vm;
                     this.dataSource.stateChangeCallback = (state) => {
