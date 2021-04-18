@@ -15,6 +15,7 @@ urlpatterns = [
     path('web/image/<model>/<field>/<id>/', views.client.image),
     path('web/company/logo/', views.client.company_logo),
     path('web/reports/<path:path>', views.client.report),
+    # path('web/test/', views.test.qunit),
 
     path('api/rpc/<service>/<meth>/', views.api.rpc),
     path('api/view/<service>/', views.api.view),
