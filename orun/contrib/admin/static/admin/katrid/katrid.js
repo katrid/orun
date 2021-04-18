@@ -5557,7 +5557,7 @@ var Katrid;
                 let model = this.getAttribute('data-model');
                 if (this.hasAttribute('allow-open'))
                     append = `<span class="fa fa-fw fa-folder-open autocomplete-open" v-on:click="openObject('${model}', record.${name}.id)"></span>`;
-                this.innerHTML = `<input class="form-control" autocomplete="nope" spellcheck="false"> <span class="caret"></span>` + append;
+                this.innerHTML = `<input class="form-control form-field" autocomplete="nope" spellcheck="false"> <span class="caret"></span>` + append;
                 this.input = this.querySelector('input');
                 let caret = this.querySelector('.caret');
                 caret.addEventListener('click', evt => this.click());
@@ -10313,7 +10313,7 @@ var Katrid;
             }
             operationTemplate() {
                 const opts = this.getOperations();
-                return `<div class="col-sm-4"><select id="param-op-${this.id}" v-model="param.operation" ng-init="param.operation='${this.defaultOperation}'" class="form-control" onchange="$('#param-${this.id}').data('param').change();$('#rep-param-id-${this.id}')[0].focus()">
+                return `<div class="col-sm-4"><select id="param-op-${this.id}" v-model="param.operation" class="form-control" onchange="$('#param-${this.id}').data('param').change();$('#rep-param-id-${this.id}')[0].focus()">
   ${opts}
   </select></div>`;
             }

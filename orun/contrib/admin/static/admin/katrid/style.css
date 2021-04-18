@@ -12475,13 +12475,14 @@ label.checkbox {
 
 input.form-field:required,
 select.form-field:required,
+.input-dropdown.form-field[required] input.form-control,
 .select2-container.form-field.ng-invalid-required > a.select2-choice {
-  background-color: #eaebff;
+  background-color: #f4f5ff;
 }
 
 input.form-field.v-dirty,
 select.form-field.v-dirty {
-  background-color: #fffdf1;
+  background-color: #fcfbf3;
 }
 
 input[type=text].form-field.ng-touched.ng-invalid,
@@ -13314,6 +13315,7 @@ dashboard-view {
   padding: 16px;
   border-radius: 6px;
   background-color: #ffffff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 query-viewer {
