@@ -7818,9 +7818,7 @@ var Katrid;
                         let el = opts.el;
                         let facet = opts.facet || view.facetGrouping;
                         let group = new SearchGroups(view, facet);
-                        if (el)
-                            for (let child of el.children())
-                                group.push(SearchGroup.fromItem(view, $(child), group));
+                        group.push(SearchGroup.fromItem(view, el, group));
                         return group;
                     }
                     addValue(item) {
@@ -8030,7 +8028,6 @@ var Katrid;
                             this.setContent(value);
                     }
                     setContent(schema) {
-                        console.log('set content', schema);
                         if (schema instanceof HTMLElement) {
                             for (let child of schema.children) {
                                 let tag = child.tagName;
@@ -8045,8 +8042,10 @@ var Katrid;
                                     continue;
                                 }
                                 else if (tag === 'GROUP') {
-                                    console.log('add group');
-                                    obj = Search.SearchGroup.fromItem(this, child);
+                                    obj = Search.SearchGroups.fromGroup({
+                                        view: this,
+                                        el: child,
+                                    });
                                     this.groups.push(obj);
                                     continue;
                                 }
@@ -8246,10 +8245,42 @@ var Katrid;
         <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" type="button">
           <span class="fa fa-bars"></span> ${_.gettext('Group By')} <span class="caret"></span>
         </button>
-        <ul class="dropdown-menu search-view-groups-menu"></ul>
+        <ul class="dropdown-menu search-view-groups-menu">
+        
+          <div v-for="group in search.groups">
+            <a class="dropdown-item" :class="{'selected': item.selected}" v-on:click.stop="item.toggle()" v-for="item in group.items">
+              {{ item.toString() }}
+            </a>
+            <div class="dropdown-divider"></div>
+          </div>
+
+          <a class="dropdown-item dropdown-search-item" v-on:click.stop.prevent
+             v-on:click="groupByExpanded=!groupByExpanded">
+            <i :class="{ 'fa-caret-right': !groupByExpanded, 'fa-caret-down': groupByExpanded }"
+               class="fa expandable"></i>
+            {{ _.gettext('Add Custom Group') }}
+          </a>
+
+          <div v-if="groupByExpanded" v-on:click.stop.prevent>
+            <div class="col-12">
+              <div class="form-group">
+                <select class="form-control" v-model="fieldName" v-on:change="fieldChange(fields[fieldName])">
+                  <option value=""></option>
+                  <option v-for="(name, field, index) in fields" :value="name">{{ field.caption }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <button class="btn btn-primary" type="button" v-on:click="search.addCustomGroup(fields[fieldName]);fieldName='';">
+                  {{ _.gettext('Apply') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        
+</ul>
       </div>
       <button class="btn btn-secondary">
-        <span class="fa fa-star"></span> ${_.gettext('Favorites')} <span class="caret"></span>
+        <span class="fa fa-star"></span> {{ _.gettext('Favorites') }} <span class="caret"></span>
       </button>
     </div>
             <div class="float-right">
@@ -8275,7 +8306,7 @@ var Katrid;
     </div>`,
                     mounted() {
                         this.$viewInfo = this.$parent.action.views.search;
-                        let search = this.$search = new SearchViewElement(this);
+                        let search = this.search = this.$search = new SearchViewElement(this);
                         this.$parent.action.searchView = search;
                         this.facets = search.facets;
                         this.$parent.search = this.$search;
@@ -8287,6 +8318,7 @@ var Katrid;
                             this.searchText = '';
                             this.$search.close();
                         });
+                        console.log('search', this.search);
                         this.$search.input.addEventListener('keydown', (evt) => {
                             switch (evt.which) {
                                 case Katrid.UI.keyCode.DOWN:
@@ -8407,6 +8439,7 @@ var Katrid;
                             fieldName: null,
                             currentIndex: 0,
                             searchText: '',
+                            groupByExpanded: false,
                             facets: [],
                             availableItems: [],
                             customFilter: [],
