@@ -6227,7 +6227,8 @@ var Katrid;
 
             </div>
             <div class="card-items" card-draggable=".card-items" card-item>
-              <div v-for="record in group.records" class="card-item sortable-item ui-sortable-handle" v-on:click="recordClick($index, record, $event)">
+              <div v-for="(record, index) in group.records" class="card panel-default card-item card-link"
+                v-on:click="recordClick(record, index, $event)">
                 <div id="template-placeholder"></div>
               </div>
             </div>
@@ -6248,9 +6249,9 @@ var Katrid;
             </form>
           </div>
         </div>
-        <div class="card-view card-deck" v-else-if="groups.length === 0">
+        <div class="card-view card-deck" v-else>
           <div v-for="(record, index) in records" class="card panel-default card-item card-link"
-               v-on:click="recordClick(record, index, event)">
+               v-on:click="recordClick(record, index, $event)">
             <div id="template-placeholder"></div>
           </div>
           <div class="card-item card-ghost"></div>
