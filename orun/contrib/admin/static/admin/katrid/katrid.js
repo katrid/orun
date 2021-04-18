@@ -6694,7 +6694,7 @@ var Katrid;
               OK
             </button>
             <button type="button" class="btn btn-secondary" type="button" data-dismiss="modal">
-              ${Katrid.i18n.gettext('Close')}
+              ${Katrid.i18n.gettext('Cancel')}
             </button>
           </div>
         </div>
