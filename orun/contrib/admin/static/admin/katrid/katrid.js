@@ -537,7 +537,7 @@ var Katrid;
             }
             getContext() {
                 let ctx = super.getContext();
-                let sel = this.getSelection();
+                let sel = this.view.getSelection();
                 if (sel && sel.length) {
                     ctx.active_id = sel[0];
                     ctx.active_ids = sel;
@@ -866,12 +866,12 @@ var Katrid;
             }
             getSelection() {
                 if (this.viewType === 'form') {
-                    if (this.scope.recordId)
-                        return [this.scope.recordId];
+                    if (this.view.vm.recordId)
+                        return [this.view.vm.recordId];
                     else
                         return;
                 }
-                if (this.selection)
+                if (this.view.vm.selection)
                     return this.dataSource.records.map((obj) => obj.id);
             }
             set attachments(value) {
@@ -4826,6 +4826,10 @@ var Katrid;
                     this.actionView.view = this;
                     return vm;
                 }
+                getSelection() {
+                    if (this.vm.selection)
+                        return this.dataSource.records.map((obj) => obj.id);
+                }
                 dataCallback(data) {
                     this.vm.dataOffset = this._dataSource.offset;
                     this.vm.dataOffsetLimit = this._dataSource.offsetLimit;
@@ -6376,7 +6380,7 @@ var Katrid;
                     if (el.hasAttribute('data-action'))
                         el.setAttribute('v-on:click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
                     else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name')))
-                        el.setAttribute('v-on:click', `action.formButtonClick(action.selection, '${el.getAttribute('name')}', $event.target)`);
+                        el.setAttribute('v-on:click', `formButtonClick(selection, '${el.getAttribute('name')}', $event.target)`);
                     if (action.hasAttribute('id'))
                         el.setAttribute('id', action.id);
                     return el;
@@ -6510,6 +6514,10 @@ var Katrid;
                     this.createBreadcrumbs(toolbar);
                     this.createToolbarButtons(toolbar);
                     return toolbar;
+                }
+                getSelection() {
+                    if (this.vm.recordId)
+                        return [this.vm.recordId];
                 }
                 createVm(el) {
                     let me = this;
