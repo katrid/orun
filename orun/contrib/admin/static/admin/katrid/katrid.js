@@ -412,9 +412,12 @@ var Katrid;
                     methods: {
                         exportReport(fmt) {
                         }
-                    }
+                    },
+                    components: Katrid.componentsRegistry,
+                    directives: Katrid.directivesRegistry,
                 });
                 vm.mount(el);
+                console.log('render report dialog');
                 return vm;
             }
         }
@@ -5030,6 +5033,84 @@ var Katrid;
     (function (Forms) {
         var Controls;
         (function (Controls) {
+            Katrid.component('input-ajax-choices', {
+                props: ['modelValue'],
+                template: '<input>',
+                mounted() {
+                    let element = $(this.$el);
+                    const multiple = this.$el.hasAttribute('multiple');
+                    const serviceName = this.$attrs['ajax-choices'];
+                    let field = this.$attrs.field;
+                    let _timeout = null;
+                    let domain;
+                    let nameFields = this.$attrs['name-fields'];
+                    let modelChoices = this.$attrs['model-choices'];
+                    const cfg = {
+                        allowClear: true,
+                        query(query) {
+                            let data = {
+                                args: [query.term],
+                                kwargs: {
+                                    count: 1,
+                                    page: query.page,
+                                    name_fields: nameFields?.split(",") || null
+                                }
+                            };
+                            if (domain)
+                                data.domain = domain;
+                            const f = () => {
+                                let svc = new Katrid.Services.Model(serviceName);
+                                let res;
+                                if (field)
+                                    res = svc.getFieldChoices({ field, term: query.term, kwargs: data.kwargs });
+                                else
+                                    res = new Katrid.Services.Model(modelChoices).searchByName(data);
+                                res.then(res => {
+                                    let data = res.items;
+                                    const r = data.map(item => ({
+                                        id: item.id,
+                                        text: item.text
+                                    }));
+                                    const more = query.page * Katrid.settings.services.choicesPageLimit < res.count;
+                                    return query.callback({
+                                        results: r,
+                                        more: more
+                                    });
+                                });
+                            };
+                            if (_timeout)
+                                clearTimeout(_timeout);
+                            _timeout = setTimeout(f, 400);
+                        },
+                        escapeMarkup(m) {
+                            return m;
+                        },
+                        initSelection(element, callback) {
+                        }
+                    };
+                    if (multiple)
+                        cfg['multiple'] = true;
+                    const el = element.select2(cfg);
+                    element.on('$destroy', function () {
+                        $('.select2-hidden-accessible').remove();
+                        $('.select2-drop').remove();
+                        return $('.select2-drop-mask').remove();
+                    });
+                    el.on('change', event => {
+                        const v = el.select2('data');
+                        this.$emit('update:modelValue', v);
+                    });
+                },
+            });
+        })(Controls = Forms.Controls || (Forms.Controls = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Controls;
+        (function (Controls) {
             Katrid.component('button-attachments', {
                 render() {
                     let templ = `<div class="dropdown">
@@ -5198,6 +5279,7 @@ var Katrid;
                         insertMode: false,
                     })
                         .change(function () {
+                        console.log('change', input.value);
                         vm.$emit('update:modelValue', moment(this.value, Katrid.i18n.formats.shortDateTimeFormat).toISOString());
                     });
                     let calendar = $(vm.$el).datetimepicker({
@@ -5213,8 +5295,9 @@ var Katrid;
                     })
                         .on('dp.change', function (evt) {
                         calendar.datetimepicker('hide');
+                        vm.$emit('update:modelValue', moment(input.value, Katrid.i18n.formats.shortDateTimeFormat).toISOString());
                     })
-                        .on('dp.hide', function (evt) {
+                        .on('dp.hide', (evt) => {
                     });
                 },
                 watch: {
@@ -10121,35 +10204,45 @@ var Katrid;
         };
         Params.Widgets = {
             CharField(param) {
-                return `<div><input id="rep-param-id-${param.id}" ng-model="param.value1" type="text" class="form-control"></div>`;
+                return `<div><input id="rep-param-id-${param.id}" v-model="param.value1" type="text" class="form-control"></div>`;
             },
             IntegerField(param) {
                 let secondField = '';
                 if (param.operation === 'between') {
-                    secondField = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-2" ng-model="param.value2" type="number" class="form-control"></div>`;
+                    secondField = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" type="number" class="form-control"></div>`;
                 }
-                return `<div class="row"><div class="col-sm-6"><input id="rep-param-id-${param.id}" type="number" ng-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                return `<div class="row"><div class="col-sm-6"><input id="rep-param-id-${param.id}" type="number" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
             },
             DecimalField(param) {
                 let secondField = '';
                 if (param.operation === 'between') {
-                    secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" ng-model="param.value2" input-decimal class="form-control"></div>`;
+                    secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" input-decimal class="form-control"></div>`;
                 }
-                return `<div class="col-sm-12 row"><div class="col-xs-6"><input id="rep-param-id-${param.id}" input-decimal ng-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                return `<div class="col-sm-12 row"><div class="col-xs-6"><input id="rep-param-id-${param.id}" input-decimal v-model="param.value1" class="form-control"></div>${secondField}</div>`;
             },
             DateTimeField(param) {
                 let secondField = '';
                 if (param.operation === 'between') {
-                    secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" ng-model="param.value2" class="form-control"></div>`;
+                    secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" v-model="param.value2" class="form-control"></div>`;
                 }
-                return `<div class="col-sm-12 row"><div class="col-xs-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" ng-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                return `<div class="col-sm-12 row"><div class="col-xs-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
             },
             DateField(param) {
                 let secondField = '';
                 if (param.operation === 'between') {
-                    secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" ng-model="param.value2" class="form-control"></div>`;
+                    secondField = `<div class="col-xs-6">
+<input-date class="input-group date" v-model="param.value2" date-picker="L">
+<input id="rep-param-id-${param.id}-2" type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
+      <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
+</input-date>
+</div>`;
                 }
-                return `<div class="col-sm-12 row"><div class="col-xs-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" ng-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                return `<div class="col-sm-12 row"><div class="col-xs-6">
+<input-date class="input-group date" v-model="param.value1" date-picker="L">
+<input id="rep-param-id-${param.id}" type="text" class="form-control" inputmode="numeric" autocomplete="off">
+      <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
+</input-date>
+</div>${secondField}</div>`;
             },
             ForeignKey(param) {
                 const serviceName = param.info.field.attr('model') || param.params.model;
@@ -10157,14 +10250,14 @@ var Katrid;
                 if (param.operation === 'in') {
                     multiple = 'multiple';
                 }
-                return `<div><input id="rep-param-id-${param.id}" ajax-choices="${serviceName}" field="${param.name}" ng-model="param.value1" ${multiple}></div>`;
+                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="${serviceName}" field-name="${param.name}" v-model="param.value1" ${multiple}></div>`;
             },
             ModelChoices(param) {
                 let multiple = '';
                 if (param.operation === 'in') {
                     multiple = 'multiple';
                 }
-                return `<div><input id="rep-param-id-${param.id}" ajax-choices="ir.action.report" model-choices="${param.info.modelChoices}" ng-model="param.value1" ${multiple}></div>`;
+                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ir.action.report" model-choices="${param.info.modelChoices}" v-model="param.value1" ${multiple}></div>`;
             },
             SelectionField(param) {
                 console.log(param);
@@ -10255,10 +10348,11 @@ var Katrid;
         Katrid.component('report-param-widget', {
             props: ['param'],
             render() {
-                console.log('type', this.param);
                 let widget = Params.Widgets[this.param.type](this.param);
                 return Vue.compile(widget)(this);
-            }
+            },
+            components: Katrid.componentsRegistry,
+            directives: Katrid.directivesRegistry,
         });
         class ReportEngine {
             static load(el) {
