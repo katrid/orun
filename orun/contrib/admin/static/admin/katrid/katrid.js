@@ -2389,17 +2389,14 @@ var Katrid;
                 this._params = [];
                 if (!group?.length) {
                     this.groups = [];
-                    this.scope.action.groups = null;
-                    this.scope.groups = null;
+                    this.vm.groups = null;
                     this.search(params);
                     return;
                 }
-                this.scope.action.groups = group;
-                this.scope.groupings = [];
+                this.vm.groups = group;
                 this.groups = group;
-                this.scope.records = this.scope.groups = await this._loadGroup(group, 0, params);
-                this.scope.$apply();
-                return this.scope.groups;
+                this.vm.records = this.vm.groups = await this._loadGroup(group, 0, params);
+                return this.vm.groups;
             }
             async _loadGroup(group, index, where, parent) {
                 let rows = [];
@@ -4289,6 +4286,9 @@ var Katrid;
                     this.addField(f);
                     f.remove();
                 }
+                let td = this.tRow.querySelector('td');
+                if (td)
+                    td.setAttribute('v-if', '!record.$hasChildren');
                 this.tRow.setAttribute(':data-id', 'record.id');
                 this.tRow.setAttribute('v-for', `(record, index) in ${records || 'records'}`);
                 this.tRow.setAttribute(':selected', 'record.$selected');
@@ -4299,6 +4299,8 @@ var Katrid;
           'form-data-changing': (dataSource.changing && dataSource.recordIndex === $index),
           'form-data-readonly': !(dataSource.changing && dataSource.recordIndex === $index)
           }`);
+                else
+                    this.tRow.setAttribute(':class', `{'group-header': record.$hasChildren}`);
                 let ngTrClass = list.getAttribute('ng-tr-class');
                 if (ngTrClass) {
                     if (!ngTrClass.startsWith('{'))
@@ -4737,6 +4739,9 @@ var Katrid;
                 }
                 ready() {
                 }
+                data() {
+                    return {};
+                }
                 createVm(el) {
                     let me = this;
                     let recordClick = this.config.recordClick || function (record, index, event) {
@@ -4763,7 +4768,7 @@ var Katrid;
                     };
                     let vm = Katrid.createView({
                         data() {
-                            return {
+                            let data = {
                                 allSelected: false,
                                 selection: [],
                                 action: me.action,
@@ -4773,11 +4778,14 @@ var Katrid;
                                 actionView: me,
                                 pendingRequest: false,
                                 recordCount: 0,
+                                groups: [],
                                 dataOffset: 0,
                                 dataOffsetLimit: 0,
                                 selectionLength: 0,
                                 $result: null,
                             };
+                            Object.assign(data, me.data());
+                            return data;
                         },
                         methods: {
                             createNew() {
@@ -4849,6 +4857,20 @@ var Katrid;
                     super.create();
                     if ('auto_load' in this.viewInfo)
                         this.autoLoad = this.viewInfo.auto_load;
+                }
+                async applyGroups(groups, params) {
+                    let res = await this.dataSource.groupBy(groups, params);
+                    this.groupBy(res);
+                }
+                groupBy(data) {
+                    for (let group of data)
+                        this.loadGroupRecords(group);
+                }
+                async loadGroupRecords(group) {
+                    if (group.$count > 0) {
+                        this.dataSource.model.search({ params: group.$params })
+                            .then(res => group.records = res.data);
+                    }
                 }
                 ready() {
                     if (this.autoLoad)
@@ -6184,7 +6206,49 @@ var Katrid;
                     let templ = Katrid.element(`
     <div class="content no-padding">
       <div class="data-panel col-12">
-        <div class="card-view card-deck">
+      
+        <div class="card-view kanban" v-if="groups.length > 0" card-draggable=".card-group" card-group>
+
+          <div v-for="group in groups" class="card-group sortable-item" :data-id="group._paramValue" :data-group-name="group._paramName">
+            <div class="card-header margin-bottom-8">
+              <div class="pull-right">
+                <button class="btn" v-on:click="cardShowAddGroupItemDlg = true"><i class="fa fa-plus"></i></button>
+              </div>
+              <h4>{{group.__str__}}</h4>
+              <div class="clearfix"></div>
+
+              <form id="card-add-group-item-dlg" v-on:submit="cardAddItem($event, cardNewName)" v-if="cardShowAddGroupItemDlg">
+                <div class="form-group">
+                  <input v-model="cardNewName" class="form-control" ng-esc="cardHideAddGroupItemDlg($event)" placeholder="${_.gettext('Add')}" v-on:blur="cardHideAddGroupItemDlg($event)">
+                </div>
+                <button type="submit" class="btn btn-primary" v-on:mousedown.prevent.stop>${Katrid.i18n.gettext('Add')}</button>
+                <button class="btn btn-default">${_.gettext('Cancel')}</button>
+              </form>
+
+            </div>
+            <div class="card-items" card-draggable=".card-items" card-item>
+              <div v-for="record in group.records" class="card-item sortable-item ui-sortable-handle" v-on:click="recordClick($index, record, $event)">
+                <div id="template-placeholder"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-add-group" title="${_.gettext('Click here to add new column')}" v-on:click="cardNewName='';cardShowAddGroupDlg($event);" :data-group-name="groups[0]._paramName">
+            <div v-show="!cardAddGroupDlg">
+              <i class="fa fa-fw fa-chevron-right fa-2x"></i>
+              <div class="clearfix"></div>
+              <span class="title">${_.gettext('Add New Column')}</span>
+            </div>
+            <form v-show="cardAddGroupDlg" v-on:submit="cardAddGroup($event, cardNewName)">
+            <div class="form-group">
+              <input class="form-control" v-on:blur="cardAddGroupDlg=false" ng-esc="cardAddGroupDlg=false" placeholder="${_.gettext('Add')}" v-model="cardNewName">
+            </div>
+              <button type="submit" class="btn btn-primary">${_.gettext('Add')}</button>
+              <button type="button" class="btn btn-default">${_.gettext('Cancel')}</button>
+            </form>
+          </div>
+        </div>
+        <div class="card-view card-deck" v-else-if="groups.length === 0">
           <div v-for="(record, index) in records" class="card panel-default card-item card-link"
                v-on:click="recordClick(record, index, event)">
             <div id="template-placeholder"></div>
@@ -6210,7 +6274,7 @@ var Katrid;
                         if (el)
                             child.replaceWith(el);
                     }
-                    templ.querySelector('#template-placeholder').replaceWith(template);
+                    $(templ).find('#template-placeholder').replaceWith(template);
                     return templ;
                 }
             }
@@ -6224,10 +6288,6 @@ var Katrid;
                 renderTemplate(template) {
                     let cardRenderer = new CardRenderer(this.fields);
                     return cardRenderer.render(template);
-                }
-                groupBy(data) {
-                    for (let group of data)
-                        this.action.loadGroupRecords(group);
                 }
             }
             Views.Card = Card;
@@ -8129,18 +8189,18 @@ var Katrid;
                             res.push(i);
                         return res;
                     }
-                    update() {
+                    async update() {
                         console.log('get params', this.getParams());
                         if (this.groupLength !== this._groupLength) {
                             this._groupLength = this.groupLength;
-                            this.view.action.applyGroups(this.groupBy(), this.getParams());
+                            await this.view.applyGroups(this.groupBy(), this.getParams());
                         }
                         else
                             this.action.setSearchParams(this.getParams());
                         this.vm.update();
                     }
                     groupBy() {
-                        return this.facetGrouping.values.map(obj => obj._ref.name);
+                        return this.facetGrouping.values.map(obj => obj._ref.groupBy);
                     }
                 }
                 Search.SearchViewElement = SearchViewElement;
@@ -8313,6 +8373,7 @@ var Katrid;
                         this.$search.model = this.$parent.action.model;
                         this.$search.action = this.$parent.action;
                         this.$search.fields = this.$viewInfo.fields;
+                        search.view = this.$parent.actionView;
                         this.$search.setContent(this.$viewInfo.template);
                         this.$search.input.addEventListener('blur', (evt) => {
                             this.searchText = '';
