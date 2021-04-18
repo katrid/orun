@@ -5095,7 +5095,7 @@ var Katrid;
                     el.on('change', event => {
                         let v = el.select2('data');
                         if (Array.isArray(v))
-                            v = v.map(obj => [obj.id, obj.text]);
+                            v = v.map(obj => obj.id);
                         this.$emit('update:modelValue', v);
                     });
                 },
