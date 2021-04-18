@@ -11453,6 +11453,10 @@ h3.popover-title {
   font-weight: 400;
 }
 
+.search-more-dialog .search-view {
+  margin-bottom: 10px;
+}
+
 .badge-primary {
   background-color: #375f82;
 }

@@ -6676,7 +6676,7 @@ var Katrid;
                 createActionView(content) {
                     let templ = $(`
     <action-view class="modal" tabindex="-1" role="dialog">
-      <div class="modal-dialog modal-lg form-view ng-form" role="document">
+      <div class="modal-dialog modal-lg form-view ng-form search-more-dialog" role="document">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">
@@ -6686,7 +6686,7 @@ var Katrid;
                 aria-hidden="true">&times;</span></button>
           </div>
           <div class="modal-body data-form data-panel">
-            <search-view class="col-12"/>
+            <search-view></search-view>
             <div class="table-responsive"></div>
           </div>
           <div class="modal-footer">
