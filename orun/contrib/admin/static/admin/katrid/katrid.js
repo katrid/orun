@@ -2393,9 +2393,8 @@ var Katrid;
                     this.search(params);
                     return;
                 }
-                this.vm.groups = group;
-                this.groups = group;
-                this.vm.records = this.vm.groups = await this._loadGroup(group, 0, params);
+                this.groups = this.vm.groups = group;
+                this.vm.groups = await this._loadGroup(group, 0, params);
                 return this.vm.groups;
             }
             async _loadGroup(group, index, where, parent) {
@@ -2792,10 +2791,13 @@ var Katrid;
             set recordIndex(index) {
                 this._recordIndex = index;
                 let rec = this._records[index];
+                console.log(this._records);
                 this.record = rec;
-                if (this.action)
-                    this.action.changeUrl('id', this.recordId);
-                this.get(rec.id);
+                if (rec?.id) {
+                    if (this.action)
+                        this.action.changeUrl('id', this.recordId);
+                    this.get(rec.id);
+                }
             }
             get recordIndex() {
                 return this._recordIndex;
@@ -4747,7 +4749,7 @@ var Katrid;
                     let recordClick = this.config.recordClick || function (record, index, event) {
                         me.action.record = record;
                         me.action.recordId = record.id;
-                        me.action.recordIndex = index;
+                        me.action.recordIndex = this.records.indexOf(record);
                         history.pushState(null, '', me.action.makeUrl('form'));
                         me.action.showView('form');
                         return;
@@ -4860,17 +4862,7 @@ var Katrid;
                 }
                 async applyGroups(groups, params) {
                     let res = await this.dataSource.groupBy(groups, params);
-                    this.groupBy(res);
-                }
-                groupBy(data) {
-                    for (let group of data)
-                        this.loadGroupRecords(group);
-                }
-                async loadGroupRecords(group) {
-                    if (group.$count > 0) {
-                        this.dataSource.model.search({ params: group.$params })
-                            .then(res => group.records = res.data);
-                    }
+                    await this.groupBy(res);
                 }
                 ready() {
                     if (this.autoLoad && !this.action.context.search_default)
@@ -6285,6 +6277,18 @@ var Katrid;
                     super.create();
                     this.viewType = 'card';
                     this.action.view = this;
+                }
+                async groupBy(data) {
+                    this.dataSource.records = [];
+                    for (let group of data)
+                        await this.loadGroupRecords(group);
+                }
+                async loadGroupRecords(group) {
+                    if (group.$count > 0) {
+                        let res = await this.dataSource.model.search({ params: group.$params });
+                        group.records = res.data;
+                        this.dataSource.records.push(...res.data);
+                    }
                 }
                 renderTemplate(template) {
                     let cardRenderer = new CardRenderer(this.fields);
@@ -8192,8 +8196,8 @@ var Katrid;
                             else
                                 i = this.getByName(item[0]);
                             console.log('load by name', item, i);
-                            if (i)
-                                i.selected = true;
+                            if (!i?.selected)
+                                i.toggle();
                         });
                     }
                     getByName(name) {
@@ -8398,8 +8402,6 @@ var Katrid;
                         this.$search.fields = this.$viewInfo.fields;
                         search.view = this.$parent.actionView;
                         this.$search.setContent(this.$viewInfo.template);
-                        if (this.$parent.action.context.search_default)
-                            setTimeout(() => search.load(this.$parent.action.context.search_default));
                         this.$search.input.addEventListener('blur', (evt) => {
                             this.searchText = '';
                             this.$search.close();
@@ -8429,6 +8431,8 @@ var Katrid;
                                     break;
                             }
                         });
+                        if (this.$parent.action.context.search_default)
+                            setTimeout(() => this.search.load(this.$parent.action.context.search_default));
                     },
                     methods: {
                         addCondition(field, condition, value) {
