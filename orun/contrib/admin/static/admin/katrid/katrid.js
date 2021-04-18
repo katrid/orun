@@ -2237,10 +2237,10 @@ var Katrid;
                         console.log(form.$error[errorType]);
                 return elfield;
             }
-            validate(raiseError = true) {
+            async validate(raiseError = true) {
                 let ret;
                 if (this.vm?.validate)
-                    ret = this.vm.validate();
+                    ret = await this.vm.validate();
                 if (!ret)
                     throw Error('Validation error');
                 return ret;
@@ -2483,12 +2483,12 @@ var Katrid;
                 }
                 return data;
             }
-            save(autoRefresh = true) {
+            async save(autoRefresh = true) {
                 for (let child of this.children)
                     if (child.changing)
                         child.flush();
                 const el = this.action.$form;
-                if (this.validate()) {
+                if (await this.validate()) {
                     const data = this.record.$record.serialize();
                     console.log('serialized data', data);
                     if (data) {
