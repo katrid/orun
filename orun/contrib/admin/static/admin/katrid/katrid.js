@@ -4873,7 +4873,7 @@ var Katrid;
                     }
                 }
                 ready() {
-                    if (this.autoLoad)
+                    if (this.autoLoad && !this.action.context.search_default)
                         this.dataSource.open();
                     this.action.dataSource = this._dataSource;
                 }
@@ -8184,6 +8184,28 @@ var Katrid;
                         if (!this.vm.facets.includes(facet))
                             this.vm.facets.push(facet);
                     }
+                    load(filter) {
+                        filter.map(item => {
+                            let i;
+                            if (typeof item === 'string')
+                                i = this.getByName(item);
+                            else
+                                i = this.getByName(item[0]);
+                            console.log('load by name', item, i);
+                            if (i)
+                                i.selected = true;
+                        });
+                    }
+                    getByName(name) {
+                        for (let item of this.filterGroups)
+                            for (let subitem of item)
+                                if (subitem.name === name)
+                                    return subitem;
+                        for (let group of this.groups)
+                            for (let item of group.items)
+                                if (item.name === name)
+                                    return item;
+                    }
                     dump() {
                         let res = [];
                         for (let i of this.facets)
@@ -8376,11 +8398,12 @@ var Katrid;
                         this.$search.fields = this.$viewInfo.fields;
                         search.view = this.$parent.actionView;
                         this.$search.setContent(this.$viewInfo.template);
+                        if (this.$parent.action.context.search_default)
+                            setTimeout(() => search.load(this.$parent.action.context.search_default));
                         this.$search.input.addEventListener('blur', (evt) => {
                             this.searchText = '';
                             this.$search.close();
                         });
-                        console.log('search', this.search);
                         this.$search.input.addEventListener('keydown', (evt) => {
                             switch (evt.which) {
                                 case Katrid.UI.keyCode.DOWN:
