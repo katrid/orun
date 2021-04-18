@@ -4290,6 +4290,7 @@ var Katrid;
                 }
                 this.tRow.setAttribute(':data-id', 'record.id');
                 this.tRow.setAttribute('v-for', `(record, index) in ${records || 'records'}`);
+                this.tRow.setAttribute(':selected', 'record.$selected');
                 this.tRow.setAttribute('v-on:contextmenu', 'recordContextMenu(record, index, $event)');
                 this.tRow.setAttribute('v-on:click', 'recordClick(record, index, $event)');
                 if (this.inlineEditor)
@@ -4739,6 +4740,28 @@ var Katrid;
                 }
                 createVm(el) {
                     let me = this;
+                    let recordClick = this.config.recordClick || function (record, index, event) {
+                        me.action.record = record;
+                        me.action.recordId = record.id;
+                        me.action.recordIndex = index;
+                        history.pushState(null, '', me.action.makeUrl('form'));
+                        me.action.showView('form');
+                        return;
+                        let params = {
+                            id: record.id,
+                            model: me.action.info.model,
+                            action: me.action.info.id,
+                            view_type: 'form',
+                            menu_id: Katrid.webApp.currentMenu.id,
+                        };
+                        if (event && event.ctrlKey) {
+                            const url = '#/app/?' + $.param(params);
+                            window.open(url);
+                            return;
+                        }
+                        else
+                            Katrid.app.loadPage('#/app/?' + $.param(params), false);
+                    };
                     let vm = Katrid.createView({
                         data() {
                             return {
@@ -4754,6 +4777,7 @@ var Katrid;
                                 dataOffset: 0,
                                 dataOffsetLimit: 0,
                                 selectionLength: 0,
+                                $result: null,
                             };
                         },
                         methods: {
@@ -4770,28 +4794,7 @@ var Katrid;
                             backTo(index, viewType) {
                                 me.action.back(index);
                             },
-                            recordClick(record, index, event) {
-                                me.action.record = record;
-                                me.action.recordId = record.id;
-                                me.action.recordIndex = index;
-                                history.pushState(null, '', me.action.makeUrl('form'));
-                                me.action.showView('form');
-                                return;
-                                let params = {
-                                    id: record.id,
-                                    model: me.action.info.model,
-                                    action: me.action.info.id,
-                                    view_type: 'form',
-                                    menu_id: Katrid.webApp.currentMenu.id,
-                                };
-                                if (event && event.ctrlKey) {
-                                    const url = '#/app/?' + $.param(params);
-                                    window.open(url);
-                                    return;
-                                }
-                                else
-                                    Katrid.app.loadPage('#/app/?' + $.param(params), false);
-                            },
+                            recordClick,
                             actionClick(selection, methodName, event) {
                                 me.action.formButtonClick(selection.map(obj => obj.id), methodName);
                             },
@@ -5554,6 +5557,9 @@ var Katrid;
                 let item = null;
                 if (el)
                     item = $(el).data('item');
+                return this.setValue(item);
+            }
+            setValue(item, el) {
                 let event = new CustomEvent('selectItem', {
                     detail: {
                         item,
@@ -5666,10 +5672,18 @@ var Katrid;
                                     template: '<a class="dropdown-item"><i>Pesquisar mais...</i></a>',
                                     click: async (event) => {
                                         event.stopPropagation();
-                                        let dlg = await Katrid.Forms.Views.ListViewDialog.showDialog({
+                                        let res = await Katrid.Forms.Views.ListViewDialog.showDialog({
                                             model: field.model,
                                             caption: field.caption,
                                         });
+                                        if (res) {
+                                            data.kwargs.ids = res.id;
+                                            let value = await this.actionView.view.model.getFieldChoices({
+                                                field: this.field.name, term: '', kwargs: data.kwargs
+                                            });
+                                            if (value.items.length)
+                                                this.setValue(value.items[0]);
+                                        }
                                     },
                                 });
                             if (this.allowCreateNew)
@@ -6002,7 +6016,7 @@ var Katrid;
                         Katrid.Forms.Views.selectionSelectToggle.call(this, ...arguments);
                     },
                     unselectAll() {
-                        this.toggleAll(false);
+                        Katrid.Forms.Views.unselectAll.call(this, ...arguments);
                     },
                     deleteSelection() {
                         Katrid.Forms.Views.selectionDelete.call(this, ...arguments);
@@ -6676,7 +6690,7 @@ var Katrid;
             <div class="table-responsive"></div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" type="button" @click="actionView.deleteAndClose()">
+            <button type="button" class="btn btn-outline-secondary" type="button" @click="$result = this.selection[0]" data-dismiss="modal">
               OK
             </button>
             <button type="button" class="btn btn-secondary" type="button" data-dismiss="modal">
@@ -6702,6 +6716,11 @@ var Katrid;
                         let dlg = new ListViewDialog({
                             caption: config.caption,
                             model, viewInfo: viewInfo.views.list,
+                            recordClick(record) {
+                                this.unselectAll();
+                                record.$selected = true;
+                                this.selection = [record];
+                            },
                             action: {
                                 views: viewInfo.views,
                                 setSearchParams(params) {
@@ -6714,7 +6733,7 @@ var Katrid;
                         let el = dlg.actionView;
                         $(el).modal(config.options)
                             .on('hidden.bs.modal', () => {
-                            resolve(true);
+                            resolve(dlg.vm.$result);
                             $(el).data('modal', null);
                         });
                         return dlg;
@@ -6821,6 +6840,13 @@ var Katrid;
                     }
                 });
             }
+            function unselectAll() {
+                for (let rec of this.selection)
+                    rec.$selected = false;
+                this.selection = [];
+                this.selectionLength = 0;
+            }
+            Views.unselectAll = unselectAll;
             function filterByFieldContent(td, record) {
                 let name = td.getAttribute('field-name');
                 if (name) {

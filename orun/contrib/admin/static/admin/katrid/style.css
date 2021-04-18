@@ -12197,7 +12197,7 @@ body.container.hide-left-menu #footer.page-footer {
   padding: 4px 4px 2px 4px;
   border: none;
 }
-.table tbody tr.selected {
+.table tbody tr[selected=true] {
   background-color: #d7e6fc;
 }
 .table tbody tr:hover {
