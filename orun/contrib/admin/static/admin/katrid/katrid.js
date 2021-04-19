@@ -8281,7 +8281,7 @@ var Katrid;
     
     <div class="btn-group search-view-more-area">
       <div custom-filter class="btn-group">
-        <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" type="button" aria-expanded="false">
+        <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" type="button" aria-expanded="false">
           <span class="fa fa-filter"></span> ${_.gettext('Filters')} <span class="caret"></span>
         </button>
         
@@ -8289,7 +8289,7 @@ var Katrid;
 <div class="dropdown-menu search-view-filter-menu">
       <div>
         <div v-for="group in search.filterGroups">
-          <a class="dropdown-item" :class="{'selected': item.selected}" v-for="item in group" v-on:click.stop="item.toggle()">
+          <a class="dropdown-item" :class="{'selected': item.selected}" v-for="item in group.items" v-on:click.stop="item.toggle()">
             {{ item.toString() }}
           </a>
           <div class="dropdown-divider"></div>
@@ -8342,7 +8342,7 @@ var Katrid;
     
       </div>
       <div class="btn-group">
-        <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" type="button">
+        <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" type="button">
           <span class="fa fa-bars"></span> ${_.gettext('Group By')} <span class="caret"></span>
         </button>
         <ul class="dropdown-menu search-view-groups-menu">
@@ -8376,10 +8376,9 @@ var Katrid;
               </div>
             </div>
           </div>
-        
 </ul>
       </div>
-      <button class="btn btn-secondary">
+      <button class="btn btn-outline-secondary">
         <span class="fa fa-star"></span> {{ _.gettext('Favorites') }} <span class="caret"></span>
       </button>
     </div>
