@@ -3708,6 +3708,7 @@ var Katrid;
                 }
                 create() {
                     super.create();
+                    this.tag = 'input';
                     this.decimalPlaces = 0;
                 }
                 toJSON(val) {
