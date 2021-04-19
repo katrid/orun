@@ -483,7 +483,6 @@ var Katrid;
                 let loadRecord = (this.params && (this.params.id !== params.id));
                 this.params = {};
                 if (!params.view_type) {
-                    console.log('view type', params.view_type);
                     this.params.view_type = this.viewModes[0];
                     invalidate = true;
                 }
@@ -506,11 +505,9 @@ var Katrid;
                     if (!this.params.action)
                         delete this.params.action;
                     let url = this.makeUrl(this.params.view_type);
-                    console.log('replace state', url);
                     history.replaceState(null, null, url);
                 }
                 let viewType = this.params.view_type;
-                console.log(viewType, this.viewType);
                 if (viewType !== this.viewType) {
                     await this.showView(viewType);
                 }
@@ -2785,7 +2782,6 @@ var Katrid;
             set recordIndex(index) {
                 this._recordIndex = index;
                 let rec = this._records[index];
-                console.log(this._records);
                 this.record = rec;
                 if (rec?.id) {
                     if (this.action)
@@ -3416,8 +3412,8 @@ var Katrid;
                     return val;
                 }
                 createWidget(widget) {
-                    console.log('create widget', widget);
                     let cls = Katrid.Forms.Widgets.registry[widget];
+                    console.log('create widget', widget, cls);
                     return new cls(this);
                 }
                 validate(record) {
@@ -4833,11 +4829,14 @@ var Katrid;
                     this.vm.recordCount = this._dataSource.recordCount;
                 }
                 _mergeHeader(parent, header) {
-                    for (let child of header.children)
+                    for (let child of Array.from(header.children)) {
                         if (child.tagName === 'HEADER')
                             this._mergeHeader(parent, child);
-                        else
+                        else {
+                            header.removeChild(child);
                             parent.append(child);
+                        }
+                    }
                 }
                 mergeHeader(parent, container) {
                     let headerEl = container.querySelector('header');
@@ -6152,6 +6151,7 @@ var Katrid;
             Katrid.component('status-field', {
                 template: `<div><slot></slot></div>`,
                 mounted() {
+                    console.log('status field');
                 }
             });
         })(Controls = Forms.Controls || (Forms.Controls = {}));
