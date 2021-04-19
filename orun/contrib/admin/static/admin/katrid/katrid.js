@@ -3471,15 +3471,10 @@ var Katrid;
                     this.tag = 'input-date';
                 }
                 formSpanTemplate() {
-                    return `{{ record.${this.name} || '${this.emptyText}' }}`;
+                    return `{{ $filters.date(record.${this.name}, 'shortDate') || '${this.emptyText}' }}`;
                 }
                 create() {
                     super.create();
-                }
-                getValue(value) {
-                    if (typeof value === 'string')
-                        return moment.utc(value).format(Katrid.i18n.formats.shortDateTimeFormat);
-                    return value;
                 }
                 toJSON(val) {
                     return val;
@@ -3516,7 +3511,7 @@ var Katrid;
                     super(info);
                 }
                 formSpanTemplate() {
-                    return `{{ record.${this.name} || '${this.emptyText}' }}`;
+                    return `{{ $filters.date(record.${this.name}, 'short') || '${this.emptyText}' }}`;
                 }
                 create() {
                     super.create();
@@ -5316,6 +5311,7 @@ var Katrid;
                 watch: {
                     modelValue(value) {
                         if (value) {
+                            console.log('date time format', value);
                             if ((this.$input.value === '') || (value !== moment(this.$input.value, Katrid.i18n.formats.shortDateTimeFormat).toISOString()))
                                 this.$input.value = moment(value).format(Katrid.i18n.formats.shortDateTimeFormat);
                         }
@@ -7111,7 +7107,7 @@ var Katrid;
         },
         toFixed: (length) => getNumberFormat(length),
     };
-    let fmtCharMap = { 'd': 'D', 'm': 'M', 'M': 'm', 'i': 'mm' };
+    let fmtCharMap = { 'd': 'D', 'm': 'M', 'M': 'm', 'i': 'mm', 'H': 'HH' };
     function convertFormat(fmt) {
         let escape = false;
         let res = '';
