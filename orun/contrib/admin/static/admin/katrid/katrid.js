@@ -1415,6 +1415,8 @@ var Katrid;
                 for (let entry of Object.entries(Katrid.customElementsRegistry))
                     customElements.define(entry[0], entry[1].constructor, entry[1].options);
                 this.userInfo = config.userInfo;
+                for (let plug of Katrid.Core.plugins)
+                    this.plugins.push(new plug(this));
             }
             get context() {
                 return;
@@ -1527,6 +1529,10 @@ var Katrid;
                         this.loadPage(href);
                     }
                 }
+                for (let plugin of this.plugins) {
+                    if (plugin.hashChange(hash))
+                        break;
+                }
             }
             search(params) {
                 this.$location.search(params);
@@ -1577,6 +1583,7 @@ var Katrid;
     (function (BI) {
         let QueryEditorPlugin = class QueryEditorPlugin extends Katrid.Core.Plugin {
             hashChange(url) {
+                console.log('hash change');
                 if (url.startsWith('#/query-viewer/')) {
                     this.execute();
                     return true;
@@ -1584,6 +1591,8 @@ var Katrid;
             }
             async execute() {
                 let queryViewer = document.createElement('query-viewer');
+                this.app.element.innerHTML = '';
+                this.app.element.append(queryViewer);
             }
         };
         QueryEditorPlugin = __decorate([
@@ -1923,7 +1932,7 @@ var Katrid;
                         let field = fields[i];
                         let td = document.createElement('td');
                         if (_.isNumber(col))
-                            col = Katrid.intl.number(col);
+                            col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
                         else if (field.type === 'DateField')
                             col = moment(col).format('DD/MM/YYYY');
                         else if (field.type === 'DateTimeField')
@@ -7097,7 +7106,7 @@ var Katrid;
         return intl;
     }
     Katrid.intl = {
-        number: (config) => {
+        number(config) {
             let cfg = {};
             if (typeof config === 'number')
                 cfg.minimumFractionDigits = config;
