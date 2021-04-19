@@ -4703,7 +4703,7 @@ var Katrid;
                         actionView.append(this.createToolbar());
                     viewContent.append(content);
                     actionView.append(viewContent);
-                    this.templateView = actionView;
+                    this.el = this.templateView = actionView;
                     return actionView;
                 }
                 render() {
@@ -8914,6 +8914,39 @@ var Katrid;
                 RadioField,
                 radio: RadioField,
             };
+        })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Widgets;
+        (function (Widgets) {
+            Katrid.component('table-field', {
+                template: '<div class="table-responsive"><slot></slot></div>',
+                mounted() {
+                    let el = this.$parent.actionView.el;
+                    this.$name = this.$el.getAttribute('name');
+                    this.$elView = el;
+                    this.$recordLoaded = (...args) => this.recordLoaded(...args);
+                    el.addEventListener('recordLoaded', this.$recordLoaded);
+                },
+                unmounted() {
+                    this.$elView.removeEventListener('recordLoaded', this.$recordLoaded);
+                },
+                methods: {
+                    async recordLoaded(event) {
+                        let rec = event.detail.record;
+                        console.log('record loaded', rec);
+                        let data = {};
+                        let field = this.$parent.actionView.fields[this.$name];
+                        data[field.info.field || 'id'] = rec.id;
+                        let res = await this.$parent.actionView.action.model.getFieldChoices({ field: this.$name, filter: data });
+                        this.$parent.record[this.$name] = res.data;
+                    }
+                }
+            });
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
