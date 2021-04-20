@@ -5330,18 +5330,33 @@ var Katrid;
                     let vm = this;
                     let mask = '99/99/9999';
                     let format = vm.$attrs['date-picker'] || 'L';
-                    if (format === 'L LT')
+                    let $format;
+                    if (format === 'L LT') {
                         mask = '99/99/9999 99:99';
+                        $format = Katrid.i18n.shortDateTimeFormat;
+                    }
+                    else
+                        $format = Katrid.i18n.shortDateFormat;
                     let input = vm.$el.querySelector('input');
                     vm.$input = input;
+                    this.$lastValue = '';
                     $(input).inputmask({
                         mask,
                         insertMode: false,
-                    })
-                        .change(function () {
-                        console.log('change', input.value);
-                        vm.$emit('update:modelValue', moment(this.value, Katrid.i18n.formats.shortDateTimeFormat).toISOString());
+                        onincomplete: function () {
+                            vm.$emit('update:modelValue', applyValue(this.value));
+                        },
+                        oncompleted: function () {
+                            vm.$emit('update:modelValue', applyValue(this.value));
+                        }
                     });
+                    let applyValue = (value) => {
+                        if (format === 'L')
+                            this.$lastValue = moment(value, $format).format('YYYY-MM-DD');
+                        else
+                            this.$lastValue = moment(value, $format).toISOString();
+                        return this.$lastValue;
+                    };
                     let calendar = $(vm.$el).datetimepicker({
                         useCurrent: false,
                         format,
@@ -5351,11 +5366,11 @@ var Katrid;
                     })
                         .on('dp.show', function (evt) {
                         if (input.value !== input.value)
-                            calendar.datetimepicker('date', moment(input.value, Katrid.i18n.formats.shortDateTimeFormat).toISOString());
+                            calendar.datetimepicker('date', applyValue(this.value));
                     })
                         .on('dp.change', function (evt) {
                         calendar.datetimepicker('hide');
-                        vm.$emit('update:modelValue', moment(input.value, Katrid.i18n.formats.shortDateTimeFormat).toISOString());
+                        vm.$emit('update:modelValue', this.getValue(this.value));
                     })
                         .on('dp.hide', (evt) => {
                     });
@@ -5363,9 +5378,10 @@ var Katrid;
                 watch: {
                     modelValue(value) {
                         if (value) {
-                            console.log('date time format', value);
-                            if ((this.$input.value === '') || (value !== moment(this.$input.value, Katrid.i18n.formats.shortDateTimeFormat).toISOString()))
-                                this.$input.value = moment(value).format(Katrid.i18n.formats.shortDateTimeFormat);
+                            if ((this.$format === 'L') && ((this.$input.value === '') || (value !== this.$lastValue)))
+                                this.$input.value = moment(value).format(this.$format);
+                            if ((this.$input.value === '') || (value !== this.$lastValue))
+                                this.$input.value = moment(value).format(this.$format);
                         }
                         else
                             this.$input.value = '';
@@ -6032,13 +6048,16 @@ var Katrid;
 <button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="deleteSelection()" v-show="selectionLength">${_.gettext('Delete')}</button>
 `;
                 grid.append(toolbar);
-                console.log('views', field.name, field.views);
                 let viewInfo = field.views[field.viewMode];
-                if (field.viewMode == 'list') {
+                console.log('view mode', field.viewMode);
+                if (field.viewMode === 'list') {
                     let renderer = new Forms.ListRenderer(viewInfo);
                     grid.setAttribute('field-name', field.name);
                     let table = renderer.render(viewInfo.template, 'records');
-                    grid.append(table);
+                    let div = document.createElement('div');
+                    div.classList.add('table-responsive');
+                    div.append(table);
+                    grid.append(div);
                 }
                 else if (field.viewMode == 'card') {
                     let renderer = new Katrid.Forms.Views.CardRenderer(viewInfo.fields);
