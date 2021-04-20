@@ -1410,10 +1410,24 @@ var Katrid;
                 }
             }
             async execute(url) {
-                let res = Katrid.Services.Service.$post('/api' + url.substring(1), {});
+                url = '/api' + url.substring(1);
+                let res = await Katrid.Services.Service.$post(url, {});
                 let el = Katrid.element(res.content);
                 this.app.element.innerHTML = '';
+                el = this.createVm(el, url);
                 this.app.element.append(el);
+            }
+            createVm(el, url) {
+                let vm = Katrid.createView({
+                    methods: {
+                        rpc(method, args) {
+                            return Katrid.Services.Service.$post(url + `api_${method}/`, args);
+                        },
+                    },
+                    components: Katrid.componentsRegistry,
+                }).mount(el);
+                console.log(vm);
+                return vm.$el;
             }
         };
         DashboardPlugin = __decorate([
@@ -1598,26 +1612,61 @@ var Katrid;
 (function (Katrid) {
     var BI;
     (function (BI) {
-        let PortletType;
-        (function (PortletType) {
-            PortletType[PortletType["query"] = 0] = "query";
-            PortletType[PortletType["action"] = 1] = "action";
-            PortletType[PortletType["view"] = 2] = "view";
-        })(PortletType = BI.PortletType || (BI.PortletType = {}));
-        class Portlet {
-            get queryId() {
-                return this._queryId;
-            }
-            set queryId(value) {
-                this._queryId = value;
-            }
+        function renderList(info) {
+            let renderer = new Katrid.Forms.ListRenderer(info, { rowSelector: false });
+            let templ = Katrid.element(info.content);
+            return renderer.render(templ);
         }
-        BI.Portlet = Portlet;
-        Katrid.component('portlet', {
-            props: ['queryId', 'viewId', 'actionId'],
-            template: '<div class="portlet"><slot></slot></div>',
+        Katrid.component('bi:grid', {
+            props: {
+                model: String,
+                queryId: String,
+                where: Object,
+                records: Array,
+                viewInfo: Object,
+                id: String,
+            },
+            render() {
+                if (this.viewInfo) {
+                    let templ = renderList(this.viewInfo);
+                    let div = document.createElement('section');
+                    let table = document.createElement('widget');
+                    table.classList.add('table-responsive', 'col-6');
+                    table.append(templ);
+                    div.append(table);
+                    return Vue.compile(div)(this);
+                }
+                if (this.model)
+                    return Vue.compile(`<div>loading...${this.model}</div>`)(this);
+                return Vue.compile('<div>clien side teste</div>')(this);
+            },
+            methods: {
+                async load() {
+                    this.loaded = true;
+                    if (this.model && !this.viewInfo) {
+                        let res = await this.$parent.rpc('load', {
+                            id: this.id, model: this.model, where: this.where, view_type: 'list',
+                        });
+                        this.viewInfo = new Katrid.Forms.Views.ViewInfo(res.result);
+                        this.viewInfo.fields = Katrid.Data.Fields.fromArray(this.viewInfo.fields);
+                    }
+                    let res = await this.$parent.rpc('search', { id: this.id, model: this.model, where: this.where });
+                    this.records = res.result.data;
+                    this.$forceUpdate();
+                }
+            },
+            async mounted() {
+                if (!this.loaded)
+                    this.load();
+            },
+            data() {
+                return {
+                    loaded: false,
+                    viewInfo: null,
+                    records: null,
+                };
+            }
         });
-        Katrid.component('portlet-chart', {});
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -4283,15 +4332,16 @@ var Katrid;
     var Forms;
     (function (Forms) {
         class ListRenderer {
-            constructor(viewInfo) {
+            constructor(viewInfo, options) {
                 this.viewInfo = viewInfo;
+                this.options = options;
                 this.inlineEditor = false;
                 this.rowSelector = false;
                 this.columns = [];
             }
             render(list, records) {
                 list.classList.add('list-view');
-                let options = { rowSelector: true, showStar: false };
+                let options = this.options || { rowSelector: true, showStar: false };
                 let _options = list.getAttribute('data-options');
                 if (_options) {
                     _options = JSON.parse(_options);
@@ -4336,8 +4386,8 @@ var Katrid;
                 this.tRow.setAttribute('v-on:click', 'recordClick(record, index, $event)');
                 if (this.inlineEditor)
                     this.tRow.setAttribute(':class', `{
-          'form-data-changing': (dataSource.changing && dataSource.recordIndex === $index),
-          'form-data-readonly': !(dataSource.changing && dataSource.recordIndex === $index)
+          'form-data-changing': (dataSource.changing && dataSource.recordIndex === index),
+          'form-data-readonly': !(dataSource.changing && dataSource.recordIndex === index)
           }`);
                 else
                     this.tRow.setAttribute(':class', `{'group-header': record.$hasChildren}`);
@@ -4376,9 +4426,9 @@ var Katrid;
                     this.tRow.append(td);
                 }
                 else {
-                    if (!field.visible)
-                        return;
                     field.assign(fld);
+                    if (field.visible === false)
+                        return;
                     field.listCreate(this);
                 }
             }
@@ -4680,6 +4730,7 @@ var Katrid;
                 constructor(config) {
                     this.readonly = false;
                     this.toolbarVisible = true;
+                    this.scripts = [];
                     this.config = config;
                     this.action = config.action;
                     this.model = config.model || this.action.model;
@@ -4730,6 +4781,11 @@ var Katrid;
                         template = content.cloneNode(true);
                     else
                         template = this.viewInfo.template;
+                    let scripts = template.querySelectorAll('script');
+                    for (let script of scripts) {
+                        this.scripts.push(script.text);
+                        script.parentNode.removeChild(script);
+                    }
                     this._template = template;
                     return this._template;
                 }
@@ -6592,7 +6648,7 @@ var Katrid;
                 createVm(el) {
                     let me = this;
                     let props = ['parent'];
-                    let vm = Katrid.createView({
+                    let component = {
                         props,
                         data() {
                             return {
@@ -6683,7 +6739,14 @@ var Katrid;
                                 return [this.record];
                             }
                         },
-                    }).mount(el);
+                    };
+                    for (let script of this.scripts) {
+                        let setup = eval(`(${script})`);
+                        let def = setup();
+                        if (def.methods)
+                            Object.assign(component.methods, def.methods);
+                    }
+                    let vm = Katrid.createView(component).mount(el);
                     this.vm = vm;
                     this.dataSource.stateChangeCallback = (state) => {
                         this.vm.state = state;
