@@ -5333,10 +5333,10 @@ var Katrid;
                     let $format;
                     if (format === 'L LT') {
                         mask = '99/99/9999 99:99';
-                        $format = Katrid.i18n.shortDateTimeFormat;
+                        $format = Katrid.i18n.formats.shortDateTimeFormat;
                     }
                     else
-                        $format = Katrid.i18n.shortDateFormat;
+                        $format = Katrid.i18n.formats.shortDateFormat;
                     let input = vm.$el.querySelector('input');
                     vm.$input = input;
                     this.$lastValue = '';
@@ -7199,6 +7199,7 @@ var Katrid;
         return res;
     }
     function expandFormats(fmts) {
+        console.log(fmts);
         fmts.shortDateFormat = convertFormat(fmts.SHORT_DATE_FORMAT);
         fmts.shortDateTimeFormat = convertFormat(fmts.SHORT_DATETIME_FORMAT);
         return fmts;
