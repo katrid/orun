@@ -1217,185 +1217,6 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
-    var BI;
-    (function (BI) {
-        class DashboardView extends HTMLElement {
-            constructor() {
-                super(...arguments);
-                this.dataSources = [];
-            }
-            connectedCallback() {
-                this.dataSources = [];
-                this.widgets = [];
-                this.components = [];
-            }
-            async load(data) {
-                try {
-                    this.waiting = true;
-                    for (let obj of data.dataSources) {
-                        let ds = new BI.DataSource(this);
-                        ds.load(obj);
-                        this.addDataSource(ds);
-                    }
-                    for (let obj of data.widgets) {
-                        let widget = new BI.widgetRegistry[obj.type](this);
-                        widget.load(obj);
-                        this.addWidget(widget);
-                    }
-                    for (let comp of this.components)
-                        await comp.ready();
-                }
-                finally {
-                    this.waiting = false;
-                }
-            }
-            set waiting(value) {
-                this._waiting = value;
-                if (this._waiting) {
-                    this._waitingElement = document.createElement('h4');
-                    $(this).empty();
-                    this.append(this._waitingElement);
-                }
-                else {
-                    this._waitingElement.remove();
-                }
-            }
-            addDataSource(datasource) {
-                this.dataSources.push(datasource);
-                this.components.push(datasource);
-            }
-            addWidget(widget) {
-                this.widgets.push(widget);
-                this.components.push(widget);
-            }
-            findComponent(name) {
-                for (let comp of this.components)
-                    if (comp.name === name)
-                        return comp;
-            }
-        }
-        BI.DashboardView = DashboardView;
-        customElements.define('dashboard-view', DashboardView);
-    })(BI = Katrid.BI || (Katrid.BI = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var BI;
-    (function (BI) {
-        let Grid = class Grid extends BI.Widget {
-            setDataView(dataView) {
-            }
-            load(obj) {
-                super.load(obj);
-                this._code = obj.code;
-            }
-            dump() {
-                let res = super.dump();
-                res.code = this._code;
-                return res;
-            }
-            get code() {
-                return this._code;
-            }
-            set code(value) {
-                this._code = value;
-                if (value && this.loaded)
-                    this.render(this.container);
-            }
-            render(container) {
-                container.classList.add('table-responsive');
-                super.render(container);
-                let table = new TableWidget(this.container);
-                table.fromCode(this.code);
-                table.dataBind(this.datasource.dataView);
-                if (this.title) {
-                    let title = document.createElement('h5');
-                    title.innerHTML = this.title;
-                    container.insertBefore(title, container.firstElementChild);
-                }
-            }
-        };
-        Grid = __decorate([
-            BI.registerWidget('grid')
-        ], Grid);
-        BI.Grid = Grid;
-        class TableWidget {
-            constructor(container) {
-                this.container = container;
-            }
-            fromCode(code) {
-                let obj = eval(code);
-                this.config = obj;
-                if (obj?.template) {
-                    if (obj.template instanceof Function)
-                        this.container.innerHTML = obj.template(this);
-                    this.table = this.container.querySelector('table');
-                }
-                else
-                    this.table = this.createTable();
-                $(this.container).empty();
-                this.container.append(this.table);
-            }
-            dataBind(dataView) {
-                this.vm = new Vue({
-                    el: this.table,
-                    data: {
-                        rows: dataView,
-                    }
-                });
-            }
-            createTable() {
-                let table = document.createElement('table');
-                let tr = document.createElement('tr');
-                tr.setAttribute('v-for', 'row in rows');
-                table.createTHead().append(document.createElement('tr'));
-                table.createTBody().append(tr);
-                table.classList.add('table');
-                if (this.config?.columns) {
-                    for (let col of this.config.columns)
-                        this.createColumn(table, col);
-                }
-                return table;
-            }
-            createColumn(table, colInfo) {
-                let column = new TableColumn(colInfo);
-                column.render(table);
-                return column;
-            }
-        }
-        BI.TableWidget = TableWidget;
-        class TableColumn {
-            constructor(info) {
-                if (typeof info === 'string') {
-                    this.caption = this.name = info;
-                }
-                else {
-                    this.name = info.name;
-                    this.caption = info.caption || info.name;
-                    this.total = info.total;
-                }
-            }
-            render(table) {
-                let td = this.createCell();
-                let th = this.createHeader();
-                table.tHead.rows[0].append(th);
-                table.tBodies[0].rows[0].append(td);
-            }
-            createCell() {
-                let td = document.createElement('td');
-                td.innerText = `{{ row.${this.name} }}`;
-                return td;
-            }
-            createHeader() {
-                let th = document.createElement('th');
-                th.innerText = this.caption;
-                return th;
-            }
-        }
-    })(BI = Katrid.BI || (Katrid.BI = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
     var Core;
     (function (Core) {
         class Application {
@@ -1576,6 +1397,228 @@ var Katrid;
         }
         Core.registerPlugin = registerPlugin;
     })(Core = Katrid.Core || (Katrid.Core = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var BI;
+    (function (BI) {
+        let DashboardPlugin = class DashboardPlugin extends Katrid.Core.Plugin {
+            hashChange(url) {
+                if (url.startsWith('#/dashboard/')) {
+                    this.execute(url);
+                    return true;
+                }
+            }
+            async execute(url) {
+                let res = Katrid.Services.Service.$post('/api' + url.substring(1), {});
+                let el = Katrid.element(res.content);
+                this.app.element.innerHTML = '';
+                this.app.element.append(el);
+            }
+        };
+        DashboardPlugin = __decorate([
+            Katrid.Core.registerPlugin
+        ], DashboardPlugin);
+        class DashboardView extends HTMLElement {
+            constructor() {
+                super(...arguments);
+                this.dataSources = [];
+            }
+            connectedCallback() {
+                this.dataSources = [];
+                this.widgets = [];
+                this.components = [];
+            }
+            async load(data) {
+                try {
+                    this.waiting = true;
+                    for (let obj of data.dataSources) {
+                        let ds = new BI.DataSource(this);
+                        ds.load(obj);
+                        this.addDataSource(ds);
+                    }
+                    for (let obj of data.widgets) {
+                        let widget = new BI.widgetRegistry[obj.type](this);
+                        widget.load(obj);
+                        this.addWidget(widget);
+                    }
+                    for (let comp of this.components)
+                        await comp.ready();
+                }
+                finally {
+                    this.waiting = false;
+                }
+            }
+            set waiting(value) {
+                this._waiting = value;
+                if (this._waiting) {
+                    this._waitingElement = document.createElement('h4');
+                    $(this).empty();
+                    this.append(this._waitingElement);
+                }
+                else {
+                    this._waitingElement.remove();
+                }
+            }
+            addDataSource(datasource) {
+                this.dataSources.push(datasource);
+                this.components.push(datasource);
+            }
+            addWidget(widget) {
+                this.widgets.push(widget);
+                this.components.push(widget);
+            }
+            findComponent(name) {
+                for (let comp of this.components)
+                    if (comp.name === name)
+                        return comp;
+            }
+        }
+        BI.DashboardView = DashboardView;
+        customElements.define('dashboard-view', DashboardView);
+    })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var BI;
+    (function (BI) {
+        let Grid = class Grid extends BI.Widget {
+            setDataView(dataView) {
+            }
+            load(obj) {
+                super.load(obj);
+                this._code = obj.code;
+            }
+            dump() {
+                let res = super.dump();
+                res.code = this._code;
+                return res;
+            }
+            get code() {
+                return this._code;
+            }
+            set code(value) {
+                this._code = value;
+                if (value && this.loaded)
+                    this.render(this.container);
+            }
+            render(container) {
+                container.classList.add('table-responsive');
+                super.render(container);
+                let table = new TableWidget(this.container);
+                table.fromCode(this.code);
+                table.dataBind(this.datasource.dataView);
+                if (this.title) {
+                    let title = document.createElement('h5');
+                    title.innerHTML = this.title;
+                    container.insertBefore(title, container.firstElementChild);
+                }
+            }
+        };
+        Grid = __decorate([
+            BI.registerWidget('grid')
+        ], Grid);
+        BI.Grid = Grid;
+        class TableWidget {
+            constructor(container) {
+                this.container = container;
+            }
+            fromCode(code) {
+                let obj = eval(code);
+                this.config = obj;
+                if (obj?.template) {
+                    if (obj.template instanceof Function)
+                        this.container.innerHTML = obj.template(this);
+                    this.table = this.container.querySelector('table');
+                }
+                else
+                    this.table = this.createTable();
+                $(this.container).empty();
+                this.container.append(this.table);
+            }
+            dataBind(dataView) {
+                this.vm = new Vue({
+                    el: this.table,
+                    data: {
+                        rows: dataView,
+                    }
+                });
+            }
+            createTable() {
+                let table = document.createElement('table');
+                let tr = document.createElement('tr');
+                tr.setAttribute('v-for', 'row in rows');
+                table.createTHead().append(document.createElement('tr'));
+                table.createTBody().append(tr);
+                table.classList.add('table');
+                if (this.config?.columns) {
+                    for (let col of this.config.columns)
+                        this.createColumn(table, col);
+                }
+                return table;
+            }
+            createColumn(table, colInfo) {
+                let column = new TableColumn(colInfo);
+                column.render(table);
+                return column;
+            }
+        }
+        BI.TableWidget = TableWidget;
+        class TableColumn {
+            constructor(info) {
+                if (typeof info === 'string') {
+                    this.caption = this.name = info;
+                }
+                else {
+                    this.name = info.name;
+                    this.caption = info.caption || info.name;
+                    this.total = info.total;
+                }
+            }
+            render(table) {
+                let td = this.createCell();
+                let th = this.createHeader();
+                table.tHead.rows[0].append(th);
+                table.tBodies[0].rows[0].append(td);
+            }
+            createCell() {
+                let td = document.createElement('td');
+                td.innerText = `{{ row.${this.name} }}`;
+                return td;
+            }
+            createHeader() {
+                let th = document.createElement('th');
+                th.innerText = this.caption;
+                return th;
+            }
+        }
+    })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var BI;
+    (function (BI) {
+        let PortletType;
+        (function (PortletType) {
+            PortletType[PortletType["query"] = 0] = "query";
+            PortletType[PortletType["action"] = 1] = "action";
+            PortletType[PortletType["view"] = 2] = "view";
+        })(PortletType = BI.PortletType || (BI.PortletType = {}));
+        class Portlet {
+            get queryId() {
+                return this._queryId;
+            }
+            set queryId(value) {
+                this._queryId = value;
+            }
+        }
+        BI.Portlet = Portlet;
+        Katrid.component('portlet', {
+            props: ['queryId', 'viewId', 'actionId'],
+            template: '<div class="portlet"><slot></slot></div>',
+        });
+        Katrid.component('portlet-chart', {});
+    })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -5989,6 +6032,7 @@ var Katrid;
 <button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="deleteSelection()" v-show="selectionLength">${_.gettext('Delete')}</button>
 `;
                 grid.append(toolbar);
+                console.log('views', field.name, field.views);
                 let viewInfo = field.views[field.viewMode];
                 if (field.viewMode == 'list') {
                     let renderer = new Forms.ListRenderer(viewInfo);
@@ -6009,8 +6053,9 @@ var Katrid;
                     this.model = config.model;
                 }
             }
-            function createDialog(config) {
+            async function createDialog(config) {
                 let formInfo = config.field.views.form;
+                await formInfo.loadPendingViews();
                 let relField = formInfo.fields[config.field.info.field];
                 if (relField)
                     relField.visible = false;
@@ -6064,7 +6109,7 @@ var Katrid;
                             return;
                         try {
                             this.$editing = true;
-                            let form = createDialog({
+                            let form = await createDialog({
                                 field: this.field, record, index,
                                 master: this.$data.dataSource.masterSource,
                             });
@@ -7058,6 +7103,7 @@ var Katrid;
         (function (Views) {
             class ViewInfo {
                 constructor(info) {
+                    this._pending = true;
                     this._info = info;
                     this.fields = info.fields;
                     Object.values(this.fields).forEach(field => field.viewInfo = this);
@@ -7067,6 +7113,9 @@ var Katrid;
                         this.auto_load = info.auto_load;
                 }
                 async loadPendingViews() {
+                    if (!this._pending)
+                        return;
+                    this._pending = false;
                     let templ = this.template;
                     for (let child of Array.from(templ.querySelectorAll('field'))) {
                         let name = child.getAttribute('name');
