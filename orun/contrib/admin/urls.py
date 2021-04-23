@@ -19,6 +19,9 @@ urlpatterns = [
 
     path('api/rpc/<service>/<meth>/', views.api.rpc),
     path('api/view/<service>/', views.api.view),
+    path('api/dashboard/<int:service>/', views.dashboard.index),
+    path('api/dashboard/<service>/', views.dashboard.index),
+    path('api/dashboard/<service>/<method>/', views.dashboard.rpc),
     path('api/field/choices/<service>/<field>/', views.api.choices),
     path('api/app/settings/', views.api.app_settings),
     path('api/public/query/<int:id>/', views.api.public_query),

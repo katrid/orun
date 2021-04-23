@@ -1213,7 +1213,64 @@ var Katrid;
             return config;
         }
         BI.getTraces = getTraces;
+        function newPlot(el, data, layout, config) {
+            if (!layout)
+                layout = {};
+            if (!layout?.separators)
+                layout.separators = Katrid.i18n.formats.DECIMAL_SEPARATOR + Katrid.i18n.formats.THOUSAND_SEPARATOR;
+            if (!config)
+                config = {};
+            if (!('responsive' in config))
+                config['responsive'] = true;
+            return Plotly.newPlot(el, data, layout, config);
+        }
+        BI.newPlot = newPlot;
     })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Core;
+    (function (Core) {
+        _.emptyText = '--';
+        class LocalSettings {
+            static init() {
+                Katrid.localSettings = new LocalSettings();
+            }
+            constructor() {
+            }
+            get searchMenuVisible() {
+                return parseInt(localStorage.searchMenuVisible) === 1;
+            }
+            set searchMenuVisible(value) {
+                localStorage.searchMenuVisible = value ? 1 : 0;
+            }
+        }
+        Core.LocalSettings = LocalSettings;
+        function setContent(content, scope) {
+        }
+        Core.setContent = setContent;
+    })(Core = Katrid.Core || (Katrid.Core = {}));
+})(Katrid || (Katrid = {}));
+(function (Katrid) {
+    function isString(obj) {
+        return typeof obj === 'string';
+    }
+    Katrid.isString = isString;
+    function isNumber(obj) {
+        return typeof obj === 'number';
+    }
+    Katrid.isNumber = isNumber;
+    function isObject(obj) {
+        return typeof obj === 'object';
+    }
+    Katrid.isObject = isObject;
+})(Katrid || (Katrid = {}));
+(function (Katrid) {
+    Katrid.customElementsRegistry = {};
+    function define(name, constructor, options) {
+        Katrid.customElementsRegistry[name] = { constructor, options };
+    }
+    Katrid.define = define;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -1413,26 +1470,82 @@ var Katrid;
                 url = '/api' + url.substring(1);
                 let res = await Katrid.Services.Service.$post(url, {});
                 let el = Katrid.element(res.content);
+                let div = document.createElement('div');
+                div.append(el);
                 this.app.element.innerHTML = '';
-                el = this.createVm(el, url);
+                this.beforeRender(div);
+                el = this.createVm(div, url, res.data, res.params);
                 this.app.element.append(el);
             }
-            createVm(el, url) {
+            beforeRender(el) {
+                for (let child of el.querySelectorAll('bi-dashboard'))
+                    child.create();
+            }
+            createVm(el, url, data, params) {
+                let watch = {};
+                for (let k of params)
+                    watch[k] = async function (value) {
+                        let res = await this.rpc('param_change', { prop: k, value, values: this.$data });
+                        for (let [k, v] of Object.entries(res.result))
+                            this[k] = v;
+                    };
                 let vm = Katrid.createView({
                     methods: {
-                        rpc(method, args) {
-                            return Katrid.Services.Service.$post(url + `api_${method}/`, args);
+                        rpc(method, args, kwargs) {
+                            return Katrid.Services.Service.$post(url + `api_${method}/`, { 'args': [args], kwargs });
                         },
                     },
+                    data() {
+                        return data;
+                    },
+                    watch,
                     components: Katrid.componentsRegistry,
                 }).mount(el);
-                console.log(vm);
                 return vm.$el;
             }
         };
         DashboardPlugin = __decorate([
             Katrid.Core.registerPlugin
         ], DashboardPlugin);
+        class BiDashboard extends HTMLElement {
+            create() {
+                this.querySelectorAll('params').forEach(el => el.replaceWith(renderParams(el)));
+            }
+        }
+        Katrid.define('bi-dashboard', BiDashboard);
+        function renderParams(params) {
+            let div = document.createElement('div');
+            div.classList.add('margin-top-8', 'row');
+            for (let child of params.children) {
+                if (child.tagName === 'FILTER-PARAM') {
+                    let el = renderParam(child);
+                    if (el)
+                        div.append(el);
+                }
+            }
+            return div;
+        }
+        function renderParam(param) {
+            let type = param.getAttribute('type');
+            let choices;
+            if (type === 'ChoiceField')
+                choices = param.children;
+            let widget = Katrid.BI.paramWidgets[Katrid.BI.paramTypes[type || 'CharField']];
+            let info = {
+                name: param.getAttribute('name'),
+                id: param.getAttribute('id'),
+                operation: param.getAttribute('operation') || '=',
+                choices,
+            };
+            let div = document.createElement('div');
+            div.classList.add('col-md-6', 'form-group');
+            div.innerHTML = `<div class="col-12"><label class="control-label">${param.getAttribute('caption')}</label></div>`;
+            let paramWidget = document.createElement('div');
+            paramWidget.classList.add('col', 'param-widget');
+            paramWidget.innerHTML = widget(info);
+            div.append(paramWidget);
+            return div;
+        }
         class DashboardView extends HTMLElement {
             constructor() {
                 super(...arguments);
@@ -1612,26 +1725,135 @@ var Katrid;
 (function (Katrid) {
     var BI;
     (function (BI) {
-        function renderList(info) {
-            let renderer = new Katrid.Forms.ListRenderer(info, { rowSelector: false });
+        BI.paramWidgets = {
+            CharField(param) {
+                return `<div><input id="rep-param-id-${param.id}" v-model="${param.name}" type="text" class="form-control"></div>`;
+            },
+            IntegerField(param) {
+                let secondField = '';
+                let model1 = param.name, model2;
+                if (param.operation === 'between') {
+                    model1 = param.name + 1;
+                    model2 = param.name + 2;
+                    secondField = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-2" v-model="${model2}" type="number" class="form-control"></div>`;
+                }
+                let firstField = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-1" v-model="${model1}" type="number" class="form-control"></div>`;
+                return `<div class="row">${firstField}${secondField}</div>`;
+            },
+            DecimalField(param) {
+                let secondField = '';
+                let model1 = param.name, model2;
+                if (param.operation === 'between') {
+                    model1 = param.name + 1;
+                    model2 = param.name + 2;
+                    secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" v-model="${model2}" input-decimal class="form-control"></div>`;
+                }
+                let firstField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}" input-decimal v-model="${model1}" class="form-control"></div>`;
+                return `<div class="col-sm-12 row">${firstField}${secondField}</div>`;
+            },
+            DateTimeField(param) {
+                let secondField = '';
+                let model1 = param.name, model2;
+                if (param.operation === 'between') {
+                    model1 = param.name + 1;
+                    model2 = param.name + 2;
+                    secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" v-model="${model2}" class="form-control"></div>`;
+                }
+                let firstField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-1" type="text" date-picker="L" v-model="${model1}" class="form-control"></div>`;
+                return `<div class="col-sm-12 row">${firstField}${secondField}</div>`;
+            },
+            DateField(param) {
+                let secondField = '';
+                let model1 = param.name, model2;
+                if (param.operation === 'between') {
+                    model1 = param.name + 1;
+                    model2 = param.name + 2;
+                    secondField = `<div class="col-xs-6">
+<input-date class="input-group date" v-model="${model2}" date-picker="L">
+<input id="rep-param-id-${param.id}-2" type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
+      <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
+</input-date>
+</div>`;
+                }
+                let firstField = `<div class="col-xs-6">
+<input-date class="input-group date" v-model="${model1}" date-picker="L">
+<input id="rep-param-id-${param.id}-1" type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
+      <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
+</input-date>
+</div>`;
+                return `<div class="col-sm-12 row">${firstField}${secondField}</div>`;
+            },
+            ForeignKey(param) {
+                const serviceName = param.info.field.attr('model') || param.params.model;
+                let multiple = '';
+                if (param.operation === 'in') {
+                    multiple = 'multiple';
+                }
+                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="${serviceName}" field-name="${param.name}" v-model="param.value1" ${multiple}></div>`;
+            },
+            ModelChoices(param) {
+                let multiple = '';
+                if (param.operation === 'in') {
+                    multiple = 'multiple';
+                }
+                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ir.action.report" model-choices="${param.info.modelChoices}" v-model="param.value1" ${multiple}></div>`;
+            },
+            SelectionField(param) {
+                console.log(param);
+                let multiple = '';
+                if (param.operation === 'in') {
+                    multiple = 'multiple-tags multiple="multiple"';
+                }
+                else
+                    multiple = 'class="form-control"';
+                if (param.choices) {
+                    let choices = Array.from(param.choices).map(el => el.outerHTML).join('');
+                    console.log(param.choices, choices);
+                    return `<div><select ${multiple} v-model="${param.name}">${choices}</select></div>`;
+                }
+                return `<div><select ${multiple} v-model="param.value1"><option :value="value" v-for="(name, value, index) in param.choices">{{name}}</option></select></div>`;
+            }
+        };
+        BI.paramTypes = {
+            CharField: 'CharField',
+            IntegerField: 'IntegerField',
+            DateField: 'DateField',
+            DateTimeField: 'DateTimeField',
+            ChoiceField: 'SelectionField',
+            str: 'CharField',
+            int: 'IntegerField',
+            date: 'DateField',
+            datetime: 'DateTimeField',
+        };
+    })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var BI;
+    (function (BI) {
+        function renderList(info, options) {
+            let renderer = new Katrid.Forms.ListRenderer(info, { rowSelector: false, recordClick: options?.recordClick });
             let templ = Katrid.element(info.content);
             return renderer.render(templ);
         }
-        Katrid.component('bi:grid', {
+        Katrid.component('bi-grid', {
             props: {
                 model: String,
                 queryId: String,
-                where: Object,
                 records: Array,
                 viewInfo: Object,
+                where: Object,
                 id: String,
+                recordClick: String,
             },
-            render() {
+            render(vm, _, props) {
+                console.log(arguments);
                 if (this.viewInfo) {
-                    let templ = renderList(this.viewInfo);
-                    let div = document.createElement('section');
+                    let templ = renderList(this.viewInfo, { recordClick: this.recordClick });
+                    let div = document.createElement('div');
                     let table = document.createElement('widget');
-                    table.classList.add('table-responsive', 'col-6');
+                    table.innerHTML = `<div v-if="loading"><i class="fas fa-spinner fa-fw fa-spin"></i> ${Katrid.i18n.gettext('Loading...')}</div>`;
+                    table.classList.add('table-responsive');
                     table.append(templ);
                     div.append(table);
                     return Vue.compile(div)(this);
@@ -1650,9 +1872,10 @@ var Katrid;
                         this.viewInfo = new Katrid.Forms.Views.ViewInfo(res.result);
                         this.viewInfo.fields = Katrid.Data.Fields.fromArray(this.viewInfo.fields);
                     }
-                    let res = await this.$parent.rpc('search', { id: this.id, model: this.model, where: this.where });
-                    this.records = res.result.data;
-                    this.$forceUpdate();
+                    await this.refreshData(0);
+                },
+                async refreshData(timeout) {
+                    return refreshData.call(this, ...arguments);
                 }
             },
             async mounted() {
@@ -1661,12 +1884,77 @@ var Katrid;
             },
             data() {
                 return {
+                    loading: false,
                     loaded: false,
                     viewInfo: null,
                     records: null,
                 };
+            },
+            watch: {
+                where: {
+                    deep: true,
+                    handler(newValue, oldValue) {
+                        if (!deepCompare(newValue, oldValue)) {
+                            console.log('reload');
+                            this.records = [];
+                            this.refreshData(300);
+                        }
+                    }
+                }
             }
         });
+        Katrid.component('bi-plot', {
+            props: {
+                data: Object,
+            },
+            emits: ['plotClick'],
+            template: '<div class="dashboard-container-widget"><div class="dashboard-widget"><div class="graph"></div></div></div>',
+            mounted() {
+                this.refresh();
+            },
+            methods: {
+                refresh() {
+                    setTimeout(() => {
+                        let el = this.$el.querySelector('.graph');
+                        createPlot.call(this, el, this.data);
+                        el.on('plotly_click', (data) => {
+                            this.$emit('plotClick', data.points.map(point => point.data));
+                        });
+                    });
+                }
+            },
+            watch: {
+                data() {
+                    this.refresh();
+                }
+            }
+        });
+        function createPlot(el, data) {
+            return Katrid.BI.newPlot(el, data.data, data.layout, { responsive: true });
+        }
+        async function refreshData(timeout) {
+            this.loading = true;
+            try {
+                if (this.$timeout)
+                    clearTimeout(this.$timeout);
+                this.$timeout = setTimeout(async () => {
+                }, timeout);
+                let res = await this.$parent.rpc('search', { id: this.id, model: this.model, where: this.where });
+                this.records = res.result.data;
+            }
+            finally {
+                this.loading = false;
+            }
+        }
+        function deepCompare(newValue, oldValue) {
+            if (newValue !== oldValue)
+                return false;
+            else if (newValue && oldValue)
+                for (let [k, v] of Object.entries(newValue))
+                    if (oldValue[k] != v)
+                        return false;
+            return true;
+        }
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -1810,51 +2098,6 @@ var Katrid;
             });
         }
     })(BI = Katrid.BI || (Katrid.BI = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Core;
-    (function (Core) {
-        _.emptyText = '--';
-        class LocalSettings {
-            static init() {
-                Katrid.localSettings = new LocalSettings();
-            }
-            constructor() {
-            }
-            get searchMenuVisible() {
-                return parseInt(localStorage.searchMenuVisible) === 1;
-            }
-            set searchMenuVisible(value) {
-                localStorage.searchMenuVisible = value ? 1 : 0;
-            }
-        }
-        Core.LocalSettings = LocalSettings;
-        function setContent(content, scope) {
-        }
-        Core.setContent = setContent;
-    })(Core = Katrid.Core || (Katrid.Core = {}));
-})(Katrid || (Katrid = {}));
-(function (Katrid) {
-    function isString(obj) {
-        return typeof obj === 'string';
-    }
-    Katrid.isString = isString;
-    function isNumber(obj) {
-        return typeof obj === 'number';
-    }
-    Katrid.isNumber = isNumber;
-    function isObject(obj) {
-        return typeof obj === 'object';
-    }
-    Katrid.isObject = isObject;
-})(Katrid || (Katrid = {}));
-(function (Katrid) {
-    Katrid.customElementsRegistry = {};
-    function define(name, constructor, options) {
-        Katrid.customElementsRegistry[name] = { constructor, options };
-    }
-    Katrid.define = define;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -4383,7 +4626,10 @@ var Katrid;
                 this.tRow.setAttribute('v-for', `(record, index) in ${records || 'records'}`);
                 this.tRow.setAttribute(':selected', 'record.$selected');
                 this.tRow.setAttribute('v-on:contextmenu', 'recordContextMenu(record, index, $event)');
-                this.tRow.setAttribute('v-on:click', 'recordClick(record, index, $event)');
+                if (this.options?.recordClick)
+                    this.tRow.setAttribute('v-on:click', this.options.recordClick);
+                else
+                    this.tRow.setAttribute('v-on:click', 'recordClick(record, index, $event)');
                 if (this.inlineEditor)
                     this.tRow.setAttribute(':class', `{
           'form-data-changing': (dataSource.changing && dataSource.recordIndex === index),
@@ -5411,6 +5657,8 @@ var Katrid;
                             this.$lastValue = moment(value, $format).format('YYYY-MM-DD');
                         else
                             this.$lastValue = moment(value, $format).toISOString();
+                        if (this.$lastValue !== 'Invalid date')
+                            vm.$emit('change', this.$lastValue);
                         return this.$lastValue;
                     };
                     let calendar = $(vm.$el).datetimepicker({
@@ -5426,7 +5674,7 @@ var Katrid;
                     })
                         .on('dp.change', function (evt) {
                         calendar.datetimepicker('hide');
-                        vm.$emit('update:modelValue', this.getValue(this.value));
+                        vm.$emit('update:modelValue', applyValue(this.value));
                     })
                         .on('dp.hide', (evt) => {
                     });
@@ -6645,10 +6893,10 @@ var Katrid;
                 refresh() {
                     this.dataSource.get(this.dataSource.recordId);
                 }
-                createVm(el) {
-                    let me = this;
+                createComponent() {
                     let props = ['parent'];
-                    let component = {
+                    let me = this;
+                    return {
                         props,
                         data() {
                             return {
@@ -6740,9 +6988,12 @@ var Katrid;
                             }
                         },
                     };
+                }
+                createVm(el) {
+                    let component = this.createComponent();
                     for (let script of this.scripts) {
                         let setup = eval(`(${script})`);
-                        let def = setup();
+                        let def = setup.call(this);
                         if (def.methods)
                             Object.assign(component.methods, def.methods);
                     }

@@ -5,7 +5,7 @@ from orun.core.exceptions import MethodNotFound
 from orun.db import models, transaction
 from orun.contrib.auth.decorators import login_required
 from orun.apps import apps
-from orun.http import HttpResponse, JsonResponse, HttpResponseForbidden
+from orun.http import HttpResponse, JsonResponse, HttpResponseForbidden, HttpRequest
 
 
 @login_required
@@ -39,16 +39,16 @@ def rpc(request, service, meth, params):
 
 @login_required
 @transaction.atomic
-def view(request, service: str):
+def view(request: HttpRequest, service: str):
     """
     Return a rendered view object
     :param request:
     :param service:
     :return:
     """
+    cls = apps.services[service]
+    service = cls()
     if request.method == 'GET':
-        cls = apps.services[service]
-        service = cls()
         res = service.get(request)
         if isinstance(res, (dict, list, tuple)):
             res = JsonResponse(res)
