@@ -5763,6 +5763,7 @@ var Katrid;
                 this._loading = false;
                 this.delay = 500;
                 this._elements = [];
+                this.mouseDown = false;
                 this.el = document.createElement('div');
                 this.el.classList.add('dropdown-menu');
                 if (options) {
@@ -5856,10 +5857,13 @@ var Katrid;
                 $(this.el).append(template);
                 let el = this.el.querySelector('.dropdown-item:last-child');
                 $(el).data('item', item);
+                this._elements.push(el);
+                el.addEventListener('mousedown', event => this.mouseDown = true);
+                el.addEventListener('mouseup', event => this.mouseDown = false);
                 if (item.click)
-                    el.addEventListener('mousedown', item.click);
+                    el.addEventListener('click', item.click);
                 else
-                    el.addEventListener('mousedown', evt => {
+                    el.addEventListener('click', evt => {
                         this.input.input.focus();
                         evt.preventDefault();
                         evt.stopPropagation();
@@ -5868,7 +5872,6 @@ var Katrid;
                             target = target.closest('a.dropdown-item');
                         this.onSelectItem(target);
                     });
-                this._elements.push(el);
                 return el;
             }
             onSelectItem(item) {
@@ -5944,8 +5947,11 @@ var Katrid;
                 caret.addEventListener('click', evt => this.click());
                 this.input.type = 'text';
                 this.input.addEventListener('input', () => this.onInput());
-                this.input.addEventListener('click', () => this.onClick());
-                this.input.addEventListener('focusout', () => this.onFocusout());
+                this.input.addEventListener('click', event => {
+                    this.input.select();
+                    this.onClick();
+                });
+                this.input.addEventListener('blur', () => this.onFocusout());
                 this.input.addEventListener('keydown', (event) => this.onKeyDown(event));
                 if (this.hasAttribute('placeholder'))
                     this.input.placeholder = this.getAttribute('placeholder');
@@ -5961,8 +5967,10 @@ var Katrid;
                 this.showMenu();
             }
             onFocusout() {
-                this.hideMenu();
-                this.invalidateValue();
+                if (!this.menu.mouseDown) {
+                    this.hideMenu();
+                    this.invalidateValue();
+                }
                 this.term = '';
             }
             createMenu() {
@@ -6063,7 +6071,6 @@ var Katrid;
                 let svc = new Katrid.Services.Model(model);
                 if (model)
                     this.setSource(async (query) => {
-                        console.log('query', query);
                         let res = await svc.searchByName({
                             args: [query.term]
                         });
