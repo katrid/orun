@@ -13308,7 +13308,7 @@ dashboard-view {
 }
 
 .dashboard-container-widget {
-  padding: 10px;
+  padding-bottom: 10px;
 }
 .dashboard-container-widget .dashboard-widget {
   border: 1px solid #e5e5e5;

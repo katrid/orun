@@ -773,7 +773,7 @@ var Katrid;
                     });
                 }
             }
-            async formButtonClick(id, meth, self) {
+            async formButtonClick(id, meth) {
                 try {
                     this.pendingOperation = true;
                     let res = await this.model.rpc(meth, [id], null, this);
@@ -1216,8 +1216,14 @@ var Katrid;
         function newPlot(el, data, layout, config) {
             if (!layout)
                 layout = {};
-            if (!layout?.separators)
+            if (!layout.separators)
                 layout.separators = Katrid.i18n.formats.DECIMAL_SEPARATOR + Katrid.i18n.formats.THOUSAND_SEPARATOR;
+            if (!layout.colorway)
+                layout.colorway = [
+                    '#86AED1', '#FF99A9', '#A1DE93',
+                    '#CAC3F7', '#FEE0CC', '#F47C7C', '#88CEFB', '#FBB4C9', '#AFF1F1', '#8DD1F1', '#B3C8C8', '#FCE2C2',
+                    '#6CB2D1', '#b3c8c8', '#f3cec9', '#64E987', '#cd7eaf', '#a262a9', '#6f4d96', '#4F9EC4', '#3d3b72', '#182844'
+                ];
             if (!config)
                 config = {};
             if (!('responsive' in config))
@@ -1457,6 +1463,41 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            class BaseView {
+                compile(template) {
+                    for (let child of Array.from(template.children)) {
+                        if (child.tagName.startsWith('T-'))
+                            this.compileElement(child);
+                        else if (child.childElementCount > 0)
+                            this.compile(child);
+                    }
+                }
+                compileElement(el) {
+                    let tag = el.tagName.toLowerCase();
+                    if (tag in Views.templateElements) {
+                        Views.templateElements[tag].call(this, el);
+                    }
+                }
+                render(template) {
+                    this.compile(template);
+                    return template;
+                }
+            }
+            Views.BaseView = BaseView;
+            Views.templateElements = {};
+            function registerTemplateElement(name, fn) {
+                Views.templateElements[name] = fn;
+            }
+            Views.registerTemplateElement = registerTemplateElement;
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
     var BI;
     (function (BI) {
         let DashboardPlugin = class DashboardPlugin extends Katrid.Core.Plugin {
@@ -1470,29 +1511,30 @@ var Katrid;
                 url = '/api' + url.substring(1);
                 let res = await Katrid.Services.Service.$post(url, {});
                 let el = Katrid.element(res.content);
+                let view = new DashboardView();
+                el = view.render(el);
                 let div = document.createElement('div');
                 div.append(el);
-                this.app.element.innerHTML = '';
-                this.beforeRender(div);
-                el = this.createVm(div, url, res.data, res.params);
+                el = view.createVm(div, url, res.data, res.params);
                 this.app.element.append(el);
             }
-            beforeRender(el) {
-                for (let child of el.querySelectorAll('bi-dashboard'))
-                    child.create();
-            }
+        };
+        DashboardPlugin = __decorate([
+            Katrid.Core.registerPlugin
+        ], DashboardPlugin);
+        class DashboardView extends Katrid.Forms.Views.BaseView {
             createVm(el, url, data, params) {
                 let watch = {};
                 for (let k of params)
                     watch[k] = async function (value) {
-                        let res = await this.rpc('param_change', { prop: k, value, values: this.$data });
+                        let res = await this.rpc('param_change', { kwargs: { prop: k, value, values: this.$data } });
                         for (let [k, v] of Object.entries(res.result))
                             this[k] = v;
                     };
                 let vm = Katrid.createView({
                     methods: {
-                        rpc(method, args, kwargs) {
-                            return Katrid.Services.Service.$post(url + `api_${method}/`, { 'args': [args], kwargs });
+                        rpc(method, params) {
+                            return Katrid.Services.Service.$post(url + `api_${method}/`, params);
                         },
                     },
                     data() {
@@ -1503,50 +1545,20 @@ var Katrid;
                 }).mount(el);
                 return vm.$el;
             }
-        };
-        DashboardPlugin = __decorate([
-            Katrid.Core.registerPlugin
-        ], DashboardPlugin);
-        class BiDashboard extends HTMLElement {
-            create() {
-                this.querySelectorAll('params').forEach(el => el.replaceWith(renderParams(el)));
-            }
-        }
-        Katrid.define('bi-dashboard', BiDashboard);
-        function renderParams(params) {
-            let div = document.createElement('div');
-            div.classList.add('margin-top-8', 'row');
-            for (let child of params.children) {
-                if (child.tagName === 'FILTER-PARAM') {
-                    let el = renderParam(child);
-                    if (el)
-                        div.append(el);
+            render(template) {
+                if (template.tagName === 'DASHBOARD') {
+                    let div = document.createElement('div');
+                    div.classList.add('dashboard');
+                    for (let child of template.childNodes)
+                        div.append(child);
+                    template = div;
                 }
+                let el = super.render(template);
+                el.classList.add('dashboard');
+                return el;
             }
-            return div;
         }
-        function renderParam(param) {
-            let type = param.getAttribute('type');
-            let choices;
-            if (type === 'ChoiceField')
-                choices = param.children;
-            let widget = Katrid.BI.paramWidgets[Katrid.BI.paramTypes[type || 'CharField']];
-            let info = {
-                name: param.getAttribute('name'),
-                id: param.getAttribute('id'),
-                operation: param.getAttribute('operation') || '=',
-                choices,
-            };
-            let div = document.createElement('div');
-            div.classList.add('col-md-6', 'form-group');
-            div.innerHTML = `<div class="col-12"><label class="control-label">${param.getAttribute('caption')}</label></div>`;
-            let paramWidget = document.createElement('div');
-            paramWidget.classList.add('col', 'param-widget');
-            paramWidget.innerHTML = widget(info);
-            div.append(paramWidget);
-            return div;
-        }
-        class DashboardView extends HTMLElement {
+        class DashboardViewElement extends HTMLElement {
             constructor() {
                 super(...arguments);
                 this.dataSources = [];
@@ -1601,8 +1613,8 @@ var Katrid;
                         return comp;
             }
         }
-        BI.DashboardView = DashboardView;
-        customElements.define('dashboard-view', DashboardView);
+        BI.DashboardViewElement = DashboardViewElement;
+        customElements.define('dashboard-view', DashboardViewElement);
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -3809,10 +3821,10 @@ var Katrid;
         (function (Fields) {
             class DateField extends Fields.Field {
                 constructor(info) {
-                    if (!info.cols)
-                        info.cols = 3;
                     super(info);
                     this.tag = 'input-date';
+                    if (!info.cols)
+                        info.cols = 3;
                 }
                 formSpanTemplate() {
                     return `{{ $filters.date(record.${this.name}, 'shortDate') || '${this.emptyText}' }}`;
@@ -3830,11 +3842,6 @@ var Katrid;
                     if (_.isString(value))
                         return moment(value).format(Katrid.i18n.gettext('yyyy-mm-dd').toUpperCase());
                     return '';
-                }
-                getAttributes(attrs) {
-                    let res = super.getAttributes(attrs);
-                    res['type'] = 'date';
-                    return res;
                 }
                 formControl() {
                     let div = document.createElement(this.tag);
@@ -3862,11 +3869,6 @@ var Katrid;
                 }
                 getParamTemplate() {
                     return 'view.param.DateTime';
-                }
-                getAttributes(attrs) {
-                    let res = super.getAttributes(attrs);
-                    res['type'] = 'datetime-local';
-                    return res;
                 }
                 formControl() {
                     let control = super.formControl();
@@ -4126,7 +4128,7 @@ var Katrid;
                     label.classList.add('radio-button', 'radio-inline');
                     let css = this.fieldEl.getAttribute('class');
                     if (css)
-                        label.classList.add(css.split(' '));
+                        label.classList.add(...css.split(' '));
                     let input = document.createElement('input');
                     let id = `id-${this.name}-\${$index}`;
                     input.setAttribute('id', id);
@@ -4272,12 +4274,6 @@ var Katrid;
                         info.template.form = 'view.form.image-field.jinja2';
                     super(info);
                     this.noImageUrl = '/static/admin/assets/img/no-image.png';
-                }
-                getAttributes(attrs) {
-                    let res = super.getAttributes(attrs);
-                    res.ngSrc = attrs.ngEmptyImage || (attrs.emptyImage && (`'${attrs.emptyImage}`)) || `'${this.noImageUrl}'`;
-                    res.ngSrc = `{{ ${res['ng-model']} || ${res.ngSrc} }}`;
-                    return res;
                 }
                 get ngSrc() {
                     let ngSrc = this.attrs.ngEmptyImage || (this.attrs.emptyImage && (`'${this.attrs.emptyImage}`)) || `'${this.noImageUrl}'`;
@@ -4832,10 +4828,6 @@ var Katrid;
         }
         Templates.PRE_LOADED_TEMPLATES = {};
         Forms.Templates = Templates;
-        function registerTemplate(name, tmpl) {
-            Templates.PRE_LOADED_TEMPLATES[name] = tmpl;
-        }
-        Forms.registerTemplate = registerTemplate;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -7319,6 +7311,44 @@ var Katrid;
     (function (Forms) {
         var Views;
         (function (Views) {
+            Views.registerTemplateElement('t-params', function tParams(params) {
+                let div = document.createElement('div');
+                div.classList.add('params', 'row');
+                for (let child of params.childNodes)
+                    div.append(child);
+                params.replaceWith(div);
+                this.compile(div);
+            });
+            Views.registerTemplateElement('t-param', function tParam(param) {
+                let type = param.getAttribute('type');
+                let choices;
+                if (type === 'ChoiceField')
+                    choices = param.children;
+                let widget = Katrid.BI.paramWidgets[Katrid.BI.paramTypes[type || 'CharField']];
+                let info = {
+                    name: param.getAttribute('name'),
+                    id: param.getAttribute('id'),
+                    operation: param.getAttribute('operation') || '=',
+                    choices,
+                };
+                let div = document.createElement('div');
+                div.classList.add('col-md-6', 'form-group');
+                div.innerHTML = `<div class="col-12"><label class="control-label">${param.getAttribute('caption')}</label></div>`;
+                let paramWidget = document.createElement('div');
+                paramWidget.classList.add('col', 'param-widget');
+                paramWidget.innerHTML = widget(info);
+                div.append(paramWidget);
+                param.replaceWith(div);
+            });
+        })(Views = Forms.Views || (Forms.Views = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
             class PortletView extends HTMLElement {
             }
             Views.PortletView = PortletView;
@@ -9291,7 +9321,7 @@ var Katrid;
                     label.classList.add('radio-button', 'radio-inline');
                     let css = this.field.fieldEl.getAttribute('class');
                     if (css)
-                        label.classList.add(css.split(' '));
+                        label.classList.add(...css.split(' '));
                     let input = document.createElement('input');
                     let id = `'RADIO_ID-${this.field.name}-${++RADIO_ID}-' + index`;
                     input.setAttribute(':id', id);
@@ -10725,21 +10755,6 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
-    var Pwa;
-    (function (Pwa) {
-        class WindowAction {
-        }
-        Pwa.WindowAction = WindowAction;
-        class WindowView {
-            constructor() {
-                this.fields = [];
-            }
-        }
-        Pwa.WindowView = WindowView;
-    })(Pwa = Katrid.Pwa || (Katrid.Pwa = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
     var Reports;
     (function (Reports) {
         let _counter = 0;
@@ -10909,19 +10924,6 @@ var Katrid;
             }
         }
         Reports.Param = Param;
-        Katrid.UI.uiKatrid.controller('ReportController', ['$scope', '$element', '$compile', function ($scope, $element, $compile) {
-                const xmlReport = $scope.$parent.action.info.content;
-                const report = new Reports.Report($scope.$parent.action, $scope);
-                $scope.report = report;
-                report.loadFromXml(xmlReport);
-                report.render($element);
-                return report.loadParams();
-            }]);
-        Katrid.UI.uiKatrid.controller('ReportParamController', ['$scope', '$element', function ($scope, $element) {
-                $scope.$parent.param.el = $element;
-                $scope.$parent.param.scope = $scope;
-                return $scope.$parent.param.setOperation($scope.$parent.param.operation, false);
-            }]);
         Katrid.component('report-param-widget', {
             props: ['param'],
             render() {
@@ -11064,7 +11066,7 @@ var Katrid;
                         field: f,
                     });
                 }
-                let params = Array.from(xml.querySelectorAll('param')).map(p => p.getAttribute('name'));
+                let params = xml.querySelectorAll('param').map((p) => p.getAttribute('name'));
                 return this.load(fields, params);
             }
             saveDialog() {
