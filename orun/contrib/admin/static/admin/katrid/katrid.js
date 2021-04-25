@@ -6979,6 +6979,9 @@ var Katrid;
                                     for (let record of obj)
                                         res += record[field] || 0;
                                 return res;
+                            },
+                            rpc(...args) {
+                                return me.action.model.rpc(...args);
                             }
                         },
                         computed: {
@@ -8328,6 +8331,12 @@ var Katrid;
                         group.push(SearchGroup.fromItem(view, el, group));
                         return group;
                     }
+                    static fromField({ view, field }) {
+                        let facet = view.facetGrouping;
+                        let group = new SearchGroups(view, facet);
+                        group.push(SearchGroup.fromField(view, field, group));
+                        return group;
+                    }
                     addValue(item) {
                         this.view.groupLength++;
                         let newItem = new Search.SearchObject(item.toString(), item.value);
@@ -8365,6 +8374,9 @@ var Katrid;
                     }
                     static fromItem(view, el, group) {
                         return new SearchGroup(view, el.getAttribute('name'), el.getAttribute('caption'), group, el);
+                    }
+                    static fromField(view, field, group) {
+                        return new SearchGroup(view, field.name, field.caption, group);
                     }
                     toString() {
                         return this.caption;
@@ -8637,7 +8649,6 @@ var Katrid;
                                 i = this.getByName(item);
                             else
                                 i = this.getByName(item[0]);
-                            console.log('load by name', item, i);
                             if (!i?.selected)
                                 i.toggle();
                         });
@@ -8795,11 +8806,11 @@ var Katrid;
               <div class="form-group">
                 <select class="form-control" v-model="fieldName" v-on:change="fieldChange(fields[fieldName])">
                   <option value=""></option>
-                  <option v-for="(name, field, index) in fields" :value="name">{{ field.caption }}</option>
+                  <option v-for="(field, name, index) in fields" :value="name">{{ field.caption }}</option>
                 </select>
               </div>
               <div class="form-group">
-                <button class="btn btn-primary" type="button" v-on:click="search.addCustomGroup(fields[fieldName]);fieldName='';">
+                <button class="btn btn-primary" type="button" v-on:click="addCustomGroup(fields[fieldName]);fieldName='';">
                   {{ _.gettext('Apply') }}
                 </button>
               </div>
@@ -8958,7 +8969,14 @@ var Katrid;
                                     };
                                 }
                             }
-                        }
+                        },
+                        addCustomGroup(field) {
+                            if (field) {
+                                let group = Search.SearchGroups.fromField({ view: this.search, field });
+                                this.search.groups.push(group);
+                                group.items[0].toggle();
+                            }
+                        },
                     },
                     data() {
                         return {
