@@ -3166,26 +3166,22 @@ var Katrid;
                     let res = await this.model.search({ params });
                     if (res.data) {
                         row.$children = res.data;
-                        this.scope.$apply(() => {
-                            this.scope.groups.splice.apply(this.scope.groups, [index + 1, 0].concat(res.data));
-                        });
+                        this.vm.groups.splice.apply(this.vm.groups, [index + 1, 0].concat(res.data));
                     }
                     this._records = this._chain();
                 }
                 else {
                     let rows = await this._loadGroup(this.groups, row.$level + 1, this._params, row);
                     row.$children = rows;
-                    this.scope.groups.splice.apply(this.scope.groups, [index + 1, 0].concat(rows));
-                    this.scope.$apply();
+                    this.vm.groups.splice.apply(this.vm.groups, [index + 1, 0].concat(rows));
                 }
             }
             collapseGroup(index, row) {
                 let collapse = (index, row) => {
-                    console.log('collapse', index, row);
                     if (row.$children && row.$children.length && row.$level !== (this.groups.length - 1))
-                        row.$children.map((obj) => collapse(this.scope.groups.indexOf(obj), obj));
+                        row.$children.map((obj) => collapse(this.vm.groups.indexOf(obj), obj));
                     if (row.$children && row.$children.length)
-                        this.scope.groups.splice(index + 1, row.$children.length);
+                        this.vm.groups.splice(index + 1, row.$children.length);
                     row.$children = [];
                 };
                 collapse(index, row);
@@ -3193,7 +3189,7 @@ var Katrid;
             }
             _chain() {
                 let records = [];
-                for (let obj of this.scope.groups)
+                for (let obj of this.vm.groups)
                     if (obj.$hasChildren && obj.$expanded && obj.$children.length)
                         records = records.concat(obj.$children);
                 let n = 0;
@@ -4580,7 +4576,7 @@ var Katrid;
             }
             render(list, records) {
                 list.classList.add('list-view');
-                let options = this.options || { rowSelector: true, showStar: false };
+                let options = this.options || { rowSelector: true, showStar: false, allowGrouping: true };
                 let _options = list.getAttribute('data-options');
                 if (_options) {
                     _options = JSON.parse(_options);
@@ -4607,7 +4603,7 @@ var Katrid;
                     let td = document.createElement('th');
                     td.classList.add('list-record-star');
                     td.title = 'Mark with star';
-                    td.setAttribute('v-on:click', '$event.stopPropagation();action.markStar(record);');
+                    td.setAttribute('v-on:click.stop', 'action.markStar(record)');
                     td.innerHTML = `<i class="far fa-fw fa-star"></i>`;
                     this.tRow.append(td);
                 }
@@ -4615,9 +4611,6 @@ var Katrid;
                     this.addField(f);
                     f.remove();
                 }
-                let td = this.tRow.querySelector('td');
-                if (td)
-                    td.setAttribute('v-if', '!record.$hasChildren');
                 this.tRow.setAttribute(':data-id', 'record.id');
                 this.tRow.setAttribute('v-for', `(record, index) in ${records || 'records'}`);
                 this.tRow.setAttribute(':selected', 'record.$selected');
@@ -4631,13 +4624,37 @@ var Katrid;
           'form-data-changing': (dataSource.changing && dataSource.recordIndex === index),
           'form-data-readonly': !(dataSource.changing && dataSource.recordIndex === index)
           }`);
-                else
-                    this.tRow.setAttribute(':class', `{'group-header': record.$hasChildren}`);
                 let ngTrClass = list.getAttribute('ng-tr-class');
                 if (ngTrClass) {
                     if (!ngTrClass.startsWith('{'))
                         ngTrClass = '{' + ngTrClass + '}';
                     this.tRow.setAttribute('ng-class', ngTrClass);
+                }
+                if (options.allowGrouping) {
+                    let tr = document.createElement('tr');
+                    tr.setAttribute('v-if', 'groups.length > 0');
+                    tr.setAttribute('v-for', '(record, index) in groups');
+                    tr.setAttribute('v-on:click', 'if (record.$hasChildren) expandGroup(index, record);');
+                    tr.setAttribute(':class', `{'group-header': record.$hasChildren}`);
+                    tr.innerHTML = this.tRow.innerHTML;
+                    for (let child of tr.children)
+                        child.setAttribute('v-if', '!record.$hasChildren');
+                    Array.from(this.tRow.children).forEach((el, index) => {
+                        if (index > 1) {
+                            let tdEmpty = document.createElement('td');
+                            tdEmpty.setAttribute('v-if', 'record.$hasChildren');
+                            tr.append(tdEmpty);
+                        }
+                    });
+                    let td = document.createElement('th');
+                    td.setAttribute('v-if', 'record.$hasChildren');
+                    td.innerHTML = `<i class="fas fa-fw" :class="{'fa-chevron-right': !record.$expanded, 'fa-chevron-down': record.$expanded}"></i> <span v-text="record.__str__"></span>`;
+                    let cols = this.columns.length;
+                    if (options.rowSelector)
+                        cols++;
+                    td.setAttribute('colspan', '2');
+                    tr.insertBefore(td, tr.firstElementChild);
+                    this.tBody.append(tr);
                 }
                 this.tHead.append(this.tHeadRow);
                 this.tBody.append(this.tRow);
@@ -5150,6 +5167,13 @@ var Katrid;
                             },
                             recordContextMenu(record, index, event) {
                                 Views.listRecordContextMenu.call(this, ...arguments);
+                            },
+                            expandGroup(index, group) {
+                                group.$expanded = !group.$expanded;
+                                if (group.$expanded)
+                                    me.dataSource.expandGroup(index, group);
+                                else
+                                    me.dataSource.collapseGroup(index, group);
                             }
                         },
                     }).mount(el);
@@ -7226,7 +7250,9 @@ var Katrid;
                     templ.querySelector('.template-placeholder').append(this.element);
                     return templ;
                 }
-                groupBy(data) {
+                async groupBy(data) {
+                    this.vm.records = [];
+                    console.log('group by', this.vm);
                 }
             }
             Views.ListView = ListView;
