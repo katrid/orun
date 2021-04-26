@@ -4612,6 +4612,7 @@ var Katrid;
                     f.remove();
                 }
                 this.tRow.setAttribute(':data-id', 'record.id');
+                this.tRow.setAttribute('v-if', 'groups.length === 0');
                 this.tRow.setAttribute('v-for', `(record, index) in ${records || 'records'}`);
                 this.tRow.setAttribute(':selected', 'record.$selected');
                 this.tRow.setAttribute('v-on:contextmenu', 'recordContextMenu(record, index, $event)');
@@ -4634,7 +4635,7 @@ var Katrid;
                     let tr = document.createElement('tr');
                     tr.setAttribute('v-if', 'groups.length > 0');
                     tr.setAttribute('v-for', '(record, index) in groups');
-                    tr.setAttribute('v-on:click', 'if (record.$hasChildren) expandGroup(index, record);');
+                    tr.setAttribute('v-on:click', 'if (record.$hasChildren) expandGroup(index, record); else recordClick(record, record.$index, $event);');
                     tr.setAttribute(':class', `{'group-header': record.$hasChildren}`);
                     tr.innerHTML = this.tRow.innerHTML;
                     for (let child of tr.children)
@@ -5098,7 +5099,7 @@ var Katrid;
                     let recordClick = this.config.recordClick || function (record, index, event) {
                         me.action.record = record;
                         me.action.recordId = record.id;
-                        me.action.recordIndex = this.records.indexOf(record);
+                        me.action.recordIndex = index;
                         history.pushState(null, '', me.action.makeUrl('form'));
                         me.action.showView('form');
                         return;
@@ -6378,7 +6379,7 @@ var Katrid;
                 let viewInfo = field.views[field.viewMode];
                 console.log('view mode', field.viewMode);
                 if (field.viewMode === 'list') {
-                    let renderer = new Forms.ListRenderer(viewInfo);
+                    let renderer = new Forms.ListRenderer(viewInfo, { rowSelector: true, allowGrouping: false });
                     grid.setAttribute('field-name', field.name);
                     let table = renderer.render(viewInfo.template, 'records');
                     let div = document.createElement('div');
@@ -6825,6 +6826,7 @@ var Katrid;
                 ready() {
                     if (this.action.dataSource && (this.action.recordIndex >= 0)) {
                         this.dataSource._records = this.action.dataSource.records;
+                        console.log('record index', this.action.recordIndex);
                         this.dataSource.recordIndex = this.action.recordIndex;
                     }
                     else if (this.action.params?.id && !this.dataSource.inserting)
@@ -7251,8 +7253,7 @@ var Katrid;
                     return templ;
                 }
                 async groupBy(data) {
-                    this.vm.records = [];
-                    console.log('group by', this.vm);
+                    this.vm.records = this.vm.groups;
                 }
             }
             Views.ListView = ListView;
