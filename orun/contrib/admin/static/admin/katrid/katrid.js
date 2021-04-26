@@ -4612,7 +4612,7 @@ var Katrid;
                     f.remove();
                 }
                 this.tRow.setAttribute(':data-id', 'record.id');
-                this.tRow.setAttribute('v-if', 'records.length === 0');
+                this.tRow.setAttribute('v-if', 'groups.length === 0');
                 this.tRow.setAttribute('v-for', `(record, index) in ${records || 'records'}`);
                 this.tRow.setAttribute(':selected', 'record.$selected');
                 this.tRow.setAttribute('v-on:contextmenu', 'recordContextMenu(record, index, $event)');
