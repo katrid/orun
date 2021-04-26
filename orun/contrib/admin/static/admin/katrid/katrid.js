@@ -6996,8 +6996,9 @@ var Katrid;
                                 await this.dataSource.copy(this.record.id);
                                 return false;
                             },
-                            sendFile(name) {
-                                console.log('send file', name);
+                            sendFile(name, file) {
+                                console.log('send file', name, file);
+                                return Katrid.Services.Upload.sendFile({ model: this.action.model, method: name, file, vm: this });
                             },
                             sum(obj, field) {
                                 let res = 0;
@@ -10178,24 +10179,14 @@ var Katrid;
             }
         }
         class Upload {
-            static sendFile(service, file) {
+            static sendFile(config) {
+                let { model, method, file, vm } = config;
                 let form = new FormData();
                 form.append('files', file.files[0]);
-                let scope = angular.element(file).scope();
-                let url = `/web/file/upload/${scope.model.name}/${service}/`;
-                if (scope.record && scope.record.id)
-                    form.append('id', scope.record.id);
-                let dataSource = scope.action.dataSource;
-                if (!dataSource) {
-                    dataSource = scope.$parent.dataSource;
-                    let s = scope.$parent;
-                    while (s) {
-                        dataSource = s.dataSource;
-                        if (dataSource)
-                            break;
-                        s = scope.$parent;
-                    }
-                }
+                let url = `/web/file/upload/${model.name}/${method}/`;
+                if (vm.record && vm.record.id)
+                    form.append('id', vm.record.id);
+                let dataSource = vm.dataSource;
                 $.ajax({
                     url: url,
                     data: form,
@@ -10203,7 +10194,8 @@ var Katrid;
                     contentType: false,
                     type: 'POST',
                     success: (data) => {
-                        scope.$apply(() => dataSource.refresh());
+                        if (dataSource)
+                            dataSource.refresh();
                         Katrid.Forms.Dialogs.Alerts.success('Operação realizada com sucesso.');
                     }
                 });
