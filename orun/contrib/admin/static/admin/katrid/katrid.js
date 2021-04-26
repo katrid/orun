@@ -5169,6 +5169,9 @@ var Katrid;
                             recordContextMenu(record, index, event) {
                                 Views.listRecordContextMenu.call(this, ...arguments);
                             },
+                            sendFile(name, file) {
+                                return Katrid.Services.Upload.sendFile({ model: this.action.model, method: name, file, vm: this });
+                            },
                             expandGroup(index, group) {
                                 group.$expanded = !group.$expanded;
                                 if (group.$expanded)
