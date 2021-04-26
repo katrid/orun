@@ -11111,7 +11111,7 @@ var Katrid;
                         field: f,
                     });
                 }
-                let params = xml.querySelectorAll('param').map((p) => p.getAttribute('name'));
+                let params = Array.from(xml.querySelectorAll('param')).map((p) => p.getAttribute('name'));
                 return this.load(fields, params);
             }
             saveDialog() {
