@@ -4612,7 +4612,7 @@ var Katrid;
                     f.remove();
                 }
                 this.tRow.setAttribute(':data-id', 'record.id');
-                this.tRow.setAttribute('v-if', 'groups.length === 0');
+                this.tRow.setAttribute('v-if', 'records.length === 0');
                 this.tRow.setAttribute('v-for', `(record, index) in ${records || 'records'}`);
                 this.tRow.setAttribute(':selected', 'record.$selected');
                 this.tRow.setAttribute('v-on:contextmenu', 'recordContextMenu(record, index, $event)');
@@ -4633,6 +4633,7 @@ var Katrid;
                 }
                 if (options.allowGrouping) {
                     let tr = document.createElement('tr');
+                    this.tRow.setAttribute('v-if', 'records.length === 0');
                     tr.setAttribute('v-if', 'groups.length > 0');
                     tr.setAttribute('v-for', '(record, index) in groups');
                     tr.setAttribute('v-on:click', 'if (record.$hasChildren) expandGroup(index, record); else recordClick(record, record.$index, $event);');
@@ -6826,7 +6827,6 @@ var Katrid;
                 ready() {
                     if (this.action.dataSource && (this.action.recordIndex >= 0)) {
                         this.dataSource._records = this.action.dataSource.records;
-                        console.log('record index', this.action.recordIndex);
                         this.dataSource.recordIndex = this.action.recordIndex;
                     }
                     else if (this.action.params?.id && !this.dataSource.inserting)
