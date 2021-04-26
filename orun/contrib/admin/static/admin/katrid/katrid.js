@@ -4633,7 +4633,6 @@ var Katrid;
                 }
                 if (options.allowGrouping) {
                     let tr = document.createElement('tr');
-                    this.tRow.setAttribute('v-if', 'records.length === 0');
                     tr.setAttribute('v-if', 'groups.length > 0');
                     tr.setAttribute('v-for', '(record, index) in groups');
                     tr.setAttribute('v-on:click', 'if (record.$hasChildren) expandGroup(index, record); else recordClick(record, record.$index, $event);');
@@ -6441,6 +6440,7 @@ var Katrid;
                         action: {},
                         record: {},
                         records: [],
+                        groups: [],
                         view: null,
                         pendingRequest: false,
                         recordCount: 0,
