@@ -246,7 +246,7 @@ class AdminModel(models.Model, helper=True):
             for row in qs:
                 key = row[field.name]
                 count = row['pk__count']
-                s = f'{field.remote_field.model.objects.get(pk=key)._format_instance_label() if key else gettext("(Undefined)")} ({count})'
+                s = f'{str(field.remote_field.model.objects.get(pk=key)) if key else gettext("(Undefined)")} ({count})'
                 res.append({
                     '$params': {field_name: key},
                     field_name: s,
@@ -299,7 +299,7 @@ class AdminModel(models.Model, helper=True):
             for k, v in context.items():
                 if k.startswith('default_'):
                     data[k[8:]] = v
-        return self.objects.create(**data)._format_instance_label()
+        return self.objects.create(**data)._api_format_choice()
 
     @api.classmethod
     def api_get(cls, id, fields=None):

@@ -39,17 +39,17 @@ class DataTable(_Element):
                     table(*self.children),
                     attrs={'class': 'dashboard-widget table-responsive'},
                 ),
-                attrs={'class': 'dashboard-container-widget col-12'},
+                attrs={'class': 'dashboard-container-widget'},
             )
         ]
 
 
 class Params(_Element):
-    tag = 'params'
+    tag = 't-params'
 
 
 class Param(_Element):
-    tag = 'filter-param'
+    tag = 't-param'
     choices: list = None
 
     def __init__(self, name=None, type=None, caption=None, choices=None, operation='=', *args, **kwargs):
@@ -71,7 +71,7 @@ class Param(_Element):
 
 
 class Dash(_Element):
-    tag = 'bi-dashboard'
+    tag = 'dashboard'
 
 
 class Div(_Element):
@@ -104,6 +104,14 @@ def th(*args, **kwargs):
 
 def td(*args, **kwargs):
     return h('td', *args, **kwargs)
+
+
+def h1(*args, **kwargs):
+    return h('h1', *args, **kwargs)
+
+
+def i(*args, **kwargs):
+    return h('i', *args, **kwargs)
 
 
 class Plot(_Element):

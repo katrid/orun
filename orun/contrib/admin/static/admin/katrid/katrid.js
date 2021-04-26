@@ -5678,8 +5678,9 @@ var Katrid;
                             this.$lastValue = moment(value, $format).format('YYYY-MM-DD');
                         else
                             this.$lastValue = moment(value, $format).toISOString();
-                        if (this.$lastValue !== 'Invalid date')
-                            vm.$emit('change', this.$lastValue);
+                        if (this.$lastValue === 'Invalid date')
+                            this.$lastValue = null;
+                        vm.$emit('change', this.$lastValue);
                         return this.$lastValue;
                     };
                     let calendar = $(vm.$el).datetimepicker({
