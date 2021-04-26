@@ -5666,13 +5666,14 @@ var Katrid;
                         mask,
                         insertMode: false,
                         onincomplete: function () {
-                            vm.$emit('update:modelValue', applyValue(this.value));
+                            vm.$emit('update:modelValue', applyValue(input.value));
                         },
                         oncompleted: function () {
-                            vm.$emit('update:modelValue', applyValue(this.value));
+                            vm.$emit('update:modelValue', applyValue(input.value));
                         }
                     });
                     let applyValue = (value) => {
+                        value = input.value;
                         if (format === 'L')
                             this.$lastValue = moment(value, $format).format('YYYY-MM-DD');
                         else
@@ -5689,14 +5690,14 @@ var Katrid;
                         },
                     })
                         .on('dp.show', function (evt) {
-                        if (input.value !== input.value)
-                            calendar.datetimepicker('date', applyValue(this.value));
+                        calendar.datetimepicker('date', applyValue(input.value));
                     })
                         .on('dp.change', function (evt) {
                         calendar.datetimepicker('hide');
-                        vm.$emit('update:modelValue', applyValue(this.value));
+                        vm.$emit('update:modelValue', applyValue(input.value));
                     })
                         .on('dp.hide', (evt) => {
+                        vm.$emit('update:modelValue', applyValue(input.value));
                     });
                 },
                 watch: {
