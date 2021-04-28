@@ -11132,11 +11132,18 @@ var Katrid;
                     file: container.find('#id-report-file').val()
                 };
                 for (let p of Array.from(this.params)) {
+                    let val1, val2;
+                    val1 = p.value1;
+                    val2 = p.value2;
+                    if (val1 === '')
+                        val1 = null;
+                    if (val2 === '')
+                        val2 = null;
                     params.data.push({
                         name: p.name,
                         op: p.operation,
-                        value1: p.value1,
-                        value2: p.value2,
+                        value1: val1,
+                        value2: val2,
                         type: p.type
                     });
                 }
