@@ -1627,6 +1627,7 @@ var Katrid;
             table.append(tbody);
             let thr = document.createElement('tr');
             thead.append(thr);
+            let fields = options.info.fields.map(field => field.name);
             for (let field of options.info.fields) {
                 let th = document.createElement('th');
                 th.innerHTML = field.caption || field.name;
@@ -1652,6 +1653,13 @@ var Katrid;
                     td.innerText = col;
                     tr.append(td);
                 });
+                if (options.binding) {
+                    tr.addEventListener('click', function (event) {
+                        let id = fields.indexOf(options.binding.field);
+                        console.log('row click', row[id]);
+                        Katrid.Forms.Views.openObject(options.binding.model, row[id], { target: 'dialog' });
+                    });
+                }
                 tbody.append(tr);
             }
             return table;
