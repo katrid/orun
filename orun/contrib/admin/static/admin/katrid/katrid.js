@@ -5562,6 +5562,8 @@ var Katrid;
                         let v = el.select2('data');
                         if (Array.isArray(v))
                             v = v.map(obj => obj.id);
+                        else if (v && ('id' in v))
+                            v = v.id;
                         this.$emit('update:modelValue', v);
                     });
                 },
