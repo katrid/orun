@@ -1664,6 +1664,7 @@ var Katrid;
                 }
                 tbody.append(tr);
             }
+            table.addEventListener('contextmenu', Katrid.Forms.dataTableContextMenu);
             return table;
         }
         function createDataTableDialog(options) {
@@ -4778,6 +4779,23 @@ var Katrid;
             }
         }
         Forms.ListRenderer = ListRenderer;
+        function dataTableContextMenu(evt) {
+            console.log('context menu');
+            evt.stopPropagation();
+            evt.preventDefault();
+            let menu = new Forms.ContextMenu();
+            menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => copyToClipboard(evt.target.closest('table')));
+            menu.show(evt.pageX, evt.pageY);
+        }
+        Forms.dataTableContextMenu = dataTableContextMenu;
+        function copyToClipboard(table) {
+            navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(table));
+        }
+        Katrid.directive('table-view', {
+            mounted(el) {
+                el.addEventListener('contextmenu', dataTableContextMenu);
+            }
+        });
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
