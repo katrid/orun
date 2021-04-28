@@ -11141,6 +11141,8 @@ var Katrid;
                         val1 = null;
                     if (val2 === '')
                         val2 = null;
+                    if (val1 === null)
+                        continue;
                     params.data.push({
                         name: p.name,
                         op: p.operation,
