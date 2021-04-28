@@ -5568,6 +5568,20 @@ var Katrid;
                     });
                 },
             });
+            Katrid.component('multiple-tags', {
+                template: `<select><slot></slot></select>`,
+                mounted() {
+                    let el = $(this.$el).select2();
+                    el.on('change', event => {
+                        let v = el.select2('data');
+                        if (Array.isArray(v))
+                            v = v.map(obj => obj.id);
+                        else if (v && ('id' in v))
+                            v = v.id;
+                        this.$emit('update:modelValue', v);
+                    });
+                }
+            });
         })(Controls = Forms.Controls || (Forms.Controls = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -10980,12 +10994,14 @@ var Katrid;
             SelectionField(param) {
                 console.log(param);
                 let multiple = '';
+                let tag = 'select';
                 if (param.operation === 'in') {
-                    multiple = 'multiple-tags multiple="multiple"';
+                    tag = 'multiple-tags';
+                    multiple = 'multiple="multiple"';
                 }
                 else
                     multiple = 'class="form-control"';
-                return `<div><select ${multiple} v-model="param.value1"><option :value="value" v-for="(name, value, index) in param.choices">{{name}}</option></select></div>`;
+                return `<div><${tag} ${multiple} v-model="param.value1"><option :value="value" v-for="(name, value, index) in param.choices">{{name}}</option></${tag}></div>`;
             }
         };
         Reports.Params = Params;
