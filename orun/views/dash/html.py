@@ -119,5 +119,5 @@ class Plot(_Element):
 
     def __init__(self, data, *args, onclick=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.attrs['@plot-click'] = f"rpc('callback', '{onclick}')"
+        self.attrs['@plot-click'] = f"plotClick('{onclick}', $event)"
         self.attrs[':data'] = data

@@ -129,9 +129,9 @@ class DataSource:
         return rows
 
     def execute(self, params=None):
-        return self._prepare(params)
-    
-    
+        return [list(row) for row in self._prepare(params)]
+
+
 class Dashboard:
     def params(self):
         return []

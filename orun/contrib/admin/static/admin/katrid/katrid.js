@@ -1216,14 +1216,10 @@ var Katrid;
         function newPlot(el, data, layout, config) {
             if (!layout)
                 layout = {};
+            if (!('hovermode' in layout))
+                layout['hovermode'] = 'closest';
             if (!layout.separators)
                 layout.separators = Katrid.i18n.formats.DECIMAL_SEPARATOR + Katrid.i18n.formats.THOUSAND_SEPARATOR;
-            if (!layout.colorway)
-                layout.colorway = [
-                    '#86AED1', '#FF99A9', '#A1DE93',
-                    '#CAC3F7', '#FEE0CC', '#F47C7C', '#88CEFB', '#FBB4C9', '#AFF1F1', '#8DD1F1', '#B3C8C8', '#FCE2C2',
-                    '#6CB2D1', '#b3c8c8', '#f3cec9', '#64E987', '#cd7eaf', '#a262a9', '#6f4d96', '#4F9EC4', '#3d3b72', '#182844'
-                ];
             if (!config)
                 config = {};
             if (!('responsive' in config))
@@ -1533,8 +1529,16 @@ var Katrid;
                     };
                 let vm = Katrid.createView({
                     methods: {
-                        rpc(method, params) {
-                            return Katrid.Services.Service.$post(url + `api_${method}/`, params);
+                        async rpc(method, params) {
+                            let res = await Katrid.Services.Service.$post(url + `api_${method}/`, params);
+                            res = res.result;
+                            if ('showData' in res) {
+                                createDataTableDialog(res.showData);
+                            }
+                            return res;
+                        },
+                        plotClick(method, params) {
+                            return this.rpc('callback', { kwargs: { method, params, values: this.$data } });
                         },
                     },
                     data() {
@@ -1614,6 +1618,67 @@ var Katrid;
             }
         }
         BI.DashboardViewElement = DashboardViewElement;
+        function createDataTable(options) {
+            let table = document.createElement('table');
+            let thead = document.createElement('thead');
+            let tbody = document.createElement('tbody');
+            table.classList.add('table', 'table-bordered');
+            table.append(thead);
+            table.append(tbody);
+            let thr = document.createElement('tr');
+            thead.append(thr);
+            for (let field of options.info.fields) {
+                let th = document.createElement('th');
+                th.innerHTML = field.caption || field.name;
+                thr.append(th);
+                if (field.type === 'decimal')
+                    th.classList.add('DecimalField');
+                else if (field.type === 'date')
+                    th.classList.add('DateField');
+            }
+            for (let row of options.data) {
+                let tr = document.createElement('tr');
+                options.info.fields.forEach((field, idx) => {
+                    let td = document.createElement('td');
+                    let col = row[idx];
+                    if (field.type === 'decimal') {
+                        td.classList.add('DecimalField');
+                        col = Katrid.filtersRegistry.number(col, 2);
+                    }
+                    else if (field.type === 'date') {
+                        td.classList.add('DateField');
+                        col = Katrid.filtersRegistry.date(col, 'shortDate');
+                    }
+                    td.innerText = col;
+                    tr.append(td);
+                });
+                tbody.append(tr);
+            }
+            return table;
+        }
+        function createDataTableDialog(options) {
+            let templ = `<div class="modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Visualização de Dados</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body"> <div class="table-responsive"></div> </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">${_.gettext('Close')}</button>
+      </div>
+    </div>
+  </div>
+</div>`;
+            let modal = $(templ);
+            modal.find('.table-responsive').append(createDataTable(options));
+            console.log(modal);
+            $(modal).modal();
+            return modal;
+        }
         customElements.define('dashboard-view', DashboardViewElement);
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
@@ -1930,7 +1995,16 @@ var Katrid;
                         let el = this.$el.querySelector('.graph');
                         createPlot.call(this, el, this.data);
                         el.on('plotly_click', (data) => {
-                            this.$emit('plotClick', data.points.map(point => point.data));
+                            let args = data.points.map(obj => ({
+                                x: obj.x,
+                                y: obj.y,
+                                name: obj.data.name,
+                                type: obj.data.type,
+                                value: obj.value,
+                                pointIndex: obj.pointIndex,
+                                pointNumber: obj.pointNumber,
+                            }));
+                            this.$emit('plotClick', args);
                         });
                     });
                 }
