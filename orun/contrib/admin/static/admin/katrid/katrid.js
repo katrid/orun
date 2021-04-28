@@ -1512,6 +1512,7 @@ var Katrid;
                 let div = document.createElement('div');
                 div.append(el);
                 el = view.createVm(div, url, res.data, res.params);
+                this.app.element.innerHTML = '';
                 this.app.element.append(el);
             }
         };
@@ -1524,8 +1525,9 @@ var Katrid;
                 for (let k of params)
                     watch[k] = async function (value) {
                         let res = await this.rpc('param_change', { kwargs: { prop: k, value, values: this.$data } });
-                        for (let [k, v] of Object.entries(res.result))
-                            this[k] = v;
+                        if (res)
+                            for (let [k, v] of Object.entries(res))
+                                this[k] = v;
                     };
                 let vm = Katrid.createView({
                     methods: {
