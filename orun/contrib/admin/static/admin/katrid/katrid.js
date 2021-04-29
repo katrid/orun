@@ -3692,6 +3692,9 @@ var Katrid;
                 }
                 set fieldEl(value) {
                     this._fieldEl = value;
+                    this.setElement(value);
+                }
+                setElement(value) {
                 }
                 formLabel() {
                     if (!this.nolabel) {
@@ -4480,6 +4483,10 @@ var Katrid;
                         res.views[k].fields = res.fields;
                     }
                 }
+                setElement(el) {
+                    if (el && el.hasAttribute('paste-allowed'))
+                        this.pasteAllowed = true;
+                }
                 setValue(record, value) {
                     if (value && value instanceof Array) {
                         let child = record.$record.dataSource.childByName(this.name);
@@ -4701,6 +4708,7 @@ var Katrid;
                 this.tRow.setAttribute('v-for', `(record, index) in ${records || 'records'}`);
                 this.tRow.setAttribute(':selected', 'record.$selected');
                 this.tRow.setAttribute('v-on:contextmenu', 'recordContextMenu(record, index, $event)');
+                table.setAttribute('v-on:contextmenu', 'tableContextMenu($event)');
                 if (this.options?.recordClick)
                     this.tRow.setAttribute('v-on:click', this.options.recordClick);
                 else
@@ -6509,6 +6517,7 @@ var Katrid;
                     div.classList.add('table-responsive');
                     div.append(table);
                     grid.append(div);
+                    grid.$columns = renderer.columns;
                 }
                 else if (field.viewMode == 'card') {
                     let renderer = new Katrid.Forms.Views.CardRenderer(viewInfo.fields);
@@ -6605,6 +6614,9 @@ var Katrid;
                     recordContextMenu(record, index, event) {
                         Katrid.Forms.Views.listRecordContextMenu.call(this, ...arguments);
                     },
+                    tableContextMenu(event) {
+                        Katrid.Forms.Views.tableContextMenu.call(this, ...arguments);
+                    },
                     async createNew() {
                         if (this.$editing)
                             return;
@@ -6653,6 +6665,7 @@ var Katrid;
                     });
                     this.$selection = new Katrid.Forms.Views.SelectionHelper();
                     this.$selection.dataSource = this.$data.dataSource;
+                    let field = this.$data.field;
                 },
                 watch: {
                     records(value) {
@@ -7541,6 +7554,16 @@ var Katrid;
                 }
             }
             Views.selectionToggleAll = selectionToggleAll;
+            function tableContextMenu(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                let menu = new Forms.ContextMenu();
+                menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => copyClick(event.target.closest('table')));
+                if (this.field?.pasteAllowed && this.$parent.dataSource.changing)
+                    menu.add('<i class="fa fa-fw fa-paste"></i> Colar', (...args) => pasteClick(this));
+                menu.show(event.pageX, event.pageY);
+            }
+            Views.tableContextMenu = tableContextMenu;
             function listRecordContextMenu(record, index, event) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -7556,7 +7579,7 @@ var Katrid;
                 let menu = new Forms.ContextMenu();
                 if (td && (td.tagName === 'TD'))
                     menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => copyClick(event.target.closest('table')));
-                if (this.pasteAllowed && this.action.scope.$parent.action.dataSource.changing)
+                if (this.field?.pasteAllowed && this.$parent.dataSource.changing)
                     menu.add('<i class="fa fa-fw fa-paste"></i> Colar', (...args) => pasteClick(this));
                 if (td && (td.tagName === 'TD')) {
                     menu.addSeparator();
@@ -7583,7 +7606,7 @@ var Katrid;
                         if (line) {
                             let record = {};
                             line.split(sep).forEach((s, n) => {
-                                let field = vm.columns[n];
+                                let field = vm.$grid.$columns[n];
                                 if (field)
                                     record[field.name] = s;
                             });
