@@ -5798,6 +5798,7 @@ var Katrid;
                             vm.$emit('update:modelValue', applyValue(input.value));
                         }
                     });
+                    this.$format = $format;
                     let applyValue = (value) => {
                         value = input.value;
                         if (format === 'L')
