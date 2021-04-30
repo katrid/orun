@@ -10227,8 +10227,11 @@ var Katrid;
                         let res;
                         if (contentType === 'application/json')
                             res = await response.json();
+                        else if (contentType.indexOf('pdf') > -1) {
+                            return downloadBytes(response);
+                        }
                         else
-                            return response.blob();
+                            return response;
                         if (res.error)
                             reject(res.error);
                         else {
@@ -10377,6 +10380,19 @@ var Katrid;
             }).then(res => res.json());
         }
         Services.post = post;
+        async function downloadBytes(res) {
+            let bytes = await res.blob();
+            let name = res.headers.get('Content-Disposition');
+            let url = URL.createObjectURL(bytes);
+            let a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = name;
+            document.body.append(a);
+            a.click();
+            URL.revokeObjectURL(url);
+            a.remove();
+        }
     })(Services = Katrid.Services || (Katrid.Services = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
