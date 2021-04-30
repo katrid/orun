@@ -2,6 +2,7 @@ import inspect
 from functools import partial, wraps
 import builtins
 
+from orun.http.response import HttpResponseBase
 from orun.db.models.base import ModelBase
 from orun.core.exceptions import RPCError, ValidationError
 
@@ -136,6 +137,8 @@ def jsonrpc(fn):
         kwargs['params'] = data.get('params')
         try:
             r = fn(request, *args, **kwargs)
+            if isinstance(r, HttpResponseBase):
+                return r
             return JsonResponse({
                 'jsonrpc': '2.0',
                 'id': _id,
