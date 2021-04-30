@@ -10389,9 +10389,8 @@ var Katrid;
             a.href = url;
             a.download = name;
             document.body.append(a);
-            a.click();
+            window.open(url);
             URL.revokeObjectURL(url);
-            a.remove();
         }
     })(Services = Katrid.Services || (Katrid.Services = {}));
 })(Katrid || (Katrid = {}));
