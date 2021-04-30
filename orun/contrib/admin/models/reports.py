@@ -133,6 +133,7 @@ class ReportAction(Action):
             xml,
             connection=ConnectionProxy(connection),
             # company=g.user.user_company,
+            name=self.name,
             company=apps['auth.user'].objects.get(pk=1).user_company,
             format=format, model=model, query=qs, report_title=self.name, params=where, types=types,
             output_file=output_path,
