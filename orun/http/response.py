@@ -39,7 +39,7 @@ class HttpResponseBase:
         # _headers is a mapping of the lowercase name to the original case of
         # the header (required for working with legacy systems) and the header
         # value. Both the name of the header and its value are ASCII strings.
-        self._headers = headers or {}
+        self._headers = {}
         self._closable_objects = []
         # This parameter is set by the handler. It's necessary to preserve the
         # historical behavior of request_finished.
@@ -60,6 +60,9 @@ class HttpResponseBase:
             content_type = '%s; charset=%s' % (settings.DEFAULT_CONTENT_TYPE,
                                                self.charset)
         self['Content-Type'] = content_type
+        if headers:
+            for k, v in headers.items():
+                self[k] = v
 
     @property
     def reason_phrase(self):
