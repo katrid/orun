@@ -5267,6 +5267,12 @@ var Katrid;
                             actionClick(selection, methodName, event) {
                                 me.action.formButtonClick(selection.map(obj => obj.id), methodName);
                             },
+                            nextPage() {
+                                me.dataSource.nextPage();
+                            },
+                            prevPage() {
+                                me.dataSource.prevPage();
+                            },
                             selectToggle(record) {
                                 Views.selectionSelectToggle.call(this, ...arguments);
                             },
@@ -11461,11 +11467,11 @@ var Katrid;
               <div class="dropdown-menu">
                 <a class="dropdown-item" v-on:click="Katrid.Reports.Reports.preview()">PDF</a>
                 <a class="dropdown-item" v-on:click="$event.preventDefault();report.telegram();">Telegram</a>
-                <a class="dropdown-item" v-on:click="exportReport('docx')">Word</a>
-                <a class="dropdown-item" v-on:click="exportReport('xlsx')">Excel</a>
-                <a class="dropdown-item" v-on:click="exportReport('pptx')">PowerPoint</a>
-                <a class="dropdown-item" v-on:click="exportReport('csv')">CSV</a>
-                <a class="dropdown-item" v-on:click="exportReport('txt')">${_.gettext('Text File')}</a>
+                <a class="dropdown-item" v-on:click="report.export('docx')">Word</a>
+                <a class="dropdown-item" v-on:click="report.export('xlsx')">Excel</a>
+                <a class="dropdown-item" v-on:click="report.export('pptx')">PowerPoint</a>
+                <a class="dropdown-item" v-on:click="report.export('csv')">CSV</a>
+                <a class="dropdown-item" v-on:click="report.export('txt')">${_.gettext('Text File')}</a>
               </div>
             </div>
 
