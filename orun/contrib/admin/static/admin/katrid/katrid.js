@@ -10227,6 +10227,8 @@ var Katrid;
                         let res;
                         if (contentType === 'application/json')
                             res = await response.json();
+                        else
+                            return response.blob();
                         if (res.error)
                             reject(res.error);
                         else {
