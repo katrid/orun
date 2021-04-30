@@ -26,6 +26,9 @@ def rpc(request, service, meth, params):
             kwargs = params.get('kwargs') or {}
             r = meth(*args, **kwargs)
 
+            if isinstance(r, HttpResponse):
+                return r
+
             if isinstance(r, QuerySet):
                 r = {
                     'data': r,

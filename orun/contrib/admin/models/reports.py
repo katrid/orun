@@ -11,6 +11,7 @@ from orun.db import models, connection
 from orun.reports.engines import get_engine, ConnectionProxy
 from orun.template import loader
 from orun.utils.translation import gettext_lazy as _
+from orun.http import HttpResponse
 from orun.utils.xml import etree
 from .action import Action
 
@@ -138,6 +139,8 @@ class ReportAction(Action):
             format=format, model=model, query=qs, report_title=self.name, params=where, types=types,
             output_file=output_path,
         )
+        if not isinstance(rep, dict):
+            return rep
         if rep:
             if not isinstance(rep, str):
                 rep = rep.export(format=format)
