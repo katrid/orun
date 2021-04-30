@@ -3977,7 +3977,7 @@ var Katrid;
                 }
                 formControl() {
                     let control = super.formControl();
-                    control.setAttribute('time-picker', 'time-picker');
+                    control.setAttribute('v-input-time', 'input-time');
                     return control;
                 }
             }
@@ -5845,6 +5845,16 @@ var Katrid;
                         else
                             this.$input.value = '';
                     }
+                }
+            });
+            Katrid.directive('input-time', {
+                mounted(el) {
+                    console.log('input time');
+                    let mask = '99:99';
+                    $(el).inputmask({
+                        mask,
+                        insertMode: false,
+                    });
                 }
             });
         })(Controls = Forms.Controls || (Forms.Controls = {}));
