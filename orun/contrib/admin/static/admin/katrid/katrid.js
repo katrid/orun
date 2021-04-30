@@ -10390,7 +10390,6 @@ var Katrid;
             a.download = name;
             document.body.append(a);
             window.open(url);
-            URL.revokeObjectURL(url);
         }
     })(Services = Katrid.Services || (Katrid.Services = {}));
 })(Katrid || (Katrid = {}));
