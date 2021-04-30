@@ -10218,13 +10218,15 @@ var Katrid;
                 }
                 return new Promise((resolve, reject) => {
                     Service.adapter.fetch(rpcName, config)
-                        .then(async (res) => {
-                        if (res.status === 500) {
-                            reject(await res.json());
+                        .then(async (response) => {
+                        console.log(response.headers);
+                        let contentType = response.headers.get('Content-Type');
+                        if (response.status === 500) {
+                            reject(await response.json());
                         }
-                        return res.json();
-                    })
-                        .then(res => {
+                        let res;
+                        if (contentType === 'application/json')
+                            res = await response.json();
                         if (res.error)
                             reject(res.error);
                         else {
@@ -10276,8 +10278,6 @@ var Katrid;
                             else
                                 resolve(res);
                         }
-                    })
-                        .then(res => {
                     })
                         .catch(res => reject(res));
                 });
