@@ -1625,15 +1625,16 @@ class OneToManyField(RelatedField):
         for v in value:
             values = v.get('values')
             action = v['action']
-            if action == 'CREATE':
-                values[self.remote_field.to_field.name] = instance.pk
-                obj = rel_model.api_write(values)
-                if instance.pk is None:
-                    res.append(obj)
-            elif action == 'DESTROY':
-                rel_model.api_delete([v['id']])
-            elif action == 'UPDATE':
-                rel_model.api_write(values)
+            if values:
+                if action == 'CREATE':
+                    values[self.remote_field.to_field.name] = instance.pk
+                    obj = rel_model.api_write(values)
+                    if instance.pk is None:
+                        res.append(obj)
+                elif action == 'DESTROY':
+                    rel_model.api_delete([v['id']])
+                elif action == 'UPDATE':
+                    rel_model.api_write(values)
         if res:
             setattr(instance, self.name, res)
 
