@@ -23,6 +23,12 @@ class Params(dict):
     def add(self, param: Param):
         self[param.name] = param
 
+    def assign(self, other: dict):
+        for k, v in other.items():
+            if k not in self:
+                self[k] = Param(k, type(v))
+            self[k].value = v
+
 
 class DataSource:
     def __init__(self, sql: str = None, params=None, transform_cols=None, transform_rows=None):
