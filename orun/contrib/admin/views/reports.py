@@ -14,9 +14,6 @@ class AutoReport(PaginatedReport):
         return {'data': list(data)}
 
     def get(self, request, *args, **kwargs):
-        self.write_line('Teste')
-        self.write_line('Teste')
-        self.write_line('Teste')
         return '\n'.join(self.stream)
 
 
