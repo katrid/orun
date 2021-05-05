@@ -3966,6 +3966,7 @@ var Katrid;
                     if (!info.cols)
                         info.cols = 3;
                     super(info);
+                    this.tag = 'input-time';
                     this.template.form = 'view.form.time-field.jinja2';
                     this.template.list = 'view.list.time-field.jinja2';
                 }
@@ -3974,11 +3975,6 @@ var Katrid;
                 }
                 formSpanTemplate() {
                     return `{{ record.${this.name} || '${this.emptyText}' }}`;
-                }
-                formControl() {
-                    let control = super.formControl();
-                    control.setAttribute('v-input-time', 'input-time');
-                    return control;
                 }
             }
             Fields.TimeField = TimeField;
@@ -5847,14 +5843,28 @@ var Katrid;
                     }
                 }
             });
-            Katrid.directive('input-time', {
-                mounted(el) {
-                    console.log('input time');
+            Katrid.component('input-time', {
+                props: ['modelValue'],
+                template: '<input type="text">',
+                mounted() {
+                    let el = this.$el;
                     let mask = '99:99';
+                    el.addEventListener('blur', () => {
+                        this.$emit('update:modelValue', el.value);
+                    });
                     $(el).inputmask({
                         mask,
                         insertMode: false,
                     });
+                },
+                watch: {
+                    modelValue(value) {
+                        if (value && (value !== this.$el.value)) {
+                            this.$el.value = value;
+                        }
+                        else if (!value)
+                            this.$el.value = '';
+                    }
                 }
             });
         })(Controls = Forms.Controls || (Forms.Controls = {}));
@@ -7729,7 +7739,7 @@ var Katrid;
         },
         toFixed: (length) => getNumberFormat(length),
     };
-    let fmtCharMap = { 'd': 'D', 'm': 'M', 'M': 'm', 'i': 'mm', 'H': 'HH' };
+    let fmtCharMap = { 'd': 'DD', 'm': 'MM', 'M': 'm', 'i': 'mm', 'H': 'HH' };
     function convertFormat(fmt) {
         let escape = false;
         let res = '';
