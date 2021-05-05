@@ -136,7 +136,7 @@ class ReportAction(Action):
             # company=g.user.user_company,
             name=self.name,
             company=apps['auth.user'].objects.get(pk=1).user_company,
-            format=format, model=model, query=qs, report_title=self.name, params=params, where=where, types=types,
+            format=format, model=model, query=qs, report_title=self.name, params=params, types=types, where=where,
             output_file=output_path,
         )
         if not isinstance(rep, (dict, str)):
@@ -160,6 +160,7 @@ class ReportAction(Action):
             rep = id
         else:
             rep = cls.objects.get(pk=id)
+        where = params.pop('where', None)
         return rep._export_report(format=format, params=params, where=where)
 
     @api.classmethod
