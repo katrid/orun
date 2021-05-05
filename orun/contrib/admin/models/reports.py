@@ -136,7 +136,7 @@ class ReportAction(Action):
             # company=g.user.user_company,
             name=self.name,
             company=apps['auth.user'].objects.get(pk=1).user_company,
-            format=format, model=model, query=qs, report_title=self.name, params=params, types=types,
+            format=format, model=model, query=qs, report_title=self.name, params=params, where=where, types=types,
             output_file=output_path,
         )
         if not isinstance(rep, (dict, str)):
@@ -152,7 +152,7 @@ class ReportAction(Action):
             }
 
     @api.classmethod
-    def export_report(cls, id, format='pdf', params=None):
+    def export_report(cls, id, format='pdf', params=None, where=None):
         # TODO check permission
         if isinstance(id, list):
             id = id[0]
@@ -160,7 +160,7 @@ class ReportAction(Action):
             rep = id
         else:
             rep = cls.objects.get(pk=id)
-        return rep._export_report(format=format, params=params)
+        return rep._export_report(format=format, params=params, where=where)
 
     @api.classmethod
     def on_execute_action(cls, action_id, context):
@@ -169,9 +169,8 @@ class ReportAction(Action):
         if params is None:
             if 'active_id' in context:
                 params = {
-                    'data': [{'pk': context['active_id']}],
+                    'where': {'pk': context['active_id']},
                 }
-        print(params)
         return cls.export_report(action_id, fmt, params)
 
 
