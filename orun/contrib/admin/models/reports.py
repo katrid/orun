@@ -218,7 +218,7 @@ def create_report_environment():
     # self._report_env = env
 
 
-report_env = create_report_environment()
+# report_env = create_report_environment()
 
 
 REPORT_ENGINES = {
