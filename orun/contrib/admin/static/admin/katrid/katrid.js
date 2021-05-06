@@ -7138,7 +7138,7 @@ var Katrid;
                             },
                             deleteSelection() {
                                 if (this.record)
-                                    me.dataSource.delete([this.record]);
+                                    me.dataSource.delete([this.record.id]);
                             },
                             actionClick(selection, methodName, event) {
                                 me.action.formButtonClick(selection.map(obj => obj.id), methodName);
