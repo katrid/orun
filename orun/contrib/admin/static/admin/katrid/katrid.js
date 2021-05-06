@@ -7136,6 +7136,10 @@ var Katrid;
                             backTo(index) {
                                 me.action.back(index);
                             },
+                            deleteSelection() {
+                                if (this.record)
+                                    me.dataSource.delete([this.record]);
+                            },
                             actionClick(selection, methodName, event) {
                                 me.action.formButtonClick(selection.map(obj => obj.id), methodName);
                             },
