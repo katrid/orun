@@ -117,7 +117,7 @@ var Katrid;
                 if (context)
                     Object.assign(ctx, context);
                 Object.assign(ctx, this.getContext());
-                Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx);
+                return Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx);
             }
             openObject(service, objectId, evt) {
                 evt.preventDefault();
@@ -862,8 +862,8 @@ var Katrid;
                     else
                         return;
                 }
-                if (this.view.vm.selection)
-                    return this.dataSource.records.map((obj) => obj.id);
+                if (this.view.vm.selection && this.view.vm.selection.length)
+                    return this.view.vm.selection.map((obj) => obj.id);
             }
             set attachments(value) {
                 this.scope.$apply(() => this.scope.attachments = value);
