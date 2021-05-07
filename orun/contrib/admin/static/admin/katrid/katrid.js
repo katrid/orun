@@ -7745,6 +7745,7 @@ var Katrid;
     };
     let fmtCharMap = { 'd': 'DD', 'm': 'MM', 'M': 'm', 'i': 'mm', 'H': 'HH' };
     function convertFormat(fmt) {
+        console.log('convert format', fmt);
         let escape = false;
         let res = '';
         for (let n = 0; n < fmt.length; n++) {
