@@ -84,34 +84,6 @@ class ReportAction(Action):
             model = apps[self.model]
             qs = model.objects.all()
         _params = defaultdict(list)
-        types = {}
-        # if params and 'data' in params:
-        #     for crit in params['data']:
-        #         for k, v in crit.items():
-        #             if k.startswith('value'):
-        #                 if crit['op'] == 'in' and not isinstance(v, list):
-        #                     v = v.split(',')
-        #                 _params[crit['name']].append(v)
-        #                 types[crit['name']] = crit['type']
-        #             elif not isinstance(v, dict):
-        #                 _params[k].append(v)
-        #                 if isinstance(v, int):
-        #                     types[k] = 'IntegerField'
-        #                 elif isinstance(v, str):
-        #                     types[k] = 'StringField'
-        #
-        #     where = {}
-        #     for k, v in _params.items():
-        #         if len(v) > 1:
-        #             for i, val in enumerate(v):
-        #                 nm = k + str(i + 1)
-        #                 where[nm] = val
-        #                 types[nm] = types[k]
-        #         else:
-        #             val = v[0]
-        #             if val == '':
-        #                 val = None
-        #             where[k] = val
 
         rep_type = None
         if self.view and self.view.template_name:
@@ -136,7 +108,7 @@ class ReportAction(Action):
             # company=g.user.user_company,
             name=self.name,
             company=apps['auth.user'].objects.get(pk=1).user_company,
-            format=format, model=model, query=qs, report_title=self.name, params=params, types=types, where=where,
+            format=format, model=model, query=qs, report_title=self.name, params=params, where=where,
             output_file=output_path,
         )
         if not isinstance(rep, (dict, str)):
