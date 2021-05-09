@@ -554,3 +554,6 @@ class YearLte(YearComparisonLookup):
 
     def get_bound(self, start, finish):
         return finish
+
+
+from . import search

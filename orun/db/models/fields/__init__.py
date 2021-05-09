@@ -1194,7 +1194,8 @@ class BooleanField(Field):
 class CharField(Field):
     description = _("String (up to %(max_length)s)")
 
-    def __init__(self, max_length_or_label=None, strip=True, *args, **kwargs):
+    def __init__(self, max_length_or_label=None, strip=True, full_text_search=False, *args, **kwargs):
+        self.full_text_search = full_text_search
         if isinstance(max_length_or_label, str):
             kwargs.setdefault('label', max_length_or_label)
         elif isinstance(max_length_or_label, int):

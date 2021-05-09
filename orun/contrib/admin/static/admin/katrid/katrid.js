@@ -5950,7 +5950,7 @@ var Katrid;
             }
             show() {
                 document.body.append(this.el);
-                this._popper = Popper.createPopper(this.input, this.el, { placement: 'bottom-start' });
+                this._popper = Popper.createPopper(this.input.input, this.el, { placement: 'bottom-start' });
                 this.el.classList.add('show');
             }
             hide() {
@@ -5961,6 +5961,7 @@ var Katrid;
                 return this.el.classList.contains('show');
             }
             loadItems(items) {
+                console.log('load items', items);
                 for (let item of items) {
                     this.addItem(item);
                 }
@@ -11637,6 +11638,11 @@ var Katrid;
                     this._menuClicked = false;
                     this.hideMenu();
                 });
+                this.create();
+            }
+            create() {
+                this.inputSearch = this.querySelector('#navbar-search');
+                this.autocomplete = new AppGlobalSearch(this.inputSearch);
             }
             loadModules(items) {
                 this.nav = document.querySelector('#navbar');
@@ -11801,6 +11807,132 @@ var Katrid;
         }
         UI.AppHeader = AppHeader;
         Katrid.define('app-header', AppHeader);
+        class AppGlobalSearch {
+            constructor(input) {
+                this.input = input;
+                this.menu = null;
+                this.term = '';
+                this.input.addEventListener('input', () => this.onInput());
+                this.input.addEventListener('click', event => {
+                    this.input.select();
+                    this.onClick();
+                });
+                this.input.addEventListener('blur', () => this.onFocusout());
+                this.input.addEventListener('keydown', (event) => this.onKeyDown(event));
+                this.setSource(async (query) => {
+                    return Katrid.Services.Service.$post('/web/menu/search/', { term: query.term }).then(res => res.items);
+                });
+            }
+            onInput() {
+                this.term = this.input.value;
+                if (this.$selectedItem) {
+                    this.$selectedItem = null;
+                }
+                this.showMenu();
+            }
+            onClick() {
+                this.showMenu();
+            }
+            onFocusout() {
+                if (!this.menu.mouseDown) {
+                    this.hideMenu();
+                    this.invalidateValue();
+                }
+                this.term = '';
+            }
+            createMenu() {
+                this.menu = new UI.DropdownMenu(this, { source: this._source });
+            }
+            invalidateValue() {
+                this.selectedItem = this.$selectedItem;
+            }
+            onKeyDown(evt) {
+                if (this.menu)
+                    switch (evt.which) {
+                        case Katrid.UI.keyCode.DOWN:
+                            this.menu.move(1);
+                            evt.preventDefault();
+                            break;
+                        case Katrid.UI.keyCode.UP:
+                            this.menu.move(-1);
+                            evt.preventDefault();
+                            break;
+                        case Katrid.UI.keyCode.ENTER:
+                            if (this.menu.activeItem) {
+                                this.menu.onSelectItem();
+                                evt.preventDefault();
+                            }
+                            break;
+                        case Katrid.UI.keyCode.ESCAPE:
+                            if (this.menu)
+                                this.hideMenu();
+                            break;
+                    }
+            }
+            showMenu() {
+                if (!this.menu) {
+                    this.createMenu();
+                    this.menu.show();
+                }
+                this.menu.init();
+            }
+            hideMenu() {
+                this.input.value = '';
+                if (this.menu)
+                    this.menu.hide();
+                this.menu = null;
+            }
+            menuVisible() {
+                return this.menu.visible;
+            }
+            setOptions(options) {
+                if (options.source)
+                    this.setSource(options.source);
+            }
+            setSource(value) {
+                this._source = value;
+            }
+            _selectItem(el) {
+                this.term = '';
+                let item = null;
+                if (el) {
+                    item = $(el).data('item');
+                    if (item?.type === 'menuitem')
+                        document.querySelector(`[data-menu-id="${item.id}"]`).click();
+                }
+                this.hideMenu();
+            }
+            setValue(item, el) {
+                let event = new CustomEvent('selectItem', {
+                    detail: {
+                        item,
+                        dropdownItem: el,
+                    }
+                });
+                if (!event.defaultPrevented) {
+                    this.selectedItem = item;
+                    if (this.menu)
+                        this.hideMenu();
+                }
+                return event;
+            }
+            get selectedItem() {
+                return this.$selectedItem;
+            }
+            set selectedItem(value) {
+                this.$selectedItem = value;
+                if (!this.input)
+                    return;
+                if (value)
+                    this.input.value = value.text;
+                else
+                    this.input.value = '';
+            }
+            get selectedValue() {
+                if (this.$selectedItem)
+                    return this.$selectedItem.id;
+            }
+        }
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
 (function () {

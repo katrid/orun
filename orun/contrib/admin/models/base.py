@@ -128,7 +128,7 @@ class AdminModel(models.Model, helper=True):
             if exact:
                 q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f}__iexact': name}) for f in name_fields])
             else:
-                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f}__icontains': name}) for f in name_fields])
+                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f: name}) for f in name_fields])
         if where:
             if q is None:
                 q = Q(**where)
@@ -510,4 +510,9 @@ def _resolve_fk_search(field: models.Field):
                 else:
                     name_fields.append(f.name)
         return [f'{field.name}__{f}' for f in name_fields]
+    elif isinstance(field, models.CharField):
+        if field.full_text_search:
+            return [f'{field.name}__search']
+        else:
+            return [f'{field.name}__icontains']
     return [field.name]

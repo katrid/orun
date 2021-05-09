@@ -38,7 +38,7 @@ class CountryState(models.Model):
 
 class City(models.Model):
     state = models.ForeignKey(CountryState, label=_('State'), null=False)
-    name = models.CharField(64, label=_('Name'), db_index=True)
+    name = models.CharField(64, label=_('Name'), db_index=True, full_text_search=True)
 
     class Meta:
         ordering = 'name'

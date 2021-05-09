@@ -26,6 +26,14 @@ def index(request: HttpRequest, template_name='/admin/index.jinja2', **context):
     return render(request, template_name, context)
 
 
+def search_menu(request: HttpRequest):
+    term = request.json.get('term')
+    items = apps['ui.menu'].api_search_by_name(term)['items']
+    for item in items:
+        item['type'] = 'menuitem'
+    return JsonResponse({'items': items})
+
+
 def company_logo(request):
     return HttpResponseRedirect('/static/admin/assets/img/katrid-logo.png')
     if request.user.is_authenticated:
