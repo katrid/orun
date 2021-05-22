@@ -6,13 +6,15 @@ from orun.utils import formats
 
 
 def default_filter(value):
+    if value is None:
+        return ''
     if isinstance(value, (decimal.Decimal, float)):
         return formats.number_format(value, 2, force_grouping=True)
-    elif isinstance(value, datetime.datetime):
+    if isinstance(value, datetime.datetime):
         return formats.date_format(value, 'SHORT_DATETIME_FORMAT')
-    elif isinstance(value, datetime.date):
+    if isinstance(value, datetime.date):
         return formats.date_format(value, 'SHORT_DATE_FORMAT')
-    elif isinstance(value, types.GeneratorType):
+    if isinstance(value, types.GeneratorType):
         return json.dumps(list(value))
 
     return str(value)

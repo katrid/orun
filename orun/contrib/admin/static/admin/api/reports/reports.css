@@ -1,17 +1,53 @@
 html {
   font-family: Arial, Sans-Serif;
+  font-size: 8pt;
+  margin: 0;
 }
 
 body {
   color: #000000;
+  margin: 0;
 }
 
 body, table td, table th {
-  font-size: 9pt;
+  font-size: 8pt;
 }
 
 body {
   margin: 0;
+}
+
+.text-right {
+  text-align: right;
+}
+.report-title h1 {
+  font-size: 12pt;
+}
+
+.report-title table {
+  width: 100%;
+}
+
+.report-title td {
+  vertical-align: top;
+}
+
+.report-title-logo {
+  width: 1px;
+}
+
+.report-title-logo img {
+  margin-right: 6px;
+}
+
+.report-title-logo img {
+  max-height: 80px;
+  max-width: 80px;
+}
+
+@page {
+  margin: 5mm 5mm 1.2cm 5mm;
+  padding: 0;
 }
 
 h2 {
@@ -62,15 +98,6 @@ page {
   margin-left: 0;
 }
 
-@media print {
-
-
-  .page-break {
-    page-break-before: always;
-  }
-
-}
-
 .c3-chart-line {
   opacity: 1 !important;
 }
@@ -99,12 +126,6 @@ div.band.footer .field {
 .table thead tr.col-header th, .col-header th {
   border: none;
   padding: 0;
-}
-
-@media print {
-  .table td, .table th {
-    background-color: transparent!important;
-  }
 }
 
 .table-striped tbody tr:nth-of-type(odd) {

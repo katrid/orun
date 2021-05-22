@@ -89,7 +89,7 @@ class ReportAction(Action):
         if self.view and self.view.template_name:
             rep_type = self.view.template_name.rsplit('.', 1)[1]
 
-        if rep_type == 'rep':
+        if rep_type == 'pug':
             xml = self.view.to_string()
         else:
             xml = self.view.get_xml(model)
@@ -121,6 +121,34 @@ class ReportAction(Action):
             return {
                 'open': out_file,
                 'name': self.name,
+            }
+
+    @api.classmethod
+    def auto_report(cls, model, params=None, title=None):
+        model_class = apps[model]
+        qs = model_class.objects.all()
+        default_view = model_class._admin_select_template('auto_report')
+        templ = default_view.render(context={'opts': model_class._meta})
+        engine = get_engine(REPORT_ENGINES['pug'])
+        fname = uuid.uuid4().hex + '.pdf'
+        output_path = os.path.join(settings.REPORT_PATH, fname)
+        rep = engine.export(
+            templ,
+            connection=ConnectionProxy(connection),
+            # company=g.user.user_company,
+            name=title or model,
+            company=apps['auth.user'].objects.get(pk=1).user_company,
+            format=format, model=model_class, queryset=qs, report_title=title or model_class._meta.verbose_name_plural,
+            params=params, where=None,
+            output_file=output_path,
+        )
+        if not isinstance(rep, (dict, str)):
+            return rep
+        if rep:
+            out_file = '/web/reports/' + os.path.basename(rep)
+            return {
+                'open': out_file,
+                'name': model_class._meta.verbose_name_plural,
             }
 
     @api.classmethod
@@ -186,6 +214,8 @@ def create_report_environment():
     env.globals['COUNT'] = COUNT
     env.globals['SUM'] = SUM
     env.globals['AVG'] = AVG
+    from orun.reports.data import DataSource
+    env.globals['create_datasource'] = lambda sql: DataSource(sql)
     # env.filters['groupby'] = groupby
     # self._report_env = env
 

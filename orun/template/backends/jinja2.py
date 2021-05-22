@@ -30,6 +30,8 @@ class Jinja2(BaseEngine):
         options.setdefault('undefined', jinja2.DebugUndefined if settings.DEBUG else jinja2.Undefined)
 
         self.env: jinja2.Environment = environment_cls(**options)
+        from orun.utils.filters import default_filter
+        self.env.finalize = default_filter
         self.env.globals['gettext'] = gettext
         from orun.utils.filters import default_filter
         self.env.filters['defaultformat'] = default_filter

@@ -1,111 +1,158 @@
 import re
 
-from orun.conf import settings
-from orun.template import TemplateDoesNotExist, TemplateSyntaxError
-from orun.utils.functional import cached_property
-from orun.utils.module_loading import import_string
-from orun.utils.translation import gettext
-from orun.template.engine import Engine
 
-from .base import BaseEngine
-
-
-class Pug(BaseEngine):
-
-    app_dirname = 'templates'
-
-    def __init__(self, params):
-        options = params.copy()
-        super().__init__(params)
-        self.engine = Engine(self.dirs, self.app_dirs, **options)
-
-    def from_string(self, template_code):
-        return Template(self.engine.from_string(template_code), self)
-
-    def get_template(self, template_name):
-        try:
-            return Template(self.engine.get_template(template_name), self)
-        except TemplateDoesNotExist as exc:
-            raise
-
-    @cached_property
-    def template_context_processors(self):
-        return [import_string(path) for path in self.context_processors]
+re_element = re.compile(r'^([:\w_-]*)')
+re_css = re.compile(r'^(\.[\w_-]+)')
+re_attrs = re.compile(r'^\((.*?)\)')
+re_attr = re.compile(r'\s*([\.:\w_-]+)\s*=?\s*(".*?")?\s*\,?')
+re_rpar = re.compile(r'\)')
+re_inlinetext = re.compile(r'^\s(.*)$')
+re_textescape = re.compile(r'^\|(.*)$')
+re_startspace = re.compile(r'^\s+')
 
 
-class Template:
+class Node:
+    parent: 'Node' = None
+    _text: str = None
 
-    def __init__(self, template, backend):
-        self.template = template
-        self.backend = backend
-        self.origin = Origin(
-            name=template.filename, template_name=template.name,
-        )
+    def __init__(self, tag):
+        self.tag = tag
+        self.attrib = {}
+        self.children = []
 
-    def render(self, context=None, request=None):
-        from .utils import csrf_input_lazy, csrf_token_lazy
-        if context is None:
-            context = {}
-        if request is not None:
-            context['request'] = request
+    def append(self, node: 'Node'):
+        node.parent = self
+        self.children.append(node)
 
-            context['config'] = settings
-            context['csrf_input'] = csrf_input_lazy(request)
-            context['csrf_token'] = csrf_token_lazy(request)
-            for context_processor in self.backend.template_context_processors:
-                context.update(context_processor(request))
-        return self.template.render(context)
+    @property
+    def text(self):
+        return self._text
 
+    @text.setter
+    def text(self, value):
+        self.set_text(value)
 
-from token import (LPAR, RPAR, NEWLINE, INDENT, DEDENT)
+    def set_text(self, value):
+        self._text = value
 
-RE_TAG = re.compile(r'^(\w(?:[-:\w]*\w)?)')
+    def tostring(self):
+        html = f'<{self.tag}'
+        if self.attrib:
+            html += ' ' + ' '.join([f'{k}={v}' if v else k for k, v in self.attrib.items()])
+        if self.children:
+            html += '>' + ''.join([el.tostring() for el in self.children])
+            html += f'</{self.tag}>'
+        else:
+            html += '/>'
+        return html
 
-
-class Lexer:
-    def __init__(self, source: str):
-        self.source = source
-        self.input = source
-        self.pos = -1
-
-    def blank(self):
-        pass
-
-    def eos(self):
-        pass
-
-    def tag(self):
-        if captures := RE_TAG.match(self.input)
-            name = captures.groups(0)
-            l = len(name)
-
-    def indent(self):
-        pass
+    def __iter__(self):
+        return iter(self.children)
 
 
-def tokenize(text: str):
-    indent = 0
-    for line in text.splitlines():
-        token = NEWLINE
-        yield (NEWLINE, '\n')
-        s = ''
-        wl = 0
-        for c in line:
-            if token == NEWLINE:
-                if c == ' ':
-                    s += c
+class Element(Node):
+    def set_text(self, value):
+        super().set_text(value)
+        self.children = [TextElement(value)]
+
+
+class TextElement(Element):
+    def __init__(self, text):
+        super().__init__('#textelement')
+        self._text = text
+
+    def tostring(self):
+        return self.text
+
+
+class Parser:
+    tab_size = None
+    re_indent = None
+
+    def __init__(self, tab_size=None):
+        if tab_size:
+            self.tab_size = tab_size
+            self.re_indent = re.compile(fr'\s{{{tab_size}}}')
+
+    def parse(self, source: str):
+        attributes = {}
+        root = parent = node = None
+        indent = ilevel = 0
+        indent_size = self.tab_size
+        instr = False
+        for line in source.splitlines():
+            css = ''
+            if match := re_startspace.match(line):
+                i = match.group()
+                sz = len(i)
+                line = line[sz:]
+                if not indent_size:
+                    self.re_indent = re.compile(fr'\s{{{sz}}}')
+                    indent_size = sz
+                    ilevel = 1
                 else:
-                    if wl > indent:
-                        indent = wl
-                        token = INDENT
-                        yield (INDENT, s)
-                    elif wl < indent:
-                        token = DEDENT
-                        yield (DEDENT, s)
-                    else:
-                        token = INDENT
-                    s = ''
+                    if sz % indent_size:
+                        raise Exception('Invalid indentation!')
+                    ilevel = sz // indent_size
+            if not line:
                 continue
-            if c == '(':
-                pass
-            wl += 1
+            if ilevel:
+                if instr and ilevel > indent:
+                    if node.text is None:
+                        node.text = ''
+                    node.text += '\n' + line
+                    continue
+                elif instr:
+                    instr = False
+                if indent == ilevel:
+                    parent = node.parent
+                elif ilevel > indent:
+                    parent = node
+                else:
+                    while indent > ilevel:
+                        parent = parent.parent
+                        indent -= 1
+            else:
+                parent = None
+
+            # element
+            if match := re_element.search(line):
+                el = match.group()
+                line = line[len(el):]
+                node = Element(el)
+                if parent:
+                    parent.append(node)
+                elif not root:
+                    root = node
+            # css class
+            while match := re_css.match(line):
+                s = match.group()[1:]
+                css += ' ' + s if css else s
+                line = line[len(s):]
+            if css:
+                node.attrib['class'] = css
+            # attributes
+            if match := re_attrs.match(line):
+                attrs = match.group()
+                line = line[len(match.group()):]
+                for k, v in re_attr.findall(attrs):
+                    if v:
+                        v = v[1:-1]
+                    node.attrib[k] = v or None
+            # inline text
+            if match := re_inlinetext.match(line):
+                # read text
+                if node and match.string:
+                    node.text = match.string
+
+            if line == '.':
+                instr = True
+
+            indent = ilevel
+
+        return root
+
+    @classmethod
+    def from_string(cls, xml):
+        parser = cls()
+        return parser.parse(xml)

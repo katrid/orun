@@ -1,0 +1,34 @@
+<html>
+<head>
+  <link href="/home/alexandre/workspace/orun/orun/contrib/admin/static/admin/assets/css/bootstrap.min.css"
+        rel="stylesheet">
+  <link href="/home/alexandre/workspace/orun/orun/contrib/admin/static/admin/api/reports/reports.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="band report-title">
+  <table>
+    <tr>
+      <td class="report-title-logo">
+        {% if company.image %}
+        <img src="{{ company.image.path }}">
+        {% endif %}
+      </td>
+      <td>
+        <h1>{{ report_title }}</h1>
+        <p>{{ company.report_header }}</p>
+      </td>
+      <td class="text-right">
+        <h4 class="report-params">{{ display_params }}</h4>
+      </td>
+    </tr>
+  </table>
+</div>
+
+
+<div class="row">
+  {{ content|safe }}
+</div>
+
+</body>
+</html>

@@ -4265,17 +4265,6 @@ var Katrid;
         var Fields;
         (function (Fields) {
             class ForeignKey extends Fields.Field {
-                constructor(info) {
-                    super(info);
-                    this.filter = info.filter;
-                    Object.assign(this.template, {
-                        list: 'view.list.foreignkey.jinja2',
-                        card: 'view.list.foreignkey.jinja2',
-                        form: 'view.form.autocomplete.jinja2',
-                    });
-                    if (Katrid.settings.ui.isMobile)
-                        this.template.form = 'view.form.autocomplete.jinja2';
-                }
                 formControl() {
                     let control = document.createElement('field-autocomplete');
                     control.setAttribute('v-model', 'record.' + this.name);
@@ -4348,35 +4337,31 @@ var Katrid;
         (function (Fields) {
             class ImageField extends Fields.Field {
                 constructor(info) {
-                    if (!info.template)
-                        info.template = {};
-                    if (!info.template.form)
-                        info.template.form = 'view.form.image-field.jinja2';
                     super(info);
                     this.noImageUrl = '/static/admin/assets/img/no-image.png';
                 }
-                get ngSrc() {
+                get vSrc() {
                     let ngSrc = this.attrs.ngEmptyImage || (this.attrs.emptyImage && (`'${this.attrs.emptyImage}`)) || `'${this.noImageUrl}'`;
-                    ngSrc = `{{ record.${this.name} || ${ngSrc} }}`;
+                    ngSrc = `record.${this.name} || ${ngSrc}`;
                     return ngSrc;
                 }
                 formSpanTemplate() {
                     return '';
                 }
                 formControl() {
-                    let div = document.createElement('div');
-                    div.classList.add('image-box', 'image-field');
-                    div.innerHTML = `<img ng-src="${this.ngSrc}">
-        <div class="text-right image-box-buttons">
-          <button class="btn btn-default" type="button" title="${_.gettext('Change')}"
+                    let div = document.createElement('image-field');
+                    div.setAttribute('v-model', 'record.' + this.name);
+                    div.innerHTML = `<img :src="${this.vSrc}">        
+<div class="text-right image-box-buttons">
+          <button class="btn btn-default" type="button" title="${Katrid.i18n.gettext('Change')}"
                   onclick="$(this).closest('.image-box').find('input').trigger('click')">
             <i class="fa fa-pen"></i>
           </button>
-          <button class="btn btn-default" type="button" title="${_.gettext('Clear')}" ng-click="record.${this.name} = null">
+          <button class="btn btn-default" type="button" title="${Katrid.i18n.gettext('Clear')}" ng-click="record.${this.name} = null">
             <i class="fa fa-trash"></i>
           </button>
         </div>
-        <input type="file" name="${this.name}" file-reader accept="image/*" v-model="record.${this.name}">`;
+`;
                     return div;
                 }
             }
@@ -5290,6 +5275,10 @@ var Katrid;
                                     me.dataSource.expandGroup(index, group);
                                 else
                                     me.dataSource.collapseGroup(index, group);
+                            },
+                            async autoReport() {
+                                let svc = new Katrid.Services.Model('ui.action.report');
+                                svc.rpc('auto_report', [me.model.name]);
                             }
                         },
                     }).mount(el);
@@ -5392,7 +5381,7 @@ var Katrid;
         ${_.gettext('Print')} <span class="caret"></span>
       </button>
       <div class="dropdown-menu">
-        <a class="dropdown-item" v-on:click="actionAutoReport()">${_.gettext('Auto Report')}</a>
+        <a class="dropdown-item" v-on:click="autoReport()">${_.gettext('Auto Report')}</a>
       </div>`;
                         let dropdown = btnPrint.querySelector('.dropdown-menu');
                         for (let bindingAction of this.viewInfo.toolbar.print) {
@@ -6388,6 +6377,33 @@ var Katrid;
     (function (Forms) {
         var Controls;
         (function (Controls) {
+            Katrid.component('image-field', {
+                props: ['modelValue'],
+                template: `<div class="image-box image-field form-control">
+<slot></slot>
+        <input type="file" v-on:change="onImageChange($event)" accept="image/*">
+      </div>`,
+                methods: {
+                    onImageChange(event) {
+                        const reader = new FileReader();
+                        reader.onload = event => {
+                            const res = event.target.result;
+                            this.$emit('update:modelValue', res);
+                        };
+                        reader.readAsDataURL(event.target.files[0]);
+                        event.target.value = '';
+                    }
+                },
+            });
+        })(Controls = Forms.Controls || (Forms.Controls = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Controls;
+        (function (Controls) {
             class FormField {
                 constructor(name) {
                     this.name = name;
@@ -7143,6 +7159,9 @@ var Katrid;
                             },
                             actionClick(selection, methodName, event) {
                                 me.action.formButtonClick(selection.map(obj => obj.id), methodName);
+                            },
+                            onImageChange(event, fieldName) {
+                                console.log('image change', event.target, fieldName);
                             },
                             async validate() {
                                 let msgs = [];

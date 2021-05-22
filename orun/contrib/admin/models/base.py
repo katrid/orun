@@ -9,6 +9,8 @@ from orun.utils.xml import get_xml_fields, etree
 from orun.utils.translation import gettext
 from orun import api
 from orun.db import models
+from orun.template.loader import select_template
+from orun.contrib.admin.models import ui
 from orun.db.models import NOT_PROVIDED, Field, BooleanField, Q, ObjectDoesNotExist
 from orun.db.models.signals import (
     before_insert, before_update, before_delete,
@@ -459,18 +461,21 @@ class AdminModel(models.Model, helper=True):
         }
 
     @classmethod
-    def _admin_get_default_view(cls, view_type):
-        from orun.template.loader import select_template
-        from orun.contrib.admin.models import ui
-        template = select_template(
+    def _admin_select_template(cls, view_type):
+        return select_template(
             [
                 'views/%s/%s.jinja2' % (cls._meta.name, view_type),
                 'views/%s/%s.html' % (cls._meta.name, view_type),
                 'views/%s/%s.xml' % (cls._meta.name, view_type),
                 'views/%s/%s.xml' % (cls._meta.addon.schema, view_type),
                 'views/%s.jinja2' % view_type,
+                'views/%s.pug' % view_type,
             ], using='jinja2'
         )
+
+    @classmethod
+    def _admin_get_default_view(cls, view_type):
+        template = cls._admin_select_template(view_type)
         templ = template.render(context=dict(opts=cls._meta, _=gettext))
         xml = ui.etree.fromstring(templ)
         ui.resolve_refs(xml)

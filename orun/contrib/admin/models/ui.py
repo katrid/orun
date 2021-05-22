@@ -201,8 +201,8 @@ class View(models.Model):
         return res
 
     def to_string(self):
-        templ = apps.jinja_env.get_or_select_template(self.template_name.split(':')[-1])
-        with open(templ.filename, encoding='utf-8') as f:
+        templ = loader.find_template(self.template_name.split(':')[-1])
+        with open(templ, encoding='utf-8') as f:
             return f.read()
 
     def render(self, context):

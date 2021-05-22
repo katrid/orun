@@ -150,6 +150,10 @@ def image(request, model, field, id):
     return HttpResponseRedirect(apps['content.attachment'].objects.filter(id=id).one().get_download_url())
 
 
+def report_preview(request):
+    pass
+
+
 # @login_required
 # def query(request):
 #     id = request.args.get('id')

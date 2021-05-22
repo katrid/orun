@@ -1837,7 +1837,7 @@ class FilePathField(Field):
                  recursive=False, allow_files=True, allow_folders=False, **kwargs):
         self.path, self.match, self.recursive = path, match, recursive
         self.allow_files, self.allow_folders = allow_files, allow_folders
-        kwargs.setdefault('max_length', 100)
+        kwargs.setdefault('max_length', 254)
         super().__init__(label, name, **kwargs)
 
     def check(self, **kwargs):
@@ -1881,6 +1881,10 @@ class FilePathField(Field):
 
     def get_internal_type(self):
         return "FilePathField"
+
+
+class ImagePathField(FilePathField):
+    pass
 
 
 class FloatField(Field):

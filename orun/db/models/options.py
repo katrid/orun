@@ -571,6 +571,14 @@ class Options:
         return []
 
     @property
+    def auto_report_fields(self):
+        if self.field_groups and 'auto_report' in self.field_groups:
+            return [self.fields[field_name] for field_name in self.field_groups['auto_report']]
+        elif self.name_field:
+            return [self.pk, self.fields[self.name_field]]
+        return []
+
+    @property
     def grouping_fields(self):
         if self.field_groups and 'grouping_fields' in self.field_groups:
             return [self.fields[field_name] for field_name in self.field_groups['grouping_fields']]
