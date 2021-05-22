@@ -102,11 +102,12 @@ class ReportAction(Action):
         engine = get_engine(REPORT_ENGINES[rep_type])
         fname = uuid.uuid4().hex + '.pdf'
         output_path = os.path.join(settings.REPORT_PATH, fname)
-        rep = engine.auto_report(
+        rep = engine.export(
             xml,
             connection=ConnectionProxy(connection),
             # company=g.user.user_company,
             name=self.name,
+            template='admin/reports/base.jinja2',
             company=apps['auth.user'].objects.get(pk=1).user_company,
             format=format, model=model, query=qs, report_title=self.name, params=params, where=where,
             output_file=output_path,
@@ -137,6 +138,7 @@ class ReportAction(Action):
             connection=ConnectionProxy(connection),
             # company=g.user.user_company,
             name=title or model,
+            template='admin/reports/base.jinja2',
             company=apps['auth.user'].objects.get(pk=1).user_company,
             format=format, model=model_class, queryset=qs, report_title=title or model_class._meta.verbose_name_plural,
             params=params, where=None,

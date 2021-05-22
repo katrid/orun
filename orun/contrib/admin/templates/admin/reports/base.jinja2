@@ -1,13 +1,12 @@
-<html>
+<html class="report">
 <head>
-  <link href="/home/alexandre/workspace/orun/orun/contrib/admin/static/admin/assets/css/bootstrap.min.css"
+  <link href="{{ static_path('/admin/katrid/style.css') }}"
         rel="stylesheet">
-  <link href="/home/alexandre/workspace/orun/orun/contrib/admin/static/admin/api/reports/reports.css" rel="stylesheet">
 </head>
 <body>
 
-<div class="band report-title">
-  <table>
+<div class="band report-title row">
+  <table class="col-12">
     <tr>
       <td class="report-title-logo">
         {% if company.image %}

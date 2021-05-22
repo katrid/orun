@@ -19,3 +19,6 @@ class Query(DataSource, reptile.engine.DataSource):
 
     def __getattr__(self, item):
         return [obj[item] for obj in self._data]
+
+    def __iter__(self):
+        return iter(self.data)

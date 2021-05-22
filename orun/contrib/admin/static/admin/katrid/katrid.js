@@ -4656,7 +4656,7 @@ var Katrid;
                     Object.assign(options, _options);
                 }
                 let table = document.createElement('table');
-                table.classList.add('table');
+                table.classList.add('table', 'table-sm', 'table-striped');
                 this.tHead = document.createElement('thead');
                 this.tHeadRow = document.createElement('tr');
                 this.tBody = document.createElement('tbody');

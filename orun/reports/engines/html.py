@@ -1,6 +1,7 @@
+import os
 import asyncio
 import pathlib
-import datetime
+import posixpath
 import jinja2
 from lxml import etree
 import reptile.engine
@@ -8,6 +9,7 @@ from reptile.html import HtmlReport, Grid, GridColumn
 from reptile.chrome import print_to_pdf
 
 import orun.reports.filters
+from orun.template import engines
 from orun.reports.data import Query
 from orun.db import models
 from orun.template import loader
@@ -19,6 +21,22 @@ def create_datasource(sql):
     q.sql = sql
     return q
 
+
+env = engines['jinja2']
+
+
+def url_to_path(path):
+    from orun.contrib.staticfiles import finders
+    normalized_path = posixpath.normpath(path).lstrip('/')
+    absolute_path = finders.find(normalized_path)
+    if not absolute_path:
+        if path.endswith('/') or path == '':
+            raise Exception("Directory indexes are not allowed here.")
+        raise Exception("'%s' could not be found" % path)
+    return absolute_path
+
+
+env.env.globals['static_path'] = url_to_path
 reptile.engine.report_env.finalize = orun.reports.filters.localize
 reptile.engine.report_env.create_datasource = create_datasource
 
@@ -33,7 +51,8 @@ class HtmlEngine:
         rep.from_node(report)
         rep.params = where
         doc = rep.prepare()
-        templ = loader.get_template('admin/reports/base.jinja2')
+        templ = loader.get_template(kwargs['template'])
+
         display_params = ''
         html = templ.render(context={
             'content': doc, 'report_title': rep.title, 'company': company, 'display_params': display_params,

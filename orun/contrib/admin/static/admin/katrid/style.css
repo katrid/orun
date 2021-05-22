@@ -9834,100 +9834,6 @@ a.text-dark:hover, a.text-dark:focus {
   visibility: hidden !important;
 }
 
-@media print {
-  *,
-*::before,
-*::after {
-    text-shadow: none !important;
-    box-shadow: none !important;
-  }
-
-  a:not(.btn) {
-    text-decoration: underline;
-  }
-
-  abbr[title]::after {
-    content: " (" attr(title) ")";
-  }
-
-  pre {
-    white-space: pre-wrap !important;
-  }
-
-  pre,
-blockquote {
-    border: 1px solid #adb5bd;
-    page-break-inside: avoid;
-  }
-
-  thead {
-    display: table-header-group;
-  }
-
-  tr,
-img {
-    page-break-inside: avoid;
-  }
-
-  p,
-h2,
-h3 {
-    orphans: 3;
-    widows: 3;
-  }
-
-  h2,
-h3 {
-    page-break-after: avoid;
-  }
-
-  @page {
-    size: a3;
-  }
-  body {
-    min-width: 992px !important;
-  }
-
-  .container {
-    min-width: 992px !important;
-  }
-
-  .navbar {
-    display: none;
-  }
-
-  .badge {
-    border: 1px solid #000;
-  }
-
-  .table {
-    border-collapse: collapse !important;
-  }
-  .table td,
-.table th {
-    background-color: #fff !important;
-  }
-
-  .table-bordered th,
-.table-bordered td {
-    border: 1px solid #dee2e6 !important;
-  }
-
-  .table-dark {
-    color: inherit;
-  }
-  .table-dark th,
-.table-dark td,
-.table-dark thead th,
-.table-dark tbody + tbody {
-    border-color: #dee2e6;
-  }
-
-  .table .thead-dark th {
-    color: inherit;
-    border-color: #dee2e6;
-  }
-}
 body.hide-left-menu #left-menu, body.page-small #left-menu {
   margin-left: -220px;
 }
@@ -12022,18 +11928,19 @@ nav#header .nav-item .dropdown-menu {
   border-radius: 0;
 }
 
-html {
-  height: 100%;
-  margin: 0;
-}
+@media screen {
+  html {
+    height: 100%;
+    margin: 0;
+  }
 
-body {
-  height: 100%;
-  background-color: #f8f9fa;
-  display: flex;
-  font-size: 0.8125rem;
+  body {
+    height: 100%;
+    background-color: #f8f9fa;
+    display: flex;
+    font-size: 0.8125rem;
+  }
 }
-
 #header {
   position: relative;
 }
@@ -12225,21 +12132,21 @@ body.container.hide-left-menu #footer.page-footer {
   padding-left: 20px;
 }
 
-.table thead tr th {
+.table-sm thead tr th {
   padding: 2px 4px 4px 4px;
 }
-.table tbody tr {
+.table-sm tbody tr {
   box-shadow: inset 0 -1px 0 0 rgba(100, 121, 143, 0.122);
   border-collapse: collapse;
 }
-.table tbody tr th, .table tbody tr td {
+.table-sm tbody tr th, .table-sm tbody tr td {
   padding: 4px 4px 2px 4px;
   border: none;
 }
-.table tbody tr[selected=true] {
+.table-sm tbody tr[selected=true] {
   background-color: #d7e6fc;
 }
-.table tbody tr:hover {
+.table-sm tbody tr:hover {
   background-color: #bdd7fd;
   z-index: 1;
 }
@@ -13429,6 +13336,216 @@ pwa-menu .btn {
 }
 .pwa-app .navbar {
   margin-bottom: 10px;
+}
+
+@media print {
+  @page {
+    margin: 5mm 5mm 12mm 5mm;
+    padding: 0;
+  }
+}
+.report {
+  font-family: Arial, Sans-Serif;
+  font-size: 8pt;
+  margin: 0;
+}
+.report body {
+  color: #000000;
+  margin: 0;
+}
+.report body, .report table td, .report table th {
+  font-size: 8pt;
+}
+.report body {
+  margin: 0;
+}
+.report .text-right {
+  text-align: right;
+}
+.report .report-title h1 {
+  font-size: 12pt;
+}
+.report .report-title table {
+  width: 100%;
+}
+.report .report-title td {
+  vertical-align: top;
+}
+.report .report-title-logo {
+  width: 1px;
+}
+.report .report-title-logo img {
+  margin-right: 16px;
+}
+.report .report-title-logo img {
+  max-height: 80px;
+  max-width: 80px;
+}
+.report h2 {
+  font-size: 11pt;
+  font-weight: 600;
+}
+.report h3 {
+  font-size: 10pt;
+  font-weight: 600;
+}
+.report h4 {
+  font-size: 9pt;
+  font-weight: 600;
+}
+.report #logo {
+  max-height: 128px;
+  max-width: 128px;
+}
+.report header, .report .report-title {
+  margin-bottom: 20px;
+}
+.report footer {
+  position: absolute;
+  bottom: 5mm;
+  box-sizing: padding-box;
+}
+.report page {
+  padding: 5mm;
+  box-sizing: border-box;
+  display: block;
+  position: relative;
+  page-break-before: always;
+}
+.report .row.band.grid:nth-child(odd) {
+  padding: 3px 0;
+  background-color: #e6e6e6;
+}
+.report .row.band {
+  margin-right: 0;
+  margin-left: 0;
+}
+.report .c3-chart-line {
+  opacity: 1 !important;
+}
+.report .field.DecimalField, .report .field.DecimalField, .report .field.FloatField, .report .field.FloatField, .report .field.IntegerField,
+.report .field.IntegerField {
+  text-align: right;
+}
+.report div.band.footer {
+  border-top: 1px solid #c7c7c7;
+}
+.report div.band.footer .field {
+  font-weight: bold;
+}
+.report .column-header {
+  color: #fff;
+  background: linear-gradient(to bottom, #88b6cd, #4681b3);
+  padding: 3px 0;
+  font-weight: 600;
+}
+.report .table thead tr.col-header th, .report .col-header th {
+  border: none;
+  padding: 0;
+}
+.report table.auto-width {
+  width: 1%;
+}
+.report .band.group-header {
+  font-size: 11pt;
+  background-color: transparent;
+}
+.report .band.group-footer {
+  font-weight: bold;
+  border-top: 1px solid #c6c6c6;
+}
+.report .band.group-footer table {
+  width: 100%;
+}
+
+@media print {
+  *,
+*::before,
+*::after {
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  a:not(.btn) {
+    text-decoration: underline;
+  }
+
+  abbr[title]::after {
+    content: " (" attr(title) ")";
+  }
+
+  pre {
+    white-space: pre-wrap !important;
+  }
+
+  pre,
+blockquote {
+    border: 1px solid #adb5bd;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+img {
+    page-break-inside: avoid;
+  }
+
+  p,
+h2,
+h3 {
+    orphans: 3;
+    widows: 3;
+  }
+
+  h2,
+h3 {
+    page-break-after: avoid;
+  }
+
+  @page {
+    size: a3;
+  }
+  body {
+    min-width: 992px !important;
+  }
+
+  .container {
+    min-width: 992px !important;
+  }
+
+  .navbar {
+    display: none;
+  }
+
+  .badge {
+    border: 1px solid #000;
+  }
+
+  .table {
+    border-collapse: collapse !important;
+  }
+  .table-bordered th,
+.table-bordered td {
+    border: 1px solid #dee2e6 !important;
+  }
+
+  .table-dark {
+    color: inherit;
+  }
+  .table-dark th,
+.table-dark td,
+.table-dark thead th,
+.table-dark tbody + tbody {
+    border-color: #ddd;
+  }
+
+  .table .thead-dark th {
+    color: inherit;
+    border-color: #ddd;
+  }
 }
 
 /*# sourceMappingURL=style.css.map */
