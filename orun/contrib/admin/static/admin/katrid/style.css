@@ -13340,6 +13340,7 @@ pwa-menu .btn {
 
 @media print {
   @page {
+    size: A4;
     margin: 5mm 5mm 12mm 5mm;
     padding: 0;
   }
@@ -13356,14 +13357,13 @@ pwa-menu .btn {
 .report body, .report table td, .report table th {
   font-size: 8pt;
 }
-.report body {
-  margin: 0;
+.report .report-title .report-title-logo img {
+  max-height: 80px;
+  max-width: 80px;
 }
-.report .text-right {
-  text-align: right;
-}
-.report .report-title h1 {
+.report h1 {
   font-size: 12pt;
+  font-weight: 600;
 }
 .report .report-title table {
   width: 100%;
@@ -13393,69 +13393,8 @@ pwa-menu .btn {
   font-size: 9pt;
   font-weight: 600;
 }
-.report #logo {
-  max-height: 128px;
-  max-width: 128px;
-}
 .report header, .report .report-title {
   margin-bottom: 20px;
-}
-.report footer {
-  position: absolute;
-  bottom: 5mm;
-  box-sizing: padding-box;
-}
-.report page {
-  padding: 5mm;
-  box-sizing: border-box;
-  display: block;
-  position: relative;
-  page-break-before: always;
-}
-.report .row.band.grid:nth-child(odd) {
-  padding: 3px 0;
-  background-color: #e6e6e6;
-}
-.report .row.band {
-  margin-right: 0;
-  margin-left: 0;
-}
-.report .c3-chart-line {
-  opacity: 1 !important;
-}
-.report .field.DecimalField, .report .field.DecimalField, .report .field.FloatField, .report .field.FloatField, .report .field.IntegerField,
-.report .field.IntegerField {
-  text-align: right;
-}
-.report div.band.footer {
-  border-top: 1px solid #c7c7c7;
-}
-.report div.band.footer .field {
-  font-weight: bold;
-}
-.report .column-header {
-  color: #fff;
-  background: linear-gradient(to bottom, #88b6cd, #4681b3);
-  padding: 3px 0;
-  font-weight: 600;
-}
-.report .table thead tr.col-header th, .report .col-header th {
-  border: none;
-  padding: 0;
-}
-.report table.auto-width {
-  width: 1%;
-}
-.report .band.group-header {
-  font-size: 11pt;
-  background-color: transparent;
-}
-.report .band.group-footer {
-  font-weight: bold;
-  border-top: 1px solid #c6c6c6;
-}
-.report .band.group-footer table {
-  width: 100%;
 }
 
 @media print {
