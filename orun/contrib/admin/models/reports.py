@@ -91,6 +91,11 @@ class ReportAction(Action):
 
         if rep_type == 'pug':
             xml = self.view.to_string()
+        elif rep_type == 'rep':
+            xml = self.view.get_xml(model)
+            report_file = xml.attrib['file']
+            with open(loader.get_template(report_file).template.filename, 'rb') as f:
+                xml = f.read()
         else:
             xml = self.view.get_xml(model)
             report_file = xml.attrib['file']
