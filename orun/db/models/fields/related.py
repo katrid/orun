@@ -1631,10 +1631,10 @@ class OneToManyField(RelatedField):
                     obj = rel_model.api_write(values)
                     if instance.pk is None:
                         res.append(obj)
-                elif action == 'DESTROY':
-                    rel_model.api_delete([v['id']])
                 elif action == 'UPDATE':
                     rel_model.api_write(values)
+            elif action == 'DESTROY':
+                rel_model.api_delete([v['id']])
         if res:
             setattr(instance, self.name, res)
 
