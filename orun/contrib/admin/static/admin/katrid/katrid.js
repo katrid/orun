@@ -459,6 +459,10 @@ var Katrid;
 (function (Katrid) {
     var Actions;
     (function (Actions) {
+        let ALLOWED_PARAMS = {
+            form: [/id/, /action/, /view_type/, /menu_id/, /model/, /default_.+/],
+            default: [/action/, /view_type/, /menu_id/, /model/, /default_.+/, /filter/],
+        };
         class WindowAction extends Katrid.Actions.Action {
             constructor(config) {
                 super(config);
@@ -479,7 +483,6 @@ var Katrid;
             }
             async onHashChange(params) {
                 let invalidate = false;
-                let allowedParams = ['action', 'view_type', 'menu_id', 'model'];
                 let loadRecord = (this.params && (this.params.id !== params.id));
                 this.params = {};
                 if (!params.view_type) {
@@ -490,18 +493,30 @@ var Katrid;
                     this.params.model = this.info.model;
                     invalidate = true;
                 }
+                let allowedParams = ALLOWED_PARAMS[this.params.view_type];
+                if (allowedParams === undefined)
+                    allowedParams = ALLOWED_PARAMS['default'];
                 Object.assign(this.params, params);
-                if (this.params.view_type === 'form')
-                    allowedParams.splice(0, 0, 'id');
-                for (let k of Object.keys(this.params))
-                    if (!allowedParams.includes(k) && !k.startsWith('default_') && !(k === 'filter')) {
+                let validParams = [];
+                for (let k of Object.keys(this.params)) {
+                    let f = false;
+                    for (let p of allowedParams)
+                        if (p.test(k)) {
+                            f = true;
+                        }
+                    if (!f)
                         invalidate = true;
-                    }
+                    else
+                        validParams.push(k);
+                }
                 if (invalidate) {
                     let oldParams = this.params;
                     this.params = {};
-                    for (let k of allowedParams)
-                        this.params[k] = oldParams[k];
+                    for (let k of validParams) {
+                        let param = oldParams[k];
+                        if (param !== undefined)
+                            this.params[k] = param;
+                    }
                     if (!this.params.action)
                         delete this.params.action;
                     let url = this.makeUrl(this.params.view_type);
@@ -640,12 +655,14 @@ var Katrid;
             makeUrl(viewType) {
                 if (!viewType)
                     viewType = this.viewModes[0];
-                let search = {
+                let search = {};
+                Object.assign(search, this.params);
+                Object.assign(search, {
                     model: this.model.name,
                     action: this.info.id,
                     view_type: viewType,
                     menu_id: Katrid.webApp.currentMenu.id,
-                };
+                });
                 if ((viewType === 'form') && this.record)
                     search.id = this.record.id;
                 let url = new URLSearchParams(search);
