@@ -158,7 +158,6 @@ class View(models.Model):
         view_cls = self.__class__
         children = view_cls.objects.filter(parent_id=self.pk, mode='extension')
         xml = self._get_content(context)
-        print('report', etree.tostring(etree.fromstring(xml)))
         xml = etree.fromstring(self._get_content(context))
         if self.parent:
             parent_xml = etree.fromstring(self.parent.render(context))
