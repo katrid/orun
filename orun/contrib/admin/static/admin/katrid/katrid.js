@@ -595,7 +595,6 @@ var Katrid;
                 this.viewInfo = this.views[this.viewType];
                 if (this.viewType in this._cachedViews) {
                     this.view = this._cachedViews[this.viewType];
-                    console.log('cached view', this.view);
                     this.element = this.view.actionView;
                     this.container.append(this.view.actionView);
                 }
@@ -659,10 +658,11 @@ var Katrid;
                 Object.assign(search, this.params);
                 Object.assign(search, {
                     model: this.model.name,
-                    action: this.info.id,
                     view_type: viewType,
                     menu_id: Katrid.webApp.currentMenu.id,
                 });
+                if (this.info?.id)
+                    search.action = this.info.id;
                 if ((viewType === 'form') && this.record)
                     search.id = this.record.id;
                 let url = new URLSearchParams(search);
@@ -2767,6 +2767,7 @@ var Katrid;
                 this._clearTimeout();
                 this.pendingRequest = true;
                 this.loading = true;
+                this.state = DataSourceState.loading;
                 page = page || 1;
                 this._pageIndex = page;
                 let domain;
@@ -2824,6 +2825,7 @@ var Katrid;
                         })
                             .finally(() => {
                             this.pendingRequest = false;
+                            this.state = DataSourceState.browsing;
                         });
                     };
                     this.pendingPromises.push(controller);
@@ -3345,6 +3347,7 @@ var Katrid;
                 this._clearTimeout();
                 if (!parentRecord || parentRecord.$created)
                     return;
+                this.state = DataSourceState.loading;
                 this.pendingOperation = setTimeout(async () => {
                     if (parentRecord.id != null) {
                         let data = {};
@@ -3353,11 +3356,11 @@ var Katrid;
                         if (this.vm)
                             this.vm.records = res.data;
                         parentRecord[this.field.name] = res.data;
-                        this.state = Katrid.Data.DataSourceState.browsing;
                     }
                     else {
                         parentRecord[this.field.name] = [];
                     }
+                    this.state = Katrid.Data.DataSourceState.browsing;
                 }, this.refreshInterval);
             }
             destroy() {
@@ -4295,6 +4298,8 @@ var Katrid;
                     if (this.attrs.nolabel === 'placeholder')
                         control.setAttribute('placeholder', this.caption);
                     control.classList.add('input-dropdown', 'form-field');
+                    if (this.filter)
+                        control.setAttribute(':filter', this.filter);
                     return control;
                 }
                 listSpanTemplate() {
@@ -4749,6 +4754,12 @@ var Katrid;
                     this.tBody.append(tr);
                 }
                 this.tHead.append(this.tHeadRow);
+                let loadingRow = document.createElement('tr');
+                loadingRow.setAttribute('v-if', 'loading');
+                loadingRow.innerHTML = `<td class="table-loading text-center" colspan="${this.tRow.children.length}">
+  <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+</td>`;
+                this.tBody.append(loadingRow);
                 this.tBody.append(this.tRow);
                 table.append(this.tHead);
                 table.append(this.tBody);
@@ -5195,6 +5206,7 @@ var Katrid;
                 }
                 afterRender(el) {
                     this.vm = this.createVm(el);
+                    console.log('after render');
                     return this.actionView;
                 }
                 ready() {
@@ -5242,6 +5254,7 @@ var Katrid;
                                 dataOffset: 0,
                                 dataOffsetLimit: 0,
                                 selectionLength: 0,
+                                loading: false,
                                 $result: null,
                             };
                             Object.assign(data, me.data());
@@ -5300,6 +5313,14 @@ var Katrid;
                         },
                     }).mount(el);
                     this.dataSource.vm = vm;
+                    this.dataSource.stateChangeCallback = (state) => {
+                        this.vm.state = state;
+                        this.vm.changing = this.dataSource.changing;
+                        this.vm.editing = this.dataSource.editing;
+                        this.vm.inserting = this.dataSource.inserting;
+                        this.vm.browsing = this.dataSource.browsing;
+                        this.vm.loading = !this.dataSource.browsing;
+                    };
                     this.actionView = el;
                     this.actionView.view = this;
                     return vm;
@@ -6290,6 +6311,7 @@ var Katrid;
                     super(...arguments);
                     this.allowAdvancedSearch = true;
                     this.allowCreateNew = true;
+                    this.filter = null;
                 }
                 create(field) {
                     if (this._created)
@@ -6301,9 +6323,10 @@ var Katrid;
                     this.field = field;
                     this.actionView = this.closest('action-view');
                     this.setSource(async (query) => {
-                        let domain = this.getAttribute('filter') || this.field.filter;
+                        let domain = this.filter || this.field.filter;
+                        console.log('field', domain);
                         if (domain && (typeof domain === 'string'))
-                            domain = this.actionView.action.scope.$eval(domain);
+                            console.log('field', domain);
                         let format = 'html';
                         let data = {
                             args: [query.term],
@@ -6642,6 +6665,7 @@ var Katrid;
                         selectionLength: 0,
                         parent: null,
                         $editing: false,
+                        loading: false,
                     };
                 },
                 methods: {
@@ -6724,6 +6748,9 @@ var Katrid;
                         action: {},
                         pageLimit: this.$data.field.info.page_limit,
                     });
+                    this.$data.dataSource.stateChangeCallback = (state) => {
+                        this.loading = this.$data.dataSource.loading;
+                    };
                     this.$selection = new Katrid.Forms.Views.SelectionHelper();
                     this.$selection.dataSource = this.$data.dataSource;
                     let field = this.$data.field;
@@ -10287,7 +10314,6 @@ var Katrid;
                 return new Promise((resolve, reject) => {
                     Service.adapter.fetch(rpcName, config)
                         .then(async (response) => {
-                        console.log(response.headers);
                         let contentType = response.headers.get('Content-Type');
                         if (response.status === 500) {
                             reject(await response.json());

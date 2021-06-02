@@ -12151,6 +12151,11 @@ body.container.hide-left-menu #footer.page-footer {
   z-index: 1;
 }
 
+td.table-loading {
+  padding: 10px;
+  background-color: #FFFFFF;
+}
+
 list-view .table {
   user-select: none;
 }
