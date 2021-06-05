@@ -1045,7 +1045,7 @@ class Field(BaseField):
 
     def value_to_json(self, value):
         """
-        Converts a python value to a json compatible value.
+        Convert a python value to a json compatible value.
         """
         return value
 
@@ -1054,6 +1054,10 @@ class Field(BaseField):
         if isinstance(group_choices, str):
             group_choices = getattr(model, group_choices)
         return group_choices(self, where)
+
+    def onchange(self, meth):
+        from .events import FieldEvent
+        return FieldEvent(self, meth)
 
 
 class AutoField(Field):

@@ -6170,7 +6170,7 @@ var Katrid;
                 this.showMenu();
             }
             onFocusout() {
-                if (!this.menu.mouseDown) {
+                if (!this.menu?.mouseDown) {
                     this.hideMenu();
                     this.invalidateValue();
                 }
@@ -6324,7 +6324,6 @@ var Katrid;
                     this.actionView = this.closest('action-view');
                     this.setSource(async (query) => {
                         let domain = this.filter || this.field.filter;
-                        console.log('field', domain);
                         if (domain && (typeof domain === 'string'))
                             console.log('field', domain);
                         let format = 'html';

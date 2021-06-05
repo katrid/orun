@@ -119,6 +119,7 @@ class Options:
         self.parents = {}
         self._get_fields_cache = {}
         self.field_change_event = defaultdict(list)
+        self.fields_events = defaultdict(list)
         self.local_fields = []
         self.fields: Union[Sequence[Field], Dict[str, Field]] = Fields(self)
         self.derived_models = []
@@ -935,6 +936,10 @@ class Options:
             if isinstance(attr, property):
                 names.append(name)
         return frozenset(names)
+
+    def notify_field_change(self, instance, field):
+        for evt in self.fields_events[field]:
+            evt(instance)
 
 
 class ModelHelper:

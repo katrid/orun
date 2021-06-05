@@ -1852,6 +1852,8 @@ class Model(metaclass=ModelBase):
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
         if not self._state.loading and key in self._meta.fields:
+            if key in self._meta.fields_events and getattr(self, key, None) != value:
+                self._meta.notify_field_change(self, key)
             if self._state.update_fields is None:
                 self._state.update_fields = {}
             self._state.update_fields[key] = value
