@@ -3729,11 +3729,14 @@ var Katrid;
                     input.type = 'text';
                     input.setAttribute('v-model', 'record.' + this.name);
                     input.classList.add('form-field', 'form-control');
-                    for (let k of Object.keys(this.attrs))
+                    for (let k of Object.keys(this.attrs)) {
                         if (k.includes(':'))
                             input.setAttribute(k, this.attrs[k]);
+                    }
                     input.autocomplete = 'off';
                     input.spellcheck = false;
+                    if (input.hasAttribute('v-on:change'))
+                        console.log('set on change', input.getAttribute('v-on:change'));
                     if (this.required)
                         input.required = true;
                     if (this.maxLength)
@@ -3745,7 +3748,7 @@ var Katrid;
                     if (this.attrs.nolabel === 'placeholder')
                         input.placeholder = this.caption;
                     if (this.attrs.ngFieldChange || this.ngChange)
-                        input.setAttribute('ng-change', this.attrs.ngFieldChange || this.ngChange);
+                        input.setAttribute('v-on:change', this.attrs.ngFieldChange || this.ngChange);
                     return input;
                 }
                 getValue(value) {
@@ -5936,6 +5939,7 @@ var Katrid;
                         clearTimeout(time);
                         vm.$changing = false;
                         vm.$emit('update:modelValue', $(this).inputmask('unmaskedvalue'));
+                        vm.$emit('change', this.value);
                     });
                 },
                 watch: {
