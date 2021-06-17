@@ -2942,7 +2942,6 @@ var Katrid;
                             .then((res) => {
                             this._pendingChanges = false;
                             this.state = DataSourceState.browsing;
-                            console.log('record saved', res);
                             if (autoRefresh)
                                 return this.refreshRecord(res);
                             else
@@ -3103,7 +3102,6 @@ var Katrid;
                     this.pendingPromises.push(controller);
                     res = await this.model.getDefaults(kwargs, { signal: controller.signal });
                 }
-                const urlParams = new URLSearchParams();
                 this.state = DataSourceState.inserting;
                 this.record['record_name'] = _.gettext('(New)');
                 let defaults = {};
@@ -3121,7 +3119,7 @@ var Katrid;
                 for (let [k, v] of Object.entries(defaults))
                     if (typeof v === "function") {
                         v = v(defaults, this);
-                        if (!_.isUndefined(v))
+                        if (v !== undefined)
                             defaults[k] = v;
                     }
                 this.setValues(defaults);
@@ -3302,10 +3300,8 @@ var Katrid;
                 return records;
             }
             _applyResponse(res) {
-                if (res) {
-                    if (res.value)
-                        this.setValues(res.value);
-                }
+                if (res?.value)
+                    this.setValues(res.value);
             }
             async dispatchEvent(name, ...args) {
                 let res = await this.model.rpc(name, ...args);
@@ -3396,7 +3392,6 @@ var Katrid;
                     clearTimeout(this.pendingOperation);
                 this._lastFieldName = field.name;
                 let fn = () => {
-                    console.log('rec', record.pristine);
                     let rec = this.encodeObject(record.pristine);
                     rec[field.name] = newValue;
                     if (this.parent)
@@ -7000,10 +6995,11 @@ var Katrid;
                     let el = document.createElement('a');
                     el.classList.add('dropdown-item');
                     this.assign(action, el);
+                    console.log(el.getAttribute('data-action'));
                     if (el.hasAttribute('data-action'))
                         el.setAttribute('v-on:click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
                     else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name')))
-                        el.setAttribute('v-on:click', `formButtonClick(selection, '${el.getAttribute('name')}', $event.target)`);
+                        el.setAttribute('v-on:click', `formButtonClick(activeRecordId, '${el.getAttribute('name')}', $event.target)`);
                     if (action.hasAttribute('id'))
                         el.setAttribute('id', action.id);
                     return el;
@@ -7204,6 +7200,9 @@ var Katrid;
                                 if (this.record)
                                     me.dataSource.delete([this.record.id]);
                             },
+                            formButtonClick(id, methodName) {
+                                me.formButtonClick(id, methodName);
+                            },
                             actionClick(selection, methodName, event) {
                                 me.action.formButtonClick(selection.map(obj => obj.id), methodName);
                             },
@@ -7248,9 +7247,30 @@ var Katrid;
                         computed: {
                             selection() {
                                 return [this.record];
+                            },
+                            activeRecordId() {
+                                return this.record.id;
                             }
                         },
                     };
+                }
+                async formButtonClick(id, meth) {
+                    try {
+                        this.action.pendingOperation = true;
+                        let res = await this.model.rpc(meth, [id], null, this);
+                        if (res.tag === 'refresh')
+                            this.refresh();
+                        else if (res.tag == 'new') {
+                            this.dataSource.insert(true, res.values);
+                        }
+                        else if (res.type) {
+                            const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
+                            act.execute();
+                        }
+                    }
+                    finally {
+                        this.action.pendingOperation = false;
+                    }
                 }
                 createVm(el) {
                     let component = this.createComponent();
