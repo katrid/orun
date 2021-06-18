@@ -5922,7 +5922,8 @@ var Katrid;
                             vm.$changing = true;
                             time = setTimeout(() => {
                                 if (oldValue !== this.value) {
-                                    vm.$emit('update:modelValue', $(this).inputmask('unmaskedvalue'));
+                                    let v = parseFloat($(this).inputmask('unmaskedvalue'));
+                                    vm.$emit('update:modelValue', v);
                                     vm.$emit('change', this.value);
                                 }
                             }, 500);
@@ -5933,7 +5934,8 @@ var Katrid;
                     $(vm.$el).inputmask(opts).blur(function () {
                         clearTimeout(time);
                         vm.$changing = false;
-                        vm.$emit('update:modelValue', $(this).inputmask('unmaskedvalue'));
+                        let v = parseFloat($(this).inputmask('unmaskedvalue'));
+                        vm.$emit('update:modelValue', v);
                         vm.$emit('change', this.value);
                     });
                 },
