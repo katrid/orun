@@ -961,6 +961,7 @@ class OneToOneField(ForeignKey):
     def __init__(self, to, on_delete=CASCADE, to_field=None, **kwargs):
         kwargs['unique'] = True
         kwargs['copy'] = False
+        kwargs['null'] = False
         super().__init__(to, on_delete, to_field=to_field, **kwargs)
 
     def deconstruct(self):
