@@ -6164,6 +6164,7 @@ var Katrid;
                 this.term = this.input.value;
                 if (this.$selectedItem) {
                     this.$selectedItem = null;
+                    this._setValue(null);
                 }
                 this.showMenu();
             }
@@ -6235,7 +6236,7 @@ var Katrid;
                     item = $(el).data('item');
                 return this.setValue(item);
             }
-            setValue(item, el) {
+            _setValue(item, el) {
                 let event = new CustomEvent('selectItem', {
                     detail: {
                         item,
@@ -6243,6 +6244,10 @@ var Katrid;
                     }
                 });
                 this.dispatchEvent(event);
+                return event;
+            }
+            setValue(item, el) {
+                let event = this._setValue(item, el);
                 if (!event.defaultPrevented) {
                     this.selectedItem = item;
                     if (this.menu)
