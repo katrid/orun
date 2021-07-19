@@ -3,7 +3,7 @@ from functools import partial, wraps
 import builtins
 
 from orun.http.response import HttpResponseBase
-from orun.db.models.base import ModelBase
+from orun.db.models.base import ModelBase, Model
 from orun.core.exceptions import RPCError, ValidationError
 
 
@@ -56,6 +56,8 @@ def method(*args, select=None, each=None):
 
         @wraps(fn)
         def wrapped(self, *args, **kwargs):
+            if 'id' in kwargs and not args:
+                args = kwargs.pop('id')
             if args:
                 arg = args[0]
                 args = args[1:]
@@ -78,7 +80,8 @@ def method(*args, select=None, each=None):
                     return fn(objs.first(), *args, **kwargs)
                 else:
                     return fn(objs, *args, **kwargs)
-
+            elif isinstance(self, Model):
+                return fn(self, *args, **kwargs)
         return _register_method(wrapped, meth_name)
 
     arg = args and args[0]

@@ -96,7 +96,8 @@ class Partner(models.Model):
         contacts = self.objects.filter(parent_id=self.pk)
         if contacts:
             for contact in contacts:
-                contact.save(update_fields=['display_name'])
+                if contact.pk != self.pk:
+                    contact.save(update_fields=['display_name'])
 
     @property
     def is_authenticated(self):

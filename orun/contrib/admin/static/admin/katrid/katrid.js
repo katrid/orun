@@ -5033,7 +5033,7 @@ var Katrid;
                         }
                         else {
                             let idSendFile = `__send_file_${++sendFileCounter}`;
-                            $btn.parent().append(`<input id="${idSendFile}" type="file" style="display: none" v-on:change="sendFile('${$btn.attr('name')}')"/>`);
+                            $btn.parent().append(`<input id="${idSendFile}" type="file" style="display: none" v-on:change="sendFile('${$btn.attr('name')}', $event.target)"/>`);
                             $btn.attr('send-file', $btn.attr('name'));
                             $btn.attr('onclick', `$('#${idSendFile}').trigger('click')`);
                         }
