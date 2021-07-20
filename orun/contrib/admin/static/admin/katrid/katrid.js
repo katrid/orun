@@ -493,7 +493,7 @@ var Katrid;
                     this.params.model = this.info.model;
                     invalidate = true;
                 }
-                let allowedParams = ALLOWED_PARAMS[this.params.view_type];
+                let allowedParams = ALLOWED_PARAMS[params.view_type || this.params.view_type];
                 if (allowedParams === undefined)
                     allowedParams = ALLOWED_PARAMS['default'];
                 Object.assign(this.params, params);
