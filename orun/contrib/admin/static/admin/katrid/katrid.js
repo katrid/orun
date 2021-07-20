@@ -6716,6 +6716,7 @@ var Katrid;
                                 field: this.field,
                                 master: this.$data.dataSource.masterSource,
                             });
+                            form.vm.parent = this.$parent;
                             form.dataSource.insert();
                             let res = await form.showDialog({ backdrop: 'static' });
                             if (res) {
