@@ -117,6 +117,9 @@ class OrunJSONEncoder(json.JSONEncoder):
         elif isinstance(o, memoryview):
             return base64.b64encode(o.tobytes()).decode('utf-8')
         elif isinstance(o, bytes):
-            return o.decode('utf-8')
+            try:
+                return o.decode('utf-8')
+            except:
+                return None
         else:
             return super().default(o)
