@@ -44,7 +44,7 @@ class Partner(models.Model):
     country = models.ForeignKey('res.country', label=_('Country'), on_delete=models.SET_NULL)
     state = models.ForeignKey('res.country.state', label=_('State'), on_delete=models.SET_NULL)
     city = models.CharField(64, label=_('City'))
-    phone = models.CharField(64, _('Phone'))
+    phone = models.CharField(64, label=_('Phone'))
     fax = models.CharField(64, 'Fax')
     mobile = models.CharField(64, label=_('Mobile'))
     birthdate = models.CharField(64, label=_('Birthdate'))
