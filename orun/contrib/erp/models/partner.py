@@ -26,7 +26,7 @@ class PartnerTitle(models.Model):
 class Partner(models.Model):
     name = models.CharField(128, label=_('Name'), null=False, db_index=True)
     display_name = models.CharField(512, db_index=True)
-    parent = models.ForeignKey('self', verbose_name='Related Company')
+    parent = models.ForeignKey('self', verbose_name=_('Related Company'))
     title = models.ForeignKey(PartnerTitle, label=_('Title'))
     active = models.BooleanField(default=True, label=_('Active'))
     color = models.IntegerField(label=_('Color'))
