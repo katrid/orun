@@ -1177,6 +1177,9 @@ class BaseDatabaseSchemaEditor:
         """
         self.execute(self.sql_create_database % {'db': db})
 
+    def post_create_database(self):
+        pass
+
     def create_schema(self, schema: str):
         """
         Create a database schema.

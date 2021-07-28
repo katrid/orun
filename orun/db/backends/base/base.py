@@ -60,6 +60,8 @@ class BaseDatabaseWrapper:
         self.queries_log = deque(maxlen=self.queries_limit)
         self.force_debug_cursor = False
 
+        self.accent_insensitive: bool = settings.ACCENT_INSENSITIVE
+
         # Transaction related attributes.
         # Tracks if the connection is in autocommit mode. Per PEP 249, by
         # default, it isn't.

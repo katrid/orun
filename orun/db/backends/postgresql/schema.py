@@ -27,6 +27,12 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         # getquoted() returns a quoted bytestring of the adapted value.
         return psycopg2.extensions.adapt(value).getquoted().decode()
 
+    def post_create_database(self):
+        if self.connection.accent_insensitive:
+            self.execute('CREATE EXTENSION unaccent')
+            self.execute('CREATE TEXT SEARCH CONFIGURATION unaccent (COPY = pg_catalog.simple)')
+            self.execute('ALTER TEXT SEARCH CONFIGURATION unaccent ALTER MAPPING FOR hword, hword_part, word with unaccent, simple')
+
     def _field_indexes_sql(self, model, field):
         output = super()._field_indexes_sql(model, field)
         like_index_statement = self._create_like_index_sql(model, field)
