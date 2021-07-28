@@ -296,10 +296,9 @@ class Options:
 
     @classmethod
     def create_helper(cls, model, attrs, meta):
-
         if meta:
             assert not hasattr(meta, 'name')
-            attrs = {'__model__': model}
+            # attrs = {'__model__': model}
             for k, v in meta.__dict__.items():
                 if k.startswith('_'):
                     continue
