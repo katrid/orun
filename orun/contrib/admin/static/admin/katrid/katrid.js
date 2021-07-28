@@ -6350,9 +6350,10 @@ var Katrid;
                             let items = res.items;
                             if (this.allowAdvancedSearch)
                                 items.push({
-                                    template: '<a class="dropdown-item"><i>Pesquisar mais...</i></a>',
+                                    template: `<a class="dropdown-item"><i>${_.gettext('Search more...')}</i></a>`,
                                     click: async (event) => {
                                         event.stopPropagation();
+                                        this.hideMenu();
                                         let res = await Katrid.Forms.Views.ListViewDialog.showDialog({
                                             model: field.model,
                                             caption: field.caption,
@@ -6369,8 +6370,9 @@ var Katrid;
                                 });
                             if (this.allowCreateNew)
                                 items.push({
-                                    template: '<a class="dropdown-item"><i>Criar novo...</i></a>', click: async (event) => {
+                                    template: `<a class="dropdown-item"><i>${_.gettext('Create new...')}</i></a>`, click: async (event) => {
                                         event.stopPropagation();
+                                        this.hideMenu();
                                         let dlg = await Katrid.Forms.Views.FormViewDialog.createNew({ model: field.model });
                                         let res = await dlg.showDialog();
                                         if (res)

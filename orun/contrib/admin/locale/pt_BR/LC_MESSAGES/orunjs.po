@@ -201,8 +201,11 @@ msgstr "Este campo deve ser preenchido."
 msgid "Creating..."
 msgstr "Criando..."
 
-msgid "Create New..."
-msgstr "Criar Novo..."
+msgid "Create new..."
+msgstr "Criar novo..."
+
+msgid "Search more..."
+msgstr "Pesquisar mais..."
 
 msgid "Create: %(title)s"
 msgstr "Criar: %(title)s"
