@@ -5977,7 +5977,6 @@ var Katrid;
     (function (UI) {
         class DropdownMenu {
             constructor(input, options) {
-                this.input = input;
                 this.options = options;
                 this.template = '<a class="dropdown-item" href="#">${item}</a>';
                 this.waitTemplate = () => `<div class="dropdown-wait text-muted"><i class="fas fa-spinner fa-spin"></i> ${_.gettext('Loading...')}</div>`;
@@ -5987,6 +5986,9 @@ var Katrid;
                 this.mouseDown = false;
                 this.el = document.createElement('div');
                 this.el.classList.add('dropdown-menu');
+                this.input = input;
+                this.target = this.options?.target || input;
+                this.input = input;
                 if (options) {
                     if (options.template)
                         this.template = options.template;
@@ -5996,7 +5998,7 @@ var Katrid;
             }
             show() {
                 document.body.append(this.el);
-                this._popper = Popper.createPopper(this.input, this.el, { placement: 'bottom-start' });
+                this._popper = Popper.createPopper(this.target, this.el, { placement: 'bottom-start' });
                 this.el.classList.add('show');
             }
             hide() {
@@ -12029,6 +12031,7 @@ var Katrid;
                 this.input.addEventListener('blur', () => this.onFocusout());
                 this.input.addEventListener('keydown', (event) => this.onKeyDown(event));
                 this.setSource(async (query) => {
+                    console.log('set source', query);
                     return Katrid.Services.Service.$post('/web/menu/search/', { term: query.term }).then(res => res.items);
                 });
             }
@@ -12050,7 +12053,7 @@ var Katrid;
                 this.term = '';
             }
             createMenu() {
-                this.menu = new UI.DropdownMenu(this, { source: this._source });
+                this.menu = new UI.DropdownMenu(this, { source: this._source, target: this.input.parentElement });
             }
             invalidateValue() {
                 this.selectedItem = this.$selectedItem;

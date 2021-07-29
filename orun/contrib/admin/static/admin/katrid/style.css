@@ -10343,16 +10343,20 @@ a.user-dropdown {
 app-header.navbar {
   padding: 0;
   justify-content: flex-end;
-  flex-flow: wrap;
+  flex-flow: nowrap;
   flex: 0 1;
 }
+app-header.navbar #navbar-menu {
+  flex: 1 0 200px;
+}
 app-header.navbar .navbar-search {
-  flex: initial;
   background-color: rgba(255, 255, 255, 0.1);
   border: 0;
+  white-space: nowrap;
+  overflow: hidden;
 }
 app-header.navbar .navbar-tools {
-  flex: initial;
+  flex: 0 1 500px;
 }
 app-header.navbar #navbar-search {
   display: inline;
@@ -10365,6 +10369,7 @@ app-header.navbar #navbar-search {
 app-header.navbar #navbar-search:focus {
   border: 0;
   outline: 0;
+  box-shadow: none;
 }
 app-header.navbar .navbar-nav {
   flex-direction: row;
@@ -12794,7 +12799,6 @@ list-view .list-record-star:hover {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.1);
   background-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
 }
 
 .btn {
@@ -13374,7 +13378,7 @@ query-view .table-responsive {
   display: flex;
   cursor: pointer;
   flex-flow: row wrap;
-  padding: 2px 25px 3px 4px;
+  padding: 1px 25px 1px 4px;
   align-items: flex-start;
   height: auto;
 }

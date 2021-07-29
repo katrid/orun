@@ -7,11 +7,13 @@
       <h3 class="row">
         <field name="name" cols="12" class="form-control-lg" nolabel="placeholder"/>
       </h3>
+      <div class="row">
+        <field name="company_type"/>
+        <field name="parent" caption="{{ _('Company') }}"/>
+      </div>
     </div>
   </div>
 
-  <field name="company_type"/>
-  <field name="parent" caption="{{ _('Company') }}"/>
   <div class="clearfix"/>
   <fieldset class="col-sm-6">
     <legend><span class="fa fa-map-marker fa-fw"/> {{ _('Address') }}</legend>
@@ -48,18 +50,18 @@
             <field name="email"/>
             <field name="address"/>
             <field name="country"/>
-            <field name="email"/>
+            <field name="image"/>
 
             <div>
               <div class="card-image">
-                <img src="/static/web/assets/img/avatar.png"/>
+                <img :src="record.image || ((record.company_type === 'company' && '/static/admin/assets/img/no-image-company.png') || '/static/admin/assets/img/avatar.png')"/>
               </div>
               <div class="card-details">
                 <strong>
                   <field name="name"/>
                 </strong>
                 <ul>
-                  <li ng-if="record.email"><span class="fa fa-envelope fa-fw"/> <field name="email"/></li>
+                  <li v-if="record.email"><span class="fa fa-envelope fa-fw"/> <field name="email"/></li>
                 </ul>
               </div>
             </div>
