@@ -42,7 +42,7 @@ class Action(models.Model):
 
     @api.method(select=['action_type'])
     def load(self, context=None):
-        return self.get_action().to_dict()
+        return self.get_action().to_dict(exclude=['groups'])
 
     def execute(self):
         raise NotImplemented()

@@ -1,15 +1,12 @@
 <form>
   <div class="media">
-    <div class="d-flex mr-3">
+    <div class="d-flex">
       <field name="image" nolabel ng-empty-image="(record.company_type === 'individual' && '/static/admin/assets/img/avatar.png') || ('/static/admin/assets/img/no-image.png')"/>
     </div>
     <div class="media-body col-12">
       <h3 class="row">
         <field name="name" cols="12" class="form-control-lg" nolabel="placeholder"/>
       </h3>
-      <div class="row">
-        <field name="is_employee"/>
-      </div>
     </div>
   </div>
 
@@ -34,10 +31,10 @@
       <field name="phone" icon="fa fa-phone" cols="4"/>
       <field name="fax" cols="4"/>
       <field name="mobile" icon="fa fa-mobile" cols="4"/>
-      <field name="website" icon="fa fa-globe"/>
-      <field name="email" icon="fa fa-envelope"/>
-      <field name="language"/>
-      <field name="title"/>
+      <field name="website" icon="fa fa-globe" cols="12"/>
+      <field name="email" cols="12" icon="fa fa-envelope"/>
+      <field name="title" v-show="company_type"/>
+      <field name="tags" cols="12"/>
     </div>
   </fieldset>
   <tabset>
@@ -101,9 +98,10 @@
     </tab>
     <tab>
       <tab-heading>{{ _('Additional Data') }}</tab-heading>
+      <field name="is_employee"/>
       <field name="birthdate"/>
       <field name="barcode"/>
-      <field name="color"/>
+      <field name="language"/>
     </tab>
     <tab>
       <tab-heading>{{ _('Sales & Purchases') }}</tab-heading>

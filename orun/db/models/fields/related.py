@@ -1567,9 +1567,8 @@ class ManyToManyField(RelatedField):
         return {"type": None, "check": None}
 
     def value_to_json(self, value):
-        return
         for obj in value.all():
-            yield obj._get_label_instance()
+            yield obj._api_format_choice()
 
     def get_data_type(self) -> str:
         return 'manytomany'

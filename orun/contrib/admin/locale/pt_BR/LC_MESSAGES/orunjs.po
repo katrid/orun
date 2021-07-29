@@ -297,6 +297,9 @@ msgstr "Compartilhar com todos os usuários"
 msgid "Add Custom Group"
 msgstr "Adicionar Grupo Personalizado"
 
+msgid "Error"
+msgstr "Erro"
+
 msgid "Back"
 msgstr "Voltar"
 

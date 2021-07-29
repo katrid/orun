@@ -70,6 +70,7 @@ class Partner(models.Model):
     children = models.OneToManyField('self')
     # user password
     site_password = models.PasswordField()
+    tags = models.ManyToManyField(PartnerCategory, label=_('Tags'))
 
     class Meta:
         name = 'res.partner'

@@ -170,7 +170,7 @@ class AdminModel(models.Model, helper=True):
         if limit:
             search_params['limit'] = limit
         if field.many_to_many:
-            field = field.remote_field.target_field
+            field = field.remote_field.through._meta.fields[field.m2m_reverse_field_name()]
         if field.many_to_one:
             if ids is None:
                 # search_params['name_fields'] = kwargs.get(

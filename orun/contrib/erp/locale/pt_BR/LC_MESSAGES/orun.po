@@ -433,3 +433,6 @@ msgstr "Empresa Superior/Matriz"
 
 msgid "Contacts & Addresses"
 msgstr "Contatos e Endereços"
+
+msgid "Tags"
+msgstr "Marcadores"

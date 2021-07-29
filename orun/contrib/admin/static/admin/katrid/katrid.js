@@ -1447,6 +1447,12 @@ var Katrid;
     })(Core = Katrid.Core || (Katrid.Core = {}));
 })(Katrid || (Katrid = {}));
 (function (Katrid) {
+    window.addEventListener('error', function (e) {
+        console.log('intercept error', e);
+    }, true);
+    window.addEventListener('onunhandledrejection', function (e) {
+        console.log('intercept error', e);
+    }, true);
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -2077,7 +2083,6 @@ var Katrid;
     (function (BI) {
         let QueryEditorPlugin = class QueryEditorPlugin extends Katrid.Core.Plugin {
             hashChange(url) {
-                console.log('hash change');
                 if (url.startsWith('#/query-viewer/')) {
                     this.execute();
                     return true;
@@ -2491,6 +2496,22 @@ var Katrid;
         }
     }
     Katrid.assignElement = assignElement;
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Exceptions;
+    (function (Exceptions) {
+        class Exception extends Error {
+            constructor(message) {
+                super(message);
+                Katrid.Forms.Dialogs.alert({ text: message, icon: 'error' });
+            }
+        }
+        Exceptions.Exception = Exception;
+        class ValidationError extends Exception {
+        }
+        Exceptions.ValidationError = ValidationError;
+    })(Exceptions = Katrid.Exceptions || (Katrid.Exceptions = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -3150,6 +3171,7 @@ var Katrid;
                 return this.fields[fieldName];
             }
             set state(state) {
+                let changing = this.changing;
                 this._modifiedFields = [];
                 this._state = state;
                 this.inserting = state === DataSourceState.inserting;
@@ -3158,6 +3180,8 @@ var Katrid;
                 this.changing = [DataSourceState.editing, DataSourceState.inserting].includes(this.state);
                 if (this.stateChangeCallback)
                     this.stateChangeCallback(state);
+                if (changing && this.$form?.dirty)
+                    this.$form.reset();
             }
             get browsing() {
                 return this._state === DataSourceState.browsing;
@@ -3728,10 +3752,8 @@ var Katrid;
                         if (k.includes(':'))
                             input.setAttribute(k, this.attrs[k]);
                     }
-                    input.autocomplete = 'off';
+                    input.autocomplete = 'nope';
                     input.spellcheck = false;
-                    if (input.hasAttribute('v-on:change'))
-                        console.log('set on change', input.getAttribute('v-on:change'));
                     if (this.required)
                         input.required = true;
                     if (this.maxLength)
@@ -3787,18 +3809,21 @@ var Katrid;
                         span.innerHTML = spanTempl;
                         section.append(span);
                     }
+                    this.createTooltip(section);
                     return section;
                 }
                 createTooltip(section) {
                     if (!Katrid.settings.ui.isMobile) {
-                        let title = this.caption;
-                        if (this.helpText)
-                            title += '<br>' + this.helpText;
-                        title += '<br>Field: ' + this.name;
-                        title += `<br>Content: {{ record.${this.name} }}`;
-                        if (this.model)
-                            title += '<br>Model: ' + this.model;
-                        section.setAttribute('ui-tooltip', title);
+                        let fn = function () {
+                            let title = this.caption;
+                            if (this.helpText)
+                                title += '<br>' + this.helpText;
+                            title += '<br>Field: ' + this.name;
+                            title += `<br>Content: ' + record.${this.name} + '`;
+                            if (this.model)
+                                title += '<br>Model: ' + this.model;
+                            return title;
+                        };
                     }
                 }
                 listCreate(view) {
@@ -3871,7 +3896,6 @@ var Katrid;
                 }
                 createWidget(widget) {
                     let cls = Katrid.Forms.Widgets.registry[widget];
-                    console.log('create widget', widget, cls);
                     return new cls(this);
                 }
                 validate(record) {
@@ -4283,8 +4307,12 @@ var Katrid;
         var Fields;
         (function (Fields) {
             class ForeignKey extends Fields.Field {
+                constructor() {
+                    super(...arguments);
+                    this.tag = 'field-autocomplete';
+                }
                 formControl() {
-                    let control = document.createElement('field-autocomplete');
+                    let control = document.createElement(this.tag);
                     control.setAttribute('v-model', 'record.' + this.name);
                     if ('allow-open' in this.attrs)
                         control.setAttribute('allow-open', null);
@@ -4397,36 +4425,24 @@ var Katrid;
         var Fields;
         (function (Fields) {
             class ManyToManyField extends Fields.ForeignKey {
-                constructor(info) {
-                    super(info);
-                    if (!info.template || (info.template && !info.template.form))
-                        this.template.form = 'view.form.manytomany.jinja2';
+                constructor() {
+                    super(...arguments);
+                    this.tag = 'field-tags';
                 }
                 toJSON(val) {
                     if (_.isArray(val))
-                        return val.map((obj) => _.isArray(obj) ? obj[0] : obj);
+                        return val.map(obj => obj.id);
                     else if (_.isString(val))
                         val = val.split(',');
                     return val;
                 }
-                formControl() {
-                    let control = super.formControl();
-                    control.setAttribute('foreignkey', 'foreignkey');
-                    control.setAttribute('multiple', 'multiple');
-                    return control;
-                }
                 formCreate(view) {
                     let section = super.formCreate(view);
-                    section.classList.add('ForeignKey');
+                    section.classList.add('ManyToManyField');
                     return section;
                 }
                 formSpanTemplate() {
-                    return `
-      <a href="#/app/?menu_id=\${ action.params.menu_id }&model={{ field.model }}&view_type=form&id=\${ record.{{ field.name }}[0] }">
-        <span ng-repeat="val in record.{{ field.name }}">
-        {{ val[1] }}
-        </span>
-      </a>`;
+                    return `<div class="input-tags"><label class="badge badge-dark" v-for="tag in record.${this.name}">{{tag.text}}</label></div>`;
                 }
             }
             Fields.ManyToManyField = ManyToManyField;
@@ -4582,11 +4598,14 @@ var Katrid;
             }
             Dialogs.toast = toast;
             function alert(message, title, icon) {
-                Swal.fire({
-                    title,
-                    text: message,
-                    icon,
-                });
+                if (Katrid.isString(message))
+                    Swal.fire({
+                        title,
+                        text: message,
+                        icon,
+                    });
+                else
+                    Swal.fire(message);
             }
             Dialogs.alert = alert;
             function createModal(title) {
@@ -5204,7 +5223,6 @@ var Katrid;
                 }
                 afterRender(el) {
                     this.vm = this.createVm(el);
-                    console.log('after render');
                     return this.actionView;
                 }
                 ready() {
@@ -5978,7 +5996,7 @@ var Katrid;
             }
             show() {
                 document.body.append(this.el);
-                this._popper = Popper.createPopper(this.input.input, this.el, { placement: 'bottom-start' });
+                this._popper = Popper.createPopper(this.input, this.el, { placement: 'bottom-start' });
                 this.el.classList.add('show');
             }
             hide() {
@@ -5989,10 +6007,8 @@ var Katrid;
                 return this.el.classList.contains('show');
             }
             loadItems(items) {
-                console.log('load items', items);
-                for (let item of items) {
+                for (let item of items)
                     this.addItem(item);
-                }
             }
             clearItems() {
                 this.items = [];
@@ -6130,7 +6146,10 @@ var Katrid;
                 this.menu = null;
                 this.closeOnChange = true;
                 this.term = '';
+                this.multiple = false;
                 this._created = false;
+                this._tags = [];
+                this._facets = [];
             }
             connectedCallback() {
                 this.create();
@@ -6141,11 +6160,18 @@ var Katrid;
                 this._created = true;
                 this.classList.add('input-autocomplete', 'input-dropdown');
                 let append = '';
+                let prepend = '';
                 let name = this.getAttribute('name');
                 let model = this.getAttribute('data-model');
                 if (this.hasAttribute('allow-open'))
                     append = `<span class="fa fa-fw fa-folder-open autocomplete-open" v-on:click="openObject('${model}', record.${name}.id)"></span>`;
-                this.innerHTML = `<input class="form-control form-field" autocomplete="nope" spellcheck="false"> <span class="caret"></span>` + append;
+                this.classList.add('form-control');
+                if (this.multiple) {
+                    prepend = `<div class="input-dropdown">`;
+                    append = '</div>' + append;
+                    this.classList.add('multiple');
+                }
+                this.innerHTML = `${prepend}<input class="form-field" autocomplete="nope" spellcheck="false"> <span class="caret"></span>${append}`;
                 this.input = this.querySelector('input');
                 let caret = this.querySelector('.caret');
                 caret.addEventListener('click', evt => this.click());
@@ -6159,6 +6185,54 @@ var Katrid;
                 this.input.addEventListener('keydown', (event) => this.onKeyDown(event));
                 if (this.hasAttribute('placeholder'))
                     this.input.placeholder = this.getAttribute('placeholder');
+            }
+            _addTag(tag) {
+                if (this.querySelector(`[data-id="${tag.id}"]`))
+                    return false;
+                let facet = $(`<div class="facet-view badge badge-dark">
+        <span class="facet-value">${tag.text}</span>
+        <span class="fas fa-times facet-remove"></span>
+        </div>`)[0];
+                facet.querySelector('.facet-remove').addEventListener('click', () => this.removeTag(tag));
+                facet.setAttribute('data-id', tag.id);
+                this._tags.push(tag);
+                this._facets.push(facet);
+                this.insertBefore(facet, this.input.parentElement);
+                return true;
+            }
+            addTag(tag) {
+                for (let t of this._tags)
+                    console.log('add tag', t);
+                this._addTag(tag);
+                this._setValues(this._tags);
+                this.hideMenu();
+            }
+            removeTag(tag) {
+                this._tags.splice(this._tags.indexOf(tag), 1);
+                let facet = this.querySelector(`[data-id="${tag.id}"]`);
+                if (facet) {
+                    this._facets.splice(this._facets.indexOf(facet), 1);
+                    facet.remove();
+                }
+                this._setValues(this._tags);
+            }
+            set tags(value) {
+                for (let facet of this._facets)
+                    facet.remove();
+                if (!value)
+                    value = [];
+                this._tags = [];
+                for (let tag of value)
+                    this._addTag(tag);
+            }
+            _setValues(tags) {
+                let event = new CustomEvent('change', {
+                    detail: {
+                        tags,
+                    }
+                });
+                this.dispatchEvent(event);
+                return event;
             }
             onInput() {
                 this.term = this.input.value;
@@ -6230,11 +6304,16 @@ var Katrid;
                 this._source = value;
             }
             _selectItem(el) {
-                this.term = '';
                 let item = null;
                 if (el)
                     item = $(el).data('item');
-                return this.setValue(item);
+                this.term = '';
+                if (this.multiple) {
+                    this.addTag(item);
+                    return this._setValue(item);
+                }
+                else
+                    return this.setValue(item);
             }
             _setValue(item, el) {
                 let event = new CustomEvent('selectItem', {
@@ -6400,7 +6479,7 @@ var Katrid;
             Katrid.define('input-foreignkey', InputForeignKeyElement);
             Katrid.component('field-autocomplete', {
                 props: ['modelValue'],
-                template: '<input-foreignkey class="input-autocomplete"><slot></slot></input-foreignkey>',
+                template: '<input-foreignkey class="input-autocomplete"><slot/></input-foreignkey>',
                 mounted() {
                     this.$field = this.$parent.view.fields[this.$attrs.name];
                     this.$el.create(this.$field);
@@ -6412,6 +6491,27 @@ var Katrid;
                     modelValue: function (value) {
                         if (value !== this.$el.selectedItem)
                             this.$el.selectedItem = value;
+                    }
+                }
+            });
+            Katrid.component('field-tags', {
+                props: ['modelValue'],
+                template: '<input-foreignkey class="input-autocomplete"><slot/></input-foreignkey>',
+                mounted() {
+                    this.$field = this.$parent.view.fields[this.$attrs.name];
+                    this.$el.multiple = true;
+                    this.$el.create(this.$field);
+                    this.$el.addEventListener('change', (evt) => {
+                        console.log('on change', evt.detail.tags);
+                        this.$emit('update:modelValue', evt.detail.tags);
+                        console.log('on change 2', evt.detail.tags);
+                    });
+                },
+                watch: {
+                    modelValue: function (value) {
+                        if (Array.isArray(value))
+                            value = value.map(val => val);
+                        this.$el.tags = value;
                     }
                 }
             });
@@ -6472,12 +6572,19 @@ var Katrid;
                         this.control.classList.add('v-pristine');
                     }
                 }
+                reset() {
+                    if (this.dirty)
+                        this.dirty = false;
+                    if (this.touched)
+                        this.touched = false;
+                }
                 get touched() {
                     return this._touched;
                 }
                 set touched(value) {
-                    console.log('set touched');
                     this._touched = value;
+                    if (!this.control)
+                        return;
                     if (value) {
                         this.form.touched = true;
                         this.control.classList.remove('v-untouched');
@@ -6528,18 +6635,14 @@ var Katrid;
                     this.fields = {};
                     this.touched = false;
                     this.valid = true;
+                    this.dirty = false;
                     this._loading = false;
                 }
                 setFieldValue(field, value) {
                     let f = this.fields[field.name];
                     if (f)
                         f.dirty = true;
-                }
-                setTouched(value) {
-                    this.touched = value;
-                    if (!value) {
-                        Object.values(this.fields).forEach((field) => field.touched = false);
-                    }
+                    this.dirty = true;
                 }
                 setValid(value) {
                     this.valid = value;
@@ -6547,7 +6650,11 @@ var Katrid;
                         Object.values(this.fields).forEach(field => field.valid = true);
                 }
                 reset() {
-                    this.setTouched(false);
+                    if (this.dirty) {
+                        this.dirty = false;
+                        this.touched = false;
+                        Object.values(this.fields).forEach(field => field.reset());
+                    }
                 }
                 setLoading(value) {
                     this._loading = value;
@@ -6572,9 +6679,7 @@ var Katrid;
                     field.el = el;
                     field.control = el.querySelector('.form-control');
                     if (field.control) {
-                        field.control.addEventListener('focusin', () => {
-                            field.touched = true;
-                        });
+                        field.control.addEventListener('focusin', () => field.touched = true);
                         if (field.control.tagName === 'INPUT')
                             field.control.addEventListener('mouseup', () => field.control.select());
                     }
@@ -6599,7 +6704,6 @@ var Katrid;
 `;
                 grid.append(toolbar);
                 let viewInfo = field.views[field.viewMode];
-                console.log('view mode', field.viewMode);
                 if (field.viewMode === 'list') {
                     let renderer = new Forms.ListRenderer(viewInfo, { rowSelector: true, allowGrouping: false });
                     grid.setAttribute('field-name', field.name);
@@ -6813,7 +6917,6 @@ var Katrid;
                 renderField(fieldEl) {
                     let name = fieldEl.getAttribute('name');
                     if (name) {
-                        console.log(this.fields, name);
                         let fld = this.fields[name];
                         if (fld) {
                             fld.view = this;
@@ -7089,9 +7192,9 @@ var Katrid;
         <header class="content-container-heading"></header>
         <div class="page-sheet">
           <div class="content container">
-            <div class="card panel-default data-panel browsing"
+            <div class="form-sheet panel-default data-panel browsing"
                  v-bind:class="{ browsing: browsing, editing: dataSource.changing }">
-              <div class="card-body template-placeholder">
+              <div class="template-placeholder">
                 <a class="maximize-button" role="button" title="${_.gettext('Maximize')}"
                    onclick="$(this).closest('div.card.data-panel').toggleClass('box-fullscreen');$(this).find('i').toggleClass('fa-compress fa-expand')">
                   <i class=" fa fa-expand"></i>
@@ -7842,7 +7945,6 @@ var Katrid;
     };
     let fmtCharMap = { 'd': 'DD', 'm': 'MM', 'M': 'm', 'i': 'mm', 'H': 'HH' };
     function convertFormat(fmt) {
-        console.log('convert format', fmt);
         let escape = false;
         let res = '';
         for (let n = 0; n < fmt.length; n++) {
@@ -7856,7 +7958,6 @@ var Katrid;
         return res;
     }
     function expandFormats(fmts) {
-        console.log(fmts);
         fmts.shortDateFormat = convertFormat(fmts.SHORT_DATE_FORMAT);
         fmts.shortDateTimeFormat = convertFormat(fmts.SHORT_DATETIME_FORMAT);
         return fmts;
@@ -9658,10 +9759,23 @@ var Katrid;
                 }
             }
             Widgets.RadioField = RadioField;
+            class StatValue extends Widget {
+                formRender(view) {
+                    let label = document.createElement('div');
+                    label.classList.add('stat-value');
+                    label.innerText = `{{record.${this.field.name}}}`;
+                    return label;
+                }
+            }
+            Widgets.StatValue = StatValue;
+            Katrid.component('stat-button', {
+                template: '<button class="btn stat-button"><slot/></button>',
+            });
             Widgets.registry = {
                 StatusField,
                 RadioField,
                 radio: RadioField,
+                'stat-value': StatValue,
             };
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -13655,6 +13769,31 @@ var Katrid;
     }
     Katrid.Reports.Telegram = Telegram;
 })();
+var Katrid;
+(function (Katrid) {
+    var UI;
+    (function (UI) {
+        Katrid.directive('tooltip', {
+            mounted(el, binding) {
+            },
+            updated(el, binding) {
+                console.log(binding);
+                $(el).tooltip({
+                    container: 'body',
+                    trigger: 'hover',
+                    html: true,
+                    placement: 'left',
+                    title: () => {
+                        return binding.value;
+                    },
+                    delay: {
+                        show: 1000,
+                    }
+                });
+            }
+        });
+    })(UI = Katrid.UI || (Katrid.UI = {}));
+})(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
     var UI;
