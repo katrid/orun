@@ -2792,9 +2792,11 @@ var Katrid;
                 page = page || 1;
                 this._pageIndex = page;
                 let domain;
-                if (this.action && this.action.info)
+                if (this.action?.info)
                     domain = this.action.info.domain;
-                if (domain) {
+                if (this.where)
+                    domain = this.where;
+                else if (domain) {
                     domain = JSON.parse(domain);
                 }
                 if (!fields)
@@ -4507,7 +4509,7 @@ var Katrid;
                 setValue(record, value) {
                     if (value && value instanceof Array) {
                         let child = record.$record.dataSource.childByName(this.name);
-                        value.map((obj) => {
+                        value.map(obj => {
                             if (obj.action === 'CLEAR') {
                                 for (let rec of child.vm.records)
                                     rec.$record.delete();
@@ -7151,9 +7153,8 @@ var Katrid;
                         if (fld) {
                             fld.view = this;
                             fld.assign(fieldEl);
-                            if (fld.visible) {
+                            if (fld.visible)
                                 return fld.formCreate(this.element);
-                            }
                         }
                         else
                             console.error(`Field "${name}" not found`);
@@ -7178,6 +7179,8 @@ var Katrid;
                     form.setAttribute('autocomplete', 'off');
                     form.classList.add('row');
                     for (let child of form.querySelectorAll('field')) {
+                        if ((child.parentElement.tagName === 'FORM') && (child.parentElement !== form))
+                            continue;
                         if (child.hasAttribute('invisible'))
                             continue;
                         let newField = this.renderField(child);
@@ -7607,6 +7610,7 @@ var Katrid;
                     this.action.view = this;
                 }
                 renderTemplate(template) {
+                    console.log('row selector', this.rowSelector);
                     template.setAttribute('data-options', JSON.stringify({ rowSelector: this.rowSelector }));
                     let renderer = new Forms.ListRenderer(this.viewInfo);
                     let templ = Katrid.element(`<div class="content no-padding">
@@ -7628,12 +7632,17 @@ var Katrid;
             }
             Views.ListView = ListView;
             class ListViewDialog extends ListView {
-                constructor() {
-                    super(...arguments);
+                constructor(config) {
+                    super(config);
                     this.toolbarVisible = false;
                     this.rowSelector = false;
+                    if (config.rowSelector)
+                        this.rowSelector = config.rowSelector;
                 }
                 createActionView(content) {
+                    let result = '$result = this.selection[0]';
+                    if (this.rowSelector)
+                        result = '$result = this.selection';
                     let templ = $(`
     <action-view class="modal" tabindex="-1" role="dialog">
       <div class="modal-dialog modal-lg form-view ng-form search-more-dialog" role="document">
@@ -7650,7 +7659,7 @@ var Katrid;
             <div class="table-responsive"></div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" type="button" @click="$result = this.selection[0]" data-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary" type="button" @click="${result}" data-dismiss="modal">
               OK
             </button>
             <button type="button" class="btn btn-secondary" type="button" data-dismiss="modal">
@@ -7675,6 +7684,7 @@ var Katrid;
                             });
                         let dlg = new ListViewDialog({
                             caption: config.caption,
+                            rowSelector: config.multiple,
                             model, viewInfo: viewInfo.views.list,
                             recordClick(record) {
                                 this.unselectAll();
@@ -7688,6 +7698,7 @@ var Katrid;
                                 },
                             },
                         });
+                        dlg.dataSource.where = config.where;
                         dlg.renderTo();
                         dlg.dataSource.open();
                         let el = dlg.actionView;
