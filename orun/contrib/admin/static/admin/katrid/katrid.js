@@ -6177,6 +6177,10 @@ var Katrid;
                 }
                 this.innerHTML = `${prepend}<input class="form-field" autocomplete="nope" spellcheck="false"> <span class="caret"></span>${append}`;
                 this.input = this.querySelector('input');
+                this.addEventListener('click', evt => {
+                    this.input.focus();
+                    this.showMenu();
+                });
                 let caret = this.querySelector('.caret');
                 caret.addEventListener('click', evt => this.click());
                 this.input.type = 'text';
