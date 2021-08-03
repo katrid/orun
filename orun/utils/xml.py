@@ -3,11 +3,10 @@ from lxml import html as etree
 
 
 def _get_xml_field(parent):
-    if 'grid' in parent.nsmap:
-        # exit if it's inside grid
-        return
     for node in parent:
-        if node.tag == 'field':
+        if node.tag == 'form' and parent.tag == 'field':
+            return
+        elif node.tag == 'field':
             yield node
         else:
             for child in _get_xml_field(node):
