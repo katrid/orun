@@ -737,7 +737,12 @@ class Query:
             alias_list.append(alias)
         else:
             # The first occurrence of a table uses the table name directly.
-            alias = filtered_relation.alias if filtered_relation is not None else table_name
+            # SQL SERVER BUG FIX: table alias must be unique
+            if len(self.alias_map) > 1:
+                alias = '%s%d' % (self.alias_prefix, len(self.alias_map) + 1)
+            else:
+                alias = filtered_relation.alias if filtered_relation is not None else table_name
+            # alias = alias.replace('.', '_').replace('"', '')
             self.table_map[table_name] = [alias]
         self.alias_refcount[alias] = 1
         return alias, True
