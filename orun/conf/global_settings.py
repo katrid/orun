@@ -178,7 +178,9 @@ SERVER_EMAIL = 'root@localhost'
 
 # Database connection info. If left empty, will default to the dummy backend.
 DATABASES = {}
-MULTI_DB = False
+
+# Support for accent insensitive search
+ACCENT_INSENSITIVE = False
 
 # Classes used to implement DB routing behavior.
 DATABASE_ROUTERS = []
