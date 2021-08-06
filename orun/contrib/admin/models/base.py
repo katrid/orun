@@ -514,7 +514,7 @@ def _resolve_fk_search(field: models.Field):
                     name_fields.extend(_resolve_fk_search(f))
                 else:
                     name_fields.append(f.name)
-        return [f'{field.name}__{f}' for f in name_fields]
+        return [f'{field.name}__{f}__icontains' for f in name_fields]
     elif isinstance(field, models.CharField):
         if field.full_text_search:
             return [f'{field.name}__search']
