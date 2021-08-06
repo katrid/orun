@@ -545,7 +545,7 @@ class Model(metaclass=ModelBase):
     def __str__(self):
         name_fields = self._meta.get_name_fields()
         if name_fields:
-            return ' - '.join([str(f.value_to_json(getattr(self, f.name))) for f in name_fields])
+            return ' - '.join([str(val) if isinstance(val := getattr(self, f.name), Model) else str(f.value_to_json(val)) for f in name_fields])
         return '%s object (%s)' % (self._meta.name, self.pk)
 
     def __eq__(self, other):
@@ -1882,6 +1882,37 @@ class Model(metaclass=ModelBase):
     def __iter__(self):
         """Emulate the Recordset behavior"""
         yield self
+
+    # internal triggers
+    def before_flush(self, old, update):
+        pass
+
+    def after_flush(self, old, update):
+        pass
+
+    def before_save(self, old, update):
+        pass
+
+    def after_save(self, old, update):
+        pass
+
+    def before_insert(self, modified_fields):
+        pass
+
+    def after_insert(self, modified_fields):
+        pass
+
+    def before_update(self, old, modified_fields):
+        pass
+
+    def after_update(self, old, modified_fields):
+        pass
+
+    def before_delete(self):
+        pass
+
+    def after_delete(self):
+        pass
 
 
 ############################################
