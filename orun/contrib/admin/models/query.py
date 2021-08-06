@@ -73,7 +73,7 @@ class Query(models.Model):
         return eval(self.context, ctx)
 
     @api.classmethod
-    def read(cls, id, with_description=False, as_dict=True, fields=None, **kwargs):
+    def read(cls, id, with_description=False, as_dict=False, fields=None, **kwargs):
         q = cls.objects.get(pk=id)
         params = q.context
         if params:
