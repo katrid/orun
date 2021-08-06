@@ -512,9 +512,11 @@ def _resolve_fk_search(field: models.Field):
             for f in rel_model._meta.get_name_fields():
                 if isinstance(f, models.ForeignKey):
                     name_fields.extend(_resolve_fk_search(f))
+                elif isinstance(f, models.CharField):
+                    name_fields.append(f.name + '__icontains')
                 else:
                     name_fields.append(f.name)
-        return [f'{field.name}__{f}__icontains' for f in name_fields]
+        return [f'{field.name}__{f}' for f in name_fields]
     elif isinstance(field, models.CharField):
         if field.full_text_search:
             return [f'{field.name}__search']
