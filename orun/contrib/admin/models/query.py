@@ -107,10 +107,16 @@ class Query(models.Model):
         else:
             fields = [f[0] for f in desc]
 
-        return {
-            'fields': fields,
-            'data': [[float(col) if isinstance(col, Decimal) else col for col in row] for row in cur.fetchall()],
-        }
+        if as_dict:
+            return {
+                'fields': fields,
+                'data': [{fields[i]: float(col) if isinstance(col, Decimal) else col for i, col in enumerate(row)} for row in cur.fetchall()],
+            }
+        else:
+            return {
+                'fields': fields,
+                'data': [[float(col) if isinstance(col, Decimal) else col for col in row] for row in cur.fetchall()],
+            }
 
     @api.classmethod
     def list_all(cls):

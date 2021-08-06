@@ -1447,9 +1447,6 @@ var Katrid;
     })(Core = Katrid.Core || (Katrid.Core = {}));
 })(Katrid || (Katrid = {}));
 (function (Katrid) {
-    window.addEventListener('error', function (e) {
-        console.log('intercept error', e);
-    }, true);
     window.addEventListener('onunhandledrejection', function (e) {
         console.log('intercept error', e);
     }, true);
@@ -8282,9 +8279,10 @@ var Katrid;
                 Search.SearchObject = SearchObject;
                 class SearchResult {
                     constructor(field, value) {
+                        console.log('search result', field, value);
                         this.field = field;
-                        this.value = value;
-                        this.text = value[1];
+                        this.value = [value.id, value.text];
+                        this.text = value.text;
                         this.indent = true;
                     }
                     select() {
@@ -8332,7 +8330,7 @@ var Katrid;
                             if (index > -1) {
                                 for (let obj of this.children) {
                                     index++;
-                                    this.view.$items.splice(index, 0, new SearchResult(this, obj));
+                                    this.view.availableItems.splice(index, 0, new SearchResult(this, obj));
                                 }
                             }
                         })
@@ -9299,7 +9297,6 @@ var Katrid;
                                     if (this.searchText === '') {
                                         this.facets[this.facets.length - 1].clear();
                                         this.facets.splice(this.facets.length - 1, 1).map(facet => facet.clear());
-                                        this.$search.update();
                                     }
                                     break;
                             }
