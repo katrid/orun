@@ -104,6 +104,21 @@ class AppConfig:
                         app_config_class = app_configs[0][1]
                         app_config_name = '%s.%s' % (mod_path, app_configs[0][0])
 
+            # If app_module specifies a default_app_config, follow the link.
+            # default_app_config is deprecated, but still takes over the
+            # automatic detection for backwards compatibility during the
+            # deprecation period.
+            try:
+                new_entry = app_module.default_app_config
+            except AttributeError:
+                # Use the default app config class if we didn't find anything.
+                if app_config_class is None:
+                    app_config_class = cls
+                    app_name = entry
+            else:
+                entry = new_entry
+                app_config_class = None
+
         # If import_string succeeds, entry is an app config class.
         if app_config_class is None:
             try:
