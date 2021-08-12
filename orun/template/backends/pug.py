@@ -38,7 +38,7 @@ class Node:
     def tostring(self):
         html = f'<{self.tag}'
         if self.attrib:
-            html += ' ' + ' '.join([f'{k}={v}' if v else k for k, v in self.attrib.items()])
+            html += ' ' + ' '.join([f'{k}="{v}"' if v is not None else k for k, v in self.attrib.items()])
         if self.children:
             html += '>' + ''.join([el.tostring() for el in self.children])
             html += f'</{self.tag}>'
@@ -48,6 +48,17 @@ class Node:
 
     def __iter__(self):
         return iter(self.children)
+
+    def __len__(self):
+        return len(self.children)
+
+    def __bool__(self):
+        return True
+
+    def find(self, tag):
+        for child in self:
+            if child.tag == tag:
+                return child
 
 
 class Element(Node):
@@ -138,7 +149,7 @@ class Parser:
                 for k, v in re_attr.findall(attrs):
                     if v:
                         v = v[1:-1]
-                    node.attrib[k] = v or None
+                    node.attrib[k] = None if v is None else v
             # inline text
             if match := re_inlinetext.match(line):
                 # read text

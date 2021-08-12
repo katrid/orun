@@ -167,6 +167,7 @@ def jsonrpc(fn):
                 }
             })
         except AssertionError as e:
+            raise
             return JsonResponse({
                 'jsonrpc': '2.0',
                 'id': _id,
@@ -174,6 +175,8 @@ def jsonrpc(fn):
                     'message': str(e),
                 }
             })
+        except:
+            raise
 
     return wrapped
 

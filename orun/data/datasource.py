@@ -77,15 +77,18 @@ class DataSource:
         select = []
         if values is None:
             values = {}
-        for k, v in self.params.items():
-            vars.append(f'declare @{k} {self._get_sqltype(v)}')
-            params.append(values.get(k, self._params[k].value))
-            select.append(f'@{k} = ?')
         sql = ''
-        if vars:
-            sql = '\n'.join(vars)
-            sql += f'''\nselect {",".join(select)}\n'''
-        sql += self.sql
+        if connection.vendor == 'mssql':
+            for k, v in self.params.items():
+                vars.append(f'declare @{k} {self._get_sqltype(v)}')
+                params.append(values.get(k, self._params[k].value))
+                select.append(f'@{k} = ?')
+            if vars:
+                sql = '\n'.join(vars)
+                sql += f'''\nselect {",".join(select)}\n'''
+            sql += self.sql.replace(':', '@')
+        else:
+            sql += self.sql
         cur = connection.cursor()
         cur.execute(sql, params)
         self.fields = cur.cursor.description

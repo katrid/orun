@@ -3,6 +3,7 @@ import os
 import uuid
 from collections import defaultdict
 from jinja2 import Environment
+from lxml import etree
 
 from orun import api
 from orun.apps import apps
@@ -48,15 +49,16 @@ class ReportAction(Action):
                             data['fields'] = model.get_fields_info(xml)
                     data['content'] = doc
             elif rep_type == 'pug':
-                templ = get_template(self.view.template_name)
-                with open(templ.filename, 'r', encoding='utf-8') as f:
-                    params = etree.tostring(engine.extract_params(f.read()))
+                templ = loader.find_template(self.view.template_name)
+                with open(templ, 'r', encoding='utf-8') as f:
+                    params = engine.extract_params(f.read())
                 if params is not None:
-                    data['content'] = params
-
-        if rep_type != 'jinja2' and rep_type != 'pug':
-            from lxml import etree
-            xml = etree.fromstring(self.view._get_content({}))
+                    print(params.tostring())
+                    data['content'] = params.tostring()
+        else:
+            xml = self.view._get_content({})
+            if isinstance(xml, str):
+                xml = etree.fromstring(xml)
             # xml = self.view.get_xml(model)
             if model:
                 data['fields'] = model.get_fields_info(xml=xml)
@@ -74,8 +76,8 @@ class ReportAction(Action):
                     #         fld = model._meta.fields[field.attrib['name']]
                 xml = params
                 data['content'] = etree.tostring(xml, encoding='utf-8').decode('utf-8')
-            else:
-                data['content'] = '<params/>'
+        if 'content' not in data:
+            data['content'] = '<params/>'
         return data
 
     def _export_report(self, format='pdf', params=None, where=None):
