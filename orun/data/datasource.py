@@ -95,6 +95,7 @@ class DataSource:
         else:
             sql += self.sql
         cur = connection.cursor()
+        print(sql, params)
         cur.execute(sql, params)
         self.fields = cur.cursor.description
         rows = cur.fetchall()
