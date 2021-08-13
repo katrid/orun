@@ -14,6 +14,7 @@ from orun.reports.data import Query
 from orun.db import models
 from orun.template import loader
 from orun.utils.encoding import force_str
+from orun.conf import settings
 
 
 def create_datasource(sql):
@@ -90,7 +91,7 @@ class HtmlEngine:
 
     def to_pdf(self, html_path, pdf_path, report_footer):
         with open(pdf_path, 'wb') as pdf:
-            pdf.write(print_to_pdf(self.loop, pathlib.Path(html_path).as_uri(), report_footer=report_footer))
+            pdf.write(print_to_pdf(self.loop, pathlib.Path(html_path).as_uri(), report_footer=report_footer, host=getattr(settings, 'CHROME_REPORT_SERVER', 'localhost')))
         return True
 
 
