@@ -1,3 +1,4 @@
+import re
 import decimal
 import datetime
 from orun.db import connection
@@ -88,6 +89,8 @@ class DataSource:
                 sql = '\n'.join(vars)
                 sql += f'''\nselect {",".join(select)}\n'''
             sql += self.sql.replace(':', '@')
+        elif connection.vendor == 'postgresql':
+            sql = re.sub(r':(\w+?)', '%(\1)s', self.sql, )
         else:
             sql += self.sql
         cur = connection.cursor()
