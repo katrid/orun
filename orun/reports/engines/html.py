@@ -91,7 +91,6 @@ class HtmlEngine:
 
     def to_pdf(self, html_path, pdf_path, report_footer):
         with open(pdf_path, 'wb') as pdf:
-            html_path = 'e:' + html_path
             pdf.write(print_to_pdf(self.loop, pathlib.Path(html_path).as_uri(), report_footer=report_footer, host=getattr(settings, 'CHROME_REPORT_SERVER', 'localhost')))
         return True
 
