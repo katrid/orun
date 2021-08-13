@@ -79,6 +79,7 @@ class DataSource:
             values = {}
         sql = ''
         if connection.vendor == 'mssql':
+            vars.append('SET DATEFORMAT ymd')
             for k, v in self.params.items():
                 vars.append(f'declare @{k} {self._get_sqltype(v)}')
                 params.append(values.get(k, self._params[k].value))
