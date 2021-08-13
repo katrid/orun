@@ -90,7 +90,8 @@ class DataSource:
                 sql += f'''\nselect {",".join(select)}\n'''
             sql += self.sql.replace(':', '@')
         elif connection.vendor == 'postgresql':
-            sql = re.sub(r':(\w+?)', '%(\1)s', self.sql, )
+            sql = re.sub(r':(\w+)', r'%(\1)s', self.sql, )
+            params = {k: self._params[k].value for k, v in self.params.items()}
         else:
             sql += self.sql
         cur = connection.cursor()
