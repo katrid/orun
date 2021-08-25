@@ -3,7 +3,6 @@ import os
 import uuid
 from collections import defaultdict
 from jinja2 import Environment
-from lxml import etree
 
 from orun import api
 from orun.apps import apps
@@ -26,6 +25,7 @@ class ReportAction(Action):
         name = 'ui.action.report'
 
     def to_dict(self, *args, **kwargs):
+        from lxml import etree
         data = super(ReportAction, self).to_dict(*args, **kwargs)
         model = None
         if self.model:
@@ -55,27 +55,32 @@ class ReportAction(Action):
                 if params is not None:
                     print(params.tostring())
                     data['content'] = params.tostring()
-        else:
-            xml = self.view._get_content({})
-            if isinstance(xml, str):
-                xml = etree.fromstring(xml)
-            # xml = self.view.get_xml(model)
-            if model:
-                data['fields'] = model.get_fields_info(xml=xml)
-            params = xml.find('params')
-            if params is not None:
-                if xml.tag == 'report' and 'model' in xml.attrib:
-                    params.attrib['model'] = xml.attrib['model']
-                    if not model:
-                        model = apps[xml.attrib['model']]
-                        data['fields'] = model.get_fields_info(params)
+            else:
+                if rep_type == 'xml':
+                    templ = loader.find_template(self.view.template_name)
+                    with open(templ, 'r', encoding='utf-8') as f:
+                        xml = f.read()
+                else:
+                    xml = self.view._get_content({})
+                if isinstance(xml, str):
+                    xml = etree.fromstring(xml)
+                # xml = self.view.get_xml(model)
+                if model:
+                    data['fields'] = model.get_fields_info(xml=xml)
+                params = xml.find('params')
+                if params is not None:
+                    if xml.tag == 'report' and 'model' in xml.attrib:
+                        params.attrib['model'] = xml.attrib['model']
+                        if not model:
+                            model = apps[xml.attrib['model']]
+                            data['fields'] = model.get_fields_info(params)
 
-                    # model = app[model]
-                    # for field in params:
-                    #     if field.tag == 'field' and 'name' in field.attrib:
-                    #         fld = model._meta.fields[field.attrib['name']]
-                xml = params
-                data['content'] = etree.tostring(xml, encoding='utf-8').decode('utf-8')
+                        # model = app[model]
+                        # for field in params:
+                        #     if field.tag == 'field' and 'name' in field.attrib:
+                        #         fld = model._meta.fields[field.attrib['name']]
+                    xml = params
+                    data['content'] = etree.tostring(xml, encoding='utf-8').decode('utf-8')
         if 'content' not in data:
             data['content'] = '<params/>'
         return data
