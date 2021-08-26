@@ -1,3 +1,4 @@
+import os
 import time
 from collections import OrderedDict
 from importlib import import_module
@@ -181,3 +182,19 @@ class Command(BaseCommand):
                     for model in model_list:
                         if model._meta.can_migrate(connection):
                             editor.sync_model(model)
+
+            # sync DDL statements on sql.py files
+            DDL = connection.ops.vsql_compiler()
+            for app_name in manifest:
+                app = apps.app_configs[app_name]
+                ddl_file = os.path.join(app.path, 'sql.py')
+                if os.path.isfile(ddl_file):
+                    ddl = DDL(connection.ops)
+                    with open(ddl_file, 'rb') as f:
+                        for cmd in ddl.generate_sql(f.read()):
+                            print(cmd)
+                            try:
+                                editor.execute(cmd)
+                            except:
+                                print('Error loading file:', ddl_file)
+                                raise

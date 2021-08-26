@@ -32,6 +32,7 @@ from orun.db.models.fields.related import (  # isort:skip
     ForeignKey, ForeignObject, OneToOneField, ManyToManyField, OneToManyField,
     ManyToOneRel, ManyToManyRel, OneToOneRel, OneToManyRel,
 )
+from .vsql import From
 
 
 __all__ = aggregates_all + constraints_all + fields_all + indexes_all

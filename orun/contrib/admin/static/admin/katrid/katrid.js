@@ -3075,7 +3075,10 @@ var Katrid;
                     let _get = () => {
                         let controller = new AbortController();
                         this.pendingPromises.push(controller);
-                        return this.model.getById(id, { signal: controller.signal })
+                        let fields;
+                        if (this.fields)
+                            fields = Object.keys(this.fields);
+                        return this.model.getById(id, { fields, signal: controller.signal })
                             .catch((err) => {
                             if (err.name === 'AbortError')
                                 return reject();
@@ -3088,7 +3091,13 @@ var Katrid;
                                 this.state = DataSourceState.browsing;
                             else if (this.state === DataSourceState.inserting)
                                 return;
-                            this.record = res.data[0];
+                            console.log(res);
+                            if (Array.isArray(res.data))
+                                this.record = res.data[0];
+                            else if (res.data)
+                                this.record = res.data;
+                            else
+                                return;
                             this._record.$record.$loaded = true;
                             if (index !== false)
                                 this._records[index] = this.record;
@@ -5115,10 +5124,11 @@ var Katrid;
                             html += `<li class="breadcrumb-item"><a href="#" ng-click="action.backTo(0, 0)">${h.info.display_name}</a></li>`;
                         i++;
                         if ((h instanceof Katrid.Actions.WindowAction) && (Katrid.webApp.actionManager.length > i && h.viewType === 'form'))
-                            html += `<li class="breadcrumb-item"><a href="#" ng-click="action.backTo(${i - 1}, 'form')">${h.scope.record.display_name}</a></li>`;
+                            html += `<li class="breadcrumb-item"><a href="#" ng-click="action.backTo(${i - 1}, 'form')">${h.scope.record.record_name}</a></li>`;
                     }
                     if (this.type === 'form')
-                        html += `<li class="breadcrumb-item">{{ self.display_name }}</li>`;
+                        html += `<li class="breadcrumb-item">{{ self }}</li>`;
+                    console.log(html);
                     return html + '</ol>';
                 }
                 render() {
@@ -10692,7 +10702,8 @@ var Katrid;
                 return this.post('api_delete', { kwargs: { ids: id } });
             }
             getById(id, config) {
-                return this.post('api_get', { args: [id] }, null, config);
+                let fields = config?.fields;
+                return this.post('api_get', { args: [id, fields] }, null, config);
             }
             getDefaults(kwargs, config) {
                 return this.post('api_get_defaults', { kwargs }, null, config);

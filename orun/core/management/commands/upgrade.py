@@ -23,7 +23,7 @@ class Command(BaseCommand):
 
     def _load_file(self, app_config, filename, **options):
         activate(settings.LANGUAGE_CODE)
-        print('Loading fixture: ', filename)
+        print('Loading fixture: ', app_config.schema, filename)
         load_fixture(app_config, filename, **options)
 
     def handle(self, schema, **options):

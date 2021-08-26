@@ -17,6 +17,8 @@ class BaseDatabaseOperations:
     performs ordering or calculates the ID of a recently-inserted row.
     """
     compiler_module = "orun.db.models.sql.compiler"
+    dialect_module = "orun.db.backends.base.dialect"
+    vsql_compiler_module = "orun.db.backends.base.vsql"
 
     # Integer field safe ranges by `internal_type` as documented
     # in docs/ref/models/fields.txt.
@@ -52,6 +54,8 @@ class BaseDatabaseOperations:
     def __init__(self, connection):
         self.connection = connection
         self._cache = None
+        self._dialect = None
+        self._vsql_cache = None
 
     def autoinc_sql(self, table, column):
         """
@@ -329,6 +333,17 @@ class BaseDatabaseOperations:
         if self._cache is None:
             self._cache = import_module(self.compiler_module)
         return getattr(self._cache, compiler_name)
+
+    def vsql_compiler(self):
+        if self._vsql_cache is None:
+            self._vsql_cache = import_module(self.vsql_compiler_module)
+        return self._vsql_cache.Compiler
+
+    @property
+    def dialect(self):
+        if self._dialect is None:
+            self._dialect = import_module(self.dialect_module)
+        return self._dialect.Dialect
 
     def quote_name(self, name):
         """

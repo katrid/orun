@@ -73,8 +73,6 @@ class AdminModel(models.Model, helper=True):
             if pk not in fields:
                 fields.append(pk)
             # load only selected fields
-            if fields:
-                qs = qs.only(*fields)
         elif cls._meta.deferred_fields:
             qs.defer(cls._meta.deferred_fields)
 
@@ -109,6 +107,8 @@ class AdminModel(models.Model, helper=True):
         # filter active records only
         if cls._meta.active_field is not None:
             qs = qs.filter(**{cls._meta.active_field: True})
+        if fields:
+            qs = qs.only(*fields)
         return qs
 
     def _api_format_choice(self, format=None, **context):
@@ -306,9 +306,10 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def api_get(cls, id, fields=None):
         if id:
-            obj = cls._api_search().get(pk=id)
-            obj.__serialize__ = True
-            return obj
+            if fields and 'record_name' not in fields:
+                fields.append('record_name')
+            obj = cls._api_search(fields=fields).get(pk=id)
+            return {'data': obj.to_dict(fields=fields)}
         else:
             raise cls.DoesNotExist()
 

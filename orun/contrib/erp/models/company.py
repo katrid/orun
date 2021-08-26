@@ -26,6 +26,7 @@ class Company(Partner):
     #users = models.ManyToManyField('auth.user', through=UserCompany)
 
     class Meta:
+        name_field = 'name'
         name = 'res.company'
         verbose_name = _('Company')
         verbose_name_plural = _('Companies')

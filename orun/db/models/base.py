@@ -190,7 +190,6 @@ class ModelBase(type):
                 if parent is not Model:
                     parent._meta.derived_models.append(new_class)
 
-
         # Collect the parent links for multi-table inheritance.
         parent_links = {}
         for base in reversed([new_class] + parents):
@@ -321,7 +320,6 @@ class ModelBase(type):
             # attr_meta.abstract = False
             # new_class.Meta = attr_meta
             return new_class
-
 
         app_config.models.append(new_class)
         apps.register_model(new_class)
@@ -545,7 +543,9 @@ class Model(metaclass=ModelBase):
     def __str__(self):
         name_fields = self._meta.get_name_fields()
         if name_fields:
-            return ' - '.join([str(val) if isinstance(val := getattr(self, f.name), Model) else str(f.value_to_json(val)) for f in name_fields])
+            return ' - '.join(
+                [str(val) if isinstance(val := getattr(self, f.name), Model) else str(f.value_to_json(val)) for f in
+                 name_fields])
         return '%s object (%s)' % (self._meta.name, self.pk)
 
     def __eq__(self, other):
@@ -580,8 +580,8 @@ class Model(metaclass=ModelBase):
             current_version = get_version()
             if current_version != pickled_version:
                 msg = (
-                    "Pickled model instance's Orun version %s does not match "
-                    "the current version %s." % (pickled_version, current_version)
+                        "Pickled model instance's Orun version %s does not match "
+                        "the current version %s." % (pickled_version, current_version)
                 )
         else:
             msg = "Pickled model instance's Orun version is not specified."
@@ -775,6 +775,7 @@ class Model(metaclass=ModelBase):
 
         self.save_base(using=using, force_insert=force_insert,
                        force_update=force_update, update_fields=update_fields)
+
     save.alters_data = True
 
     def save_base(self, raw=False, force_insert=False,
@@ -919,15 +920,15 @@ class Model(metaclass=ModelBase):
             return update_fields is not None or filtered.exists()
         if self._meta.select_on_save and not forced_update:
             return (
-                filtered.exists() and
-                # It may happen that the object is deleted from the DB right after
-                # this check, causing the subsequent UPDATE to return zero matching
-                # rows. The same result can occur in some rare cases when the
-                # database returns zero despite the UPDATE being executed
-                # successfully (a row is matched and updated). In order to
-                # distinguish these two cases, the object's existence in the
-                # database is again checked for if the UPDATE query returns 0.
-                (filtered._update(values) > 0 or filtered.exists())
+                    filtered.exists() and
+                    # It may happen that the object is deleted from the DB right after
+                    # this check, causing the subsequent UPDATE to return zero matching
+                    # rows. The same result can occur in some rare cases when the
+                    # database returns zero despite the UPDATE being executed
+                    # successfully (a row is matched and updated). In order to
+                    # distinguish these two cases, the object's existence in the
+                    # database is again checked for if the UPDATE query returns 0.
+                    (filtered._update(values) > 0 or filtered.exists())
             )
         return filtered._update(values) > 0
 
@@ -936,21 +937,29 @@ class Model(metaclass=ModelBase):
         Do an INSERT. If update_pk is defined then this method should return
         the new pk for the model.
         """
-        return manager._insert([self], fields=fields, return_id=update_pk,
-                               using=using, raw=raw)
+        return manager._insert([self], fields=fields, return_id=update_pk, using=using, raw=raw)
 
     def delete(self, using=None, keep_parents=False):
+        self._before_delete()
         using = using or router.db_for_write(self.__class__, instance=self)
         assert self.pk is not None, (
-            "%s object can't be deleted because its %s attribute is set to None." %
-            (self._meta.object_name, self._meta.pk.attname)
+                "%s object can't be deleted because its %s attribute is set to None." %
+                (self._meta.object_name, self._meta.pk.attname)
         )
 
         collector = Collector(using=using)
         collector.collect([self], keep_parents=keep_parents)
-        return collector.delete()
+        ret = collector.delete()
+        self._after_delete()
+        return ret
 
     delete.alters_data = True
+
+    def _before_delete(self):
+        pass
+
+    def _after_delete(self):
+        pass
 
     def _get_FIELD_display(self, field):
         value = getattr(self, field.attname)
@@ -1813,12 +1822,13 @@ class Model(metaclass=ModelBase):
                     v = v or []
                     if v:
                         v = list(
-                            child.remote_field.model.objects.db_manager(using=kwargs.get('using', DEFAULT_DB_ALIAS)).only('pk').filter(
+                            child.remote_field.model.objects.db_manager(
+                                using=kwargs.get('using', DEFAULT_DB_ALIAS)).only('pk').filter(
                                 **{'%s__in' % child.remote_field.model._meta.pk.name: v}
                             )
                         )
                     getattr(instance, child.name).set(v)
-                    #setattr(instance, child.name, v)
+                    # setattr(instance, child.name, v)
                 else:
                     child.set(instance, v)
             except ValidationError as e:
@@ -1845,6 +1855,8 @@ class Model(metaclass=ModelBase):
             if exclude and f.name in exclude:
                 continue
             data[f.name] = f.value_to_json(getattr(self, f.name, None))
+        if fields is None or 'record_name' in fields:
+            data['record_name'] = str(self)
         if 'id' not in data:
             data['id'] = self.pk
         return data
@@ -1951,6 +1963,7 @@ def make_foreign_order_accessors(model, related_model):
         'set_%s_order' % model.__name__.lower(),
         partialmethod(method_set_order, model)
     )
+
 
 ########
 # MISC #

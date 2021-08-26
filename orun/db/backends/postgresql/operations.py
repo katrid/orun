@@ -6,6 +6,7 @@ from orun.db.backends.base.operations import BaseDatabaseOperations
 
 
 class DatabaseOperations(BaseDatabaseOperations):
+    vsql_compiler_module = "orun.db.backends.postgresql.vsql"
     cast_char_field_without_max_length = 'varchar'
     explain_prefix = 'EXPLAIN'
     cast_data_types = {

@@ -6,6 +6,8 @@ from orun.db.backends.base.operations import BaseDatabaseOperations
 
 class DatabaseOperations(BaseDatabaseOperations):
     compiler_module = "orun.db.backends.mssql.compiler"
+    dialect_module = "orun.db.backends.mssql.dialect"
+    vsql_compiler_module = "orun.db.backends.mssql.vsql"
 
     cast_char_field_without_max_length = 'varchar(max)'
     explain_prefix = 'EXPLAIN'
