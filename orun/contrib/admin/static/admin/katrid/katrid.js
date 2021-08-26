@@ -273,9 +273,17 @@ var Katrid;
                 }
                 await action.execute();
                 await action.onHashChange(params);
+                return action;
             }
         }
         Actions.ActionManager = ActionManager;
+        function goto(actionId, config) {
+            let params = { action: actionId };
+            if (config)
+                Object.assign(params, config);
+            return Katrid.webApp.actionManager.onHashChange(params, false);
+        }
+        Actions.goto = goto;
         Actions.registry[UrlAction.actionType] = UrlAction;
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
@@ -797,6 +805,9 @@ var Katrid;
                     if (res.tag === 'refresh')
                         this.view.refresh();
                     else if (res.tag == 'new') {
+                        if (res.action) {
+                            Katrid.Actions.goto(res.action, { view_type: 'form' });
+                        }
                         this.dataSource.insert(true, res.values);
                     }
                     else if (res.type) {
@@ -3145,13 +3156,15 @@ var Katrid;
                 this.setValues(defaults);
                 return this.record;
             }
-            setValues(values) {
+            setValues(values, record) {
+                if (!record)
+                    record = this.record;
                 Object.entries(values).forEach(([k, v]) => {
                     let fld = this.fields[k];
                     if (fld)
-                        fld.setValue(this.record, v);
+                        fld.setValue(record, v);
                     else
-                        this.record[k] = v;
+                        record[k] = v;
                 });
             }
             edit() {
@@ -3276,9 +3289,10 @@ var Katrid;
             addRecord(rec) {
                 let scope = this.vm;
                 let record = Katrid.Data.createRecord(null, this);
-                for (let [k, v] of Object.entries(rec))
-                    record[k] = v;
                 scope.records.push(record);
+                this._record = record;
+                this.setValues(rec);
+                this._record = null;
                 this.parent.record.$record.addChild(record.$record);
             }
             async expandGroup(index, row) {
@@ -4504,6 +4518,7 @@ var Katrid;
                         this.pasteAllowed = true;
                 }
                 setValue(record, value) {
+                    console.log('parse o2m', this, value);
                     if (value && value instanceof Array) {
                         let child = record.$record.dataSource.childByName(this.name);
                         value.map(obj => {
@@ -7380,7 +7395,12 @@ var Katrid;
                         if (res.tag === 'refresh')
                             this.refresh();
                         else if (res.tag == 'new') {
-                            this.dataSource.insert(true, res.values);
+                            if (res.action) {
+                                let action = await Katrid.Actions.goto(res.action, { view_type: 'form' });
+                                action.view.dataSource.insert(true, res.values);
+                            }
+                            else
+                                this.dataSource.insert(true, res.values);
                         }
                         else if (res.type) {
                             const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
