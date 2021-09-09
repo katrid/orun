@@ -10,6 +10,7 @@ import functools
 import inspect
 from collections import namedtuple
 
+from orun.core.exceptions import FieldError
 from orun.db.models.constants import LOOKUP_SEP
 from orun.db.models.fields.mixins import FieldCacheMixin
 from orun.utils import tree
@@ -20,29 +21,10 @@ from orun.utils import tree
 PathInfo = namedtuple('PathInfo', 'from_opts to_opts target_fields join_field m2m direct filtered_relation')
 
 
-class InvalidQuery(Exception):
-    """The query passed to raw() isn't a safe query to use with raw()."""
-    pass
-
-
 def subclasses(cls):
     yield cls
     for subclass in cls.__subclasses__():
         yield from subclasses(subclass)
-
-
-class QueryWrapper:
-    """
-    A type that indicates the contents are an SQL fragment and the associate
-    parameters. Can be used to pass opaque data to a where-clause, for example.
-    """
-    contains_aggregate = False
-
-    def __init__(self, sql, params):
-        self.data = sql, list(params)
-
-    def as_sql(self, compiler=None, connection=None):
-        return self.data
 
 
 class Q(tree.Node):
@@ -57,21 +39,17 @@ class Q(tree.Node):
     conditional = True
 
     def __init__(self, *args, _connector=None, _negated=False, **kwargs):
-        if args and isinstance(args[0], (int, str)):
-            kwargs['pk'] = args[0]
-            args = args[1:]
         super().__init__(children=[*args, *sorted(kwargs.items())], connector=_connector, negated=_negated)
 
     def _combine(self, other, conn):
-        if not isinstance(other, Q):
+        if not(isinstance(other, Q) or getattr(other, 'conditional', False) is True):
             raise TypeError(other)
 
-        # If the other Q() is empty, ignore it and just use `self`.
-        if not other:
-            return copy.deepcopy(self)
-        # Or if this Q is empty, ignore it and just use `other`.
-        elif not self:
-            return copy.deepcopy(other)
+        if not self:
+            return other.copy() if hasattr(other, 'copy') else copy.copy(other)
+        elif isinstance(other, Q) and not other:
+            _, args, kwargs = self.deconstruct()
+            return type(self)(*args, **kwargs)
 
         obj = type(self)()
         obj.connector = conn
@@ -94,7 +72,10 @@ class Q(tree.Node):
     def resolve_expression(self, query=None, allow_joins=True, reuse=None, summarize=False, for_save=False):
         # We must promote any new joins to left outer joins so that when Q is
         # used as an expression, rows aren't filtered due to joins.
-        clause, joins = query._add_q(self, reuse, allow_joins=allow_joins, split_subq=False)
+        clause, joins = query._add_q(
+            self, reuse, allow_joins=allow_joins, split_subq=False,
+            check_filterable=False,
+        )
         query.promote_joins(joins)
         return clause
 
@@ -102,14 +83,10 @@ class Q(tree.Node):
         path = '%s.%s' % (self.__class__.__module__, self.__class__.__name__)
         if path.startswith('orun.db.models.query_utils'):
             path = path.replace('orun.db.models.query_utils', 'orun.db.models')
-        args, kwargs = (), {}
-        if len(self.children) == 1 and not isinstance(self.children[0], Q):
-            child = self.children[0]
-            kwargs = {child[0]: child[1]}
-        else:
-            args = tuple(self.children)
-            if self.connector != self.default:
-                kwargs = {'_connector': self.connector}
+        args = tuple(self.children)
+        kwargs = {}
+        if self.connector != self.default:
+            kwargs['_connector'] = self.connector
         if self.negated:
             kwargs['_negated'] = True
         return path, args, kwargs
@@ -163,8 +140,37 @@ class FieldComparator:
     def iendswith(self, other):
         return Q(**{f'{self.field_name}__iendswith': other})
 
+    def __add__(self, other):
+        from ast import Add
+        return BinOp(self, Add, other)
+
     def __str__(self):
         return self.field_name
+
+
+class BinOp(FieldComparator):
+    def __init__(self, left, op, right):
+        self.left = left
+        self.op = op
+        self.right = right
+
+    def as_sql(self, col, compiler, connection):
+        if isinstance(self.left, BinOp):
+            left = self.left.as_sql(col, compiler, connection)
+        else:
+            alias, column = col.alias, self.left.field.column
+            identifiers = (alias, column) if alias else (column,)
+            left = '.'.join(map(compiler.quote_name_unless_alias, identifiers))
+        if isinstance(self.right, BinOp):
+            right = self.right.as_sql(col, compiler, connection)
+        elif isinstance(self.right, str):
+            right = f"'{self.right}'"
+        else:
+            alias = col.alias
+            identifiers = (alias, self.right.field.column)
+            right = '.'.join(map(compiler.quote_name_unless_alias, identifiers))
+        op = '||'
+        return f'({left} {op} {right})'
 
 
 class DeferredAttribute(FieldComparator):
@@ -172,10 +178,8 @@ class DeferredAttribute(FieldComparator):
     A wrapper for a deferred-loading field. When the value is read from this
     object the first time, the query is executed.
     """
-
-    def __init__(self, field, field_name):
+    def __init__(self, field):
         self.field = field
-        self.field_name = field_name
 
     def __get__(self, instance, cls=None):
         """
@@ -185,31 +189,31 @@ class DeferredAttribute(FieldComparator):
         if instance is None:
             return self
         data = instance.__dict__
-        if data.get(self.field_name, self) is self:
+        field_name = self.field.attname
+        if field_name not in data:
             # Let's see if the field is part of the parent chain. If so we
             # might be able to reuse the already loaded value. Refs #18343.
-            val = self._check_parent_chain(instance, self.field_name)
+            val = self._check_parent_chain(instance)
             if val is None:
-                instance.refresh_from_db(fields=[self.field_name])
-                val = getattr(instance, self.field_name)
-            data[self.field_name] = val
-        return data[self.field_name]
+                instance.refresh_from_db(fields=[field_name])
+            else:
+                data[field_name] = val
+        return data[field_name]
 
-    def _check_parent_chain(self, instance, name):
+    def _check_parent_chain(self, instance):
         """
         Check if the field value can be fetched from a parent field already
         loaded in the instance. This can be done if the to-be fetched
         field is a primary key field.
         """
         opts = instance._meta
-        f = opts.get_field(name)
-        link_field = opts.get_ancestor_link(f.model)
-        if f.primary_key and f != link_field:
+        link_field = opts.get_ancestor_link(self.field.model)
+        if self.field.primary_key and self.field != link_field:
             return getattr(instance, link_field.attname)
         return None
 
 
-class CalculatedAttribute(FieldCacheMixin):
+class PropertyDescriptor(FieldCacheMixin):
     """
     A wrapper for a deferred-loading field. When the value is read from this
     object the first time, the query is executed.
@@ -245,6 +249,10 @@ class CalculatedAttribute(FieldCacheMixin):
             self.delete_cached_value(instance)
         except KeyError:
             pass
+
+
+class HybridDescriptor(PropertyDescriptor):
+    pass
 
 
 class RegisterLookupMixin:
@@ -343,10 +351,11 @@ def select_related_descend(field, restricted, requested, load_fields, reverse=Fa
     if load_fields:
         if field.attname not in load_fields:
             if restricted and field.name in requested:
-                raise InvalidQuery("Field %s.%s cannot be both deferred"
-                                   " and traversed using select_related"
-                                   " at the same time." %
-                                   (field.model._meta.object_name, field.name))
+                msg = (
+                    'Field %s.%s cannot be both deferred and traversed using '
+                    'select_related at the same time.'
+                ) % (field.model._meta.object_name, field.name)
+                raise FieldError(msg)
     return True
 
 
@@ -370,26 +379,24 @@ def check_rel_lookup_compatibility(model, target_opts, field):
       1) model and opts match (where proxy inheritance is removed)
       2) model is parent of opts' model or the other way around
     """
-
     def check(opts):
         return (
-                model._meta.concrete_model == opts.concrete_model or
-                opts.concrete_model in model._meta.get_parent_list() or
-                model in opts.get_parent_list()
+            model._meta.concrete_model == opts.concrete_model or
+            opts.concrete_model in model._meta.get_parent_list() or
+            model in opts.get_parent_list()
         )
-
     # If the field is a primary key, then doing a query against the field's
     # model is ok, too. Consider the case:
     # class Restaurant(models.Model):
-    #     place = OnetoOneField(Place, primary_key=True):
+    #     place = OneToOneField(Place, primary_key=True):
     # Restaurant.objects.filter(pk__in=Restaurant.objects.all()).
     # If we didn't have the primary key check, then pk__in (== place__in) would
     # give Place's opts as the target opts, but Restaurant isn't compatible
     # with that. This logic applies only to primary keys, as when doing __in=qs,
     # we are going to turn this into __in=qs.values('pk') later on.
     return (
-            check(target_opts) or
-            (getattr(field, 'primary_key', False) and check(field.model._meta))
+        check(target_opts) or
+        (getattr(field, 'primary_key', False) and check(field.model._meta))
     )
 
 
@@ -407,11 +414,12 @@ class FilteredRelation:
         self.path = []
 
     def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return NotImplemented
         return (
-                isinstance(other, self.__class__) and
-                self.relation_name == other.relation_name and
-                self.alias == other.alias and
-                self.condition == other.condition
+            self.relation_name == other.relation_name and
+            self.alias == other.alias and
+            self.condition == other.condition
         )
 
     def clone(self):
