@@ -1,4 +1,4 @@
-from .comparison import Cast, Coalesce, Greatest, Least, NullIf
+from .comparison import Cast, Coalesce, Collate, Greatest, Least, NullIf
 from .datetime import (
     Extract, ExtractDay, ExtractHour, ExtractIsoYear, ExtractMinute,
     ExtractMonth, ExtractQuarter, ExtractSecond, ExtractWeek, ExtractWeekDay,
@@ -7,7 +7,7 @@ from .datetime import (
 )
 from .math import (
     Abs, ACos, ASin, ATan, ATan2, Ceil, Cos, Cot, Degrees, Exp, Floor, Ln, Log,
-    Mod, Pi, Power, Radians, Round, Sin, Sqrt, Tan,
+    Mod, Pi, Power, Radians, Random, Round, Sign, Sin, Sqrt, Tan,
 )
 from .text import (
     Chr, Concat, ConcatPair, Left, Length, Lower, LPad, LTrim, Ord, Repeat,
@@ -20,7 +20,7 @@ from .window import (
 
 __all__ = [
     # comparison and conversion
-    'Cast', 'Coalesce', 'Greatest', 'Least', 'NullIf',
+    'Cast', 'Coalesce', 'Collate', 'Greatest', 'Least', 'NullIf',
     # datetime
     'Extract', 'ExtractDay', 'ExtractHour', 'ExtractMinute', 'ExtractMonth',
     'ExtractQuarter', 'ExtractSecond', 'ExtractWeek', 'ExtractWeekDay',

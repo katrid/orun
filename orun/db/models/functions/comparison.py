@@ -1,5 +1,8 @@
 """Database functions that do comparisons or type conversions."""
+from orun.db import NotSupportedError
 from orun.db.models.expressions import Func, Value
+from orun.db.models.fields.json import JSONField
+from orun.utils.regex_helper import _lazy_re_compile
 
 
 class Cast(Func):
@@ -29,8 +32,14 @@ class Cast(Func):
         return self.as_sql(compiler, connection, **extra_context)
 
     def as_mysql(self, compiler, connection, **extra_context):
+        template = None
+        output_type = self.output_field.get_internal_type()
         # MySQL doesn't support explicit cast to float.
-        template = '(%(expressions)s + 0.0)' if self.output_field.get_internal_type() == 'FloatField' else None
+        if output_type == 'FloatField':
+            template = '(%(expressions)s + 0.0)'
+        # MariaDB doesn't support explicit cast to JSON.
+        elif output_type == 'JSONField' and connection.mysql_is_mariadb:
+            template = "JSON_EXTRACT(%(expressions)s, '$')"
         return self.as_sql(compiler, connection, template=template, **extra_context)
 
     def as_postgresql(self, compiler, connection, **extra_context):
@@ -38,6 +47,13 @@ class Cast(Func):
         # 'expressions' is wrapped in parentheses in case it's a complex
         # expression.
         return self.as_sql(compiler, connection, template='(%(expressions)s)::%(db_type)s', **extra_context)
+
+    def as_oracle(self, compiler, connection, **extra_context):
+        if self.output_field.get_internal_type() == 'JSONField':
+            # Oracle doesn't support explicit cast to JSON.
+            template = "JSON_QUERY(%(expressions)s, '$')"
+            return super().as_sql(compiler, connection, template=template, **extra_context)
+        return self.as_sql(compiler, connection, **extra_context)
 
 
 class Coalesce(Func):
@@ -49,6 +65,14 @@ class Coalesce(Func):
             raise ValueError('Coalesce must take at least two expressions')
         super().__init__(*expressions, **extra)
 
+    @property
+    def empty_aggregate_value(self):
+        for expression in self.get_source_expressions():
+            result = expression.empty_aggregate_value
+            if result is NotImplemented or result is not None:
+                return result
+        return None
+
     def as_oracle(self, compiler, connection, **extra_context):
         # Oracle prohibits mixing TextField (NCLOB) and CharField (NVARCHAR2),
         # so convert all fields to NCLOB when that type is expected.
@@ -59,6 +83,23 @@ class Coalesce(Func):
             ])
             return super(Coalesce, clone).as_sql(compiler, connection, **extra_context)
         return self.as_sql(compiler, connection, **extra_context)
+
+
+class Collate(Func):
+    function = 'COLLATE'
+    template = '%(expressions)s %(function)s %(collation)s'
+    # Inspired from https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
+    collation_re = _lazy_re_compile(r'^[\w\-]+$')
+
+    def __init__(self, expression, collation):
+        if not (collation and self.collation_re.match(collation)):
+            raise ValueError('Invalid collation name: %r.' % collation)
+        self.collation = collation
+        super().__init__(expression)
+
+    def as_sql(self, compiler, connection, **extra_context):
+        extra_context.setdefault('collation', connection.ops.quote_name(self.collation))
+        return super().as_sql(compiler, connection, **extra_context)
 
 
 class Greatest(Func):
@@ -79,6 +120,46 @@ class Greatest(Func):
     def as_sqlite(self, compiler, connection, **extra_context):
         """Use the MAX function on SQLite."""
         return super().as_sqlite(compiler, connection, function='MAX', **extra_context)
+
+
+class JSONObject(Func):
+    function = 'JSON_OBJECT'
+    output_field = JSONField()
+
+    def __init__(self, **fields):
+        expressions = []
+        for key, value in fields.items():
+            expressions.extend((Value(key), value))
+        super().__init__(*expressions)
+
+    def as_sql(self, compiler, connection, **extra_context):
+        if not connection.features.has_json_object_function:
+            raise NotSupportedError(
+                'JSONObject() is not supported on this database backend.'
+            )
+        return super().as_sql(compiler, connection, **extra_context)
+
+    def as_postgresql(self, compiler, connection, **extra_context):
+        return self.as_sql(
+            compiler,
+            connection,
+            function='JSONB_BUILD_OBJECT',
+            **extra_context,
+        )
+
+    def as_oracle(self, compiler, connection, **extra_context):
+        class ArgJoiner:
+            def join(self, args):
+                args = [' VALUE '.join(arg) for arg in zip(args[::2], args[1::2])]
+                return ', '.join(args)
+
+        return self.as_sql(
+            compiler,
+            connection,
+            arg_joiner=ArgJoiner(),
+            template='%(function)s(%(expressions)s RETURNING CLOB)',
+            **extra_context,
+        )
 
 
 class Least(Func):

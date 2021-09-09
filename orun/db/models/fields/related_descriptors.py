@@ -67,11 +67,11 @@ from orun.core.exceptions import FieldError
 from orun.db import connections, router, transaction
 from orun.db.models import Q, signals
 from orun.db.models.query import QuerySet
-from orun.db.models.query_utils import FieldComparator
+# from orun.db.models.query_utils import FieldComparator
 from orun.utils.functional import cached_property
 
 
-class ForwardManyToOneDescriptor(FieldComparator):
+class ForwardManyToOneDescriptor:
     """
     Accessor to the related object on the forward side of a many-to-one or
     one-to-one (via ForwardOneToOneDescriptor subclass) relation.

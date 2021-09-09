@@ -29,7 +29,7 @@ class Command(BaseCommand):
         connection = connections[database]
         verbosity = options['verbosity']
         interactive = options['interactive']
-        # The following are stealth options used by Orun's internals.
+        # The following are stealth options used by Django's internals.
         reset_sequences = options.get('reset_sequences', True)
         allow_cascade = options.get('allow_cascade', False)
         inhibit_post_migrate = options.get('inhibit_post_migrate', False)
@@ -38,19 +38,19 @@ class Command(BaseCommand):
 
         # Import the 'management' module within each installed app, to register
         # dispatcher events.
-        for app_config in apps.app_configs.values():
+        for app_config in apps.get_app_configs():
             try:
                 import_module('.management', app_config.name)
             except ImportError:
                 pass
 
-        sql_list = sql_flush(self.style, connection, only_orun=True,
+        sql_list = sql_flush(self.style, connection,
                              reset_sequences=reset_sequences,
                              allow_cascade=allow_cascade)
 
         if interactive:
             confirm = input("""You have requested a flush of the database.
-This will IRREVERSIBLY DESTROY all data currently in the %r database,
+This will IRREVERSIBLY DESTROY all data currently in the "%s" database,
 and return each table to an empty state.
 Are you sure you want to do this?
 
@@ -60,15 +60,15 @@ Are you sure you want to do this?
 
         if confirm == 'yes':
             try:
-                connection.ops.execute_sql_flush(database, sql_list)
+                connection.ops.execute_sql_flush(sql_list)
             except Exception as exc:
                 raise CommandError(
                     "Database %s couldn't be flushed. Possible reasons:\n"
                     "  * The database isn't running or isn't configured correctly.\n"
                     "  * At least one of the expected database tables doesn't exist.\n"
                     "  * The SQL was invalid.\n"
-                    "Hint: Look at the output of 'orun-admin sqlflush'. "
-                    "That's the SQL this command wasn't able to run.\n" % (
+                    "Hint: Look at the output of 'django-admin sqlflush'. "
+                    "That's the SQL this command wasn't able to run." % (
                         connection.settings_dict['NAME'],
                     )
                 ) from exc
@@ -79,4 +79,4 @@ Are you sure you want to do this?
                 # respond as if the database had been migrated from scratch.
                 emit_post_migrate_signal(verbosity, interactive, database)
         else:
-            self.stdout.write("Flush cancelled.\n")
+            self.stdout.write('Flush cancelled.')

@@ -25,14 +25,14 @@ class Attachment(models.Model):
     attachment_type = models.SelectionField(TYPE, default='file')
     url = models.URLField()
     is_public = models.BooleanField(default=False)
-    content = models.BinaryField(getter='get_content', setter='set_content')
+    # content = models.BinaryField(getter='get_content', setter='set_content')
     db_content = models.BinaryField()
     stored_file_name = models.CharField(label=_('Stored Filename'))
     file_size = models.BigIntegerField()
     checksum = models.CharField(40, db_index=True)
     mimetype = models.CharField(128, 'Mime Type', readonly=True)
     indexed_content = models.TextField(deferred=True, readonly=True)
-    download_url = models.CharField(getter='get_download_url')
+    # download_url = models.CharField(getter='get_download_url')
 
     class Meta:
         name = 'content.attachment'

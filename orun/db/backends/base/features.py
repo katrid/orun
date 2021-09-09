@@ -4,6 +4,8 @@ from orun.utils.functional import cached_property
 
 class BaseDatabaseFeatures:
     gis_enabled = False
+    # Oracle can't group by LOB (large object) data types.
+    allows_group_by_lob = True
     allows_group_by_pk = False
     allows_group_by_selected_pks = False
     empty_fetchmany_value = []
@@ -23,10 +25,13 @@ class BaseDatabaseFeatures:
     # Does the backend allow inserting duplicate rows when a unique_together
     # constraint exists and some fields are nullable but not all of them?
     supports_partially_nullable_unique_constraints = True
+    # Does the backend support initially deferrable unique constraints?
+    supports_deferrable_unique_constraints = False
 
     can_use_chunked_reads = True
-    can_return_id_from_insert = False
-    can_return_ids_from_bulk_insert = False
+    can_return_columns_from_insert = False
+    can_return_ids_from_bulk_insert = True
+    can_return_rows_from_bulk_insert = True
     has_bulk_insert = True
     uses_savepoints = True
     can_release_savepoints = False
@@ -62,6 +67,9 @@ class BaseDatabaseFeatures:
     has_real_datatype = False
     supports_subqueries_in_group_by = True
 
+    # Does the backend ignore unnecessary ORDER BY clauses in subqueries?
+    ignores_unnecessary_order_by_in_subqueries = True
+
     # Is there a true datatype for uuid?
     has_native_uuid_field = False
 
@@ -71,6 +79,10 @@ class BaseDatabaseFeatures:
     # Does the database driver supports same type temporal data subtraction
     # by returning the type used to store duration field?
     supports_temporal_subtraction = False
+
+    # Does the backend support boolean expressions in SELECT and GROUP BY
+    # clauses?
+    supports_boolean_expr_in_select_clause = True
 
     # Does the __regex lookup support backreferencing and grouping?
     supports_regex_backreferencing = True
@@ -283,10 +295,19 @@ class BaseDatabaseFeatures:
     # Does the backend support partial indexes (CREATE INDEX ... WHERE ...)?
     supports_partial_indexes = True
     supports_functions_in_partial_indexes = True
+    # Does the backend support covering indexes (CREATE INDEX ... INCLUDE ...)?
+    supports_covering_indexes = False
+    # Does the backend support indexes on expressions?
+    supports_expression_indexes = True
+    # Does the backend treat COLLATE as an indexed expression?
+    collate_as_index_expression = False
 
     # Does the database allow more than one constraint or index on the same
     # field(s)?
     allows_multiple_constraints_on_same_fields = True
+
+    # Does the backend support NULLS FIRST and NULLS LAST in ORDER BY?
+    supports_order_by_nulls_modifier = True
 
     def __init__(self, connection):
         self.connection = connection
@@ -309,3 +330,8 @@ class BaseDatabaseFeatures:
             count, = cursor.fetchone()
             cursor.execute('DROP TABLE ROLLBACK_TEST')
         return count == 0
+
+    def allows_group_by_selected_pks_on_model(self, model):
+        if not self.allows_group_by_selected_pks:
+            return False
+        return model._meta.managed

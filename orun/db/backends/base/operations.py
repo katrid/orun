@@ -26,8 +26,12 @@ class BaseDatabaseOperations:
         'SmallIntegerField': (-32768, 32767),
         'IntegerField': (-2147483648, 2147483647),
         'BigIntegerField': (-9223372036854775808, 9223372036854775807),
+        'PositiveBigIntegerField': (0, 9223372036854775807),
         'PositiveSmallIntegerField': (0, 32767),
         'PositiveIntegerField': (0, 2147483647),
+        'SmallAutoField': (-32768, 32767),
+        'AutoField': (-2147483648, 2147483647),
+        'BigAutoField': (-9223372036854775808, 9223372036854775807),
     }
     set_operators = {
         'union': 'UNION',
@@ -315,14 +319,20 @@ class BaseDatabaseOperations:
         """
         return value
 
-    def return_insert_id(self):
+    def return_insert_columns(self, fields):
         """
-        For backends that support returning the last insert ID as part of an
-        insert query, return the SQL and params to append to the INSERT query.
-        The returned fragment should contain a format string to hold the
-        appropriate column.
+        For backends that support returning columns as part of an insert query,
+        return the SQL and params to append to the INSERT query. The returned
+        fragment should contain a format string to hold the appropriate column.
         """
         pass
+
+    def fetch_returned_insert_columns(self, cursor, returning_params):
+        """
+        Given a cursor object that has just performed an INSERT...RETURNING
+        statement into a table, return the newly created data.
+        """
+        return cursor.fetchone()
 
     def compiler(self, compiler_name):
         """
@@ -400,15 +410,17 @@ class BaseDatabaseOperations:
         """
         return ''
 
-    def sql_flush(self, style, tables, sequences, allow_cascade=False):
+    def sql_flush(self, style, tables, *, reset_sequences=False, allow_cascade=False):
         """
         Return a list of SQL statements required to remove all data from
         the given database tables (without actually removing the tables
-        themselves) and the SQL statements required to reset the sequences
-        passed in `sequences`.
+        themselves).
 
         The `style` argument is a Style object as returned by either
         color_style() or no_style() in orun.core.management.color.
+
+        If `reset_sequences` is True, the list includes SQL statements required
+        to reset the sequences.
 
         The `allow_cascade` argument determines whether truncation may cascade
         to tables with foreign keys pointing the tables being truncated.
@@ -416,9 +428,12 @@ class BaseDatabaseOperations:
         """
         raise NotImplementedError('subclasses of BaseDatabaseOperations must provide an sql_flush() method')
 
-    def execute_sql_flush(self, using, sql_list):
-        """Execute a list of SQL statements to flush the database."""
-        with transaction.atomic(using=using, savepoint=self.connection.features.can_rollback_ddl):
+    def execute_sql_flush(self, sql_list):
+        """execute a list of sql statements to flush the database."""
+        with transaction.atomic(
+                using=self.connection.alias,
+                savepoint=self.connection.features.can_rollback_ddl,
+        ):
             with self.connection.cursor() as cursor:
                 for sql in sql_list:
                     cursor.execute(sql)
@@ -542,30 +557,46 @@ class BaseDatabaseOperations:
         """
         return value or None
 
-    def year_lookup_bounds_for_date_field(self, value):
+    def year_lookup_bounds_for_date_field(self, value, iso_year=False):
         """
         Return a two-elements list with the lower and upper bound to be used
         with a BETWEEN operator to query a DateField value using a year
         lookup.
 
         `value` is an int, containing the looked-up year.
+        If `iso_year` is True, return bounds for ISO-8601 week-numbering years.
         """
-        first = datetime.date(value, 1, 1)
-        second = datetime.date(value, 12, 31)
+        if iso_year:
+            first = datetime.date.fromisocalendar(value, 1, 1)
+            second = (
+                datetime.date.fromisocalendar(value + 1, 1, 1) -
+                datetime.timedelta(days=1)
+            )
+        else:
+            first = datetime.date(value, 1, 1)
+            second = datetime.date(value, 12, 31)
         first = self.adapt_datefield_value(first)
         second = self.adapt_datefield_value(second)
         return [first, second]
 
-    def year_lookup_bounds_for_datetime_field(self, value):
+    def year_lookup_bounds_for_datetime_field(self, value, iso_year=False):
         """
         Return a two-elements list with the lower and upper bound to be used
         with a BETWEEN operator to query a DateTimeField value using a year
         lookup.
 
         `value` is an int, containing the looked-up year.
+        If `iso_year` is True, return bounds for ISO-8601 week-numbering years.
         """
-        first = datetime.datetime(value, 1, 1)
-        second = datetime.datetime(value, 12, 31, 23, 59, 59, 999999)
+        if iso_year:
+            first = datetime.datetime.fromisocalendar(value, 1, 1)
+            second = (
+                datetime.datetime.fromisocalendar(value + 1, 1, 1) -
+                datetime.timedelta(microseconds=1)
+            )
+        else:
+            first = datetime.datetime(value, 1, 1)
+            second = datetime.datetime(value, 12, 31, 23, 59, 59, 999999)
         if settings.USE_TZ:
             tz = timezone.get_current_timezone()
             first = timezone.make_aware(first, tz)
@@ -691,3 +722,10 @@ class BaseDatabaseOperations:
 
     def ignore_conflicts_suffix_sql(self, ignore_conflicts=None):
         return ''
+
+    def conditional_expression_supported_in_where_clause(self, expression):
+        """
+        Return True, if the conditional expression is supported in the WHERE
+        clause.
+        """
+        return True

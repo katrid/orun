@@ -14,7 +14,7 @@ class Action(models.Model):
     action_type = models.CharField(32, _('Action Type'), null=False)
     usage = models.TextField(label=_('Usage'))
     description = models.TextField(label=_('Description'))
-    external_id = models.CharField(label=_('External ID'), getter='get_external_id')
+    # external_id = models.CharField(label=_('External ID'), getter='get_external_id')
     groups = models.ManyToManyField('auth.group')
     binding_model = models.ForeignKey('content.type', on_delete=models.CASCADE)
     binding_type = models.SelectionField(
@@ -78,7 +78,7 @@ class WindowAction(Action):
     ))
     limit = models.IntegerField(default=100, label=_('Limit'))
     auto_search = models.BooleanField(default=True, label=_('Auto Search'))
-    views = models.TextField(getter='_get_views', editable=False, serializable=True)
+    # views = models.TextField(getter='_get_views', editable=False, serializable=True)
     view_list = models.OneToManyField('ui.action.window.view')
     view_type = models.SelectionField(VIEW_MODE, default='form')
 

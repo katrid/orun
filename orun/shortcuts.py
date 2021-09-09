@@ -4,7 +4,7 @@ of MVC. In other words, these functions/classes introduce controlled coupling
 for convenience's sake.
 """
 from orun.http import (
-    HttpResponse, HttpResponsePermanentRedirect, HttpResponseRedirect,
+    Http404, HttpResponse, HttpResponsePermanentRedirect, HttpResponseRedirect,
 )
 from orun.template import loader
 from orun.urls import NoReverseMatch, reverse

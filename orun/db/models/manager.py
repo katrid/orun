@@ -1,4 +1,3 @@
-from typing import TYPE_CHECKING, Type
 import copy
 import inspect
 from importlib import import_module
@@ -34,7 +33,10 @@ class BaseManager:
 
     def __str__(self):
         """Return "app_label.model_label.manager_name"."""
-        return '%s.%s' % (self.model._meta.name, self.name)
+        return '%s.%s' % (self.model._meta.label, self.name)
+
+    def __class_getitem__(cls, *args, **kwargs):
+        return cls
 
     def deconstruct(self):
         """
@@ -107,13 +109,13 @@ class BaseManager:
             **cls._get_queryset_methods(queryset_class),
         })
 
-    def contribute_to_class(self, model, name):
+    def contribute_to_class(self, cls, name):
         self.name = self.name or name
-        self.model = model
+        self.model = cls
 
-        setattr(model, name, ManagerDescriptor(self))
+        setattr(cls, name, ManagerDescriptor(self))
 
-        model._meta.add_manager(self)
+        cls._meta.add_manager(self)
 
     def _set_creation_counter(self):
         """
@@ -142,10 +144,7 @@ class BaseManager:
         Return a new QuerySet object. Subclasses can override this method to
         customize the behavior of the Manager.
         """
-        qs = self._queryset_class(model=self.model, using=self._db, hints=self._hints)
-        if self.model._meta.deferred_fields:
-            qs = qs.defer(*self.model._meta.deferred_fields)
-        return qs
+        return self._queryset_class(model=self.model, using=self._db, hints=self._hints)
 
     def all(self):
         # We can't proxy this method through the `QuerySet` like we do for the
@@ -164,10 +163,6 @@ class BaseManager:
 
     def __hash__(self):
         return id(self)
-
-    def __getitem__(self, item) -> Type['Model']:
-        from orun.apps import apps
-        return apps[item]
 
 
 class Manager(BaseManager.from_queryset(QuerySet)):
@@ -189,6 +184,14 @@ class ManagerDescriptor:
                 cls._meta.object_name,
             ))
 
+        if cls._meta.swapped:
+            raise AttributeError(
+                "Manager isn't available; '%s' has been swapped for '%s'" % (
+                    cls._meta.label,
+                    cls._meta.swapped,
+                )
+            )
+
         return cls._meta.managers_map[self.manager.name]
 
 
@@ -199,6 +202,3 @@ class EmptyManager(Manager):
 
     def get_queryset(self):
         return super().get_queryset().none()
-
-if TYPE_CHECKING:
-    from orun.db.models import Model

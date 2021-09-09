@@ -396,14 +396,14 @@ class ForeignObject(RelatedField):
     rel_class = ForeignObjectRel
 
     def __init__(self, to, on_delete, from_fields, to_fields, rel=None, related_name=None,
-                 related_query_name=None, filter=None, parent_link=False, **kwargs):
+                 related_query_name=None, filter=None, limit_choices_to=None, parent_link=False, **kwargs):
 
         if rel is None:
             rel = self.rel_class(
                 self, to,
                 related_name=related_name,
                 related_query_name=related_query_name,
-                limit_choices_to=filter,
+                limit_choices_to=filter or limit_choices_to,
                 parent_link=parent_link,
                 on_delete=on_delete,
             )
@@ -523,10 +523,14 @@ class ForeignObject(RelatedField):
         for index in range(len(self.from_fields)):
             from_field_name = self.from_fields[index]
             to_field_name = self.to_fields[index]
-            from_field = (self if from_field_name == 'self'
-                          else self.opts.fields[from_field_name])
-            to_field = (self.remote_field.model._meta.pk if to_field_name is None
-                        else self.remote_field.model._meta.fields[to_field_name])
+            from_field = (
+                self if from_field_name == RECURSIVE_RELATIONSHIP_CONSTANT
+                else self.opts.fields[from_field_name]
+            )
+            to_field = (
+                self.remote_field.model._meta.pk if to_field_name is None
+                else self.remote_field.model._meta.fields[to_field_name]
+            )
             related_fields.append((from_field, to_field))
         return related_fields
 
@@ -598,7 +602,7 @@ class ForeignObject(RelatedField):
         """
         return {}
 
-    def get_extra_restriction(self, where_class, alias, related_alias):
+    def get_extra_restriction(self, alias, related_alias):
         """
         Return a pair condition used for joining and subquery pushdown. The
         condition is something that responds to as_sql(compiler, connection)
@@ -696,9 +700,9 @@ class ForeignKey(ForeignObject):
     }
     description = _("Foreign Key (type determined by related field)")
 
-    def __init__(self, to, on_delete=PROTECT, related_name=None, related_query_name=None,
-                 filter=None, parent_link=False, to_field=None, name_fields=None, label_from_instance=None,
-                 check_company=False, db_constraint=True, **kwargs):
+    def __init__(self, to, on_delete=PROTECT, *, related_name=None, related_query_name=None,
+                 limit_choices_to=None, parent_link=False, to_field=None, name_fields=None,
+                 label_from_instance=None, check_company=False, db_constraint=True, **kwargs):
         try:
             to.Meta.name
         except AttributeError:
@@ -713,7 +717,12 @@ class ForeignKey(ForeignObject):
             # For backwards compatibility purposes, we need to *try* and set
             # the to_field during FK construction. It won't be guaranteed to
             # be correct until contribute_to_class is called. Refs #12190.
-            to_field = to_field or (to.Meta.pk and to.Meta.pk.name)
+            to_field = to_field or (to._meta and to._meta.pk and to._meta.pk.name) or (to.Meta.pk and to.Meta.pk.name)
+
+        # limit_choices_to should be used to validate relation values before update
+        self.limit_choices_to = limit_choices_to
+        kwargs.setdefault('filter', limit_choices_to)
+        filter = kwargs['filter']
 
         kwargs['rel'] = self.rel_class(
             self, to, to_field,
@@ -725,8 +734,10 @@ class ForeignKey(ForeignObject):
         )
         kwargs.setdefault('db_index', False)
 
-        super().__init__(to, on_delete, from_fields=['self'], to_fields=[to_field], filter=filter, **kwargs)
-
+        super().__init__(
+            to, on_delete, from_fields=[RECURSIVE_RELATIONSHIP_CONSTANT], to_fields=[to_field], **kwargs
+        )
+        self.__remote_field = self.remote_field
         self.db_constraint = db_constraint
         self.name_fields = name_fields
         self.label_from_instance = label_from_instance
@@ -833,23 +844,22 @@ class ForeignKey(ForeignObject):
         super().validate(value, model_instance)
         if value is None:
             return
-
-        # todo check fk integrity
-        return
-        using = router.db_for_read(self.remote_field.model, instance=model_instance)
-        qs = self.remote_field.model._default_manager.using(using).filter(
-            **{self.remote_field.field_name: value}
-        )
-        qs = qs.complex_filter(self.get_limit_choices_to())
-        if not qs.exists():
-            raise exceptions.ValidationError(
-                self.error_messages['invalid'],
-                code='invalid',
-                params={
-                    'model': self.remote_field.model._meta.verbose_name, 'pk': value,
-                    'field': self.remote_field.field_name, 'value': value,
-                },  # 'pk' is included for backwards compatibility
+        # Limit choices to filter attribute
+        if self.limit_choices_to:
+            using = router.db_for_read(self.remote_field.model, instance=model_instance)
+            qs = self.remote_field.model._default_manager.using(using).filter(
+                **{self.remote_field.field_name: value}
             )
+            qs = qs.complex_filter(self.get_limit_choices_to())
+            if not qs.exists():
+                raise exceptions.ValidationError(
+                    self.error_messages['invalid'],
+                    code='invalid',
+                    params={
+                        'model': self.remote_field.model._meta.verbose_name, 'pk': value,
+                        'field': self.remote_field.field_name, 'value': value,
+                    },  # 'pk' is included for backwards compatibility
+                )
 
     def get_attname(self):
         return '%s_id' % self.name
@@ -991,10 +1001,14 @@ def create_many_to_many_intermediary_model(field, klass):
     name = '%s_%s' % (klass._meta.object_name, field.name)
     lazy_related_operation(set_managed, klass, to_model, name)
 
-    to = make_model_name(to_model)
-    from_ = klass._meta.name.replace('.', '_')
-    to = 'to_%s' % to.replace('.', '_')
-    from_ = 'from_%s' % from_
+    to = to_model._meta.model_name
+    from_ = klass._meta.model_name
+
+    # to = 'to_%s' % to.replace('.', '_')
+    # from_ = 'from_%s' % from_
+    if to == from_:
+        to = 'to_%s' % to
+        from_ = 'from_%s' % from_
 
     meta = type('Meta', (), {
         # 'db_table': field._get_m2m_db_table(klass._meta),
@@ -1506,7 +1520,11 @@ class ManyToManyField(RelatedField):
             # related_name with one generated from the m2m field name. Orun
             # still uses backwards relations internally and we need to avoid
             # clashes between multiple m2m fields with related_name == '+'.
-            self.remote_field.related_name = "_%s_%s_+" % (cls.__name__.lower(), name)
+            self.remote_field.related_name = '_%s_%s_%s_+' % (
+                cls._meta.schema,
+                cls.__name__.lower(),
+                name,
+            )
 
         super().contribute_to_class(cls, name, **kwargs)
 
@@ -1520,7 +1538,12 @@ class ManyToManyField(RelatedField):
                     field.remote_field.through = model
                 lazy_related_operation(resolve_through_model, cls, self.remote_field.through, field=self)
             else:
-                self.remote_field.through = create_many_to_many_intermediary_model(self, cls)
+                if isinstance(self.remote_field.model, str):
+                    def resolve_through_model(_, model, field):
+                        self.remote_field.through = create_many_to_many_intermediary_model(self, cls)
+                    lazy_related_operation(resolve_through_model, cls, self.remote_field.model, field=self)
+                else:
+                    self.remote_field.through = create_many_to_many_intermediary_model(self, cls)
 
         # Add the descriptor for the m2m relation.
         setattr(cls, self.name, ManyToManyDescriptor(self.remote_field, reverse=False))

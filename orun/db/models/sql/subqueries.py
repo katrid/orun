@@ -10,6 +10,7 @@ from orun.db.models.sql.constants import (
 )
 from orun.db.models.sql.query import Query
 
+
 __all__ = ['DeleteQuery', 'UpdateQuery', 'InsertQuery', 'AggregateQuery']
 
 
@@ -22,7 +23,10 @@ class DeleteQuery(Query):
         self.alias_map = {table: self.alias_map[table]}
         self.where = where
         cursor = self.get_compiler(using).execute_sql(CURSOR)
-        return cursor.rowcount if cursor else 0
+        if cursor:
+            with cursor:
+                return cursor.rowcount
+        return 0
 
     def delete_batch(self, pk_list, using):
         """
@@ -35,45 +39,13 @@ class DeleteQuery(Query):
         num_deleted = 0
         field = self.get_meta().pk
         for offset in range(0, len(pk_list), GET_ITERATOR_CHUNK_SIZE):
-            self.where = self.where_class()
-            self.add_q(Q(
-                **{field.attname + '__in': pk_list[offset:offset + GET_ITERATOR_CHUNK_SIZE]}))
+            self.clear_where()
+            self.add_filter(
+                f'{field.attname}__in',
+                pk_list[offset:offset + GET_ITERATOR_CHUNK_SIZE],
+            )
             num_deleted += self.do_query(self.get_meta().db_table, self.where, using=using)
         return num_deleted
-
-    def delete_qs(self, query, using):
-        """
-        Delete the queryset in one SQL query (if possible). For simple queries
-        this is done by copying the query.query.where to self.query, for
-        complex queries by using subquery.
-        """
-        innerq = query.query
-        # Make sure the inner query has at least one table in use.
-        innerq.get_initial_alias()
-        # The same for our new query.
-        self.get_initial_alias()
-        innerq_used_tables = tuple([t for t in innerq.alias_map if innerq.alias_refcount[t]])
-        if not innerq_used_tables or innerq_used_tables == tuple(self.alias_map):
-            # There is only the base table in use in the query.
-            self.where = innerq.where
-        else:
-            pk = query.model._meta.pk
-            if not connections[using].features.update_can_self_select:
-                # We can't do the delete using subquery.
-                values = list(query.values_list('pk', flat=True))
-                if not values:
-                    return 0
-                return self.delete_batch(values, using)
-            else:
-                innerq.clear_select_clause()
-                innerq.select = [
-                    pk.get_col(self.get_initial_alias())
-                ]
-                values = innerq
-            self.where = self.where_class()
-            self.add_q(Q(pk__in=values))
-        cursor = self.get_compiler(using).execute_sql(CURSOR)
-        return cursor.rowcount if cursor else 0
 
 
 class UpdateQuery(Query):
@@ -102,8 +74,8 @@ class UpdateQuery(Query):
     def update_batch(self, pk_list, values, using):
         self.add_update_values(values)
         for offset in range(0, len(pk_list), GET_ITERATOR_CHUNK_SIZE):
-            self.where = self.where_class()
-            self.add_q(Q(pk__in=pk_list[offset: offset + GET_ITERATOR_CHUNK_SIZE]))
+            self.clear_where()
+            self.add_filter('pk__in', pk_list[offset: offset + GET_ITERATOR_CHUNK_SIZE])
             self.get_compiler(using).execute_sql(NO_RESULTS)
 
     def add_update_values(self, values):
@@ -116,13 +88,13 @@ class UpdateQuery(Query):
         for name, val in values.items():
             field = self.get_meta().get_field(name)
             direct = not (field.auto_created and not field.concrete) or not field.concrete
-            model = field.model
+            model = field.model._meta.concrete_model
             if not direct or (field.is_relation and field.many_to_many):
                 raise FieldError(
                     'Cannot update model field %r (only non-relations and '
                     'foreign keys permitted).' % field
                 )
-            if model is not self.get_meta().model:
+            if model is not self.get_meta().concrete_model:
                 self.add_related_update(model, field, val)
                 continue
             values_seq.append((field, model, val))
@@ -161,7 +133,7 @@ class UpdateQuery(Query):
             query = UpdateQuery(model)
             query.values = values
             if self.related_ids is not None:
-                query.add_filter(('pk__in', self.related_ids))
+                query.add_filter('pk__in', self.related_ids)
             result.append(query)
         return result
 
@@ -189,6 +161,6 @@ class AggregateQuery(Query):
 
     compiler = 'SQLAggregateCompiler'
 
-    def add_subquery(self, query, using):
-        query.subquery = True
-        self.subquery, self.sub_params = query.get_compiler(using).as_sql(with_col_aliases=True)
+    def __init__(self, model, inner_query):
+        self.inner_query = inner_query
+        super().__init__(model)

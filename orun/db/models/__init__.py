@@ -10,12 +10,15 @@ from orun.db.models.deletion import (
 )
 from orun.db.models.expressions import (
     Case, Exists, Expression, ExpressionList, ExpressionWrapper, F, Func,
-    OuterRef, RowRange, Subquery, Value, ValueRange, When, Window, WindowFrame,
+    OrderBy, OuterRef, RowRange, Subquery, Value, ValueRange, When, Window, WindowFrame,
 )
+from orun.db.models.enums import *  # NOQA
+from orun.db.models.enums import __all__ as enums_all
 from orun.db.models.fields import *  # NOQA
 from orun.db.models.fields import __all__ as fields_all
+from orun.db.models.fields.json import JSONField
 from orun.db.models.fields.files import FileField, ImageField
-from orun.db.models.fields.proxy import OrderWrt, ProxyField
+from orun.db.models.fields.proxy import ProxyField
 from orun.db.models.indexes import *  # NOQA
 from orun.db.models.indexes import __all__ as indexes_all
 from orun.db.models.lookups import Lookup, Transform
@@ -29,7 +32,7 @@ from orun.db.models.query_utils import FilteredRelation
 from orun.db.models.base import DEFERRED, Model  # isort:skip
 from orun.db.models.decorators import ModelHelper
 from orun.db.models.fields.related import (  # isort:skip
-    ForeignKey, ForeignObject, OneToOneField, ManyToManyField, OneToManyField,
+    ForeignKey, ForeignObject, ForeignObjectRel, OneToOneField, ManyToManyField, OneToManyField,
     ManyToOneRel, ManyToManyRel, OneToOneRel, OneToManyRel,
 )
 from .vsql import From

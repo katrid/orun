@@ -154,7 +154,7 @@ class ContentType(models.Model):
     verbose_name_plural = models.CharField(verbose_name=_('verbose name plural'), translate=True)
     description = models.TextField()
     help = models.TextField()
-    parent = models.ForeignKey('self', verbose_name=_('Parent'))
+    parent = models.ForeignKey('self', label=_('Parent'))
     objects = ContentTypeManager()
     object_type = models.ChoiceField(
         (
@@ -297,7 +297,7 @@ class Field(models.Model):
     auto_created = models.BooleanField(default=False)
     stored = models.BooleanField(default=True)
     # groups = models.ManyToManyField('auth.group')
-    localize = models.BooleanField(verbose_name=_('Localize'), help_text=_('Field content must be localized'))
+    localize = models.BooleanField(default=False, verbose_name=_('Localize'), help_text=_('Field content must be localized'))
 
     class Meta:
         name = 'content.field'
@@ -319,7 +319,7 @@ class Field(models.Model):
             'unique': field._unique,
             'required': field.required,
             'nullable': field.null,
-            'stored': field.stored,
+            'stored': field.concrete,
             'db_index': field.db_index,
             'default': field.default,
             'db_default': field.db_default,

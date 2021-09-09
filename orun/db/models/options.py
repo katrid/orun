@@ -7,10 +7,9 @@ from functools import partialmethod, partial, wraps
 from orun.apps import apps
 from orun.conf import settings
 from orun.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
-from orun.db import connections, connection
-from orun.db.models import Manager
-from orun.db.models.fields import AutoField, CharField
-from orun.db.models.fields.proxy import OrderWrt
+from orun.db import connections
+from orun.db.models import AutoField, Manager, UniqueConstraint
+from orun.db.models.fields import CharField, Fields, Field
 from orun.db.models.query_utils import PathInfo
 from orun.utils.datastructures import ImmutableList, OrderedSet
 from orun.utils.functional import cached_property
@@ -51,7 +50,7 @@ def normalize_together(option_together):
             raise TypeError
         first_element = option_together[0]
         if not isinstance(first_element, (tuple, list)):
-            option_together = (option_together,)
+            option_together = [option_together]
         # Normalize everything to tuples
         return tuple(tuple(ot) for ot in option_together)
     except TypeError:
@@ -77,6 +76,8 @@ class Options:
     tablename: str = None
     name: str = None
     concrete = None
+    constraints: List = None
+    indexes: List = None
     addon = None
     schema = None
     model = None
@@ -103,6 +104,7 @@ class Options:
     select_on_save = False
     default_permissions = ('create', 'read', 'update', 'delete')
     permissions = ()
+    unique_together: List[str] = None
 
     #
     local_many_to_many: List['Field'] = None
@@ -128,9 +130,8 @@ class Options:
         self.default_manager_name = None
         self.model_name = None
         self._ordering_clash = False
-        self.indexes = []
-        self.constraints = []
-        self.unique_together = []
+        if not self.unique_together:
+            self.unique_together = []
         self.index_together = []
         self.get_latest_by = None
         # self.order_with_respect_to = None
@@ -169,7 +170,8 @@ class Options:
                     cls.qualname = '{}.{}'.format(cls.db_schema, cls.tablename)
                     cls.db_table = '"{}"."{}"'.format(cls.db_schema, cls.tablename)
                 elif not cls.db_schema:
-                    cls.db_table = f'"{cls.db_table}"'
+                    pass
+                    # cls.db_table = f'"{cls.db_table}"'
             else:
                 cls.qualname = cls.tablename = cls.db_table
 
@@ -180,16 +182,24 @@ class Options:
             if not cls.concrete:
                 cls.managed = False
 
+    @property
+    def label(self):
+        return '%s.%s' % (self.schema, self.object_name)
+
+    @property
+    def label_lower(self):
+        return '%s.%s' % (self.schema, self.model_name)
+
     @classmethod
     def from_model(cls, meta, model, parents=None, attrs=None):
         is_proxy = False
         meta_attrs = {}
-        if attrs:
-            meta_attrs.update(attrs)
         if meta is not None:
             meta_attrs.update({k: v for k, v in meta.__dict__.items() if not k.startswith('__')})
             # if proxy, generate a new model name
             is_proxy = meta_attrs.get('proxy')
+        if attrs:
+            meta_attrs.update(attrs)
 
         if not parents:
             bases = [base.Meta for base in model.__bases__ if hasattr(base, 'Meta') and base.Meta]
@@ -197,13 +207,11 @@ class Options:
             bases = [base.Meta for base in parents if hasattr(base, 'Meta') and base.Meta]
         if bases:
             bases = tuple(bases)
-            if parents:
-                for base in bases:
-                    if 'field_groups' in meta_attrs and meta_attrs.get('override'):
-                        parent = parents[0]
-                        if not parent.Meta.field_groups:
-                            parent.Meta.field_groups = {}
-                        parent.Meta.field_groups.update(meta_attrs['field_groups'])
+            if 'field_groups' in meta_attrs and meta_attrs.get('override'):
+                parent = parents[0]
+                if not parent.Meta.field_groups:
+                    parent.Meta.field_groups = {}
+                parent.Meta.field_groups.update(meta_attrs['field_groups'])
         else:
             bases = (Options,)
 
@@ -220,12 +228,13 @@ class Options:
         meta_attrs['model'] = model
 
         opts = type('Options', bases, meta_attrs)
+        if opts.constraints is None:
+            opts.constraints = []
+        if opts.indexes is None:
+            opts.indexes = []
         return opts
 
     def contribute_to_class(self, cls, name):
-        from orun.db import connection
-        from orun.db.backends.utils import truncate_name
-
         cls._meta = self
         self.model = cls
         # First, construct the default values for these options.
@@ -240,6 +249,15 @@ class Options:
         # Store the original user-defined values for each option,
         # for use when serializing the model definition
         self.original_attrs = {}
+        self.unique_together = normalize_together(self.unique_together)
+        self.index_together = normalize_together(self.index_together)
+
+        # App label/class name interpolation for names of constraints and
+        # indexes.
+        if not getattr(cls._meta, 'abstract', False):
+            for attr_name in {'constraints', 'indexes'}:
+                objs = getattr(self, attr_name, [])
+                setattr(self, attr_name, self._format_names_with_class(cls, objs))
 
     def _prepare(self, model):
         if self.ordering is None:
@@ -259,10 +277,10 @@ class Options:
                 raise FieldDoesNotExist("%s has no field named '%s'" % (self.object_name, query))
 
             self.ordering = ('_order',)
-            if not any(isinstance(field, OrderWrt) for field in model._meta.local_fields):
-                f = OrderWrt()
-                model.add_to_class('_order', f)
-                self.local_fields.append(f)
+            # if not any(isinstance(field, OrderWrt) for field in model._meta.local_fields):
+            #     f = OrderWrt()
+            #     model.add_to_class('_order', f)
+            #     self.local_fields.append(f)
         else:
             self.order_with_respect_to = None
 
@@ -438,7 +456,7 @@ class Options:
     def get_name_field(self):
         return self.fields[self.name_field]
 
-    def get_name_fields(self) -> List['Field']:
+    def get_name_fields(self) -> List[Field]:
         if self.field_groups and 'name_fields' in self.field_groups:
             return [self.fields[field_name] for field_name in self.field_groups['name_fields']]
         if self.name_field:
@@ -508,23 +526,24 @@ class Options:
     def concrete_fields(self):
         """
         Return a list of all concrete fields on the model and its parents.
-
-        Private API intended only to be used by Orun itself; get_fields()
-        combined with filtering of field properties is the public API for
-        obtaining this field list.
         """
         return make_immutable_fields_list(
             "concrete_fields", (f for f in self.fields if f.concrete and not f.many_to_many)
         )
 
     @cached_property
+    def selectable_fields(self):
+        """
+        Return a list of all selectable fields on the model and its parents.
+        """
+        return make_immutable_fields_list(
+            "selectable_fields", (f for f in self.fields if f.selectable)
+        )
+
+    @cached_property
     def local_concrete_fields(self):
         """
         Return a list of all concrete fields on the model.
-
-        Private API intended only to be used by Orun itself; get_fields()
-        combined with filtering of field properties is the public API for
-        obtaining this field list.
         """
         return make_immutable_fields_list(
             "local_concrete_fields", (f for f in self.local_fields if f.concrete and not f.many_to_many)
@@ -532,6 +551,9 @@ class Options:
 
     @cached_property
     def deferred_fields(self):
+        """
+        Return a list of deferred fields on the model.
+        """
         return make_immutable_fields_list(
             "deferred_fields", (f.name for f in self.local_fields if f.defer)
         )
@@ -788,9 +810,6 @@ class Options:
             if opts.abstract:
                 continue
 
-            for f in opts._get_fields(reverse=False, include_parents=False):
-                if not hasattr(f, 'model'):
-                    print('field not found')
             fields_with_relations = (
                 f for f in opts._get_fields(reverse=False, include_parents=False)
                 if f.is_relation and f.related_model is not None
@@ -940,6 +959,42 @@ class Options:
         for evt in self.fields_events[field]:
             evt(instance)
 
+    @cached_property
+    def db_returning_fields(self):
+        """
+        Private API intended only to be used by Orun itself.
+        Fields to be returned after a database insert.
+        """
+        return [
+            field for field in self._get_fields(forward=True, reverse=False, include_parents=PROXY_PARENTS)
+            if getattr(field, 'db_returning', False)
+        ]
+
+    @cached_property
+    def total_unique_constraints(self):
+        """
+        Return a list of total unique constraints. Useful for determining set
+        of fields guaranteed to be unique for all rows.
+        """
+        return [
+            constraint
+            for constraint in self.constraints
+            if isinstance(constraint, UniqueConstraint) and constraint.condition is None
+        ]
+
+    def _format_names_with_class(self, cls, objs):
+        """App label/class name interpolation for object names."""
+        new_objs = []
+        for obj in objs:
+            obj = obj.clone()
+            obj.name = obj.name % {
+                'app_label': self.schema,
+                'class': self.model_name,
+                'model_name': self.name,
+            }
+            new_objs.append(obj)
+        return new_objs
+
 
 class ModelHelper:
     pass
@@ -958,6 +1013,3 @@ def classmethod_helper(fn, class_helper):
     if getattr(fn, 'exposed', None):
         wrapped.exposed = fn.exposed
     return classmethod(wrapped)
-
-
-from orun.db.models.fields import Fields, Field

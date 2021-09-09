@@ -70,9 +70,9 @@ def method(*args, select=None, each=None):
                         objs = self.select()
                 single = False
                 if isinstance(arg, list):
-                    objs = objs.where(pk__in=arg)
+                    objs = objs.filter(pk__in=arg)
                 else:
-                    objs = objs.where(pk=arg)
+                    objs = objs.filter(pk=arg)
                     single = True
                 if each or (each is None and not single):
                     return [fn(obj, *args, **kwargs) for obj in objs]

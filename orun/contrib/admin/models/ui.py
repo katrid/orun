@@ -76,7 +76,7 @@ class View(models.Model):
     priority = models.IntegerField(_('Priority'), default=99, null=False)
     template_name = models.CharField(max_length=256)
     content = models.TextField(caption=_('Content'))
-    ref_id = models.CharField(caption=_('Reference ID'), getter='_get_xml_id')
+    # ref_id = models.CharField(caption=_('Reference ID'), getter='_get_xml_id')
     # children = models.OneToManyField('self', 'parent')
     class_name = models.CharField(max_length=256, verbose_name='Python Class Name')
 

@@ -52,7 +52,7 @@ class AdminModel(models.Model, helper=True):
         if domain:
             params.update(domain)
         if fields:
-            if 'record_name' in fields:
+            if 'record_name' in fields and cls._meta.name_field:
                 fields.append(cls._meta.name_field)
 
             # optimize select_related fields
@@ -65,7 +65,7 @@ class AdminModel(models.Model, helper=True):
                     rel_fields.extend(field.get_select_related(only))
 
             qs = qs.select_related(*rel_fields)
-            fields = [f.attname for f in [cls._meta.fields[f] for f in fields] if f.concrete]
+            fields = [f.attname or f.name for f in [cls._meta.fields[f] for f in fields] if f.concrete]
             if only:
                 fields.extend(only)
 
@@ -165,7 +165,7 @@ class AdminModel(models.Model, helper=True):
                               **kwargs):
         fmt = kwargs.get('format', 'str')
         field = cls._meta.fields[field]
-        related_model = cls.objects[field.remote_field.model]
+        related_model = apps[field.remote_field.model]
         search_params = {}
         if limit:
             search_params['limit'] = limit
@@ -386,11 +386,11 @@ class AdminModel(models.Model, helper=True):
 
     @classmethod
     def admin_get_formfield(cls, field, view_type=None):
-        return field.formfield
+        return field.fieldinfo
 
     @classmethod
     def admin_get_field_info(cls, field, view_type=None):
-        return field.formfield
+        return field.fieldinfo
 
     @api.classmethod
     def admin_get_fields_info(cls, view_id=None, view_type='form', toolbar=False, context=None, xml=None):
@@ -414,8 +414,8 @@ class AdminModel(models.Model, helper=True):
 
     @api.classmethod
     def admin_get_view_info(cls, view_type, view=None, toolbar=False):
-        View = cls.objects['ui.view']
-        model = cls.objects['content.type']
+        View = apps['ui.view']
+        model = apps['content.type']
 
         if view is None:
             view = View.objects.filter(mode='primary', view_type=view_type, model=cls._meta.name).first()
@@ -435,7 +435,7 @@ class AdminModel(models.Model, helper=True):
                 'fields': cls.admin_get_fields_info(view_type=view_type, xml=content),
             }
         if toolbar and view_type != 'search':
-            bindings = cls.objects['ui.action'].get_bindings(cls._meta.name)
+            bindings = apps['ui.action'].get_bindings(cls._meta.name)
             r['toolbar'] = {
                 'print': [action.to_dict() for action in bindings['print'] if
                           view_type == 'list' or not action.multiple],
@@ -447,8 +447,8 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def admin_load_views(cls, views=None, toolbar=False, **kwargs):
         if views is None and 'action' in kwargs:
-            Action = cls.objects['ui.action.window']
-            action = Action.objects.get(kwargs.get('action'))
+            Action = apps['ui.action.window']
+            action = Action.objects.get(pk=kwargs.get('action'))
             views = {mode: None for mode in action.view_mode.split(',')}
         elif views is None:
             views = {'form': None, 'list': None, 'search': None}

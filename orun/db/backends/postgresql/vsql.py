@@ -14,5 +14,6 @@ class Compiler(vsql.Compiler):
             ret = 'OLD'
         self.fill(f'RETURN {ret};\nEND;\n$$')
         self.end_sql()
-        self.fill(f'CREATE TRIGGER {name} {event} ON {self._model._meta.tablename} FOR EACH ROW EXECUTE PROCEDURE {proc_name}();')
+        self.fill(f'DROP TRIGGER IF EXISTS {name} ON {self._model._meta.db_table};')
+        self.fill(f'CREATE TRIGGER {name} {event} ON {self._model._meta.db_table} FOR EACH ROW EXECUTE PROCEDURE {proc_name}();')
 

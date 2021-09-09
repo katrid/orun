@@ -22,13 +22,16 @@ from orun.db.models.constants import LOOKUP_SEP
 from orun.db.models.constraints import CheckConstraint, UniqueConstraint
 from orun.db.models.deletion import CASCADE, Collector
 from orun.db.models.fields.related import (
-    ForeignObjectRel, OneToOneField, lazy_related_operation,
+    ForeignObjectRel, OneToOneField, lazy_related_operation, resolve_relation,
 )
 from orun.db.models.manager import Manager
 from orun.db.models.options import Options
 from orun.db.models.query import Q
 from orun.db.models.signals import (
     class_prepared, post_init, post_save, pre_init, pre_save,
+)
+from orun.db.models import (
+    NOT_PROVIDED, ExpressionWrapper, IntegerField, Max, Value,
 )
 from orun.utils.encoding import force_str
 from orun.utils.text import capfirst, get_text_list
@@ -83,13 +86,16 @@ class ModelBase(type):
             Options.create_helper(base, attrs, attr_meta)
             return base
 
+        if attr_meta is None:
+            class Meta:
+                pass
+            attr_meta = Meta
+
         # Also ensure initialization is only performed for subclasses of Model
         # (excluding Model class itself).
         parents = [b for b in bases if isinstance(b, ModelBase)]
         if not parents:
             return super_new(cls, name, bases, attrs)
-
-        override = helper
 
         module = attrs.pop('__module__')
         new_attrs = {'__module__': module}
@@ -203,7 +209,7 @@ class ModelBase(type):
             for field in base._meta.local_fields:
                 if isinstance(field, OneToOneField) and field.remote_field.parent_link:
                     related = resolve_relation(new_class, field.remote_field.model)
-                    parent_links[make_model_tuple(related)] = field
+                    parent_links[related] = field
 
         # Track fields inherited from base models.
         inherited_attributes = set()
@@ -423,6 +429,9 @@ class Model(metaclass=ModelBase):
         _setattr = setattr
         _DEFERRED = DEFERRED
 
+        if opts.abstract:
+            raise TypeError('Abstract models cannot be instantiated.')
+
         pre_init.send(sender=cls, args=args, kwargs=kwargs)
 
         # Set up the storage for instance state
@@ -440,7 +449,7 @@ class Model(metaclass=ModelBase):
             raise IndexError("Number of args exceeds number of fields")
 
         if not kwargs:
-            fields_iter = iter(opts.concrete_fields)
+            fields_iter = iter(opts.selectable_fields)
             # The ordering of the zip calls matter - zip throws StopIteration
             # when an iter throws it. So if the first iter throws it, the second
             # is *not* consumed. We rely on this, so don't change the order
@@ -451,7 +460,7 @@ class Model(metaclass=ModelBase):
                 _setattr(self, field.attname, val)
         else:
             # Slower, kwargs-ready version.
-            fields_iter = iter(opts.concrete_fields)
+            fields_iter = iter(opts.selectable_fields)
             for val, field in zip(args, fields_iter):
                 if val is _DEFERRED:
                     continue
@@ -462,6 +471,8 @@ class Model(metaclass=ModelBase):
         # keywords, or default.
 
         for field in fields_iter:
+            if field.is_calculated and not self._state.loading:
+                continue
             is_related_object = False
             # Virtual field
             if field.attname not in kwargs and field.column is None:
@@ -525,11 +536,11 @@ class Model(metaclass=ModelBase):
 
     @classmethod
     def from_db(cls, db, field_names, values):
-        if len(values) != len(cls._meta.concrete_fields):
+        if len(values) != len(cls._meta.selectable_fields):
             values_iter = iter(values)
             values = [
                 next(values_iter) if f.attname in field_names else DEFERRED
-                for f in cls._meta.concrete_fields
+                for f in cls._meta.selectable_fields
             ]
         new = cls(*values, _state=ModelState(loading=True))
         new._state.loading = False
@@ -609,7 +620,7 @@ class Model(metaclass=ModelBase):
         Return a set containing names of deferred fields for this instance.
         """
         return {
-            f.attname for f in self._meta.concrete_fields
+            f.attname for f in self._meta.selectable_fields
             if f.attname not in self.__dict__
         }
 
@@ -758,9 +769,11 @@ class Model(metaclass=ModelBase):
             non_model_fields = update_fields.difference(field_names)
 
             if non_model_fields:
-                raise ValueError("The following fields do not exist in this "
-                                 "model or are m2m fields: %s"
-                                 % ', '.join(non_model_fields))
+                raise ValueError(
+                    'The following fields do not exist in this model, are m2m '
+                    'fields, or are non-concrete fields: %s'
+                    % ', '.join(non_model_fields)
+                )
 
         # If saving to the same database, and this model is deferred, then
         # automatically do a "update_fields" save on the loaded fields.
@@ -875,13 +888,23 @@ class Model(metaclass=ModelBase):
         if not pk_set and (force_update or update_fields):
             raise ValueError("Cannot force an update in save() with no primary key.")
         updated = False
+        # Skip an UPDATE when adding an instance and primary key has a default.
+        if (
+                not raw and
+                not force_insert and
+                self._state.adding and
+                meta.pk.default and
+                meta.pk.default is not NOT_PROVIDED
+        ):
+            force_insert = True
         # If possible, try an UPDATE. If that doesn't update anything, do an INSERT.
         if pk_set and not force_insert:
             base_qs = cls._base_manager.using(using)
             values = [(f, None, (getattr(self, f.attname) if raw else f.pre_save(self, False)))
                       for f in non_pks]
             forced_update = update_fields or force_update
-            updated = self._do_update(base_qs, using, pk_val, values, update_fields, forced_update)
+            updated = self._do_update(base_qs, using, pk_val, values, update_fields,
+                                      forced_update)
             if force_update and not updated:
                 raise DatabaseError("Forced update did not affect any rows.")
             if update_fields and not updated:
@@ -892,17 +915,21 @@ class Model(metaclass=ModelBase):
                 # autopopulate the _order field
                 field = meta.order_with_respect_to
                 filter_args = field.get_filter_kwargs_for_object(self)
-                order_value = cls._base_manager.using(using).filter(**filter_args).count()
-                self._order = order_value
-
+                self._order = cls._base_manager.using(using).filter(**filter_args).aggregate(
+                    _order__max=Coalesce(
+                        ExpressionWrapper(Max('_order') + Value(1), output_field=IntegerField()),
+                        Value(0),
+                    ),
+                )['_order__max']
             fields = meta.local_concrete_fields
             if not pk_set:
                 fields = [f for f in fields if f is not meta.auto_field]
 
-            update_pk = meta.auto_field and not pk_set
-            result = self._do_insert(cls._base_manager, using, fields, update_pk, raw)
-            if update_pk:
-                setattr(self, meta.pk.attname, result)
+            returning_fields = meta.db_returning_fields
+            results = self._do_insert(cls._base_manager, using, fields, returning_fields, raw)
+            if results:
+                for value, field in zip(results[0], returning_fields):
+                    setattr(self, field.attname, value)
         return updated
 
     def _do_update(self, base_qs, using, pk_val, values, update_fields, forced_update):
@@ -932,15 +959,52 @@ class Model(metaclass=ModelBase):
             )
         return filtered._update(values) > 0
 
-    def _do_insert(self, manager, using, fields, update_pk, raw):
+    def _do_insert(self, manager, using, fields, returning_fields, raw):
         """
-        Do an INSERT. If update_pk is defined then this method should return
-        the new pk for the model.
+        Do an INSERT. If returning_fields is defined then this method should
+        return the newly created data for the model.
         """
-        return manager._insert([self], fields=fields, return_id=update_pk, using=using, raw=raw)
+        return manager._insert(
+            [self], fields=fields, returning_fields=returning_fields,
+            using=using, raw=raw,
+        )
+
+    def _prepare_related_fields_for_save(self, operation_name):
+        # Ensure that a model instance without a PK hasn't been assigned to
+        # a ForeignKey or OneToOneField on this model. If the field is
+        # nullable, allowing the save would result in silent data loss.
+        for field in self._meta.concrete_fields:
+            # If the related field isn't cached, then an instance hasn't been
+            # assigned and there's no need to worry about this check.
+            if field.is_relation and field.is_cached(self):
+                obj = getattr(self, field.name, None)
+                if not obj:
+                    continue
+                # A pk may have been assigned manually to a model instance not
+                # saved to the database (or auto-generated in a case like
+                # UUIDField), but we allow the save to proceed and rely on the
+                # database to raise an IntegrityError if applicable. If
+                # constraints aren't supported by the database, there's the
+                # unavoidable risk of data corruption.
+                if obj.pk is None:
+                    # Remove the object from a related instance cache.
+                    if not field.remote_field.multiple:
+                        field.remote_field.delete_cached_value(obj)
+                    raise ValueError(
+                        "%s() prohibited to prevent data loss due to unsaved "
+                        "related object '%s'." % (operation_name, field.name)
+                    )
+                elif getattr(self, field.attname) in field.empty_values:
+                    # Use pk from related object if it has been saved after
+                    # an assignment.
+                    setattr(self, field.attname, obj.pk)
+                # If the relationship's pk/to_field was changed, clear the
+                # cached relationship.
+                if getattr(obj, field.target_field.attname) != getattr(self, field.attname):
+                    field.delete_cached_value(self)
 
     def delete(self, using=None, keep_parents=False):
-        self._before_delete()
+        self.before_delete()
         using = using or router.db_for_write(self.__class__, instance=self)
         assert self.pk is not None, (
                 "%s object can't be deleted because its %s attribute is set to None." %
@@ -950,16 +1014,10 @@ class Model(metaclass=ModelBase):
         collector = Collector(using=using)
         collector.collect([self], keep_parents=keep_parents)
         ret = collector.delete()
-        self._after_delete()
+        self.after_delete()
         return ret
 
     delete.alters_data = True
-
-    def _before_delete(self):
-        pass
-
-    def _after_delete(self):
-        pass
 
     def _get_FIELD_display(self, field):
         value = getattr(self, field.attname)
@@ -1067,7 +1125,7 @@ class Model(metaclass=ModelBase):
         # Gather a list of checks for fields declared as unique and add them to
         # the list of checks.
 
-        fields_with_class = [(self.__class__, self._meta.local_fields)]
+        fields_with_class = [(self.__class__, (f for f in self._meta.local_fields if not f.auto_created))]
         for parent_class in self._meta.get_parent_list():
             fields_with_class.append((parent_class, parent_class._meta.local_fields))
 
@@ -1171,9 +1229,9 @@ class Model(metaclass=ModelBase):
                 'model_name': capfirst(opts.verbose_name),
                 'lookup_type': lookup_type,
                 'field': field_name,
-                'field_label': capfirst(field.verbose_name),
+                'field_label': capfirst(field.label),
                 'date_field': unique_for,
-                'date_field_label': capfirst(opts.get_field(unique_for).verbose_name),
+                'date_field_label': capfirst(opts.get_field(unique_for).label),
             }
         )
 
@@ -1190,7 +1248,7 @@ class Model(metaclass=ModelBase):
         # A unique field
         if len(unique_check) == 1:
             field = opts.get_field(unique_check[0])
-            params['field_label'] = capfirst(field.verbose_name)
+            params['field_label'] = capfirst(field.label)
             return ValidationError(
                 message=field.error_messages['unique'],
                 code='unique',
@@ -1199,7 +1257,7 @@ class Model(metaclass=ModelBase):
 
         # unique_together
         else:
-            field_labels = [capfirst(opts.get_field(f).verbose_name) for f in unique_check]
+            field_labels = [capfirst(opts.get_field(f).label) for f in unique_check]
             params['field_labels'] = get_text_list(field_labels, _('and'))
             return ValidationError(
                 message=_("%(model_name)s with this %(field_labels)s already exists."),
@@ -1896,12 +1954,6 @@ class Model(metaclass=ModelBase):
         yield self
 
     # internal triggers
-    def before_flush(self, old, update):
-        pass
-
-    def after_flush(self, old, update):
-        pass
-
     def before_save(self, old, update):
         pass
 
@@ -1914,16 +1966,44 @@ class Model(metaclass=ModelBase):
     def after_insert(self, modified_fields):
         pass
 
-    def before_update(self, old, modified_fields):
+    def before_update(self, old, values):
         pass
 
-    def after_update(self, old, modified_fields):
+    def after_update(self, old, values):
         pass
 
     def before_delete(self):
         pass
 
     def after_delete(self):
+        pass
+
+    @classmethod
+    def _before_update(cls, qs, values):
+        """
+        Trigger before queryset/recordset update.
+        :param qs:
+        :param values:
+        :return:
+        """
+        pass
+
+    @classmethod
+    def _after_delete(cls, qs):
+        """
+        Trigger after delete queryset/recordset
+        :param qs:
+        :return:
+        """
+        pass
+
+    @classmethod
+    def _before_delete(cls, qs):
+        """
+        Trigger before delete queryset/recordset
+        :param qs: the queryset
+        :return:
+        """
         pass
 
 

@@ -198,7 +198,7 @@ class Registry:
             self._pending_operations[model_name].append(function)
 
     def do_pending_operations(self):
-        for k, v in self._pending_operations.items():
+        for k, v in tuple(self._pending_operations.items()):
             model = self.models[k]
             for fn in v:
                 fn(model)

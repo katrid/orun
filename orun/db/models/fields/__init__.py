@@ -1,3 +1,4 @@
+from typing import Optional, Union, Callable
 import collections.abc
 import copy
 import datetime
@@ -7,7 +8,6 @@ import uuid
 import warnings
 from base64 import b64decode, b64encode
 from functools import partialmethod, total_ordering
-from typing import Optional, Union, Callable
 
 from orun.apps import apps
 from orun.conf import settings
@@ -18,7 +18,7 @@ from orun.core import checks, exceptions, validators
 from orun.core.exceptions import FieldDoesNotExist  # NOQA
 from orun.db import connection, connections, router
 from orun.db.models.constants import LOOKUP_SEP
-from orun.db.models.query_utils import DeferredAttribute, CalculatedAttribute, RegisterLookupMixin, Q
+from orun.db.models.query_utils import DeferredAttribute, RegisterLookupMixin, Q, PropertyDescriptor, HybridDescriptor
 from orun.utils import timezone
 from orun.utils.datastructures import DictWrapper
 from orun.utils.dateparse import (
@@ -34,10 +34,10 @@ from orun.utils.translation import gettext_lazy as _, gettext
 __all__ = [
     'BaseField', 'AutoField', 'BLANK_CHOICE_DASH', 'BigAutoField', 'BigIntegerField',
     'BinaryField', 'BooleanField', 'CharField', 'CommaSeparatedIntegerField',
-    'DateField', 'DateTimeField', 'DecimalField', 'DurationField',
+    'DateField', 'DateTimeField', 'DecimalField', 'DurationField', 'SmallAutoField',
     'EmailField', 'Empty', 'Field', 'FieldDoesNotExist', 'FilePathField',
     'FloatField', 'GenericIPAddressField', 'IPAddressField', 'IntegerField',
-    'NOT_PROVIDED', 'NullBooleanField', 'PositiveIntegerField',
+    'NOT_PROVIDED', 'NullBooleanField', 'PositiveIntegerField', 'PositiveBigIntegerField',
     'PositiveSmallIntegerField', 'SlugField', 'SmallIntegerField', 'TextField',
     'TimeField', 'URLField', 'UUIDField', 'ChoiceField', 'SelectionField',
     'XmlField', 'HtmlField', 'PasswordField',
@@ -158,7 +158,7 @@ class BaseField(RegisterLookupMixin):
     column = None
     max_length: int = None
     _unique = False
-    stored = True
+    is_calculated = False
     local = True
     db_default = NOT_PROVIDED
     db_compute = None
@@ -198,7 +198,7 @@ class BaseField(RegisterLookupMixin):
         return self.__class__.__name__
 
     def get_data_type(self) -> str:
-        return
+        pass
 
     def __set_name__(self, owner, name):
         self.name = name
@@ -235,6 +235,7 @@ class Field(BaseField):
     hidden = False
 
     related_model = None
+    _on_calculate: Callable = None
 
     template = None
     widget_attrs = None
@@ -254,12 +255,12 @@ class Field(BaseField):
                  serialize=True, unique_for_date=None, unique_for_month=None,
                  unique_for_year=None, choices: Optional[Union[dict, list, tuple]] = None, help_text=None,
                  db_column: Optional[str] = None, db_tablespace=None, db_compute=None, db_default=NOT_PROVIDED,
-                 stored: Optional[bool] = None,
                  translate=None, copy=None, widget=None, widget_attrs=None, readonly=None,
                  defer=False,
                  auto_created=False, validators=(), error_messages=None, concrete=None,
-                 getter: Union[str, Callable, None] = None, setter: Union[str, Callable, None] = None,
+                 getter: Union[str, Callable, None] = None, setter: Union[str, Callable, None] = None, hybrid=False,
                  on_insert_value: Union[str, Callable, None] = None, on_update_value: Union[str, Callable, None] = None,
+                 on_calculate: Union[Callable, str] = None, db_calculate: Union[Callable, str] = None,
                  group_choices=None, track_visibility=None,
                  descriptor=None, **kwargs):
         self.name = name
@@ -299,15 +300,22 @@ class Field(BaseField):
         self._db_tablespace = db_tablespace
         self.db_compute = db_compute
         self.db_default = db_default
-        self.stored = stored
         self.auto_created = auto_created
+        self.db_calculate = db_calculate
+        self.hybrid = hybrid
 
         if getter is not None and descriptor is None:
-            descriptor = CalculatedAttribute(self, getter, setter)
+            descriptor = HybridDescriptor(self, getter, setter) if hybrid else PropertyDescriptor(self, getter, setter)
+        elif on_calculate is not None and descriptor is None:
+            self._on_calculate = on_calculate
+            from orun.db.models.fields.descriptors import CalculatedAttribute
+            descriptor = CalculatedAttribute(self)
         self.descriptor = descriptor
+        if descriptor is not None:
+            self.is_calculated = True
         self.group_choices = group_choices
         if concrete is None:
-            concrete = False if descriptor is not None else True
+            concrete = False if descriptor is not None or db_calculate else True
         self.concrete = concrete
 
         self.translate = translate
@@ -322,7 +330,7 @@ class Field(BaseField):
 
         if required is None and null is False and not primary_key:
             required = True
-        self.required = required
+        self.required = required or False
 
         # Adjust the appropriate creation counter, and save our local copy.
         if auto_created:
@@ -350,12 +358,28 @@ class Field(BaseField):
 
         self.track_visibility = track_visibility
 
-        self.selectable = self.concrete and not descriptor
+        self.selectable = bool((self.concrete or self.db_calculate) and not self.many_to_many)
 
         if copy is None:
             self.copy = not self.primary_key and self.concrete and not auto_created
         else:
             self.copy = copy
+
+    @property
+    def on_calculate(self):
+        return self._on_calculate
+
+    @on_calculate.setter
+    def on_calculate(self, value):
+        self._on_calculate = value
+
+    def _calculate(self, qs):
+        if isinstance(self._on_calculate, str):
+            self._on_calculate = getattr(self.model, self._on_calculate)
+        if callable(self._on_calculate):
+            self._on_calculate(qs.model, qs)
+        elif isinstance(self._on_calculate, classmethod):
+            self._on_calculate.__func__(qs.model, qs)
 
     def __str__(self):
         """
@@ -553,6 +577,9 @@ class Field(BaseField):
         return []
 
     def get_col(self, alias, output_field=None):
+        if self.db_calculate is not None:
+            from orun.db.models.expressions import CalcCol
+            return CalcCol(alias, self, output_field)
         if output_field is None:
             output_field = self
         if alias != self.model._meta.db_table or output_field is not self:
@@ -611,13 +638,13 @@ class Field(BaseField):
         possibles = {
             "label": None,
             "primary_key": False,
-            "max_length": None,
+            # "max_length": None,
             "unique": False,
             "required": False,
             "null": True,
             "db_index": False,
             "db_default": NOT_PROVIDED,
-            "help_text": '',
+            "help_text": None,
             "db_column": None,
             "db_tablespace": None,
             "auto_created": False,
@@ -688,7 +715,7 @@ class Field(BaseField):
         not a new copy of that field. So, use the app registry to load the
         model and then the field back.
         """
-        if not hasattr(self, 'model'):
+        if self.model is None:
             # Fields are sometimes used without attaching them to models (for
             # example in aggregation). In this case give back a plain field
             # instance. The code below will create a new empty instance of
@@ -873,7 +900,7 @@ class Field(BaseField):
 
     def set_attributes_from_name(self, name):
         self.name = self.name or name
-        if self.concrete:
+        if self.selectable:
             self.attname, self.column = self.get_attname_column()
         else:
             self.attname = self.column = None
@@ -891,14 +918,14 @@ class Field(BaseField):
         if not self.model:
             self.model = cls
         cls._meta.add_field(self)
+        if self.descriptor:
+            setattr(cls, self.name, self.descriptor)
         if self.column:
             # Don't override classmethods with the descriptor. This means that
             # if you have a classmethod and a field with the same name, then
             # such fields can't be deferred (we don't have a check for this).
-            if not getattr(cls, self.attname, None):
-                setattr(cls, self.attname, DeferredAttribute(self, self.attname))
-        elif self.descriptor:
-            setattr(cls, self.name, self.descriptor)
+            if not self.descriptor and not getattr(cls, self.attname, None):
+                setattr(cls, self.attname, DeferredAttribute(self))
         if self.choices:
             setattr(cls, 'get_%s_display' % self.name,
                     partialmethod(cls._get_FIELD_display, field=self))
@@ -1027,17 +1054,55 @@ class Field(BaseField):
             'onchange': self.name in self.model._meta.field_change_event if self.model else None,
             'attrs': self.widget_attrs,
             'widget': self.widget,
+            'max_length': self.max_length,
         }
-        if self.max_length:
-            info['max_length'] = self.max_length
         if self.template:
             info['template'] = self.template
-        return info
+        return FieldInfo(info)
 
     @cached_property
-    def formfield(self):
+    def fieldinfo(self):
         """Return a dict with the form field information to be evaluated by the client side."""
         return self._formfield()
+
+    def formfield(self, form_class=None, choices_form_class=None, **kwargs):
+        """Return a orun.forms.Field instance for this field."""
+        from orun import forms
+        defaults = {
+            'required': not self.required,
+            'label': capfirst(self.label),
+            'help_text': self.help_text,
+        }
+        if self.has_default():
+            if callable(self.default):
+                defaults['initial'] = self.default
+                defaults['show_hidden_initial'] = True
+            else:
+                defaults['initial'] = self.get_default()
+        if self.choices is not None:
+            # Fields with choices get special treatment.
+            include_blank = (self.required or
+                             not (self.has_default() or 'initial' in kwargs))
+            defaults['choices'] = self.get_choices(include_blank=include_blank)
+            defaults['coerce'] = self.to_python
+            if self.null:
+                defaults['empty_value'] = None
+            if choices_form_class is not None:
+                form_class = choices_form_class
+            else:
+                form_class = forms.TypedChoiceField
+            # Many of the subclass-specific formfield arguments (min_value,
+            # max_value) don't apply for choice fields, so be sure to only pass
+            # the values that TypedChoiceField will understand.
+            for k in list(kwargs):
+                if k not in ('coerce', 'empty_value', 'choices', 'required',
+                             'widget', 'label', 'initial', 'help_text',
+                             'error_messages', 'show_hidden_initial', 'disabled'):
+                    del kwargs[k]
+        defaults.update(kwargs)
+        if form_class is None:
+            form_class = forms.CharField
+        return form_class(**defaults)
 
     def value_from_object(self, obj):
         """Return the value of this field in the given model instance."""
@@ -1060,104 +1125,6 @@ class Field(BaseField):
         return FieldEvent(self, meth)
 
 
-class AutoField(Field):
-    description = _("Integer")
-
-    empty_strings_allowed = False
-    default_error_messages = {
-        'invalid': _("'%(value)s' value must be an integer."),
-    }
-
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault('primary_key', True)
-        kwargs['required'] = False
-        kwargs['readonly'] = True
-        kwargs['copy'] = False
-        kwargs.setdefault('editable', False)
-        super().__init__(*args, **kwargs)
-
-    def check(self, **kwargs):
-        return [
-            *super().check(**kwargs),
-            *self._check_primary_key(),
-        ]
-
-    def _check_primary_key(self):
-        if not self.primary_key:
-            return [
-                checks.Error(
-                    'AutoFields must set primary_key=True.',
-                    obj=self,
-                    id='fields.E100',
-                ),
-            ]
-        else:
-            return []
-
-    def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        del kwargs['blank']
-        kwargs['primary_key'] = True
-        return name, path, args, kwargs
-
-    def get_internal_type(self):
-        return "AutoField"
-
-    def get_data_type(self) -> str:
-        return 'int'
-
-    def to_python(self, value):
-        if value is None:
-            return value
-        elif value == '':
-            return None
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            raise exceptions.ValidationError(
-                self.error_messages['invalid'],
-                code='invalid',
-                params={'value': value},
-            )
-
-    def rel_db_type(self, connection):
-        return IntegerField().db_type(connection=connection)
-
-    def validate(self, value, model_instance):
-        pass
-
-    def get_db_prep_value(self, value, connection, prepared=False):
-        if not prepared:
-            value = self.get_prep_value(value)
-            value = connection.ops.validate_autopk_value(value)
-        return value
-
-    def get_prep_value(self, value):
-        from orun.db.models.expressions import OuterRef
-        value = super().get_prep_value(value)
-        if value is None or isinstance(value, OuterRef):
-            return value
-        return int(value)
-
-    def contribute_to_class(self, cls, name, **kwargs):
-        assert not cls._meta.auto_field, "Model %s can't have more than one AutoField." % cls._meta.label
-        super().contribute_to_class(cls, name, **kwargs)
-        cls._meta.auto_field = self
-
-
-class BigAutoField(AutoField):
-    description = _("Big (8 byte) integer")
-
-    def get_internal_type(self):
-        return "BigAutoField"
-
-    def get_data_type(self) -> str:
-        return 'bigint'
-
-    def rel_db_type(self, connection):
-        return BigIntegerField().db_type(connection=connection)
-
-
 class BooleanField(Field):
     empty_strings_allowed = False
     default_error_messages = {
@@ -1165,6 +1132,11 @@ class BooleanField(Field):
         'invalid_nullable': _("'%(value)s' value must be either True, False, or None."),
     }
     description = _("Boolean (Either True or False)")
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('null', False)
+        kwargs.setdefault('default', True)
+        super().__init__(*args, **kwargs)
 
     def get_internal_type(self):
         return "BooleanField"
@@ -1198,16 +1170,21 @@ class BooleanField(Field):
 class CharField(Field):
     description = _("String (up to %(max_length)s)")
 
-    def __init__(self, max_length_or_label=None, strip=True, full_text_search=False, *args, **kwargs):
+    def __init__(
+            self, max_length_or_label=None, db_collation: str=None, strip=True, full_text_search=False, *args, **kwargs
+    ):
         self.full_text_search = full_text_search
         if isinstance(max_length_or_label, str):
             kwargs.setdefault('label', max_length_or_label)
         elif isinstance(max_length_or_label, int):
             kwargs.setdefault('max_length', max_length_or_label)
-        kwargs.setdefault('max_length', 512)
-        self.strip = strip
         super().__init__(*args, **kwargs)
+        self.strip = strip
+        self.db_collation = db_collation
         self.validators.append(validators.MaxLengthValidator(self.max_length))
+
+    def db_type_parameters(self, connection):
+        return {'max_length': self.max_length or 512}
 
     def check(self, **kwargs):
         return [
@@ -1235,6 +1212,12 @@ class CharField(Field):
             ]
         else:
             return []
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        if self.db_collation:
+            kwargs['db_collation'] = self.db_collation
+        return name, path, args, kwargs
 
     def cast_db_type(self, connection):
         if self.max_length is None:
@@ -1392,8 +1375,6 @@ class DateField(DateTimeCheckMixin, Field):
     def to_python(self, value):
         if value is None:
             return value
-        if isinstance(value, str):
-            return datetime.datetime.strptime(value, '%Y-%m-%d')
         if isinstance(value, datetime.datetime):
             if settings.USE_TZ and timezone.is_aware(value):
                 # Convert aware datetimes to the default time zone
@@ -2003,6 +1984,16 @@ class IntegerField(Field):
             )
 
 
+class SmallIntegerField(IntegerField):
+    description = _("Small integer")
+
+    def get_internal_type(self):
+        return "SmallIntegerField"
+
+    def get_data_type(self) -> str:
+        return 'smallint'
+
+
 class BigIntegerField(IntegerField):
     description = _("Big (8 byte) integer")
     MAX_BIGINT = 9223372036854775807
@@ -2012,6 +2003,122 @@ class BigIntegerField(IntegerField):
 
     def get_data_type(self) -> str:
         return 'bigint'
+
+
+class AutoFieldMixin:
+    db_returning = True
+
+    def __init__(self, *args, **kwargs):
+        kwargs['required'] = False
+        kwargs['readonly'] = True
+        kwargs['copy'] = False
+        kwargs.setdefault('editable', False)
+        super().__init__(*args, **kwargs)
+
+    def check(self, **kwargs):
+        return [
+            *super().check(**kwargs),
+            *self._check_primary_key(),
+        ]
+
+    def _check_primary_key(self):
+        if not self.primary_key:
+            return [
+                checks.Error(
+                    'AutoFields must set primary_key=True.',
+                    obj=self,
+                    id='fields.E100',
+                ),
+            ]
+        else:
+            return []
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        del kwargs['blank']
+        kwargs['primary_key'] = True
+        return name, path, args, kwargs
+
+    def validate(self, value, model_instance):
+        pass
+
+    def get_db_prep_value(self, value, connection, prepared=False):
+        if not prepared:
+            value = self.get_prep_value(value)
+            value = connection.ops.validate_autopk_value(value)
+        return value
+
+    def contribute_to_class(self, cls, name, **kwargs):
+        assert not cls._meta.auto_field, (
+            "Model %s can't have more than one auto-generated field."
+            % cls._meta.label
+        )
+        super().contribute_to_class(cls, name, **kwargs)
+        cls._meta.auto_field = self
+
+    def formfield(self, **kwargs):
+        return None
+
+
+class AutoFieldMeta(type):
+    """
+    Metaclass to maintain backward inheritance compatibility for AutoField.
+
+    It is intended that AutoFieldMixin become public API when it is possible to
+    create a non-integer automatically-generated field using column defaults
+    stored in the database.
+
+    In many areas Orun also relies on using isinstance() to check for an
+    automatically-generated field as a subclass of AutoField. A new flag needs
+    to be implemented on Field to be used instead.
+
+    When these issues have been addressed, this metaclass could be used to
+    deprecate inheritance from AutoField and use of isinstance() with AutoField
+    for detecting automatically-generated fields.
+    """
+
+    @property
+    def _subclasses(self):
+        return (BigAutoField, SmallAutoField)
+
+    def __instancecheck__(self, instance):
+        return isinstance(instance, self._subclasses) or super().__instancecheck__(instance)
+
+    def __subclasscheck__(self, subclass):
+        return issubclass(subclass, self._subclasses) or super().__subclasscheck__(subclass)
+
+
+class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):
+
+    def get_internal_type(self):
+        return "AutoField"
+
+    def get_data_type(self) -> str:
+        return 'int'
+
+    def rel_db_type(self, connection):
+        return IntegerField().db_type(connection=connection)
+
+
+class BigAutoField(AutoFieldMixin, BigIntegerField):
+
+    def get_internal_type(self):
+        return 'BigAutoField'
+
+    def get_data_type(self) -> str:
+        return 'bigint'
+
+    def rel_db_type(self, connection):
+        return BigIntegerField().db_type(connection=connection)
+
+
+class SmallAutoField(AutoFieldMixin, SmallIntegerField):
+
+    def get_internal_type(self):
+        return 'SmallAutoField'
+
+    def rel_db_type(self, connection):
+        return SmallIntegerField().db_type(connection=connection)
 
 
 class IPAddressField(Field):
@@ -2157,21 +2264,18 @@ class PositiveIntegerRelDbTypeMixin:
             return IntegerField().db_type(connection=connection)
 
 
+class PositiveBigIntegerField(PositiveIntegerRelDbTypeMixin, BigIntegerField):
+    description = _('Positive big integer')
+
+    def get_internal_type(self):
+        return 'PositiveBigIntegerField'
+
+
 class PositiveIntegerField(PositiveIntegerRelDbTypeMixin, IntegerField):
     description = _("Positive integer")
 
     def get_internal_type(self):
         return "PositiveIntegerField"
-
-
-class SmallIntegerField(IntegerField):
-    description = _("Small integer")
-
-    def get_internal_type(self):
-        return "SmallIntegerField"
-
-    def get_data_type(self) -> str:
-        return 'smallint'
 
 
 class PositiveSmallIntegerField(PositiveIntegerRelDbTypeMixin, SmallIntegerField):
@@ -2505,10 +2609,6 @@ class HtmlField(XmlField):
     pass
 
 
-class JsonField(TextField):
-    pass
-
-
 class PythonCodeField(TextField):
     pass
 
@@ -2528,3 +2628,11 @@ class PasswordField(CharField):
         if is_password_usable(value):
             return make_password(value)
         return value
+
+
+class FieldInfo(dict):
+    def __getattr__(self, item):
+        return self[item]
+
+    def __setattr__(self, key, value):
+        self[key] = value

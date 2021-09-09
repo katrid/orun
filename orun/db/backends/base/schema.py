@@ -2,12 +2,13 @@ import logging
 from datetime import datetime
 
 from orun.db.backends.ddl_references import (
-    Columns, ForeignKeyName, IndexName, Statement, Table,
+    Columns, Expressions, ForeignKeyName, IndexName, Statement, Table,
 )
 from orun.db.backends.utils import names_digest, split_identifier
 from orun.db.models.fields import Field, DecimalField
 from orun.db.backends.base.introspection import FieldInfo
-from orun.db.models import Index
+from orun.db.models import Deferrable, Index
+from orun.db.models.sql import Query
 from orun.db.transaction import TransactionManagementError, atomic
 from orun.apps import apps
 from orun.utils import timezone
@@ -176,8 +177,8 @@ class BaseDatabaseSchemaEditor:
                     params += [default_value]
         # Oracle treats the empty string ('') as null, so coerce the null
         # option whenever '' is a possible value.
-        if not field.primary_key:
-            null = True
+        # if not field.primary_key:
+        #     null = True
         if null and not self.connection.features.implied_column_null:
             sql += " NULL"
         elif not null:
@@ -289,10 +290,10 @@ class BaseDatabaseSchemaEditor:
                     self.deferred_sql.extend(autoinc_sql)
 
         # Add any unique_togethers (always deferred, as some fields might be
-        # created afterwards, like geometry fields with some backends)
-        for fields in model._meta.unique_together:
-            columns = [model._meta.get_field(field).column for field in fields]
-            self.deferred_sql.append(self._create_unique_sql(model, columns))
+        # created afterward, like geometry fields with some backends).
+        for field_names in model._meta.unique_together:
+            fields = [model._meta.get_field(field) for field in field_names]
+            self.deferred_sql.append(self._create_unique_sql(model, fields))
         constraints = [constraint.constraint_sql(model, self) for constraint in model._meta.constraints]
         # Make the table
         sql = self.sql_create_table % {
@@ -330,6 +331,14 @@ class BaseDatabaseSchemaEditor:
         for sql in list(self.deferred_sql):
             if isinstance(sql, Statement) and sql.references_table(model._meta.db_table):
                 self.deferred_sql.remove(sql)
+
+    def _deferrable_constraint_sql(self, deferrable):
+        if deferrable is None:
+            return ''
+        if deferrable == Deferrable.DEFERRED:
+            return ' DEFERRABLE INITIALLY DEFERRED'
+        if deferrable == Deferrable.IMMEDIATE:
+            return ' DEFERRABLE INITIALLY IMMEDIATE'
 
     def add_index(self, model, index):
         """Add an index on a model."""
@@ -918,14 +927,32 @@ class BaseDatabaseSchemaEditor:
             return ' ' + self.connection.ops.tablespace_sql(db_tablespace)
         return ''
 
-    def _create_index_sql(self, model, fields, *, name=None, suffix='', using='',
+    def _index_condition_sql(self, condition):
+        if condition:
+            return ' WHERE ' + condition
+        return ''
+
+    def _index_include_sql(self, model, columns):
+        if not columns or not self.connection.features.supports_covering_indexes:
+            return ''
+        return Statement(
+            ' INCLUDE (%(columns)s)',
+            columns=Columns(model._meta.db_table, columns, self.quote_name),
+        )
+
+    def _create_index_sql(self, model, *, fields=None, name=None, suffix='', using='',
                           db_tablespace=None, col_suffixes=(), sql=None, opclasses=(),
-                          condition=None):
+                          condition=None, include=None, expressions=None):
         """
-        Return the SQL statement to create the index for one or several fields.
-        `sql` can be specified if the syntax differs from the standard (GIS
-        indexes, ...).
+        Return the SQL statement to create the index for one or several fields
+        or expressions. `sql` can be specified if the syntax differs from the
+        standard (GIS indexes, ...).
         """
+        fields = fields or []
+        expressions = expressions or []
+        compiler = Query(model, alias_cols=False).get_compiler(
+            connection=self.connection,
+        )
         tablespace_sql = self._get_index_tablespace_sql(model, fields, db_tablespace=db_tablespace)
         columns = [field.column for field in fields]
         sql_create_index = sql or self.sql_create_index
@@ -942,9 +969,14 @@ class BaseDatabaseSchemaEditor:
             table=Table(table, self.quote_name),
             name=IndexName(table, columns, suffix, create_index_name),
             using=using,
-            columns=self._index_columns(table, columns, col_suffixes, opclasses),
+            columns=(
+                self._index_columns(table, columns, col_suffixes, opclasses)
+                if columns
+                else Expressions(table, expressions, compiler, self.quote_value)
+            ),
             extra=tablespace_sql,
-            condition=(' WHERE ' + condition) if condition else '',
+            condition=self._index_condition_sql(condition),
+            include=self._index_include_sql(model, include),
         )
 
     def _delete_index_sql(self, model, name):
@@ -962,18 +994,22 @@ class BaseDatabaseSchemaEditor:
         Return a list of all index SQL statements (field indexes,
         index_together, Meta.indexes) for the specified model.
         """
-        if not model._meta.managed:
+        if not model._meta.managed or model._meta.proxy or model._meta.swapped:
             return []
         output = []
-        for field in model._meta.local_concrete_fields:
+        for field in model._meta.local_fields:
             output.extend(self._field_indexes_sql(model, field))
 
         for field_names in model._meta.index_together:
             fields = [model._meta.get_field(field) for field in field_names]
-            output.append(self._create_index_sql(model, fields, suffix="_idx"))
+            output.append(self._create_index_sql(model, fields=fields, suffix='_idx'))
 
         for index in model._meta.indexes:
-            output.append(index.create_sql(model, self))
+            if (
+                    not index.contains_expressions or
+                    self.connection.features.supports_expression_indexes
+            ):
+                output.append(index.create_sql(model, self))
         return output
 
     def _field_indexes_sql(self, model, field):
@@ -982,7 +1018,7 @@ class BaseDatabaseSchemaEditor:
         """
         output = []
         if self._field_should_be_indexed(model, field):
-            output.append(self._create_index_sql(model, [field]))
+            output.append(self._create_index_sql(model, fields=[field]))
         return output
 
     def _field_should_be_indexed(self, model, field):
@@ -1034,47 +1070,81 @@ class BaseDatabaseSchemaEditor:
     def _delete_fk_sql(self, model, name):
         return self._delete_constraint_sql(self.sql_delete_fk, model, name)
 
-    def _unique_sql(self, model, fields, name, condition=None):
-        if condition:
-            # Databases support conditional unique constraints via a unique
-            # index.
-            sql = self._create_unique_sql(model, fields, name=name, condition=condition)
+    def _unique_sql(
+        self, model, fields, name, condition=None, deferrable=None,
+        include=None, opclasses=None, expressions=None,
+    ):
+        if (
+            deferrable and
+            not self.connection.features.supports_deferrable_unique_constraints
+        ):
+            return None
+        if condition or include or opclasses or expressions:
+            # Databases support conditional, covering, and functional unique
+            # constraints via a unique index.
+            sql = self._create_unique_sql(
+                model,
+                fields,
+                name=name,
+                condition=condition,
+                include=include,
+                opclasses=opclasses,
+                expressions=expressions,
+            )
             if sql:
                 self.deferred_sql.append(sql)
             return None
         constraint = self.sql_unique_constraint % {
-            'columns': ', '.join(map(self.quote_name, fields)),
+            'columns': ', '.join([self.quote_name(field.column) for field in fields]),
+            'deferrable': self._deferrable_constraint_sql(deferrable),
         }
         return self.sql_constraint % {
             'name': self.quote_name(name),
             'constraint': constraint,
         }
 
-    def _create_unique_sql(self, model, columns, name=None, condition=None):
+    def _create_unique_sql(
+        self, model, fields, name=None, condition=None, deferrable=None,
+        include=None, opclasses=None, expressions=None,
+    ):
+        if (
+            (
+                deferrable and
+                not self.connection.features.supports_deferrable_unique_constraints
+            ) or
+            (condition and not self.connection.features.supports_partial_indexes) or
+            (include and not self.connection.features.supports_covering_indexes) or
+            (expressions and not self.connection.features.supports_expression_indexes)
+        ):
+            return None
+
         def create_unique_name(*args, **kwargs):
             return self.quote_name(self._create_index_name(*args, **kwargs))
 
-        table = Table(model._meta.db_table, self.quote_name)
+        compiler = Query(model, alias_cols=False).get_compiler(connection=self.connection)
+        table = model._meta.db_table
+        columns = [field.column for field in fields]
         if name is None:
-            name = IndexName(model._meta.db_table, columns, '_uniq', create_unique_name)
+            name = IndexName(table, columns, '_uniq', create_unique_name)
         else:
             name = self.quote_name(name)
-        columns = Columns(table, columns, self.quote_name)
-        if condition:
-            return Statement(
-                self.sql_create_unique_index,
-                table=table,
-                name=name,
-                columns=columns,
-                condition=' WHERE ' + condition,
-            ) if self.connection.features.supports_partial_indexes else None
+        if condition or include or opclasses or expressions:
+            sql = self.sql_create_unique_index
         else:
-            return Statement(
-                self.sql_create_unique,
-                table=table,
-                name=name,
-                columns=columns,
-            )
+            sql = self.sql_create_unique
+        if columns:
+            columns = self._index_columns(table, columns, col_suffixes=(), opclasses=opclasses)
+        else:
+            columns = Expressions(table, expressions, compiler, self.quote_value)
+        return Statement(
+            sql,
+            table=Table(table, self.quote_name),
+            name=name,
+            columns=columns,
+            condition=self._index_condition_sql(condition),
+            deferrable=self._deferrable_constraint_sql(deferrable),
+            include=self._index_include_sql(model, include),
+        )
 
     def _delete_unique_sql(self, model, name, condition=None):
         if condition:
