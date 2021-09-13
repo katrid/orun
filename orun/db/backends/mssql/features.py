@@ -6,8 +6,8 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     allows_schema = True
     allows_group_by_selected_pks = True
     can_use_chunked_reads = False
-    can_return_id_from_insert = True
-    can_return_ids_from_bulk_insert = True
+    can_return_columns_from_insert = True
+    can_return_rows_from_bulk_insert = True
     has_real_datatype = True
     has_native_uuid_field = True
     has_native_duration_field = False

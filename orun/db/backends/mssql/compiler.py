@@ -20,7 +20,7 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
         opts = self.query.get_meta()
         insert_statement = self.connection.ops.insert_statement(ignore_conflicts=self.query.ignore_conflicts)
         result = ['SET NOCOUNT ON;']
-        if self.return_id:
+        if self.returning_fields:
             result.append('DECLARE @T TABLE(ID BIGINT)')
         result.append('%s %s' % (insert_statement, qn(opts.db_table)))
         fields = self.query.fields or [opts.pk]
@@ -40,14 +40,14 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
         # queries and generate their own placeholders. Doing that isn't
         # necessary and it should be possible to use placeholders and
         # expressions in bulk inserts too.
-        can_bulk = (not self.return_id and self.connection.features.has_bulk_insert)
+        can_bulk = (not self.returning_fields and self.connection.features.has_bulk_insert)
 
         placeholder_rows, param_rows = self.assemble_as_sql(fields, value_rows)
 
         ignore_conflicts_suffix_sql = self.connection.ops.ignore_conflicts_suffix_sql(
             ignore_conflicts=self.query.ignore_conflicts
         )
-        if self.return_id and self.connection.features.can_return_id_from_insert:
+        if self.returning_fields and self.connection.features.can_return_columns_from_insert:
             r_fmt, r_params = self.connection.ops.return_insert_id()
             # Skip empty r_fmt to allow subclasses to customize behavior for
             # 3rd party backends. Refs #19096.
