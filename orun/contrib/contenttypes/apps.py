@@ -4,14 +4,14 @@ from orun.contrib.contenttypes.checks import (
 )
 from orun.core import checks
 from orun.db.models.signals import post_migrate, pre_migrate
-from orun.utils.translation import gettext_lazy as _
+# from orun.utils.translation import gettext_lazy as _
 
 from .management import create_contenttypes
 
 
 class ContentTypesConfig(apps.AppConfig):
     name = 'orun.contrib.contenttypes'
-    verbose_name = _("Content Types")
+    verbose_name = "Content Types"
 
     def ready(self):
         # pre_migrate.connect(inject_rename_contenttypes_operations, sender=self)

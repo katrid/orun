@@ -5984,6 +5984,7 @@ var Katrid;
                 watch: {
                     modelValue: function (value) {
                         if (value && !this.$changing) {
+                            console.log('watch value', value);
                             if (value !== $(this.$el).inputmask('unmaskedvalue'))
                                 $(this.$el).inputmask('setvalue', value);
                         }

@@ -34,22 +34,22 @@ class ActivityType(models.Model):
     )
     res_model_id = models.ForeignKey(
         'content.type', 'Model', index=True,
-        domain=['&', ('is_mail_thread', '=', True), ('transient', '=', False)],
+        filter=['&', ('is_mail_thread', '=', True), ('transient', '=', False)],
         help_text='Specify a model if the activity should be specific to a model'
                   ' and not available when managing activities for other models.'
     )
     default_next_type_id = models.ForeignKey(
         'mail.activity.type', verbose_name=_('Default Next Activity'),
-        domain="['|', ('res_model_id', '=', False), ('res_model_id', '=', res_model_id)]"
+        filter="['|', ('res_model_id', '=', False), ('res_model_id', '=', res_model_id)]"
     )
     force_next = models.BooleanField(verbose_name=_("Auto Schedule Next Activity"), default=False)
     next_type = models.ManyToManyField(
         'mail.activity.type', 'mail_activity_rel', 'activity_id', 'recommended_id',
-        domain="['|', ('res_model_id', '=', False), ('res_model_id', '=', res_model_id)]",
+        filter="['|', ('res_model_id', '=', False), ('res_model_id', '=', res_model_id)]",
         verbose_name='Recommended Next Activities')
     previous_type = models.ManyToManyField(
         'mail.activity.type', 'mail_activity_rel', 'recommended_id', 'activity_id',
-        domain="['|', ('res_model_id', '=', False), ('res_model_id', '=', res_model_id)]",
+        filter="['|', ('res_model_id', '=', False), ('res_model_id', '=', res_model_id)]",
         verbose_name='Preceding Activities')
     category = models.ChoiceField(
         (
@@ -138,7 +138,7 @@ class MailActivityMixin(models.Model):
         'mail.activity', 'object_id', verbose_name=_('Activities'),
         # auto_join=True,
         groups="base.group_user",
-        domain=lambda self: {'model_name': self._meta.name}
+        filter=lambda self: {'model_name': self._meta.name}
     )
     activity_state = models.SelectionField(
         (

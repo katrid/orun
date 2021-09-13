@@ -7,7 +7,7 @@ import unittest
 import warnings
 from collections import Counter
 from contextlib import contextmanager
-from copy import copy
+from copy import copy, deepcopy
 from difflib import get_close_matches
 from functools import wraps
 from unittest.util import safe_repr
@@ -1109,6 +1109,43 @@ class _TestCaseDatabasesDescriptor(_TransactionTestCaseDatabasesDescriptor):
     )
 
 
+class TestData:
+    """
+    Descriptor to provide TestCase instance isolation for attributes assigned
+    during the setUpTestData() phase.
+
+    Allow safe alteration of objects assigned in setUpTestData() by test
+    methods by exposing deep copies instead of the original objects.
+
+    Objects are deep copied using a memo kept on the test case instance in
+    order to maintain their original relationships.
+    """
+    memo_attr = '_testdata_memo'
+
+    def __init__(self, name, data):
+        self.name = name
+        self.data = data
+
+    def get_memo(self, testcase):
+        try:
+            memo = getattr(testcase, self.memo_attr)
+        except AttributeError:
+            memo = {}
+            setattr(testcase, self.memo_attr, memo)
+        return memo
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self.data
+        memo = self.get_memo(instance)
+        data = deepcopy(self.data, memo)
+        setattr(instance, self.name, data)
+        return data
+
+    def __repr__(self):
+        return '<TestData: name=%r, data=%r>' % (self.name, self.data)
+
+
 class TestCase(TransactionTestCase):
     """
     Similar to TransactionTestCase, but use `transaction.atomic()` to achieve
@@ -1149,26 +1186,35 @@ class TestCase(TransactionTestCase):
         super().setUpClass()
         if not cls._databases_support_transactions():
             return
-        cls.cls_atomics = cls._enter_atomics()
-
-        if cls.fixtures:
-            for db_name in cls._databases_names(include_mirrors=False):
-                try:
-                    for schema, fixtures in cls.fixtures.items():
-                        call_command('loaddata', schema, *fixtures, **{'verbosity': 0, 'database': db_name})
-                except Exception:
-                    cls._rollback_atomics(cls.cls_atomics)
-                    cls._remove_databases_failures()
-                    raise
+        # Disable the durability check to allow testing durable atomic blocks
+        # in a transaction for performance reasons.
+        transaction.Atomic._ensure_durability = False
         try:
-            cls.setUpTestData()
+            cls.cls_atomics = cls._enter_atomics()
+
+            if cls.fixtures:
+                for db_name in cls._databases_names(include_mirrors=False):
+                    try:
+                        call_command('loaddata', *cls.fixtures, **{'verbosity': 0, 'database': db_name})
+                    except Exception:
+                        cls._rollback_atomics(cls.cls_atomics)
+                        raise
+            pre_attrs = cls.__dict__.copy()
+            try:
+                cls.setUpTestData()
+            except Exception:
+                cls._rollback_atomics(cls.cls_atomics)
+                raise
+            for name, value in cls.__dict__.items():
+                if value is not pre_attrs.get(name):
+                    setattr(cls, name, TestData(name, value))
         except Exception:
-            cls._rollback_atomics(cls.cls_atomics)
-            cls._remove_databases_failures()
+            transaction.Atomic._ensure_durability = True
             raise
 
     @classmethod
     def tearDownClass(cls):
+        transaction.Atomic._ensure_durability = True
         if cls._databases_support_transactions():
             cls._rollback_atomics(cls.cls_atomics)
             for conn in connections.all():

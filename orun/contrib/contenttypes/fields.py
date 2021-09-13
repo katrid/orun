@@ -6,7 +6,7 @@ from orun.db import DEFAULT_DB_ALIAS, models, router, transaction
 from orun.db.models import DO_NOTHING
 from orun.db.models.base import ModelBase, make_foreign_order_accessors
 from orun.db.models.fields.mixins import FieldCacheMixin
-from orun.db.models.fields import BaseField, CharField
+from orun.db.models.fields import Field, CharField
 from orun.db.models.fields.related import (
     ForeignObject, ForeignObjectRel, ReverseManyToOneDescriptor,
     lazy_related_operation,
@@ -18,7 +18,7 @@ from orun.apps import apps
 from .models import ContentType
 
 
-class GenericForeignKey(BaseField, FieldCacheMixin):
+class GenericForeignKey(Field, FieldCacheMixin):
     """
     Provide a generic many-to-one relation through the ``model`` and
     ``object_id`` fields.
@@ -28,14 +28,6 @@ class GenericForeignKey(BaseField, FieldCacheMixin):
     """
 
     # Field flags
-    auto_created = False
-    concrete = False
-    editable = False
-    hidden = False
-    primary_key = False
-    db_index = False
-
-    is_relation = True
     many_to_many = False
     many_to_one = True
     one_to_many = False
@@ -43,13 +35,14 @@ class GenericForeignKey(BaseField, FieldCacheMixin):
     related_model = None
     remote_field = None
 
-    def __init__(self, ct_field='model', fk_field='object_id', for_concrete_model=True):
+    def __init__(self, ct_field='model', fk_field='object_id', for_concrete_model=True, **kwargs):
+        super().__init__(concrete=False, editable=False, **kwargs)
         self.ct_field = ct_field
         self.fk_field = fk_field
         self.for_concrete_model = for_concrete_model
-        self.editable = False
         self.rel = None
         self.column = None
+        self.is_relation = True
 
     def contribute_to_class(self, cls, name, **kwargs):
         self.name = name

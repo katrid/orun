@@ -46,7 +46,6 @@ class Message(models.Model):
     reply_to = models.CharField('Reply-To')
     # mail_server = models.ForeignKey('ir.mail.server')
     attachments = models.ManyToManyField('content.attachment')
-    via = models.CharField()
 
     class Meta:
         name = 'mail.message'
