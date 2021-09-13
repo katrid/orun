@@ -3,5 +3,5 @@ import orun.contrib.erp.models
 from .thread import Thread
 
 
-class Partner(orun.contrib.erp.models.Partner, Thread):
-    pass
+# class Partner(orun.contrib.erp.models.Partner, Thread):
+#     pass
