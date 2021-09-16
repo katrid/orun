@@ -61,21 +61,14 @@ SUBDIRS_TO_SKIP = [
 
 ALWAYS_INSTALLED_APPS = [
     'orun.contrib.contenttypes',
-    'orun.contrib.auth',
-    'orun.contrib.sites',
-    'orun.contrib.sessions',
-    'orun.contrib.messages',
     'orun.contrib.staticfiles',
     'orun.contrib.erp',
-    'orun.contrib.web',
-    'orun.contrib.mail',
-    #'orun.contrib.comments',
 ]
 
 ALWAYS_MIDDLEWARE = [
     'orun.contrib.sessions.middleware.SessionMiddleware',
     'orun.middleware.common.CommonMiddleware',
-    'orun.middleware.csrf.CsrfViewMiddleware',
+    # 'orun.middleware.csrf.CsrfViewMiddleware',
     'orun.contrib.auth.middleware.AuthenticationMiddleware',
     'orun.contrib.messages.middleware.MessageMiddleware',
 ]
@@ -109,7 +102,7 @@ def get_test_modules():
 
 
 def get_installed():
-    return [app_config.name for app_config in apps.get_addons()]
+    return [app_config.name for app_config in apps.get_app_configs()]
 
 
 def setup(verbosity, test_labels, parallel):
@@ -149,15 +142,13 @@ def setup(verbosity, test_labels, parallel):
     settings.STATIC_URL = '/static/'
     settings.STATIC_ROOT = os.path.join(TMPDIR, 'static')
     settings.TEMPLATES = [{
-        'BACKEND': 'orun.template.backends.django.DjangoTemplates',
-        'DIRS': [TEMPLATE_DIR],
+        'BACKEND': 'orun.template.backends.jinja2.Jinja2',
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'orun.template.context_processors.debug',
                 'orun.template.context_processors.request',
-                # 'orun.contrib.auth.context_processors.auth',
-                # 'orun.contrib.messages.context_processors.messages',
+                'orun.template.context_processors.i18n',
             ],
         },
     }]

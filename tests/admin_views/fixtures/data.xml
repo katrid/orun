@@ -1,0 +1,8 @@
+<data>
+  <action id="admin_views.admin.NestedDataWindowAction" type="ui.action.window" model="admin_views.nested.data"/>
+  <menuitem id="admin_views.admin.menu" name="Admin Views">
+    <menuitem id="admin_views.admin.menu.actions" name="Actions">
+      <menuitem id="admin_views.admin.menu.actions.nested_data" action="admin_views.admin.NestedDataWindowAction"/>
+    </menuitem>
+  </menuitem>
+</data>

@@ -12,11 +12,12 @@ class UITestCase(TestCase):
         'admin_tests': ['users.xml'],
     }
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         user = apps['auth.user'].objects.filter(username='test').first()
         user.set_password(TEST_PASSWORD)
         user.save()
-        self.client = ClientRPC()
+        cls.client = ClientRPC()
 
     def test_api(self):
         self.client.login(username='test', password=TEST_PASSWORD)
@@ -67,4 +68,9 @@ class UITestCase(TestCase):
         })
 
         res = self.client.rpc('admin_tests.widgets', 'write', valid_data)
+        self.assertEqual(res.status_code, 200)
+
+    def test_copy_to(self):
+        self.client.login(username='test', password=TEST_PASSWORD)
+        res = self.client.rpc('admin_tests.tag', 'write', {'name': 'Red Tag'})
         self.assertEqual(res.status_code, 200)
