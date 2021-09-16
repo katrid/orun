@@ -7,7 +7,7 @@ class AdminSite:
 
     def register(self, action_type_or_object, *args):
         if issubclass(action_type_or_object, actions.Action):
-            self.actions[action_type_or_object.__qualname__] = action_type_or_object
+            self.actions[action_type_or_object.get_qualname()] = action_type_or_object
             return action_type_or_object
 
     def update(self):

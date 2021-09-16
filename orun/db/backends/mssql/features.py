@@ -49,4 +49,4 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     supports_aggregate_filter_clause = True
     supported_explain_formats = {'JSON', 'TEXT', 'XML'}
     validates_explain_options = False
-
+    supports_boolean_expr_in_select_clause = False

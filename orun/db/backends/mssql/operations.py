@@ -81,4 +81,23 @@ class DatabaseOperations(BaseDatabaseOperations):
     def convert_bynaryfield_value(self, value, expression, connection):
         return value
 
+    def sql_flush(self, style, tables, *, reset_sequences=False, allow_cascade=False):
+        if not tables:
+            return []
 
+        # Perform a single SQL 'TRUNCATE x, y, z...;' statement. It allows us
+        # to truncate tables referenced by a foreign key in any other table.
+        sql_parts = ['EXEC sp_msforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT ALL";']
+        sql_parts.extend([
+            style.SQL_KEYWORD('TRUNCATE TABLE') + ' ' + style.SQL_FIELD(self.quote_name(table)) + ';' for table in tables
+        ])
+        if reset_sequences:
+            sql_parts.append(style.SQL_KEYWORD('RESTART IDENTITY'))
+        return ['%s;' % ' '.join(sql_parts)]
+
+    def conditional_expression_supported_in_where_clause(self, expression):
+        """
+        Return True, if the conditional expression is supported in the WHERE
+        clause.
+        """
+        return False

@@ -1508,21 +1508,28 @@ class LiveServerTestCase(TransactionTestCase):
         return cls.host
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def _make_connections_override(cls):
         connections_override = {}
         for conn in connections.all():
             # If using in-memory sqlite databases, pass the connections to
             # the server thread.
             if conn.vendor == 'sqlite' and conn.is_in_memory_db():
-                # Explicitly enable thread-shareability for this connection
-                conn.inc_thread_sharing()
                 connections_override[conn.alias] = conn
+        return connections_override
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
         cls._live_server_modified_settings = modify_settings(
             ALLOWED_HOSTS={'append': cls.allowed_host},
         )
         cls._live_server_modified_settings.enable()
+
+        connections_override = cls._make_connections_override()
+        for conn in connections_override.values():
+            # Explicitly enable thread-shareability for this connection.
+            conn.inc_thread_sharing()
+
         cls.server_thread = cls._create_server_thread(connections_override)
         cls.server_thread.daemon = True
         cls.server_thread.start()
@@ -1546,21 +1553,18 @@ class LiveServerTestCase(TransactionTestCase):
 
     @classmethod
     def _tearDownClassInternal(cls):
-        # There may not be a 'server_thread' attribute if setUpClass() for some
-        # reasons has raised an exception.
-        if hasattr(cls, 'server_thread'):
-            # Terminate the live server's thread
-            cls.server_thread.terminate()
+        # Terminate the live server's thread.
+        cls.server_thread.terminate()
+        # Restore shared connections' non-shareability.
+        for conn in cls.server_thread.connections_override.values():
+            conn.dec_thread_sharing()
 
-            # Restore sqlite in-memory database connections' non-shareability.
-            for conn in cls.server_thread.connections_override.values():
-                conn.dec_thread_sharing()
+        cls._live_server_modified_settings.disable()
+        super().tearDownClass()
 
     @classmethod
     def tearDownClass(cls):
         cls._tearDownClassInternal()
-        cls._live_server_modified_settings.disable()
-        super().tearDownClass()
 
 
 class SerializeMixin:

@@ -4,7 +4,7 @@ import builtins
 
 from orun.http.response import HttpResponseBase
 from orun.db.models.base import ModelBase, Model
-from orun.core.exceptions import RPCError, ValidationError
+from orun.core.exceptions import RPCError, ValidationError, ObjectDoesNotExist
 
 
 class RecordProxy:
@@ -166,8 +166,15 @@ def jsonrpc(fn):
                     'message': str(e)
                 }
             })
+        except ObjectDoesNotExist as e:
+            return JsonResponse({
+                'jsonrpc': '2.0',
+                'id': _id,
+                'error': {
+                    'message': str(e)
+                }
+            })
         except AssertionError as e:
-            raise
             return JsonResponse({
                 'jsonrpc': '2.0',
                 'id': _id,

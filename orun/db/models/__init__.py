@@ -5,8 +5,8 @@ from orun.db.models.aggregates import __all__ as aggregates_all
 from orun.db.models.constraints import *  # NOQA
 from orun.db.models.constraints import __all__ as constraints_all
 from orun.db.models.deletion import (
-    CASCADE, DO_NOTHING, PROTECT, SET, SET_DEFAULT, SET_NULL, ProtectedError,
-    DB_CASCADE,
+    CASCADE, DB_CASCADE, DO_NOTHING, PROTECT, RESTRICT, SET, SET_DEFAULT, SET_NULL,
+    ProtectedError, RestrictedError,
 )
 from orun.db.models.expressions import (
     Case, Exists, Expression, ExpressionList, ExpressionWrapper, F, Func,

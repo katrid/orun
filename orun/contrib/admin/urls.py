@@ -3,9 +3,10 @@ from orun.urls import path, re_path
 from . import views
 
 
+app_name = 'admin'
 urlpatterns = [
     path('web/', views.client.index),
-    path('web/login/', views.client.login),
+    path('web/login/', views.client.login, name='login'),
     path('web/logout/', views.client.logout),
     path('web/js/templates/', views.client.js_templates),
     path('web/content/<int:content_id>/', views.client.content),

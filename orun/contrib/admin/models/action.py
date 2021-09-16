@@ -24,7 +24,7 @@ class Action(models.Model):
         ),
         default='action',
     )
-    multiple = models.BooleanField(label='Restrict to lists')
+    multiple = models.BooleanField(default=False, label='Restrict to lists')
 
     class Meta:
         name = 'ui.action'

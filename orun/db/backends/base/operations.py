@@ -417,7 +417,7 @@ class BaseDatabaseOperations:
         themselves).
 
         The `style` argument is a Style object as returned by either
-        color_style() or no_style() in orun.core.management.color.
+        color_style() or no_style() in django.core.management.color.
 
         If `reset_sequences` is True, the list includes SQL statements required
         to reset the sequences.

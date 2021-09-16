@@ -287,9 +287,7 @@ class AdminModel(models.Model, helper=True):
         for obj in ids:
             r.append(obj.pk)
             obj.delete()
-        return {
-            'ids': r,
-        }
+        return r
 
     @api.classmethod
     def api_create_by_name(self, name, *args, **kwargs):
@@ -310,8 +308,7 @@ class AdminModel(models.Model, helper=True):
                 fields.append('record_name')
             obj = cls._api_search(fields=fields).get(pk=id)
             return {'data': obj.to_dict(fields=fields)}
-        else:
-            raise cls.DoesNotExist()
+        return {'error': 'the record ID must be specified'}
 
     @api.classmethod
     def api_write(cls, data):
@@ -450,6 +447,8 @@ class AdminModel(models.Model, helper=True):
             Action = apps['ui.action.window']
             action = Action.objects.get(pk=kwargs.get('action'))
             views = {mode: None for mode in action.view_mode.split(',')}
+            if 'search' not in views:
+                views['search'] = None
         elif views is None:
             views = {'form': None, 'list': None, 'search': None}
 

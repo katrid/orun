@@ -11,6 +11,12 @@ class ProtectedError(IntegrityError):
         super().__init__(msg, protected_objects)
 
 
+class RestrictedError(IntegrityError):
+    def __init__(self, msg, restricted_objects):
+        self.restricted_objects = restricted_objects
+        super().__init__(msg, restricted_objects)
+
+
 def CASCADE(collector, field, sub_objs, using):
     collector.collect(sub_objs, source=field.remote_field.model,
                       source_attr=field.name, nullable=field.null)
@@ -33,6 +39,11 @@ def PROTECT(collector, field, sub_objs, using):
         ),
         sub_objs
     )
+
+
+def RESTRICT(collector, field, sub_objs, using):
+    collector.add_restricted_objects(field, sub_objs)
+    collector.add_dependency(field.remote_field.model, field.model)
 
 
 def SET(value):

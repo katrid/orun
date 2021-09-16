@@ -2969,6 +2969,7 @@ var Katrid;
                     const data = this.record.$record.serialize();
                     if (data) {
                         this.uploading++;
+                        console.log(data);
                         return this.model.write([data])
                             .then((res) => {
                             this._pendingChanges = false;
@@ -3561,8 +3562,10 @@ var Katrid;
                 return oldValue != newValue;
             }
             discard() {
-                if (this.pending)
+                console.log(this.pristine, this.pending);
+                if (this.pending) {
                     Object.assign(this.pristine, this.pending);
+                }
                 this.data = {};
             }
             flush() {
@@ -4512,8 +4515,10 @@ var Katrid;
                     this.fields = res.fields;
                     Object.values(res.views).forEach((viewInfo) => {
                         let relField = viewInfo.fields[this.info.field];
-                        if (relField)
+                        if (relField) {
+                            relField.required = false;
                             relField.visible = false;
+                        }
                     });
                     for (let k of Object.keys(preLoadedViews)) {
                         if (!(k in res.views))
@@ -6029,6 +6034,7 @@ var Katrid;
             hide() {
                 this.el.classList.remove('show');
                 this._popper.destroy();
+                this.el.remove();
             }
             get visible() {
                 return this.el.classList.contains('show');
@@ -6100,7 +6106,7 @@ var Katrid;
                 if (typeof template === 'function')
                     template = template();
                 else if (!template)
-                    template = `<a class="dropdown-item">${item.text}</a>`;
+                    template = `<a class="dropdown-item" data-item-id="${item.id}">${item.text}</a>`;
                 $(this.el).append(template);
                 let el = this.el.querySelector('.dropdown-item:last-child');
                 $(el).data('item', item);
@@ -6460,7 +6466,7 @@ var Katrid;
                             let items = res.items;
                             if (this.allowAdvancedSearch)
                                 items.push({
-                                    template: `<a class="dropdown-item"><i>${_.gettext('Search more...')}</i></a>`,
+                                    template: `<a class="dropdown-item action-search-more"><i>${_.gettext('Search more...')}</i></a>`,
                                     click: async (event) => {
                                         event.stopPropagation();
                                         this.hideMenu();
@@ -6480,13 +6486,15 @@ var Katrid;
                                 });
                             if (this.allowCreateNew)
                                 items.push({
-                                    template: `<a class="dropdown-item"><i>${_.gettext('Create new...')}</i></a>`, click: async (event) => {
+                                    template: `<a class="dropdown-item action-create-new"><i>${_.gettext('Create new...')}</i></a>`, click: async (event) => {
                                         event.stopPropagation();
                                         this.hideMenu();
                                         let dlg = await Katrid.Forms.Views.FormViewDialog.createNew({ model: field.model });
                                         let res = await dlg.showDialog();
-                                        if (res)
-                                            dlg.dataSource.save();
+                                        if (res) {
+                                            let newRec = await dlg.dataSource.save();
+                                            this.setValue({ id: newRec.id, text: newRec.record_name });
+                                        }
                                     }
                                 });
                             return items;
@@ -6730,7 +6738,7 @@ var Katrid;
                 let toolbar = document.createElement('div');
                 toolbar.classList.add('grid-toolbar');
                 toolbar.innerHTML = `
-<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="createNew()">${_.gettext('Add')}</button>
+<button class="btn btn-sm btn-outline-secondary btn-action-add" type="button" v-on:click="createNew()">${_.gettext('Add')}</button>
 <button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="deleteSelection()" v-show="selectionLength">${_.gettext('Delete')}</button>
 `;
                 grid.append(toolbar);
@@ -6738,7 +6746,13 @@ var Katrid;
                 if (field.viewMode === 'list') {
                     let renderer = new Forms.ListRenderer(viewInfo, { rowSelector: true, allowGrouping: false });
                     grid.setAttribute('field-name', field.name);
-                    let table = renderer.render(viewInfo.template, 'records');
+                    let table;
+                    if (field['$$listTemplateCache'] === undefined) {
+                        table = renderer.render(viewInfo.template, 'records');
+                        field['$$listTemplate'] = table;
+                    }
+                    else
+                        table = field['$$listTemplateCache'];
                     let div = document.createElement('div');
                     div.classList.add('table-responsive');
                     div.append(table);
@@ -6820,7 +6834,9 @@ var Katrid;
                                 field: this.field, record, index,
                                 master: this.$data.dataSource.masterSource,
                             });
-                            form.dataSource.record = record;
+                            let rec = {};
+                            rec = Object.assign(rec, record);
+                            form.dataSource.record = rec;
                             form.vm.parent = this.$parent;
                             record = await record.$record.load(record);
                             let res = await form.showDialog({ edit: this.$parent.changing, backdrop: 'static' });
@@ -7335,6 +7351,9 @@ var Katrid;
                             cancel() {
                                 me.dataSource.cancel();
                             },
+                            discardChanges() {
+                                this.record.$record.discard();
+                            },
                             edit() {
                                 me.dataSource.edit();
                             },
@@ -7547,11 +7566,11 @@ var Katrid;
             <div class="clearfix"></div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-primary" type="button" @click="actionView.saveAndClose()"
+            <button type="button" class="btn btn-primary btn-action-save" type="button" @click="actionView.saveAndClose()"
                     v-if="dataSource.changing">
               ${Katrid.i18n.gettext('Save')}
             </button>
-            <button type="button" class="btn btn-outline-secondary" type="button" data-dismiss="modal" @click="cancel()"
+            <button type="button" class="btn btn-outline-secondary" type="button" data-dismiss="modal" @click="discardChanges()"
                     v-if="dataSource.changing">
               ${Katrid.i18n.gettext('Discard')}
             </button>
@@ -7569,6 +7588,7 @@ var Katrid;
     </action-view>
       `)[0];
                     this.templateView = templ;
+                    this.templateView.setAttribute('data-model', this.model.name);
                     templ.querySelector('.modal-body').append(content);
                     return templ;
                 }
@@ -7582,7 +7602,8 @@ var Katrid;
                         $(el).modal(options)
                             .on('hidden.bs.modal', () => {
                             resolve(this.$result);
-                            $(el).data('modal', null);
+                            $(el).data('bs.modal', null);
+                            el.remove();
                         });
                         if (options?.edit)
                             this.vm.dataSource.edit();
@@ -7734,10 +7755,13 @@ var Katrid;
                         dlg.renderTo();
                         dlg.dataSource.open();
                         let el = dlg.actionView;
+                        console.log('show dialog');
                         $(el).modal(config.options)
                             .on('hidden.bs.modal', () => {
                             resolve(dlg.vm.$result);
-                            $(el).data('modal', null);
+                            console.log('remove', el.closest('action-view'));
+                            $(el).data('bs.modal', null);
+                            el.closest('action-view').remove();
                         });
                         return dlg;
                     });
@@ -7953,6 +7977,7 @@ var Katrid;
                         .map((field) => field.loadViews()));
                 }
                 get template() {
+                    return $(this.content)[0];
                     if (!this._template)
                         this._template = $(this.content)[0];
                     return this._template;
