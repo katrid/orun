@@ -89,8 +89,10 @@ class DatabaseOperations(BaseDatabaseOperations):
         # to truncate tables referenced by a foreign key in any other table.
         sql_parts = ['EXEC sp_msforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT ALL";']
         sql_parts.extend([
-            style.SQL_KEYWORD('TRUNCATE TABLE') + ' ' + style.SQL_FIELD(self.quote_name(table)) + ';' for table in tables
+            style.SQL_KEYWORD('DELETE FROM') + ' ' + style.SQL_FIELD(self.quote_name(table)) + ';' for table in tables
         ])
+
+        sql_parts.append('EXEC sp_msforeachtable "ALTER TABLE ? WITH CHECK CONSTRAINT ALL";')
         if reset_sequences:
             sql_parts.append(style.SQL_KEYWORD('RESTART IDENTITY'))
         return ['%s;' % ' '.join(sql_parts)]

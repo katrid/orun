@@ -13189,11 +13189,11 @@ Katrid.filter('date', function (value, fmt = 'MM/DD/YYYY') {
     }
 });
 Katrid.filter('number', function (value, digits) {
-    if (value !== null)
+    if (value != null)
         return Katrid.intl.number(digits).format(value);
 });
 Katrid.filter('toFixed', function (value, digits) {
-    if (value !== null)
+    if (value != null)
         return Katrid.intl.toFixed(digits).format(value);
 });
 Katrid.filter('sprintf', function (fmt, ...args) {

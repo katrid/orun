@@ -77,6 +77,9 @@ class Partner(models.Model):
         title_field = 'display_name'
         verbose_name = _('Partner')
         verbose_name_plural = _('Partners')
+        field_groups = {
+            'name_fields': ['name'],
+        }
 
     def __str__(self):
         return self.display_name
@@ -89,6 +92,7 @@ class Partner(models.Model):
             self.display_name = f'{self.parent.display_name}, {self.name}'
         else:
             self.display_name = self.name
+        return self.display_name
 
     def save(self, *args, **kwargs):
         # TODO replace by orm api
