@@ -131,7 +131,7 @@ class AdminTestCaseMixin:
             parent = self.selenium
         inp = parent.find_element_by_name('qt').find_element_by_tag_name('input')
         inp.click()
-        inp.send_keys('10')
+        inp.send_keys(str(value))
 
 
 
