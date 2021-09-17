@@ -77,6 +77,6 @@ Are you sure you want to do this?
             if sql_list and not inhibit_post_migrate:
                 # Emit the post migrate signal. This allows individual applications to
                 # respond as if the database had been migrated from scratch.
-                emit_post_migrate_signal(verbosity, interactive, database)
+                emit_post_migrate_signal(verbosity, interactive, database, app_models=[(k, v.models) for k, v in apps.app_configs.items()])
         else:
             self.stdout.write('Flush cancelled.')

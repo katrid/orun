@@ -964,10 +964,12 @@ class Model(metaclass=ModelBase):
         Do an INSERT. If returning_fields is defined then this method should
         return the newly created data for the model.
         """
-        return manager._insert(
+        ret = manager._insert(
             [self], fields=fields, returning_fields=returning_fields,
             using=using, raw=raw,
         )
+        self.after_insert([])
+        return ret
 
     def _prepare_related_fields_for_save(self, operation_name):
         # Ensure that a model instance without a PK hasn't been assigned to
@@ -1977,6 +1979,11 @@ class Model(metaclass=ModelBase):
 
     def after_delete(self):
         pass
+
+    def update(self, **values):
+        self.objects.filter(pk=self.pk).update(**values)
+        for k, v in values.items():
+            setattr(self, k, v)
 
     @classmethod
     def _before_update(cls, qs, values):

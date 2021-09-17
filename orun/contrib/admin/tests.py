@@ -11,12 +11,7 @@ class CSPMiddleware(MiddlewareMixin):
         return response
 
 
-# @modify_settings(MIDDLEWARE={'append': 'orun.contrib.admin.tests.CSPMiddleware'})
-class AdminSeleniumTestCase(SeleniumTestCase):
-    available_apps = [
-        'orun.contrib.admin',
-    ]
-
+class AdminTestCaseMixin:
     def wait_until(self, callback, timeout=10):
         """
         Block the execution of the tests until the specified callback returns a
@@ -114,6 +109,37 @@ class AdminSeleniumTestCase(SeleniumTestCase):
         # Wait for the next page to be loaded
         self.wait_until(ec.staleness_of(old_page), timeout=timeout)
         self.wait_page_ready(timeout=timeout)
+
+    def close_toasts(self):
+        for btn in self.selenium.find_elements_by_css_selector(".toast-close-button"):
+            btn.click()
+
+    def select_foreignkey(self, name, text, value=None):
+        inp = self.selenium.find_element_by_name(name).find_element_by_tag_name('input')
+        inp.click()
+        inp.send_keys(text)
+        if value is None:
+            selector = ".dropdown-item[data-item-id]"
+        else:
+            selector = f".dropdown-item[data-item-id='{value}']"
+        self.wait_for(selector)
+        dropdown_item = self.selenium.find_element_by_css_selector(selector)
+        dropdown_item.click()
+
+    def set_field_value(self, name, value, parent=None):
+        if parent is None:
+            parent = self.selenium
+        inp = parent.find_element_by_name('qt').find_element_by_tag_name('input')
+        inp.click()
+        inp.send_keys('10')
+
+
+
+# @modify_settings(MIDDLEWARE={'append': 'orun.contrib.admin.tests.CSPMiddleware'})
+class AdminSeleniumTestCase(SeleniumTestCase, AdminTestCaseMixin):
+    available_apps = [
+        'orun.contrib.admin',
+    ]
 
     def admin_login(self, username, password, login_url='/admin/'):
         """

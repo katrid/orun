@@ -3575,7 +3575,6 @@ var Katrid;
                 if (this.state == RecordState.unmodified)
                     this.state = RecordState.modified;
                 let rec = this;
-                console.log('flush data on parent', rec.dataSource);
                 while (rec.parent) {
                     rec.parent.addChild(rec);
                     rec = rec.parent;
@@ -3587,7 +3586,7 @@ var Katrid;
                     if (this.state === RecordState.unmodified)
                         this.state = RecordState.modified;
                     let oldValue = this.pristine[propKey];
-                    value = field.toJSON(value);
+                    value = field.$set(value);
                     if (this.compare(oldValue, value)) {
                         this.setModified(field, value);
                         this.data[propKey] = value;
@@ -3617,11 +3616,14 @@ var Katrid;
                     else if (child.state === RecordState.destroyed)
                         data[child.dataSource.field.name].push({ action: 'DESTROY', id: child.pk });
                 }
-                for (let k of Object.values(data)) {
-                    if (this.pk)
-                        data.id = this.pk;
-                    return data;
+                if (this.pk)
+                    data.id = this.pk;
+                for (let k of Object.keys(data)) {
+                    let field = this.dataSource.fieldByName(k);
+                    if (field)
+                        data[k] = field.toJSON(data[k]);
                 }
+                return data;
             }
         }
         Data.DataRecord = DataRecord;
@@ -3916,6 +3918,9 @@ var Katrid;
                 getParamValue(value) {
                     return value.toString();
                 }
+                $set(val) {
+                    return val;
+                }
                 toJSON(val) {
                     return val;
                 }
@@ -4030,12 +4035,10 @@ var Katrid;
             Fields.DateTimeField = DateTimeField;
             class TimeField extends Fields.Field {
                 constructor(info) {
-                    if (!info.cols)
-                        info.cols = 3;
                     super(info);
                     this.tag = 'input-time';
-                    this.template.form = 'view.form.time-field.jinja2';
-                    this.template.list = 'view.list.time-field.jinja2';
+                    if (!info.cols)
+                        info.cols = 3;
                 }
                 create() {
                     super.create();
@@ -4182,6 +4185,9 @@ var Katrid;
                     if (val && _.isString(val))
                         return parseFloat(val);
                     return val;
+                }
+                $set(val) {
+                    return this.toJSON(val);
                 }
                 formSpanTemplate() {
                     return `{{ $filters.toFixed(record.${this.name}, ${this.decimalPlaces}) || '${this.emptyText}' }}`;
@@ -6834,8 +6840,7 @@ var Katrid;
                                 field: this.field, record, index,
                                 master: this.$data.dataSource.masterSource,
                             });
-                            let rec = {};
-                            rec = Object.assign(rec, record);
+                            let rec = record;
                             form.dataSource.record = rec;
                             form.vm.parent = this.$parent;
                             record = await record.$record.load(record);
@@ -7712,7 +7717,7 @@ var Katrid;
             <div class="table-responsive"></div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" type="button" @click="${result}" data-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary btn-ok" type="button" @click="${result}" data-dismiss="modal">
               OK
             </button>
             <button type="button" class="btn btn-secondary" type="button" data-dismiss="modal">
