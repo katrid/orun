@@ -73,6 +73,7 @@ class Action:
 class WindowAction(Action):
     model: str = None
     name: str = None
+    domain: dict = None
     view_mode: List[str] = ['list', 'form']
     view_type = 'form'
 

@@ -19,8 +19,8 @@ class ObjectManager(models.Manager):
 
 
 class Object(models.Model):
-    name = models.CharField(verbose_name=_('Object Name'), null=False)
-    model = models.ForeignKey('content.type', null=False)
+    name = models.CharField(label=_('Object Name'), null=False)
+    model = models.ForeignKey(ContentType, null=False)
     model_name = models.CharField(null=False)
     object_id = models.BigIntegerField()
     content_object = GenericForeignKey()
@@ -82,12 +82,14 @@ class Property(models.Model):
 
 
 class Association(models.Model):
-    source_content = models.ForeignKey(ContentType)
+    source_model = models.ForeignKey(ContentType, null=False)
+    source_model_name = models.CharField(proxy='source_model.name')
     source_id = models.BigIntegerField()
-    source_object = GenericForeignKey('source_content', 'source_id')
-    target_content = models.ForeignKey(ContentType)
-    target_id = models.BigIntegerField()
-    target_object = GenericForeignKey('target_content', 'target_id')
+    source_object = GenericForeignKey('source_model', 'source_id')
+    dest_model = models.ForeignKey(ContentType, null=False)
+    dest_model_name = models.CharField(proxy='dest_model.name')
+    dest_id = models.BigIntegerField()
+    dest_object = GenericForeignKey('dest_model', 'target_id')
     comment = models.TextField()
 
     class Meta:

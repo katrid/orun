@@ -802,24 +802,28 @@ var Katrid;
                 try {
                     this.pendingOperation = true;
                     let res = await this.model.rpc(meth, [id], null, this);
-                    if (res.tag === 'refresh')
-                        this.view.refresh();
-                    else if (res.tag == 'new') {
-                        if (res.action) {
-                            Katrid.Actions.goto(res.action, { view_type: 'form' });
-                        }
-                        this.dataSource.insert(true, res.values);
-                    }
-                    else if (res.type) {
-                        const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
-                        act.execute();
-                    }
+                    await this._evalResponseAction(res);
                 }
                 finally {
                     this.pendingOperation = false;
                 }
             }
-            ;
+            async _evalResponseAction(res) {
+                if (res.tag === 'refresh')
+                    this.view.refresh();
+                else if (res.tag == 'new') {
+                    if (res.action) {
+                        let action = await Katrid.Actions.goto(res.action, { view_type: 'form' });
+                        await action.view.dataSource.insert(true, res.values);
+                    }
+                    else
+                        this.dataSource.insert(true, res.values);
+                }
+                else if (res.type) {
+                    const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
+                    return act.execute();
+                }
+            }
             doBindingAction(evt) {
                 Katrid.Services.Actions.load($(evt.currentTarget).data('id'))
                     .then((action) => {
@@ -3145,6 +3149,7 @@ var Katrid;
                 }
                 this.state = DataSourceState.inserting;
                 this.record['record_name'] = _.gettext('(New)');
+                console.log('pass default values', defaultValues);
                 let defaults = {};
                 if (this.masterSource && this.field && this.field.defaultValue)
                     Object.assign(defaults, this.field.defaultValue);
@@ -7332,6 +7337,16 @@ var Katrid;
                             };
                         },
                         methods: {
+                            async doFormAction(meth, kwargs) {
+                                try {
+                                    me.action.pendingOperation = true;
+                                    let res = await me.action.model.rpc(meth, [this.record.id], kwargs, this);
+                                    await me.action._evalResponseAction(res);
+                                }
+                                finally {
+                                    me.action.pendingOperation = false;
+                                }
+                            },
                             refresh() {
                                 me.dataSource.refresh();
                             },
