@@ -157,6 +157,7 @@ class View(models.Model):
     def compile(self, context, parent=None):
         view_cls = self.__class__
         children = view_cls.objects.filter(parent_id=self.pk, mode='extension')
+        context['ref'] = ref
         xml = self._get_content(context)
         xml = etree.fromstring(self._get_content(context))
         if self.parent:
