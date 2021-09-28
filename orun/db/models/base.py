@@ -812,6 +812,7 @@ class Model(metaclass=ModelBase):
                 sender=origin, instance=self, raw=raw, using=using,
                 update_fields=update_fields,
             )
+            self.before_update(None, None)
         # A transaction isn't needed if one query is issued.
         if meta.parents:
             context_manager = transaction.atomic(using=using, savepoint=False)
@@ -836,6 +837,7 @@ class Model(metaclass=ModelBase):
                 sender=origin, instance=self, created=(not updated),
                 update_fields=update_fields, raw=raw, using=using,
             )
+            self.after_update(None, None)
 
     save_base.alters_data = True
 
