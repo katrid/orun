@@ -1983,9 +1983,11 @@ class Model(metaclass=ModelBase):
         pass
 
     def update(self, **values):
+        self.before_update(None, values)
         self.objects.filter(pk=self.pk).update(**values)
         for k, v in values.items():
             setattr(self, k, v)
+        self.after_update(None, values)
 
     @classmethod
     def _before_update(cls, qs, values):
