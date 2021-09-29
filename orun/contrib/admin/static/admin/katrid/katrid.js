@@ -9257,7 +9257,10 @@ var Katrid;
             </select>
             </div>
             <div class="form-group" v-if="field">
-              <input class="form-control" v-model="searchValue" type="text" v-if="tempCondition && (field.info.type === 'IntegerField')">
+              <select class="form-control" v-model="searchValue" v-if="tempCondition && field.choices">
+                <option v-for="choice in field.choices" :value="choice[0]">{{choice[1]}}</option>
+              </select>
+              <input class="form-control" v-model="searchValue" type="text" v-else-if="tempCondition && (field.info.type === 'IntegerField')">
               <input class="form-control" v-model="searchValue" type="text" v-else-if="tempCondition && (field.info.type === 'IntegerField')">
               <input-autocomplete v-model="searchValue" :data-model="field.info.model" v-else-if="(tempCondition === '=') && (field.info.type === 'ForeignKey')"/>
               <input class="form-control" v-model="searchValue" type="text" v-else-if="field.info.type !== 'BooleanField'">
@@ -9428,22 +9431,31 @@ var Katrid;
                         fieldChange(field) {
                             this.field = field;
                             if (field) {
-                                if ((field.info.type === 'CharField') || (field.info.type === 'EmailField')) {
+                                console.log(field.choices);
+                                if (field.choices) {
+                                    this.fieldConditions = {
+                                        '=': _.gettext('Is equal'),
+                                        '!=': _.gettext('Is different'),
+                                        'is not null': _.gettext('Is filled'),
+                                        'is null': _.gettext('Is not filled'),
+                                    };
+                                }
+                                else if ((field.info.type === 'CharField') || (field.info.type === 'EmailField')) {
                                     this.fieldConditions = {
                                         '%': _.gettext('Contains'),
                                         '!%': _.gettext('Not contains'),
                                         '=': _.gettext('Is equal'),
                                         '!=': _.gettext('Is different'),
-                                        'is not null': _.gettext('Is defined'),
-                                        'is null': _.gettext('Is not defined'),
+                                        'is not null': _.gettext('Is filled'),
+                                        'is null': _.gettext('Is not filled'),
                                     };
                                 }
                                 else if (field.info.type === 'ForeignKey') {
                                     this.fieldConditions = {
                                         '=': _.gettext('Is equal'),
                                         '!=': _.gettext('Is different'),
-                                        'is not null': _.gettext('Is defined'),
-                                        'is null': _.gettext('is not defined'),
+                                        'is not null': _.gettext('Is filled'),
+                                        'is null': _.gettext('Is not filled'),
                                     };
                                 }
                                 else if (field.info.type === 'IntegerField') {
