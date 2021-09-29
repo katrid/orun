@@ -1990,6 +1990,10 @@ class Model(metaclass=ModelBase):
         self.after_update(None, values)
 
     @classmethod
+    def get(cls, id):
+        return cls.objects.get(pk=id)
+
+    @classmethod
     def _before_update(cls, qs, values):
         """
         Trigger before queryset/recordset update.
