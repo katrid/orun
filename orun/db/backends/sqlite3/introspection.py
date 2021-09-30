@@ -73,7 +73,8 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
             ORDER BY name""")
         return [TableInfo(row[0], row[1][0]) for row in cursor.fetchall()]
 
-    def get_table_description(self, cursor, table_name):
+    def get_table_description(self, cursor, schema_name, table_name):
+
         """
         Return a description of the table with the DB-API cursor.description
         interface.

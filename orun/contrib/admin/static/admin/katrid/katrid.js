@@ -4615,8 +4615,30 @@ var Katrid;
             Dialogs.WaitDialog = WaitDialog;
             class ExceptionDialog {
                 static show(title, msg, traceback) {
+                    let modal = document.createElement('div');
+                    modal.classList.add('modal');
+                    modal.tabIndex = -1;
+                    modal.setAttribute('role', 'dialog');
+                    modal.innerHTML = `<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger"><i class="fa fa-fw fa-bug text-danger"></i> ${title}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+      ${msg || ''}
+      </div>
+      <div class="modal-footer">
+        <button type="button" name="btn-cancel" class="btn btn-outline-secondary" data-dismiss="modal">${Katrid.i18n.gettext('Close')}</button>
+      </div>
+    </div>
+  </div>`;
+                    $(modal).modal();
                 }
             }
+            Dialogs.ExceptionDialog = ExceptionDialog;
             function toast(message) {
                 let el = $(`<div role="alert" aria-live="assertive" aria-atomic="true" class="toast" data-autohide="false">
   <div class="toast-header">
@@ -4647,7 +4669,7 @@ var Katrid;
                     Swal.fire(message);
             }
             Dialogs.alert = alert;
-            function createModal(title) {
+            function createModal(title, content) {
                 let modal = document.createElement('div');
                 modal.classList.add('modal');
                 modal.tabIndex = -1;
@@ -4661,6 +4683,7 @@ var Katrid;
         </button>
       </div>
       <div class="modal-body">
+      ${content || ''}
       </div>
       <div class="modal-footer">
         <button type="button" name="btn-ok" class="btn btn-primary">OK</button>
@@ -10565,7 +10588,9 @@ var Katrid;
                         .then(async (response) => {
                         let contentType = response.headers.get('Content-Type');
                         if (response.status === 500) {
-                            reject(await response.json());
+                            let res = await response.json();
+                            Katrid.Forms.Dialogs.ExceptionDialog.show(`Server Error 500`, res.error);
+                            return reject(res);
                         }
                         let res;
                         if (contentType === 'application/json')
@@ -10624,7 +10649,10 @@ var Katrid;
                                 resolve(res);
                         }
                     })
-                        .catch(res => reject(res));
+                        .catch(res => {
+                        console.log('error', res);
+                        reject(res);
+                    });
                 });
             }
         }
@@ -10836,15 +10864,6 @@ var Katrid;
                         resolve(res);
                     })
                         .catch(res => {
-                        if (res.messages && _.isObject(res.messages)) {
-                            for (let msg of Object.values(res.messages))
-                                if (typeof msg === 'string')
-                                    Katrid.Forms.Dialogs.Alerts.error(msg);
-                                else if (msg instanceof Array)
-                                    Katrid.Forms.Dialogs.Alerts.error(msg.join('\n'));
-                        }
-                        else
-                            Katrid.Forms.Dialogs.Alerts.error(res.message);
                         reject(res);
                     });
                 });

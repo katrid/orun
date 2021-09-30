@@ -3,6 +3,7 @@ from orun.utils.functional import cached_property
 
 
 class BaseDatabaseFeatures:
+    schemas_allowed = True
     gis_enabled = False
     # Oracle can't group by LOB (large object) data types.
     allows_group_by_lob = True

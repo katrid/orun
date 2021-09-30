@@ -85,7 +85,9 @@ class AdminModel(models.Model, helper=True):
                         f = None
                         if '__' in k:
                             f = cls._meta.fields[k.split('__', 1)[0]]
-                        if isinstance(f, models.ForeignKey):
+                        if k == 'OR':
+                            _args.append(reduce(lambda a, b: a | b, ([Q(**{k2: v2 for k2, v2 in f.items()}) for f in v])))
+                        elif isinstance(f, models.ForeignKey):
                             name_fields = list(
                                 chain(*(_resolve_fk_search(fk) for fk in f.related_model._meta.get_name_fields())))
                             if len(name_fields) == 1:
