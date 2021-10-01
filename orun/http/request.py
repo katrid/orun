@@ -1,4 +1,5 @@
 import copy
+import decimal
 import re
 import warnings
 import json
@@ -237,7 +238,7 @@ class HttpRequest:
 
     @cached_property
     def json(self):
-        return json.loads(self.body)
+        return json.loads(self.body, parse_float=decimal.Decimal)
 
     @property
     def encoding(self):
