@@ -13,6 +13,7 @@ class Menu(models.Model):
     action = models.ForeignKey('ui.action')
     groups = models.ManyToManyField('auth.group')
     icon = models.CharField()
+    css_class = models.TextField()
 
     class Meta:
         name = 'ui.menu'

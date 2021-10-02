@@ -42,7 +42,7 @@ class Action(models.Model):
 
     @api.method(select=['action_type'])
     def load(self, context=None):
-        return self.get_action().to_dict(exclude=['groups'])
+        return self.get_action()._get_info(context)
 
     def execute(self):
         raise NotImplemented()
@@ -55,6 +55,9 @@ class Action(models.Model):
         for action in cls.objects.filter(binding_model_id=obj.pk):
             r[action.binding_type].append(action)
         return r
+
+    def _get_info(self, context):
+        return self.to_dict(exclude=['groups'])
 
 
 class WindowAction(Action):
@@ -100,10 +103,11 @@ class WindowAction(Action):
             modes['search'] = None
         return modes
 
-    def from_model(self, model):
+    @classmethod
+    def from_model(cls, model):
         if isinstance(model, models.Model):
             model = model._meta.name
-        return self.objects.filter(model=model).first()
+        return cls.objects.filter(model=model).first()
 
 
 class WindowActionView(models.Model):

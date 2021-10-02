@@ -219,6 +219,9 @@ var Katrid;
             get context() {
                 if (this.currentAction)
                     return this.currentAction.context;
+                return {
+                    user_id: Katrid.app.userInfo.id,
+                };
             }
             set action(action) {
                 let i = this.actions.indexOf(action);
@@ -269,6 +272,7 @@ var Katrid;
                 }
                 else if (!(this.currentAction && (this.currentAction.info.id == actionId))) {
                     let actionInfo = await Katrid.Services.Actions.load(actionId);
+                    console.log(actionInfo.action_type);
                     action = new Katrid.Actions.registry[actionInfo.action_type]({ info: actionInfo, location: params });
                 }
                 await action.execute();
@@ -348,6 +352,125 @@ var Katrid;
         ClientAction.registry = {};
         Actions.ClientAction = ClientAction;
         Actions.registry[ClientAction.actionType] = ClientAction;
+    })(Actions = Katrid.Actions || (Katrid.Actions = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Core;
+    (function (Core) {
+        _.emptyText = '--';
+        class LocalSettings {
+            static init() {
+                Katrid.localSettings = new LocalSettings();
+            }
+            constructor() {
+            }
+            get searchMenuVisible() {
+                return parseInt(localStorage.searchMenuVisible) === 1;
+            }
+            set searchMenuVisible(value) {
+                localStorage.searchMenuVisible = value ? 1 : 0;
+            }
+        }
+        Core.LocalSettings = LocalSettings;
+        function setContent(content, scope) {
+        }
+        Core.setContent = setContent;
+    })(Core = Katrid.Core || (Katrid.Core = {}));
+})(Katrid || (Katrid = {}));
+(function (Katrid) {
+    function isString(obj) {
+        return typeof obj === 'string';
+    }
+    Katrid.isString = isString;
+    function isNumber(obj) {
+        return typeof obj === 'number';
+    }
+    Katrid.isNumber = isNumber;
+    function isObject(obj) {
+        return typeof obj === 'object';
+    }
+    Katrid.isObject = isObject;
+})(Katrid || (Katrid = {}));
+(function (Katrid) {
+    Katrid.customElementsRegistry = {};
+    function define(name, constructor, options) {
+        Katrid.customElementsRegistry[name] = { constructor, options };
+    }
+    Katrid.define = define;
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Actions;
+    (function (Actions) {
+        class Homepage extends Actions.Action {
+            get content() {
+                return this.info.content;
+            }
+            onHashChange(params) {
+                super.onHashChange(params);
+                let home = document.createElement('homepage-view');
+                console.log('action info', this.info.id);
+                home.actionId = this.info.id;
+                this.container.append(home);
+                let content = this.content;
+                if (content) {
+                    if (typeof content === 'string')
+                        content = JSON.parse(content);
+                    home.load(content);
+                }
+                home.render();
+            }
+        }
+        Homepage.actionType = 'ui.action.homepage';
+        Actions.Homepage = Homepage;
+        class HomepageElement extends HTMLElement {
+            constructor() {
+                super(...arguments);
+                this.panels = [];
+            }
+            connectedCallback() {
+                this.classList.add('homepage-view', 'col-12');
+                this.create();
+                this.render();
+            }
+            create() {
+                let div = document.createElement('div');
+                div.classList.add('homepage-toolbar');
+                let btn = document.createElement('a');
+                btn.classList.add('btn', 'btn-edit', 'btn-outline-secondary');
+                btn.innerHTML = '<i class="fas fa-pen"></i>';
+                div.append(btn);
+                btn.addEventListener('click', () => this.edit());
+                this.append(div);
+            }
+            load(data) {
+                console.log('load', data);
+                this.panels = data.panels;
+                this.info = data;
+            }
+            edit() {
+                let editor = document.createElement('homepage-editor');
+                editor.actionId = this.actionId;
+                if (this.info)
+                    editor.load(this.info);
+                this.parentElement.append(editor);
+                this.remove();
+            }
+            render() {
+                for (let panel of this.panels) {
+                    let el = this.createPanel();
+                    el.load(panel);
+                    this.append(el);
+                }
+            }
+            createPanel() {
+                return document.createElement('portlet-panel');
+            }
+        }
+        Actions.HomepageElement = HomepageElement;
+        Katrid.define('homepage-view', HomepageElement);
+        Katrid.Actions.registry[Homepage.actionType] = Homepage;
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -932,6 +1055,300 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    var Actions;
+    (function (Actions) {
+        var Portlets;
+        (function (Portlets) {
+            class HomepageEditor extends Katrid.Actions.HomepageElement {
+                createPanel() {
+                    let el = super.createPanel();
+                    el.editing = true;
+                    return el;
+                }
+                create() {
+                    let btnSave = document.createElement('button');
+                    btnSave.classList.add('btn', 'btn-outline-primary');
+                    btnSave.innerText = Katrid.i18n.gettext('Save');
+                    let btnDiscard = document.createElement('button');
+                    btnDiscard.classList.add('btn', 'btn-outline-secondary');
+                    btnDiscard.innerText = Katrid.i18n.gettext('Discard');
+                    btnSave.addEventListener('click', () => this.save());
+                    btnDiscard.addEventListener('click', () => this.back());
+                    this.append(btnSave);
+                    this.append(btnDiscard);
+                }
+                edit() {
+                    throw Error('Editor already loaded');
+                }
+                dump() {
+                    let res = [];
+                    this.querySelectorAll('portlet-panel').forEach(el => res.push(el.dump()));
+                    return { panels: res };
+                }
+                async save() {
+                    let svc = new Katrid.Services.Model('ui.action.homepage');
+                    let data = this.dump();
+                    await svc.rpc('save_layout', [[this.actionId], JSON.stringify(data)]);
+                    let home = this._back();
+                    home.actionId = this.actionId;
+                    home.load(data);
+                    this.parentElement.append(home);
+                    this.remove();
+                }
+                _back() {
+                    return document.createElement('homepage-view');
+                }
+                back() {
+                    let home = this._back();
+                    if (this.info)
+                        home.load(this.info);
+                    this.parentElement.append(home);
+                    this.remove();
+                }
+                render() {
+                    if (!this.panels || !this.panels.length)
+                        this.panels = [{ caption: '', portlets: [] }];
+                    super.render();
+                }
+            }
+            Portlets.HomepageEditor = HomepageEditor;
+            Katrid.define('homepage-editor', HomepageEditor);
+        })(Portlets = Actions.Portlets || (Actions.Portlets = {}));
+    })(Actions = Katrid.Actions || (Katrid.Actions = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Actions;
+    (function (Actions) {
+        var Portlets;
+        (function (Portlets) {
+            let registry = {};
+            class PortletPanel extends HTMLElement {
+                constructor() {
+                    super(...arguments);
+                    this.caption = '';
+                    this.editing = false;
+                    this.portlets = [];
+                }
+                connectedCallback() {
+                    this.classList.add('portlet-panel', 'col-12');
+                    if (this.editing)
+                        this.classList.add('editing');
+                    this.render();
+                }
+                render() {
+                    let container = document.createElement('div');
+                    container.classList.add('col-12');
+                    let legend = document.createElement('h5');
+                    legend.innerText = this.caption;
+                    container.append(legend);
+                    this.append(container);
+                    if (this.editing) {
+                        this.renderEditor(container);
+                    }
+                    if (this.info)
+                        for (let child of this.info.portlets)
+                            this.addPortlet(child).render();
+                }
+                async renderEditor(container) {
+                    let svc = new Katrid.Services.Model('ui.portlet');
+                    this.availableItems = [];
+                    let res = await svc.rpc('search_portlets');
+                    let portlets = res.portlets;
+                    let toolbar = document.createElement('div');
+                    toolbar.classList.add('toolbar');
+                    let sel = document.createElement('select');
+                    sel.classList.add('form-control');
+                    portlets.forEach((port, index) => {
+                        console.log(port, index);
+                        this.availableItems[port.id] = port;
+                        let option = document.createElement('option');
+                        option.value = port.id;
+                        option.innerText = port.name;
+                        sel.append(option);
+                    });
+                    let btn = document.createElement('button');
+                    btn.innerText = Katrid.i18n.gettext('Add');
+                    btn.classList.add('btn', 'btn-outline-secondary');
+                    toolbar.append(sel);
+                    toolbar.append(btn);
+                    toolbar.querySelector('button').addEventListener('click', evt => this.addPortletClick(evt.target));
+                    container.append(toolbar);
+                    return toolbar;
+                }
+                dump() {
+                    return {
+                        caption: this.caption,
+                        portlets: this.portlets.map(port => port.dump()),
+                    };
+                }
+                load(info) {
+                    if (info.caption)
+                        this.caption = info.caption;
+                    this.info = info;
+                }
+                addPortlet(info) {
+                    let el;
+                    if (this.editing) {
+                        el = document.createElement('portlet-editor');
+                        el.load(info);
+                        this.portlets.push(el.el);
+                        this.append(el);
+                    }
+                    else {
+                        el = document.createElement(info.tag);
+                        el.load(info);
+                        this.portlets.push(el);
+                        let div = document.createElement('div');
+                        div.classList.add('portlet-wrapper', 'col-1');
+                        div.append(el);
+                        this.append(div);
+                    }
+                    return el;
+                }
+                addPortletClick(sender) {
+                    let sel = sender.parentElement.querySelector('select');
+                    let info = this.availableItems[parseInt(sel.value)];
+                    let tagName = info.tag;
+                    let portlet = { tag: tagName, name: info.name };
+                    if (info.info) {
+                        if (typeof info.info === "string")
+                            info.info = JSON.parse(info.info);
+                        Object.assign(portlet, info.info);
+                    }
+                    this.addPortlet(portlet);
+                }
+            }
+            Portlets.PortletPanel = PortletPanel;
+            class PortletEditor extends HTMLElement {
+                connectedCallback() {
+                    this.create();
+                    this.render();
+                }
+                create() {
+                    this.classList.add('portlet-editor', 'col-1');
+                }
+                load(info) {
+                    this.info = info;
+                    this.el = document.createElement(info.tag);
+                    this.el.editing = true;
+                    this.el.load(info);
+                    this.el.render();
+                }
+                render() {
+                    this.append(this.el);
+                    let div = document.createElement('div');
+                    div.classList.add('mirror');
+                    this.append(div);
+                }
+            }
+            Portlets.PortletEditor = PortletEditor;
+            class Portlet extends HTMLElement {
+                constructor() {
+                    super(...arguments);
+                    this.editing = false;
+                    this.info = {};
+                    this.loaded = false;
+                }
+                connectedCallback() {
+                    this.create();
+                }
+                create() {
+                    this.classList.add('portlet');
+                }
+                dump() {
+                    return {};
+                }
+                load(info) {
+                    this.info = info;
+                }
+                render() {
+                    console.log('render');
+                    let title = document.createElement('h6');
+                    title.innerText = Katrid.i18n.gettext(this.info.name);
+                    this.append(title);
+                }
+            }
+            Portlets.Portlet = Portlet;
+            class CreateNew extends Portlet {
+                create() {
+                    super.create();
+                    this.classList.add('portlet-create-new');
+                }
+                dump() {
+                    return {
+                        tag: this.tagName.toLowerCase(),
+                        model: this.model,
+                        action: this.action,
+                    };
+                }
+                load(info) {
+                    super.load(info);
+                    this.model = info.model;
+                    this.action = info.action;
+                }
+            }
+            Portlets.CreateNew = CreateNew;
+            class PortletModelWindowAction extends Portlet {
+                render() {
+                    super.render();
+                    let href = Katrid.webApp.formatActionHref(this.info.action);
+                    let btnNew = document.createElement('a');
+                    btnNew.innerText = Katrid.i18n.gettext('Create');
+                    btnNew.classList.add('btn', 'btn-link');
+                    console.log('acton', this.info);
+                    btnNew.href = href + '&view_type=form';
+                    let btnSearch = document.createElement('a');
+                    btnSearch.innerText = Katrid.i18n.gettext('Search');
+                    btnSearch.classList.add('btn', 'btn-link');
+                    btnSearch.href = href;
+                    this.append(btnNew);
+                    this.append(btnSearch);
+                }
+                dump() {
+                    return {
+                        tag: this.tagName.toLowerCase(),
+                        name: this.info.name,
+                        model: this.model,
+                        action: this.action,
+                        info: this.info.info,
+                    };
+                }
+                load(info) {
+                    super.load(info);
+                    this.action = info.action;
+                    this.model = info.model;
+                }
+            }
+            Portlets.PortletModelWindowAction = PortletModelWindowAction;
+            class GotoList extends Portlet {
+                create() {
+                    super.create();
+                    this.classList.add('portlet-goto-list');
+                }
+                dump() {
+                    return {
+                        tag: this.tagName.toLowerCase(),
+                        action: this.action,
+                        viewType: this.viewType,
+                    };
+                }
+                render() {
+                    let title = document.createElement('h6');
+                    title.innerText = 'Goto List';
+                }
+            }
+            Portlets.GotoList = GotoList;
+            Katrid.define('portlet-create-new', CreateNew);
+            Katrid.define('portlet-panel', PortletPanel);
+            Katrid.define('portlet-editor', PortletEditor);
+            Katrid.define('portlet-model-window-action', PortletModelWindowAction);
+            Katrid.define('portlet-goto-list', GotoList);
+        })(Portlets = Actions.Portlets || (Actions.Portlets = {}));
+    })(Actions = Katrid.Actions || (Katrid.Actions = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
     Katrid.isMobile = (() => {
         var check = false;
         (function (a) {
@@ -1265,51 +1682,6 @@ var Katrid;
 (function (Katrid) {
     var Core;
     (function (Core) {
-        _.emptyText = '--';
-        class LocalSettings {
-            static init() {
-                Katrid.localSettings = new LocalSettings();
-            }
-            constructor() {
-            }
-            get searchMenuVisible() {
-                return parseInt(localStorage.searchMenuVisible) === 1;
-            }
-            set searchMenuVisible(value) {
-                localStorage.searchMenuVisible = value ? 1 : 0;
-            }
-        }
-        Core.LocalSettings = LocalSettings;
-        function setContent(content, scope) {
-        }
-        Core.setContent = setContent;
-    })(Core = Katrid.Core || (Katrid.Core = {}));
-})(Katrid || (Katrid = {}));
-(function (Katrid) {
-    function isString(obj) {
-        return typeof obj === 'string';
-    }
-    Katrid.isString = isString;
-    function isNumber(obj) {
-        return typeof obj === 'number';
-    }
-    Katrid.isNumber = isNumber;
-    function isObject(obj) {
-        return typeof obj === 'object';
-    }
-    Katrid.isObject = isObject;
-})(Katrid || (Katrid = {}));
-(function (Katrid) {
-    Katrid.customElementsRegistry = {};
-    function define(name, constructor, options) {
-        Katrid.customElementsRegistry[name] = { constructor, options };
-    }
-    Katrid.define = define;
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Core;
-    (function (Core) {
         class Application {
             constructor(config) {
                 this.config = config;
@@ -1397,6 +1769,9 @@ var Katrid;
                 else
                     this.loadPage(location.hash);
             }
+            formatActionHref(actionId) {
+                return `#/app/?menu_id=${this.currentMenu.id}&action=${actionId}`;
+            }
             get currentMenu() {
                 return this._currentMenu;
             }
@@ -1430,6 +1805,7 @@ var Katrid;
                         name: $(`.module-selector[data-menu-id="${params.menu_id}"]`).text()
                     };
                 }
+                console.log('load page', params);
                 if (('action' in params) || ('model' in params))
                     await this.actionManager.onHashChange(params, reset);
                 else if ((!('action' in params)) && ('menu_id' in params)) {
@@ -10613,7 +10989,7 @@ var Katrid;
                                     messages.push(result.message);
                                 else if (result.warn)
                                     messages.push({ type: 'warn', message: result.warn });
-                                else if (result.info)
+                                else if (result.info && (Object.keys(result).length === 1))
                                     messages.push({ type: 'info', message: result.info });
                                 else if (result.error)
                                     messages.push({ type: 'error', message: result.error });
@@ -10902,7 +11278,7 @@ var Katrid;
         class Actions extends Model {
             static load(action) {
                 let svc = new Model('ui.action');
-                return svc.post('load', { args: [action] });
+                return svc.post('load', { args: [action], kwargs: { context: Katrid.app.context } });
             }
             static onExecuteAction(action, actionType, context) {
                 let svc = new Model(actionType);
@@ -12062,8 +12438,13 @@ var Katrid;
                         ul.append(li);
                         if (item.children?.length)
                             li.append(this.createDropdownMenu(item.children));
-                        else
+                        else {
                             a.setAttribute('href', '#/app/?menu_id=' + this._rootItem.id.toString() + '&action=' + item.action);
+                            a.addEventListener('click', evt => {
+                                evt.stopPropagation();
+                                return false;
+                            });
+                        }
                     }
                 }
                 return module;

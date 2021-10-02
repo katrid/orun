@@ -11157,6 +11157,64 @@ header.content-container-heading:empty {
   margin-bottom: 16px;
 }
 
+.homepage-view {
+  padding-top: 20px;
+  position: relative;
+}
+.homepage-view .homepage-toolbar {
+  float: right;
+}
+.homepage-view h6 {
+  font-size: small;
+}
+
+.portlet-panel {
+  display: flex;
+  flex-wrap: wrap;
+}
+.portlet-panel .portlet {
+  height: 150px;
+  border: 1px solid #c1c1c1;
+  background-color: #FFFFFF;
+  padding: 8px;
+  display: block;
+  cursor: pointer;
+}
+.portlet-panel .portlet-wrapper {
+  padding-right: 5px;
+  padding-left: 5px;
+}
+
+homepage-editor .portlet-panel {
+  background-color: rgba(202, 212, 252, 0.7);
+  min-height: 200px;
+  border-radius: 6px;
+  position: relative;
+}
+homepage-editor .portlet-panel .toolbar {
+  position: absolute;
+  right: 15px;
+  top: 10px;
+  display: flex;
+}
+homepage-editor .portlet-panel portlet-editor {
+  padding-right: 5px;
+  padding-left: 5px;
+  padding-bottom: 5px;
+  position: relative;
+}
+homepage-editor .portlet-panel portlet-editor:hover .portlet {
+  box-shadow: 4px 4px 15px -8px rgba(0, 0, 0, 0.94);
+}
+homepage-editor .portlet-panel portlet-editor .mirror {
+  position: absolute;
+  cursor: move;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+}
+
 .kanban {
   padding: 0;
 }

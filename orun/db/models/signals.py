@@ -58,6 +58,7 @@ m2m_changed = ModelSignal(
 
 pre_migrate = Signal(providing_args=["app_config", "verbosity", "interactive", "using", "apps", "plan"])
 post_migrate = Signal(providing_args=["app_config", "verbosity", "interactive", "using", "apps", "plan"])
+post_sync = Signal(providing_args=["verbosity", "interactive", "using", "apps"])
 
 
 class TriggerSignal(Signal):

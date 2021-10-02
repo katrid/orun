@@ -86,15 +86,21 @@ class AdminModel(models.Model, helper=True):
                         if '__' in k:
                             f = cls._meta.fields[k.split('__', 1)[0]]
                         if k == 'OR':
-                            _args.append(reduce(lambda a, b: a | b, ([Q(**{k2: v2 for k2, v2 in f.items()}) for f in v])))
+                            _args.append(
+                                reduce(lambda a, b: a | b, ([Q(**{k2: v2 for k2, v2 in f.items()}) for f in v]))
+                            )
                         elif isinstance(f, models.ForeignKey):
                             name_fields = list(
                                 chain(*(_resolve_fk_search(fk) for fk in f.related_model._meta.get_name_fields())))
                             if len(name_fields) == 1:
                                 _args.append(Q(**{f'{f.name}__{name_fields[0]}__icontains': v}))
                             elif name_fields:
-                                _args.append(reduce(lambda f1, f2: f1 | f2,
-                                                    [Q(**{f'{f.name}__{fk}__icontains': v}) for fk in name_fields]))
+                                _args.append(
+                                    reduce(
+                                        lambda f1, f2: f1 | f2,
+                                        [Q(**{f'{f.name}__{fk}__icontains': v}) for fk in name_fields]
+                                    )
+                                )
                             else:
                                 kwargs[k] = v
                         else:

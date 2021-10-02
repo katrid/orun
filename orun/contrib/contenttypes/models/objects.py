@@ -1,4 +1,5 @@
-from orun.db import models
+from orun.apps import apps
+from orun.db import models, DEFAULT_DB_ALIAS
 from orun.utils.translation import gettext_lazy as _
 
 from orun.contrib.contenttypes.fields import GenericForeignKey
@@ -94,3 +95,57 @@ class Association(models.Model):
 
     class Meta:
         name = 'content.association'
+
+
+class Registrable:
+    schema: str = None
+    no_update = False
+
+    def __init_subclass__(cls, **kwargs):
+        module = cls.__module__
+        app_config = apps.get_containing_app_config(module)
+        if app_config:
+            cls.schema = app_config.schema
+
+    @classmethod
+    def _register_object(cls, model, obj_name: str, info: dict, using=DEFAULT_DB_ALIAS):
+        try:
+            obj_id = Object.objects.get(name=obj_name)
+            if cls.no_update != obj_id.can_update:
+                obj_id.can_update = cls.no_update
+                obj_id.save(using=using)
+            instance = obj_id.content_object
+            if instance is None:
+                answer = input('The object "%s" is defined but not found on module "%s". Do you want to recreate it? [Y/n]' % (obj_name, obj_id.model_name))
+                if answer == 'y' or not answer:
+                    obj_id.delete()
+                    raise Object.DoesNotExist
+            if cls.no_update:
+                return instance
+        except Object.DoesNotExist:
+            obj_id = None
+            instance = model()
+
+        for k, v in info.items():
+            field = instance._meta.fields.get(k)
+            if field:
+                k = field.attname
+            setattr(instance, k, v)
+        instance.save(using=using)
+
+        if not obj_id:
+            Object.objects.create(
+                schema=cls.schema,
+                name=obj_name,
+                object_id=instance.pk,
+                model=ContentType.objects.get_by_natural_key(instance._meta.name),
+                model_name=instance._meta.name,
+                can_update=not cls.no_update,
+            )
+        return instance
+
+    @classmethod
+    def get_qualname(cls):
+        return f'{cls.__module__}.{cls.__qualname__}'
+
+

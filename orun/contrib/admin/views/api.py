@@ -1,3 +1,4 @@
+import inspect
 from orun import api
 from orun.db.models import QuerySet
 from orun.conf import settings
@@ -22,8 +23,11 @@ def rpc(request, service, meth, params):
         if getattr(meth, 'exposed', None):
             qs = kwargs
 
-            args = params.get('args') or ()
+            args = params.get('args') or []
             kwargs = params.get('kwargs') or {}
+            if getattr(meth, 'pass_request', False):
+                # inspect if the method needs to receive de request arg
+                kwargs['request'] = request
             r = meth(*args, **kwargs)
 
             if isinstance(r, HttpResponse):

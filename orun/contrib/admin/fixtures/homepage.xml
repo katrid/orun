@@ -1,0 +1,6 @@
+<data>
+  <action id="admin.action.my.homepage" type="ui.action.homepage" name="My Homepage"/>
+  <menuitem id="admin.menu.homepage" name="Homepage" sequence="9">
+    <menuitem id="action.menu.my.homepage" action="admin.action.my.homepage" name="My Homepage"/>
+  </menuitem>
+</data>

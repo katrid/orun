@@ -51,3 +51,11 @@ def emit_post_migrate_signal(verbosity, interactive, db, **kwargs):
             using=db,
             **kwargs
         )
+
+    models.signals.post_sync.send(
+        sender=None,
+        verbosity=verbosity,
+        interactive=interactive,
+        using=db,
+        **kwargs
+    )

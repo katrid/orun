@@ -2,6 +2,7 @@ import inspect
 from functools import partial, wraps
 import builtins
 
+from orun.http import HttpRequest
 from orun.http.response import HttpResponseBase
 from orun.db.models.base import ModelBase, Model
 from orun.core.exceptions import RPCError, ValidationError, ObjectDoesNotExist
@@ -34,22 +35,25 @@ class RecordProxy:
         return self.__instance__.__call__(self.env, *args, **kwargs)
 
 
-def _register_method(fn, meth_name):
+def _register_method(fn, meth_name, pass_request=False):
     fn.exposed = True
+    fn.pass_request = pass_request
     fn = builtins.classmethod(fn)
     fn.meth_name = meth_name
     fn.exposed = True
+    fn.pass_request = pass_request
     return fn
 
 
 def classmethod(name_or_fn):
     if callable(name_or_fn):
+        name_or_fn.pass_request = None
         return _register_method(name_or_fn, name_or_fn.__name__)
     if isinstance(name_or_fn, str):
         return partial(_register_method, meth_name=name_or_fn)
 
 
-def method(*args, select=None, each=None):
+def method(*args, select=None, each=None, request=None):
 
     def decorator(fn, meth_name=None):
         meth_name = meth_name or fn.__name__
@@ -82,7 +86,8 @@ def method(*args, select=None, each=None):
                     return fn(objs, *args, **kwargs)
             elif isinstance(self, Model):
                 return fn(self, *args, **kwargs)
-        return _register_method(wrapped, meth_name)
+
+        return _register_method(wrapped, meth_name, pass_request=request)
 
     arg = args and args[0]
     if isinstance(arg, str):

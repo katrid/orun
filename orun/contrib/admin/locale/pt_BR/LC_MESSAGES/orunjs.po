@@ -75,6 +75,12 @@ msgstr "Não"
 msgid "Create <i>\"%s\"</i>..."
 msgstr "Criar <i>\"%s\"</i>..."
 
+msgid "Create %s"
+msgstr "Criar %s"
+
+msgid "Search"
+msgstr "Pesquisar"
+
 msgid "Record changes successfully saved"
 msgstr "As alterações do registro foram salvas com êxito"
 

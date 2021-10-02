@@ -147,7 +147,7 @@ class Command(BaseCommand):
         with connection.schema_editor() as editor:
             for app_name in manifest:
                 app = apps.app_configs[app_name]
-                if app.db_schema and app.create_schema and app.db_schema not in schemas:
+                if connection.features.schemas_allowed and app.db_schema and app.create_schema and app.db_schema not in schemas:
                     editor.create_schema(app.db_schema)
             # create all tables before additional objects
             for app_name, model_list in manifest.items():
@@ -168,11 +168,6 @@ class Command(BaseCommand):
                         self.stdout.write("    Creating table %s\n" % model._meta.db_table)
                     editor.create_model(model)
                 post_model_list[app_name] = model_list
-
-            # emit post migrate signal
-            emit_post_migrate_signal(
-                self.verbosity, self.interactive, connection.alias, app_models=post_model_list.items()
-            )
 
             # Deferred SQL is executed when exiting the editor's context.
             if self.verbosity >= 1:
@@ -198,3 +193,9 @@ class Command(BaseCommand):
                             except:
                                 print('Error loading file:', ddl_file)
                                 raise
+
+            # emit post migrate signal
+            emit_post_migrate_signal(
+                self.verbosity, self.interactive, connection.alias, app_models=post_model_list.items()
+            )
+

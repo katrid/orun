@@ -436,3 +436,9 @@ msgstr "Contatos e Endereços"
 
 msgid "Tags"
 msgstr "Marcadores"
+
+msgid "Vendors"
+msgstr "Fornecedores"
+
+msgid "Customers"
+msgstr "Clientes"

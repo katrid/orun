@@ -3,71 +3,25 @@ from typing import List
 from orun.apps import apps
 from orun.db import models
 from orun.db import DEFAULT_DB_ALIAS
-from orun.contrib.contenttypes.models import ContentType, Object
+from orun.contrib.contenttypes.models import ContentType, Object, Registrable
 
 
-class Action:
+class Action(Registrable):
     schema: str = None
-    no_update = False
     template_name: str = None
     usage: str = None
     description: str = None
     multiple = False
-
-    def __init_subclass__(cls, **kwargs):
-        module = cls.__module__
-        app_config = apps.get_containing_app_config(module)
-        if app_config:
-            cls.schema = app_config.schema
 
     @classmethod
     def _update_info(cls):
         pass
 
     @classmethod
-    def _register_object(cls, model, obj_name: str, info: dict, using=DEFAULT_DB_ALIAS):
-        try:
-            obj_id = Object.objects.get(name=obj_name)
-            if cls.no_update != obj_id.can_update:
-                obj_id.can_update = cls.no_update
-                obj_id.save(using=using)
-            instance = obj_id.content_object
-            if instance is None:
-                answer = input('The object "%s" is defined but not found on module "%s". Do you want to recreate it? [Y/n]' % (obj_name, obj_id.model_name))
-                if answer == 'y' or not answer:
-                    obj_id.delete()
-                    raise Object.DoesNotExist
-            if not cls.no_update:
-                return instance
-        except Object.DoesNotExist:
-            instance = model()
-
-        for k, v in info.items():
-            field = instance._meta.fields.get(k)
-            if field:
-                k = field.attname
-            setattr(instance, k, v)
-        instance.save(using=using)
-
-        Object.objects.create(
-            schema=cls.schema,
-            name=obj_name,
-            object_id=instance.pk,
-            model=ContentType.objects.get_by_natural_key(instance._meta.name),
-            model_name=instance._meta.name,
-            can_update=cls.no_update,
-        )
-        return instance
-
-    @classmethod
     def get_id(cls):
         """Return id from database"""
         obj = apps['ir.object'].get_by_natural_key(cls.get_qualname())
         return obj.content_object.pk
-
-    @classmethod
-    def get_qualname(cls):
-        return f'{cls.__module__}.{cls.__qualname__}'
 
 
 class WindowAction(Action):
