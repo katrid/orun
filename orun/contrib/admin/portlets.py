@@ -3,7 +3,7 @@ import json
 
 from orun.apps import apps
 from orun.contrib.contenttypes.models import Registrable, ref
-from .models.action import WindowAction
+from .models.action import Action, WindowAction
 
 
 class Portlet(Registrable):
@@ -14,13 +14,9 @@ class Portlet(Registrable):
 
     @classmethod
     def _get_info(cls):
-        name = cls.name
-        if name is None:
-            model = apps[cls.model]
-            name = model._meta.verbose_name_plural
         return {
             'tag': cls.tag,
-            'name': name,
+            'name': cls.name,
             'description': cls.description,
             'type_name': cls.get_qualname(),
             'info': json.dumps(cls.get_info()),
@@ -39,10 +35,23 @@ class Portlet(Registrable):
         pass
 
 
-class ModelWindowAction(Portlet):
-    tag = 'portlet-model-window-action'
+class ModelActionPortlet(Portlet):
     model: str = None
     action: str = None
+
+    @classmethod
+    def _get_info(cls):
+        res = super()._get_info()
+        name = res['name']
+        if not name:
+            if cls.action:
+                if isinstance(cls.action, str):
+                    name = Action.get(ref(cls.action)).name
+            if not name and cls.model:
+                model = apps[cls.model]
+                name = model._meta.verbose_name_plural
+            res['name'] = name
+        return res
 
     @classmethod
     def get_info(cls):
@@ -50,13 +59,15 @@ class ModelWindowAction(Portlet):
         if action is None:
             # get default window action
             action = WindowAction.from_model(cls.model).pk
-        elif isinstance(action, str):
-            action = ref(action)
         return {
             # 'kind': cls.kind,
             'model': cls.model,
             'action': action,
         }
+
+
+class ModelWindowAction(ModelActionPortlet):
+    tag = 'portlet-model-window-action'
 
 
 class CreateNew(ModelWindowAction):
@@ -72,6 +83,10 @@ class GotoModel(ModelWindowAction):
         res = super().get_info()
         res['view_type'] = cls.view_type
         return res
+
+
+class GotoReport(ModelActionPortlet):
+    tag = 'portlet-goto-report'
 
 
 class PortletGroup:

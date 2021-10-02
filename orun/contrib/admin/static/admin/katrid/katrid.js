@@ -1262,11 +1262,12 @@ var Katrid;
                 load(info) {
                     this.info = info;
                 }
-                render() {
-                    console.log('render');
+                render(container) {
+                    if (!container)
+                        container = this;
                     let title = document.createElement('h6');
                     title.innerText = Katrid.i18n.gettext(this.info.name);
-                    this.append(title);
+                    container.append(title);
                 }
             }
             Portlets.Portlet = Portlet;
@@ -1339,11 +1340,40 @@ var Katrid;
                 }
             }
             Portlets.GotoList = GotoList;
+            class GotoReport extends Portlet {
+                create() {
+                    super.create();
+                    this.classList.add('portlet-goto-report');
+                }
+                load(info) {
+                    super.load(info);
+                    this.action = info.action;
+                    this.model = info.model;
+                }
+                dump() {
+                    return {
+                        tag: this.tagName.toLowerCase(),
+                        name: this.info.name,
+                        model: this.model,
+                        action: this.action,
+                        info: this.info.info,
+                    };
+                }
+                render() {
+                    let a = document.createElement('a');
+                    a.classList.add('full-size');
+                    super.render(a);
+                    a.href = Katrid.webApp.formatActionHref(this.action);
+                    this.append(a);
+                }
+            }
+            Portlets.GotoReport = GotoReport;
             Katrid.define('portlet-create-new', CreateNew);
             Katrid.define('portlet-panel', PortletPanel);
             Katrid.define('portlet-editor', PortletEditor);
             Katrid.define('portlet-model-window-action', PortletModelWindowAction);
             Katrid.define('portlet-goto-list', GotoList);
+            Katrid.define('portlet-goto-report', GotoReport);
         })(Portlets = Actions.Portlets || (Actions.Portlets = {}));
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));

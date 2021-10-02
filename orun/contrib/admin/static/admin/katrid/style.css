@@ -11179,6 +11179,15 @@ header.content-container-heading:empty {
   padding: 8px;
   display: block;
   cursor: pointer;
+  position: relative;
+}
+.portlet-panel .portlet a.full-size {
+  padding: 8px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
 }
 .portlet-panel .portlet-wrapper {
   padding-right: 5px;

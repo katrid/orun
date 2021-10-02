@@ -5,7 +5,7 @@ from orun.apps import apps
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 
-from orun.contrib.contenttypes.models import ContentType
+from orun.contrib.contenttypes.models import ContentType, ref
 #from ..fields import GenericForeignKey
 
 
@@ -40,9 +40,14 @@ class Action(models.Model):
     def get_action(self):
         return apps[self.action_type].objects.get(pk=self.pk)
 
-    @api.method(select=['action_type'])
-    def load(self, context=None):
-        return self.get_action()._get_info(context)
+    @api.classmethod
+    def load(cls, name_or_id, context=None):
+        try:
+            name_or_id = int(name_or_id)
+        except ValueError:
+            if isinstance(name_or_id, str):
+                name_or_id = ref(name_or_id)
+        return cls.get(name_or_id).get_action()._get_info(context)
 
     def execute(self):
         raise NotImplemented()
