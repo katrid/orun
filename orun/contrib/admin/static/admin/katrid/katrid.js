@@ -11015,14 +11015,17 @@ var Katrid;
                                 let result = res.result;
                                 if (Array.isArray(result) && (result.length === 1))
                                     result = result[0];
-                                console.log('result', result);
                                 let messages;
                                 if (result.messages)
                                     messages = result.messages;
                                 else
                                     messages = [];
-                                if (result.message)
-                                    messages.push(result.message);
+                                if (result.message) {
+                                    if (result.message.info)
+                                        messages.push({ type: 'info', message: result.info });
+                                    else
+                                        messages.push(result.message);
+                                }
                                 else if (result.warn)
                                     messages.push({ type: 'warn', message: result.warn });
                                 else if (result.error) {
