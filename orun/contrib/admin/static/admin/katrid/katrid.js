@@ -11004,6 +11004,13 @@ var Katrid;
                         else
                             return downloadBytes(response);
                         if (res.error) {
+                            if ('message' in res.error)
+                                Katrid.Forms.Alerts.error(res.error.message);
+                            else
+                                Katrid.Forms.Alerts.error(res.error);
+                            reject(res.error);
+                        }
+                        else {
                             if (res.result) {
                                 let result = res.result;
                                 if (Array.isArray(result) && (result.length === 1))
@@ -11039,8 +11046,6 @@ var Katrid;
                                     else if (msg.type === 'alert')
                                         Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
                                 });
-                                if (res.error)
-                                    reject(res.error);
                                 if (result) {
                                     if (result.open)
                                         window.open(result.open);
