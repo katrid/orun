@@ -11005,9 +11005,9 @@ var Katrid;
                             return downloadBytes(response);
                         if (res.error) {
                             if ('message' in res.error)
-                                Katrid.Forms.Alerts.error(res.error.message);
+                                Katrid.Forms.Dialogs.Alerts.error(res.error.message);
                             else
-                                Katrid.Forms.Alerts.error(res.error);
+                                Katrid.Forms.Dialogs.Alerts.error(res.error);
                             reject(res.error);
                         }
                         else {
