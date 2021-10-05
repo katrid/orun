@@ -11025,8 +11025,6 @@ var Katrid;
                                     messages.push(result.message);
                                 else if (result.warn)
                                     messages.push({ type: 'warn', message: result.warn });
-                                else if (result.info && (Object.keys(result).length === 1))
-                                    messages.push({ type: 'info', message: result.info });
                                 else if (result.error) {
                                     if (typeof result.error === 'string')
                                         messages.push({ type: 'error', message: result.error });
