@@ -11003,9 +11003,7 @@ var Katrid;
                             res = await response.json();
                         else
                             return downloadBytes(response);
-                        if (res.error)
-                            reject(res.error);
-                        else {
+                        if (res.error) {
                             if (res.result) {
                                 let result = res.result;
                                 if (Array.isArray(result) && (result.length === 1))
@@ -11041,6 +11039,8 @@ var Katrid;
                                     else if (msg.type === 'alert')
                                         Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
                                 });
+                                if (res.error)
+                                    reject(res.error);
                                 if (result) {
                                     if (result.open)
                                         window.open(result.open);
