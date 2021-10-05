@@ -11022,7 +11022,7 @@ var Katrid;
                                     messages = [];
                                 if (result.message) {
                                     if (result.message.info)
-                                        messages.push({ type: 'info', message: result.info });
+                                        messages.push({ type: 'info', message: result.message.info });
                                     else
                                         messages.push(result.message);
                                 }
