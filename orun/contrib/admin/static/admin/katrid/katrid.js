@@ -11003,6 +11003,7 @@ var Katrid;
                             res = await response.json();
                         else
                             return downloadBytes(response);
+                        console.log('result', res);
                         if (res.error) {
                             if ('message' in res.error)
                                 Katrid.Forms.Dialogs.Alerts.error(res.error.message);
