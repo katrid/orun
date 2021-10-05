@@ -11028,10 +11028,10 @@ var Katrid;
                                 else if (result.info && (Object.keys(result).length === 1))
                                     messages.push({ type: 'info', message: result.info });
                                 else if (result.error) {
-                                    if ('message' in result.error)
-                                        messages.push({ type: 'error', message: result.error.message });
-                                    else
+                                    if (typeof result.error === 'string')
                                         messages.push({ type: 'error', message: result.error });
+                                    else
+                                        messages.push({ type: 'error', message: result.error.message });
                                 }
                                 messages.forEach(function (msg) {
                                     if (_.isString(msg))
