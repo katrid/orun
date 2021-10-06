@@ -1,0 +1,314 @@
+
+msgid ""
+msgstr ""
+"Project-Id-Version:  orun\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-10-05 22:29-0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.1\n"
+
+msgid "English"
+msgstr "Inglés"
+
+msgid "Create"
+msgstr "Crear"
+
+msgid "Action"
+msgstr "Acción"
+
+msgid "Logout"
+msgstr "Cerrar sesión"
+
+msgid "Delete"
+msgstr "Borrar"
+
+msgid "Remove"
+msgstr "Eliminar"
+
+msgid "Delete selection"
+msgstr "Eliminar selección"
+
+msgid "Edit"
+msgstr "Editar"
+
+msgid "Save"
+msgstr "Salvar"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Discard"
+msgstr "Descartar"
+
+msgid "Add"
+msgstr "Agregar"
+
+msgid "Duplicate"
+msgstr "Duplicado"
+
+msgid "Shortcuts"
+msgstr "Métodos abreviados"
+
+msgid "Confirm delete record?"
+msgstr "¿Confirmar el registro de eliminación?"
+
+msgid "Confirm delete records?"
+msgstr "¿Confirmar la eliminación de registros?"
+
+msgid "Confirm delete attachment?"
+msgstr "¿Confirmar la eliminación de datos adjuntos?"
+
+msgid "yes"
+msgstr "Sí"
+
+msgid "no"
+msgstr "no"
+
+msgid "Yes"
+msgstr "Sí"
+
+msgid "No"
+msgstr "No"
+
+#, python-format
+msgid "Create <i>\"%s\"</i>..."
+msgstr "Create <i>\"%s\"</i>..."
+
+msgid "Record changes successfully saved"
+msgstr "Registrar cambios guardados correctamente"
+
+msgid "Record saved successfully."
+msgstr "Registro guardado correctamente."
+
+msgid "Error saving record changes"
+msgstr "Error al guardar los cambios de registro"
+
+msgid "Loading..."
+msgstr "Carga..."
+
+msgid "Search..."
+msgstr "Buscar..."
+
+msgid "or"
+msgstr "o"
+
+msgid "Filters"
+msgstr "Filtros"
+
+msgid "FILTERS"
+msgstr "FILTROS"
+
+msgid "Group By"
+msgstr "Grupo por"
+
+msgid "Favorites"
+msgstr "Favoritos"
+
+msgid "Group by:"
+msgstr "Grupo por:"
+
+msgid "yyyy-mm-dd"
+msgstr "aaaa-mm-dd"
+
+msgid "yyyy-MM-dd"
+msgstr "aaaa-MM-dd"
+
+msgid "yyyy-MM-dd hh:mma"
+msgstr "aaaa-MM-dd hh:mma"
+
+msgid "(New)"
+msgstr "(Nuevo)"
+
+msgid "Print"
+msgstr "Impresión"
+
+msgid "Auto Report"
+msgstr "Informe automático"
+
+msgid "My reports"
+msgstr "Mis informes"
+
+msgid "Add Parameter"
+msgstr "Agregar parámetro"
+
+msgid "Advanced options"
+msgstr "Opciones avanzadas"
+
+msgid "Load"
+msgstr "Carga"
+
+msgid "Preview"
+msgstr "Vista previa"
+
+msgid "Printable Fields"
+msgstr "Campos imprimibles"
+
+msgid "Totalizing Fields"
+msgstr "Totalización de campos"
+
+msgid "Sorting"
+msgstr "Ordenación"
+
+msgid "Grouping"
+msgstr "Agrupación"
+
+msgid "Export"
+msgstr "Exportar"
+
+msgid "Is equal"
+msgstr "Es igual"
+
+msgid "Selection"
+msgstr "Selección"
+
+msgid "Starting with"
+msgstr "Empezando por"
+
+msgid "Ending with"
+msgstr "Terminando con"
+
+msgid "Greater-than"
+msgstr "Mayor que"
+
+msgid "Less-than"
+msgstr "Menos de"
+
+msgid "Contains"
+msgstr "Contiene"
+
+msgid "Between"
+msgstr "Entre"
+
+msgid "Search Results"
+msgstr "Resultados de la búsqueda"
+
+msgid "No results found."
+msgstr "No se han encontrado resultados."
+
+msgid "Page"
+msgstr "Página"
+
+msgid "Refresh"
+msgstr "Actualizar"
+
+msgid "The following fields are invalid:"
+msgstr "Los siguientes campos no son válidos:"
+
+msgid "This field cannot be empty."
+msgstr "Este campo no puede estar vacío."
+
+msgid "Creating..."
+msgstr "Crear..."
+
+msgid "Create new..."
+msgstr "Crear nuevo..."
+
+msgid "Search more..."
+msgstr "Buscar más..."
+
+#, python-format
+msgid "Create: %(title)s"
+msgstr "Crear: %(title)s"
+
+msgid "Set Default"
+msgstr "Establecer valores predeterminados"
+
+msgid "Only me"
+msgstr "Sólo yo"
+
+msgid "All users"
+msgstr "Todos los usuarios"
+
+msgid "You still have pending changes, are you sure you want to leave this page?"
+msgstr ""
+"Todavía tienes cambios pendientes, ¿estás seguro de que quieres salir de "
+"esta página?"
+
+msgid "Add New Column"
+msgstr "Agregar nueva columna"
+
+msgid "Click here to add new column"
+msgstr "Haga clic aquí para agregar una nueva columna"
+
+msgid "No pending changes"
+msgstr "Sin cambios pendientes"
+
+msgid "Attachments"
+msgstr "Accesorios"
+
+#, python-format
+msgid "%d Attachment(s)"
+msgstr "%d Datos adjuntos"
+
+msgid "Add..."
+msgstr "Agregar..."
+
+msgid "Delete attachment"
+msgstr "Eliminar datos adjuntos"
+
+#, python-format
+msgid "Search <i>%(caption)s</i> by: <strong>%(text)s</strong>"
+msgstr "Buscar <i>%(caption)s</i> por: <strong>%(text)s</strong>"
+
+msgid "Add Custom Filter"
+msgstr "Agregar filtro personalizado"
+
+msgid "Add a condition"
+msgstr "Agregar una condición"
+
+msgid "Apply"
+msgstr "Aplicar"
+
+msgid "Remove item"
+msgstr "Quitar elemento"
+
+msgid "Paste"
+msgstr "Pegar"
+
+msgid "Change Password"
+msgstr "Cambiar contraseña"
+
+msgid "Old Password"
+msgstr "Contraseña antigua"
+
+msgid "New Password"
+msgstr "Nueva contraseña"
+
+msgid "Confirm New Password"
+msgstr "Confirmar nueva contraseña"
+
+msgid "View more..."
+msgstr "Ver más..."
+
+msgid "The password and confirmation does not match!"
+msgstr "¡La contraseña y la confirmación no coinciden!"
+
+msgid "Close"
+msgstr "Cerrar"
+
+msgid "Save current search"
+msgstr "Guardar búsqueda actual"
+
+msgid "Search name"
+msgstr "Nombre de la búsqueda"
+
+msgid "Use by default"
+msgstr "Uso predeterminado"
+
+msgid "Share with all users"
+msgstr "Compartir con todos los usuarios"
+
+msgid "Add Custom Group"
+msgstr "Agregar grupo personalizado"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Back"
+msgstr "Atrás"
+

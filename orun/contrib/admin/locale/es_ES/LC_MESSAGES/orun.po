@@ -1,0 +1,149 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version:  orun\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2021-10-05 14:53-0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: Alexandre Dias <alexandre@katrid.com>\n"
+"Language: es_ES\n"
+"Language-Team: Español (México)language/es_ES/)\n"
+"Plural-Forms: nplurals=2; plural=(n > 1)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.1\n"
+
+#: models/action.py:13 models/query.py:11 models/query.py:19 models/ui.py:273
+msgid "Name"
+msgstr "Nombre"
+
+#: models/action.py:14
+msgid "Action Type"
+msgstr "Tipo de acción"
+
+#: models/action.py:15
+msgid "Usage"
+msgstr "Uso"
+
+#: models/action.py:16
+msgid "Description"
+msgstr "Descripción"
+
+#: models/action.py:17
+msgid "External ID"
+msgstr "ID externo"
+
+#: models/action.py:22 models/ui.py:281
+msgid "Action"
+msgstr "Acción"
+
+#: models/action.py:23
+msgid "Print"
+msgstr "Impresión"
+
+#: models/action.py:68 models/action.py:121
+msgid "View"
+msgstr "Vista"
+
+#: models/action.py:69
+msgid "Domain"
+msgstr "Dominio"
+
+#: models/action.py:70
+msgid "Context"
+msgstr "Contexto"
+
+#: models/action.py:71 models/action.py:188
+msgid "Model"
+msgstr "Modelo"
+
+#: models/action.py:72
+msgid "Object ID"
+msgstr "ID de objeto"
+
+#: models/action.py:74
+msgid "View Mode"
+msgstr "Modo de visualización"
+
+#: models/action.py:75
+msgid "Target"
+msgstr "Blanco"
+
+#: models/action.py:79
+msgid "Limit"
+msgstr "Límite"
+
+#: models/action.py:80
+msgid "Auto Search"
+msgstr "Búsqueda automática"
+
+#: models/action.py:113
+msgid "View Type"
+msgstr "Tipo de vista"
+
+#: models/action.py:153
+msgid "Python Code"
+msgstr "Código Python"
+
+#: models/action.py:169
+msgid "Value"
+msgstr "Valor"
+
+#: models/action.py:170
+msgid "Python Expression"
+msgstr "Expresión de Python"
+
+#: models/action.py:171
+msgid "Evaluation Type"
+msgstr "Tipo de evaluación"
+
+#: models/base.py:274
+msgid "(Undefined)"
+msgstr "(Indefinido)"
+
+#: models/reports.py:20
+msgid "Report Type"
+msgstr "Tipo de informe"
+
+#: models/rule.py:6
+msgid "object name"
+msgstr "nombre del objeto"
+
+#: models/ui.py:52
+msgid "Active"
+msgstr "Activo"
+
+#: models/ui.py:71
+msgid "Primary"
+msgstr "Primario"
+
+#: models/ui.py:72
+msgid "Extension"
+msgstr "Extensión"
+
+#: models/ui.py:76
+msgid "Priority"
+msgstr "Prioridad"
+
+#: models/ui.py:78
+msgid "Content"
+msgstr "Contenido"
+
+#: models/ui.py:79
+msgid "Reference ID"
+msgstr "ID de referencia"
+
+#: views/client.py:68
+msgid "Login successful, please wait..."
+msgstr "Inicie sesión correctamente, espere ..."
+
+#: views/client.py:74 views/client.py:76
+msgid "Invalid username and password."
+msgstr "Nombre de usuario y contraseña no válidos."
+
