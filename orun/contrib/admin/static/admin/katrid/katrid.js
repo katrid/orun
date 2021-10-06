@@ -3853,7 +3853,7 @@ var Katrid;
                     let rec = this.encodeObject(record.pristine);
                     rec[field.name] = newValue;
                     if (this.parent)
-                        rec[this.field.info.field] = this.encodeObject(this.parent.record);
+                        rec[this.field.info.field] = this.encodeObject(this.parent.record.$record.serialize());
                     this.dispatchEvent('admin_on_field_change', [field.name, rec]);
                 };
                 this.pendingOperation = setTimeout(fn, 50);
@@ -9946,44 +9946,6 @@ var Katrid;
         (function (Views) {
             var Search;
             (function (Search) {
-                Katrid.UI.uiKatrid.controller('CustomFilterController', ['$scope', '$element', '$filter', function ($scope, $element, $filter) {
-                        $scope.tempFilter = null;
-                        $scope.customFilter = [];
-                        $scope.fieldChange = function (field) {
-                            $scope.field = field;
-                            $scope.condition = field.defaultCondition;
-                            $scope.conditionChange($scope.condition);
-                        };
-                        $scope.conditionChange = (condition) => {
-                            $scope.controlVisible = $scope.field.isControlVisible(condition);
-                        };
-                        $scope.valueChange = (value) => {
-                            $scope.searchValue = value;
-                        };
-                        $scope.addCondition = (field, condition, value) => {
-                            if (!$scope.tempFilter)
-                                $scope.tempFilter = new Search.SearchFilters($scope.$parent.action.searchView);
-                            $scope.tempFilter.push(new Search.CustomFilterItem($scope.$parent.action.searchView, field, condition, value, $scope.tempFilter));
-                            $scope.field = null;
-                            $scope.condition = null;
-                            $scope.controlVisible = false;
-                            $scope.searchValue = undefined;
-                        };
-                        $scope.applyFilter = (field, condition, searchValue) => {
-                            if ($scope.searchValue)
-                                $scope.addCondition(field, condition, searchValue);
-                            $scope.customFilter.push($scope.tempFilter);
-                            $scope.tempFilter.selectAll();
-                            $scope.tempFilter = null;
-                            $scope.customSearchExpanded = false;
-                        };
-                    }])
-                    .directive('customFilter', () => ({
-                    restrict: 'A',
-                    scope: {
-                        action: '=',
-                    },
-                }));
                 class SearchView {
                     constructor(scope, element, view) {
                         this.scope = scope;
