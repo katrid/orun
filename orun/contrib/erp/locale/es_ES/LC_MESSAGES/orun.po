@@ -1,0 +1,400 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version:  orun\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2021-10-05 14:53-0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: Alexandre Dias <alexandre@katrid.com>\n"
+"Language: es_ES\n"
+"Language-Team: Español (México)language/es_ES/)\n"
+"Plural-Forms: nplurals=2; plural=(n > 1)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.1\n"
+
+#: fields.py:7 models/company.py:30 models/partner.py:67
+#: templates/erp/views/res.partner/form.html:12
+#: templates/erp/views/res.partner/search.html:14
+msgid "Company"
+msgstr "Compañía"
+
+#: fields.py:15 models/partner.py:31
+msgid "Active"
+msgstr "Activo"
+
+#: models/auth.py:55
+msgid "Signature"
+msgstr "Firma"
+
+#: models/auth.py:56
+msgid "Home Action"
+msgstr "Inicio Acción"
+
+#: models/auth.py:59 models/company.py:31
+#: templates/erp/views/res.partner/search.html:5
+msgid "Companies"
+msgstr "Empresas"
+
+#: models/auth.py:93
+msgid "Invalid password!"
+msgstr "¡Contraseña no válida!"
+
+#: models/bank.py:7
+msgid "Bank Identifier Code"
+msgstr "Código de identificación bancaria"
+
+#: models/bank.py:7
+msgid "BIC or Swift Code"
+msgstr "Código BIC o Swift"
+
+#: models/bank.py:14
+msgid "Fed. State"
+msgstr "Estado de la Fed."
+
+#: models/bank.py:24
+msgid "Account Number"
+msgstr "Número de cuenta"
+
+#: models/bank.py:26
+msgid "Account Holder"
+msgstr "Titular de la cuenta"
+
+#: models/copy.py:9
+msgid "Source Model"
+msgstr "Modelo de origen"
+
+#: models/copy.py:10
+msgid "Action (Optional)"
+msgstr "Acción (opcional)"
+
+#: models/copy.py:11
+msgid "Destination Model"
+msgstr "Modelo de destino"
+
+#: models/copy.py:12
+msgid "Caption"
+msgstr "Subtítulo"
+
+#: models/copy.py:14
+msgid "Fields Mapping"
+msgstr "Mapeo de campos"
+
+#: models/copy.py:18 models/copy.py:19
+msgid "Copying Settings"
+msgstr "Copiar la configuración"
+
+#: models/cron.py:20
+msgid "Days"
+msgstr "Días"
+
+#: models/cron.py:21
+msgid "Hours"
+msgstr "Horas"
+
+#: models/cron.py:22
+msgid "Weeks"
+msgstr "Semanas"
+
+#: models/cron.py:23
+msgid "Months"
+msgstr "Meses"
+
+#: models/cron.py:24
+msgid "Minutes"
+msgstr "Acta"
+
+#: models/decimal.py:7
+msgid "Usage"
+msgstr "Uso"
+
+#: models/decimal.py:8
+msgid "Digits"
+msgstr "Dígitos"
+
+#: models/locale.py:6 models/locale.py:41 models/partner.py:17
+#: models/partner.py:27 models/sequence.py:6
+msgid "Name"
+msgstr "Nombre"
+
+#: models/locale.py:7
+msgid "Country Code"
+msgstr "Código de país"
+
+#: models/locale.py:12
+msgid "Address Format"
+msgstr "Formato de dirección"
+
+#: models/locale.py:16 models/partner.py:44
+msgid "Country"
+msgstr "País"
+
+#: models/locale.py:17
+msgid "Countries"
+msgstr "Países"
+
+#: models/locale.py:21 models/locale.py:30 models/locale.py:54
+#: models/partner.py:6
+msgid "name"
+msgstr "nombre"
+
+#: models/locale.py:31
+msgid "State Code"
+msgstr "Código estatal"
+
+#: models/locale.py:35 models/locale.py:40 models/partner.py:45
+msgid "State"
+msgstr "Estado"
+
+#: models/locale.py:36
+msgid "States"
+msgstr "Estados"
+
+#: models/locale.py:46 models/partner.py:46
+msgid "City"
+msgstr "Ciudad"
+
+#: models/locale.py:47
+msgid "Cities"
+msgstr "Ciudades"
+
+#: models/locale.py:55
+msgid "Locale Code"
+msgstr "Código local"
+
+#: models/locale.py:56
+msgid "ISO Code"
+msgstr "Código ISO"
+
+#: models/locale.py:64
+msgid "currency"
+msgstr "divisa"
+
+#: models/locale.py:65
+msgid "symbol"
+msgstr "símbolo"
+
+#: models/locale.py:66
+msgid "Rounding Factor"
+msgstr "Factor de redondeo"
+
+#: models/module.py:12
+msgid "Module Category"
+msgstr "Categoría del módulo"
+
+#: models/module.py:13
+msgid "Module Categories"
+msgstr "Categorías de módulos"
+
+#: models/module.py:42
+msgid "Module"
+msgstr "Módulo"
+
+#: models/module.py:43
+msgid "Modules"
+msgstr "Módulos"
+
+#: models/partner.py:12
+msgid "Partner Category"
+msgstr "Categoría de socios"
+
+#: models/partner.py:13
+msgid "Partner Categories"
+msgstr "Categorías de socios"
+
+#: models/partner.py:18
+msgid "Abbreviation"
+msgstr "Abreviatura"
+
+#: models/partner.py:22
+msgid "Partner Title"
+msgstr "Título del socio"
+
+#: models/partner.py:23
+msgid "Partner Titles"
+msgstr "Títulos de socios"
+
+#: models/partner.py:29
+msgid "Related Company"
+msgstr "Empresa relacionada"
+
+#: models/partner.py:30
+msgid "Title"
+msgstr "Título"
+
+#: models/partner.py:32
+msgid "Color"
+msgstr "Color"
+
+#: models/partner.py:33
+msgid "User"
+msgstr "Usuario"
+
+#: models/partner.py:34
+msgid "Language"
+msgstr "Idioma"
+
+#: models/partner.py:35
+msgid "Email"
+msgstr "Correo electrónico"
+
+#: models/partner.py:37
+msgid "Barcode"
+msgstr "Código de barras"
+
+#: models/partner.py:38
+msgid "Is a Customer"
+msgstr "Es un cliente"
+
+#: models/partner.py:39
+msgid "Is a Supplier"
+msgstr "Es un proveedor"
+
+#: models/partner.py:40
+msgid "Is a Employee"
+msgstr "Es un empleado"
+
+#: models/partner.py:41 templates/erp/views/res.partner/form.html:19
+#: templates/erp/views/res.partner/form.html:87
+msgid "Address"
+msgstr "Dirección"
+
+#: models/partner.py:42
+msgid "Address 2"
+msgstr "Dirección 2"
+
+#: models/partner.py:43
+msgid "Zip"
+msgstr "Cremallera"
+
+#: models/partner.py:47
+msgid "Phone"
+msgstr "Teléfono"
+
+#: models/partner.py:49
+msgid "Mobile"
+msgstr "Móvil"
+
+#: models/partner.py:50
+msgid "Birthdate"
+msgstr "Nacimiento"
+
+#: models/partner.py:51
+msgid "Is a Company"
+msgstr "Es una empresa"
+
+#: models/partner.py:54
+msgid "Contact"
+msgstr "Contacto"
+
+#: models/partner.py:55
+msgid "Invoice address"
+msgstr "Dirección de la factura"
+
+#: models/partner.py:56
+msgid "Shipping address"
+msgstr "Dirección de envío"
+
+#: models/partner.py:57
+msgid "Private address"
+msgstr "Dirección privada"
+
+#: models/partner.py:58
+msgid "Other address"
+msgstr "Otra dirección"
+
+#: models/partner.py:59
+msgid "Address Type"
+msgstr "Tipo de dirección"
+
+#: models/partner.py:65
+msgid "Company Type"
+msgstr "Tipo de empresa"
+
+#: models/partner.py:68 templates/erp/views/res.partner/form.html:124
+msgid "Notes"
+msgstr "Notas"
+
+#: models/partner.py:73
+msgid "Tags"
+msgstr "Etiquetas"
+
+#: models/partner.py:78
+msgid "Partner"
+msgstr "Socio"
+
+#: models/partner.py:79
+msgid "Partners"
+msgstr "Socios"
+
+#: models/sequence.py:7
+msgid "Sequence Code"
+msgstr "Código de secuencia"
+
+#: models/sequence.py:10
+msgid "Standard"
+msgstr "Estándar"
+
+#: models/sequence.py:11
+msgid "No gap"
+msgstr "Sin brecha"
+
+#: templates/erp/views/res.partner/form.html:21
+msgid "View on google maps"
+msgstr "Ver en google maps"
+
+#: templates/erp/views/res.partner/form.html:31
+msgid "Details"
+msgstr "Detalles"
+
+#: templates/erp/views/res.partner/form.html:44
+msgid "Contacts & Addresses"
+msgstr "Contactos y direcciones"
+
+#: templates/erp/views/res.partner/form.html:102
+msgid "Additional Data"
+msgstr "Datos adicionales"
+
+#: templates/erp/views/res.partner/form.html:109
+msgid "Sales & Purchases"
+msgstr "Ventas y Compras"
+
+#: templates/erp/views/res.partner/form.html:111
+msgid "Sales"
+msgstr "Ventas"
+
+#: templates/erp/views/res.partner/form.html:117
+msgid "Purchases"
+msgstr "Compras"
+
+#: templates/erp/views/res.partner/search.html:4
+msgid "Persons"
+msgstr "Personas"
+
+#: templates/erp/views/res.partner/search.html:8
+msgid "Vendors"
+msgstr "Proveedores"
+
+#: templates/erp/views/res.partner/search.html:9
+msgid "Customers"
+msgstr "Clientela"
+
+#: templates/erp/views/res.partner/search.html:12
+msgid "Archived"
+msgstr "Archivados"
+
+msgid "Contacts"
+msgstr "Contactos"
+
+msgid "Localization"
+msgstr "Localización"
+
+msgid "Find resources here..."
+msgstr "Encuentre recursos aquí..."
+
