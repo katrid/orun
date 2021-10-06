@@ -807,12 +807,12 @@ class Model(metaclass=ModelBase):
         assert update_fields is None or update_fields
         cls = origin = self.__class__
         meta = cls._meta
+        is_updating = self.pk is None
         if not meta.auto_created:
             pre_save.send(
                 sender=origin, instance=self, raw=raw, using=using,
                 update_fields=update_fields,
             )
-            self.before_update(None, None)
         # A transaction isn't needed if one query is issued.
         if meta.parents:
             context_manager = transaction.atomic(using=using, savepoint=False)
@@ -837,8 +837,6 @@ class Model(metaclass=ModelBase):
                 sender=origin, instance=self, created=(not updated),
                 update_fields=update_fields, raw=raw, using=using,
             )
-            self.after_update(None, None)
-
     save_base.alters_data = True
 
     def _save_parents(self, cls, using, update_fields):
@@ -889,6 +887,10 @@ class Model(metaclass=ModelBase):
         pk_set = pk_val is not None
         if not pk_set and (force_update or update_fields):
             raise ValueError("Cannot force an update in save() with no primary key.")
+
+        if pk_set:
+            self.before_update(None, None)
+
         updated = False
         # Skip an UPDATE when adding an instance and primary key has a default.
         if (
@@ -932,6 +934,8 @@ class Model(metaclass=ModelBase):
             if results:
                 for value, field in zip(results[0], returning_fields):
                     setattr(self, field.attname, value)
+        if pk_set:
+            self.after_update(None, None)
         return updated
 
     def _do_update(self, base_qs, using, pk_val, values, update_fields, forced_update):
