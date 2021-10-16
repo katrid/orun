@@ -20,7 +20,8 @@ class AdminConfig(AppConfig):
     urls_module = 'orun.contrib.admin.urls'
 
     def ready(self):
+        pass
         # pre_migrate.connect(inject_rename_contenttypes_operations, sender=self)
-        post_sync.connect(admin_auto_register)
+        # post_sync.connect(admin_auto_register)
         # checks.register(check_generic_foreign_keys, checks.Tags.models)
         # checks.register(check_model_name_lengths, checks.Tags.models)

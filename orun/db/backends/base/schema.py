@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from collections import defaultdict
 
 from orun.db.backends.ddl_references import (
     Columns, Expressions, ForeignKeyName, IndexName, Statement, Table,
@@ -7,7 +8,7 @@ from orun.db.backends.ddl_references import (
 from orun.db.backends.utils import names_digest, split_identifier
 from orun.db.models.fields import Field, DecimalField
 from orun.db.backends.base.introspection import FieldInfo
-from orun.db.models import Deferrable, Index
+from orun.db.models import Deferrable, Index, Model
 from orun.db.models.sql import Query
 from orun.db.transaction import TransactionManagementError, atomic
 from orun.apps import apps
@@ -1441,3 +1442,25 @@ class BaseDatabaseSchemaEditor:
         elif isinstance(new_field, DecimalField):
             if new_field.max_digits != old_field.max_digits or new_field.decimal_places != old_field.decimal_places:
                 print('Field %s type must be modified' % new_field.name, new_type, old_type)
+
+    def sync_model_ddl(self, model: Model):
+        """Synchronize DDL model objects"""
+        from orun.db.vsql.triggers import create_agg_triggers
+        # sync model triggers
+        triggers = defaultdict(list)
+        for auto_trigger in model._meta.auto_calc_triggers:
+            for k, v in create_agg_triggers(auto_trigger).items():
+                triggers[k].append(v)
+        for trigger in model._meta.triggers.triggers:
+            triggers[trigger.name].append(trigger.get_source())
+        if triggers:
+            source = f"class Table('{model._meta.name}'):\n"
+            for name, sources in triggers.items():
+                for i, lines in enumerate(sources):
+                    if i > 0:
+                        lines = '\n'.join(lines.splitlines()[2:])
+                    source += '\n' + lines
+
+            DDL = self.connection.ops.vsql_compiler()(self.connection)
+            for stmt in DDL.generate_sql(source):
+                self.execute(stmt)

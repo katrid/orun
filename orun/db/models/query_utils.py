@@ -440,3 +440,15 @@ class FilteredRelation:
         query = compiler.query
         where = query.build_filtered_relation_q(self.condition, reuse=set(self.path))
         return compiler.compile(where)
+
+
+class Update:
+    def __init__(self, *models):
+        self._where = None
+
+    def where(self, *args, **kwargs):
+        self._where = kwargs
+        return self
+
+    def set(self, *args, **kwargs):
+        pass

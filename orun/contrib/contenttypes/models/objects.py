@@ -99,7 +99,7 @@ class Association(models.Model):
 
 class Registrable:
     schema: str = None
-    no_update = False
+    can_update = False
 
     def __init_subclass__(cls, **kwargs):
         module = cls.__module__
@@ -111,16 +111,16 @@ class Registrable:
     def _register_object(cls, model, obj_name: str, info: dict, using=DEFAULT_DB_ALIAS):
         try:
             obj_id = Object.objects.get(name=obj_name)
-            if cls.no_update != obj_id.can_update:
-                obj_id.can_update = cls.no_update
+            if cls.can_update != obj_id.can_update:
+                obj_id.can_update = cls.can_update
                 obj_id.save(using=using)
-            instance = obj_id.content_object
+            instance = obj_id.exists()
             if instance is None:
                 answer = input('The object "%s" is defined but not found on module "%s". Do you want to recreate it? [Y/n]' % (obj_name, obj_id.model_name))
                 if answer == 'y' or not answer:
                     obj_id.delete()
                     raise Object.DoesNotExist
-            if cls.no_update:
+            if not cls.can_update:
                 return instance
         except Object.DoesNotExist:
             obj_id = None
@@ -140,7 +140,7 @@ class Registrable:
                 object_id=instance.pk,
                 model=ContentType.objects.get_by_natural_key(instance._meta.name),
                 model_name=instance._meta.name,
-                can_update=not cls.no_update,
+                can_update=not cls.can_update,
             )
         return instance
 

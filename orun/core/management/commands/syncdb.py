@@ -35,6 +35,10 @@ class Command(BaseCommand):
             help='Nominates a database to synchronize. Defaults to the "default" database.',
         )
         parser.add_argument(
+            '--noddl', '--no-ddl', action='store_false',
+            help='Sync database structure without additional DDL objects',
+        )
+        parser.add_argument(
             '--fake', action='store_true',
             help='Mark migrations as run without actually running them.',
         )
@@ -55,6 +59,7 @@ class Command(BaseCommand):
 
         self.verbosity = options['verbosity']
         self.interactive = options['interactive']
+        self.no_ddl = not options['noddl']
 
         # Import the 'management' module within each installed app, to register
         # dispatcher events.
@@ -172,27 +177,30 @@ class Command(BaseCommand):
             # Deferred SQL is executed when exiting the editor's context.
             if self.verbosity >= 1:
                 self.stdout.write("    Running deferred SQL...\n")
-                # Check by additional sql objects
+            # Check by additional sql objects
+            for app_name, model_list in post_model_list.items():
+                for model in model_list:
+                    if model._meta.can_migrate(connection):
+                        editor.sync_model(model)
+
+            # sync DDL statements on models
+            if not self.no_ddl:
                 for app_name, model_list in post_model_list.items():
                     for model in model_list:
-                        if model._meta.can_migrate(connection):
-                            editor.sync_model(model)
-
-            # sync DDL statements on sql.py files
-            DDL = connection.ops.vsql_compiler()
-            for app_name in manifest:
-                app = apps.app_configs[app_name]
-                ddl_file = os.path.join(app.path, 'sql.py')
-                if os.path.isfile(ddl_file):
-                    ddl = DDL(connection.ops)
-                    with open(ddl_file, 'rb') as f:
-                        for cmd in ddl.generate_sql(f.read()):
-                            print(cmd)
-                            try:
-                                editor.execute(cmd)
-                            except:
-                                print('Error loading file:', ddl_file)
-                                raise
+                        editor.sync_model_ddl(model)
+                # for app_name in manifest:
+                #     app = apps.app_configs[app_name]
+                #     ddl_file = os.path.join(app.path, 'ddl.py')
+                #     if os.path.isfile(ddl_file):
+                #         ddl = DDL(connection.ops)
+                #         with open(ddl_file, 'rb') as f:
+                #             for cmd in ddl.generate_sql(f.read()):
+                #                 print(cmd)
+                #                 try:
+                #                     editor.execute(cmd)
+                #                 except:
+                #                     print('Error loading file:', ddl_file)
+                #                     raise
 
             # emit post migrate signal
             emit_post_migrate_signal(

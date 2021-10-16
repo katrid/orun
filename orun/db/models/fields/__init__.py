@@ -261,7 +261,7 @@ class Field(BaseField):
                  getter: Union[str, Callable, None] = None, setter: Union[str, Callable, None] = None, hybrid=False,
                  on_insert_value: Union[str, Callable, None] = None, on_update_value: Union[str, Callable, None] = None,
                  on_calculate: Union[Callable, str] = None, db_calculate: Union[Callable, str] = None,
-                 group_choices=None, track_visibility=None,
+                 group_choices=None, track_visibility=None, aggregate=None,
                  descriptor=None, **kwargs):
         self.name = name
         label = label or kwargs.get('label', kwargs.get('verbose_name'))
@@ -286,6 +286,7 @@ class Field(BaseField):
         self.widget_attrs = widget_attrs
         self.on_insert_value = on_insert_value
         self.on_update_value = on_update_value
+        self.aggregate = aggregate
         if isinstance(choices, dict):
             choices = choices.items()
         elif isinstance(choices, (list, tuple)) and choices:

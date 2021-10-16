@@ -357,6 +357,9 @@ class Options:
             if field.name in self.fields:
                 raise ValueError(f'Field "{field.name}" duplicated. Use the fields_override attribute to extend a field.')
             self.local_fields.append(field)
+            # add aggregation trigger
+            if field.aggregate:
+                self.add_field_aggregation(field)
         elif field.many_to_many:
             field.concrete = False
 
@@ -994,6 +997,30 @@ class Options:
             }
             new_objs.append(obj)
         return new_objs
+
+    # DDL definition
+    def add_trigger(self, trigger):
+        self._triggers.append(trigger)
+
+    _triggers = None
+    @property
+    def triggers(self):
+        from orun.db.vsql.triggers import Triggers
+        if self._triggers is None:
+            self._triggers = Triggers()
+        return self._triggers
+
+    # auto calculable triggers
+    def add_field_aggregation(self, field: Field):
+        """Add auto calculable trigger for the target field"""
+        self.auto_calc_triggers.append(field)
+
+    _auto_calc_triggers = None
+    @property
+    def auto_calc_triggers(self):
+        if self._auto_calc_triggers is None:
+            self._auto_calc_triggers = []
+        return self._auto_calc_triggers
 
 
 class ModelHelper:

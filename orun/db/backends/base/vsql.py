@@ -4,28 +4,15 @@ import ast
 from orun.apps import apps
 
 
-COMMON_TRIGGER_NAMES = (
-    'before_insert', 'before_update', 'before_delete', 'after_insert', 'after_update', 'after_delete'
-)
-
-TRIGGER_SUFFIX = {
-    'before_insert': 'bi',
-    'before_update': 'bu',
-    'before_delete': 'bd',
-    'after_insert': 'ai',
-    'after_update': 'au',
-    'after_delete': 'ad'
-}
-
-
 class Compiler(ast._Unparser):
     """
     Virtual SQL Compiler
     """
-    def __init__(self, ops):
+    def __init__(self, connection):
         super().__init__()
-        self.ops = ops
-        self.dialect = ops.dialect()
+        self.connection = connection
+        self.ops = connection.ops
+        self.dialect = self.ops.dialect()
         self._cur_model = None
         self._name = None
         self._trigger_vars = None
@@ -53,6 +40,12 @@ class Compiler(ast._Unparser):
 
     def visit_ImportFrom(self, node):
         pass
+
+    def visit_Attribute(self, node):
+        if node.value and node.value.id == 'self':
+            self.write(node.attr)
+        else:
+            super().visit_Attribute(node)
 
     def _write_docstring(self, node):
         self.fill()
@@ -98,7 +91,7 @@ class Compiler(ast._Unparser):
         with self.block():
             self.traverse(node.body)
         # collapse nested ifs into equivalent elifs.
-        while node.orelse and len(node.orelse) == 1 and isinstance(node.orelse[0], If):
+        while node.orelse and len(node.orelse) == 1 and isinstance(node.orelse[0], ast.If):
             node = node.orelse[0]
             self.begin_elseif(node)
             with self.block():
@@ -150,13 +143,13 @@ class Compiler(ast._Unparser):
 
     def visit_ClassDef(self, node):
         self._cur_model = node
-        for kw in node.keywords:
-            self._name = kw.value.value
+        for base in node.bases:
+            self._name = base.value
             self._model = apps[self._name]
         self._write_docstring_and_traverse_body(node)
 
     def visit_FunctionDef(self, node: ast.FunctionDef):
-        if node.name in COMMON_TRIGGER_NAMES:
+        if node.decorator_list and node.decorator_list[0].id == 'trigger':
             self.visit_trigger(node)
         else:
             super().visit_FunctionDef(node)
@@ -179,11 +172,8 @@ class Compiler(ast._Unparser):
 
     def visit_trigger(self, trigger: ast.FunctionDef):
         # check by common trigger names
-        if trigger.name in COMMON_TRIGGER_NAMES:
-            tr_name = f'_tr_{self._name.replace(".", "_")}_{TRIGGER_SUFFIX[trigger.name]}'
-            ev_name = trigger.name.replace('_', ' ').upper()
-        else:
-            tr_name = trigger.name
+        tr_name = f'_tr_{self._name.replace(".", "_")}_{trigger.name}'
+        ev_name = trigger.name.replace('_', ' ').upper()
         self.begin_trigger(trigger, tr_name, ev_name)
         with self.block():
             self.traverse(trigger.body)

@@ -26,7 +26,7 @@ from orun.db.models.manager import Manager
 from orun.db.models.query import (
     Prefetch, Q, QuerySet, prefetch_related_objects,
 )
-from orun.db.models.query_utils import FilteredRelation
+from orun.db.models.query_utils import FilteredRelation, Update
 
 # Imports that would create circular imports if sorted
 from orun.db.models.base import DEFERRED, Model  # isort:skip
