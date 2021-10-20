@@ -12,9 +12,9 @@ Run your code
 
 To execute your code, orun offers the quick run by calling the ``runfile`` command:
 
-    .. console::
+.. console::
 
-        $ python manage.py runfile reports/myreport.py
+    $ python manage.py runfile reports/myreport.py
 
 #. The runfile command handler will find the first "executable" class in ``myreport.py`` and invoke it.
 
