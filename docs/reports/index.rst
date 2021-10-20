@@ -11,6 +11,7 @@ Run your code
 =============
 
 To execute your code, orun offers the quick run by calling the ``runfile`` command:
+
     .. console::
 
         $ python manage.py runfile reports/myreport.py
@@ -24,7 +25,7 @@ To execute your code, orun offers the quick run by calling the ``runfile`` comma
     from orun.reports import Report
 
 
-    # printing vsql directly
+    # printing vsql result directly to output
     class Report1(Report):
         def execute(self, params):
             self.print(self.execsql('''select id, name from res.partner'''))
@@ -44,7 +45,7 @@ Database queries using OpenQuery
 .. code-block:: python
     class MyReport(Report):
         def execute(self, params):
-            # select statement using openquery SQL dialect
+            # select statement using OpenQuery SQL dialect
             for rec in self.execsql('''select name from res.partner'''):
                 ...
             ...
