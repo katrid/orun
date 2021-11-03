@@ -99,7 +99,7 @@ class Association(models.Model):
 
 class Registrable:
     schema: str = None
-    can_update = False
+    can_update = True
 
     def __init_subclass__(cls, **kwargs):
         module = cls.__module__
@@ -114,7 +114,7 @@ class Registrable:
             if cls.can_update != obj_id.can_update:
                 obj_id.can_update = cls.can_update
                 obj_id.save(using=using)
-            instance = obj_id.exists()
+            instance = obj_id.content_object
             if instance is None:
                 answer = input('The object "%s" is defined but not found on module "%s". Do you want to recreate it? [Y/n]' % (obj_name, obj_id.model_name))
                 if answer == 'y' or not answer:
@@ -147,5 +147,9 @@ class Registrable:
     @classmethod
     def get_qualname(cls):
         return f'{cls.__module__}.{cls.__qualname__}'
+
+    @classmethod
+    def update_info(cls):
+        pass
 
 
