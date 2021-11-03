@@ -445,7 +445,6 @@ var Katrid;
                 this.append(div);
             }
             load(data) {
-                console.log('load', data);
                 this.panels = data.panels;
                 this.info = data;
             }
@@ -564,10 +563,18 @@ var Katrid;
         class ViewAction extends Actions.Action {
             async onHashChange(params) {
                 location.hash = '#/app/?' + $.param(params);
-                let svc = new Katrid.Services.Model('ui.action.view');
-                let res = await svc.post('get_view', { args: [this.info.view.id] });
-                let content = res.content;
-                let viewType = res.type;
+                console.log(this.info);
+                let content, viewType;
+                if (this.info.content) {
+                    content = this.info.content;
+                    console.log('action content', content);
+                }
+                else {
+                    let svc = new Katrid.Services.Model('ui.action.view');
+                    let res = await svc.post('get_view', { args: [this.info.view.id] });
+                    content = res.content;
+                    viewType = res.type;
+                }
                 if (content.startsWith('{')) {
                     if (viewType === 'dashboard') {
                         let dashboard = document.createElement('dashboard-view');
@@ -1067,10 +1074,10 @@ var Katrid;
                 }
                 create() {
                     let btnSave = document.createElement('button');
-                    btnSave.classList.add('btn', 'btn-outline-primary');
+                    btnSave.classList.add('btn', 'btn-primary');
                     btnSave.innerText = Katrid.i18n.gettext('Save');
                     let btnDiscard = document.createElement('button');
-                    btnDiscard.classList.add('btn', 'btn-outline-secondary');
+                    btnDiscard.classList.add('btn', 'btn-secondary');
                     btnDiscard.innerText = Katrid.i18n.gettext('Discard');
                     btnSave.addEventListener('click', () => this.save());
                     btnDiscard.addEventListener('click', () => this.back());
@@ -1160,7 +1167,6 @@ var Katrid;
                     let sel = document.createElement('select');
                     sel.classList.add('form-control');
                     portlets.forEach((port, index) => {
-                        console.log(port, index);
                         this.availableItems[port.id] = port;
                         let option = document.createElement('option');
                         option.value = port.id;
@@ -1194,6 +1200,8 @@ var Katrid;
                         el.load(info);
                         this.portlets.push(el.el);
                         this.append(el);
+                        el.panel = this;
+                        el.render();
                     }
                     else {
                         el = document.createElement(info.tag);
@@ -1240,6 +1248,16 @@ var Katrid;
                     let div = document.createElement('div');
                     div.classList.add('mirror');
                     this.append(div);
+                    console.log('render');
+                    if (this.el.editing)
+                        this.addEventListener('click', () => this.removePortlet());
+                }
+                removePortlet() {
+                    let i = this.panel.portlets.indexOf(this.el);
+                    console.log(i, this.panel);
+                    if (i > -1)
+                        this.panel.portlets.splice(i, 1);
+                    this.remove();
                 }
             }
             Portlets.PortletEditor = PortletEditor;
@@ -2972,7 +2990,7 @@ var Katrid;
             DataSourceState[DataSourceState["loading"] = 3] = "loading";
             DataSourceState[DataSourceState["inactive"] = 4] = "inactive";
         })(DataSourceState = Data.DataSourceState || (Data.DataSourceState = {}));
-        let DEFAULT_REQUEST_INTERVAL = 300;
+        const DEFAULT_REQUEST_INTERVAL = 300;
         class DataSource {
             constructor(config) {
                 this.config = config;
@@ -3883,6 +3901,15 @@ var Katrid;
                 this.fn = fn;
             }
         }
+    })(Data = Katrid.Data || (Katrid.Data = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Data;
+    (function (Data) {
+        class Model {
+        }
+        Data.Model = Model;
     })(Data = Katrid.Data || (Katrid.Data = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;

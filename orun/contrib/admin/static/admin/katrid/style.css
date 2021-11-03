@@ -11160,6 +11160,7 @@ header.content-container-heading:empty {
 .homepage-view {
   padding-top: 20px;
   position: relative;
+  background-image: linear-gradient(to left top, #e6f4f1, #b9d8dc, #93bbce, #7d9bbf, #7978a8);
 }
 .homepage-view .homepage-toolbar {
   float: right;
@@ -11171,6 +11172,9 @@ header.content-container-heading:empty {
 .portlet-panel {
   display: flex;
   flex-wrap: wrap;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 8px 8px 14px 8px;
 }
 .portlet-panel .portlet {
   height: 150px;

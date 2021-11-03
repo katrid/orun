@@ -4,6 +4,7 @@ from orun import api
 from orun.apps import apps
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
+from orun.utils.module_loading import import_string
 
 from orun.contrib.contenttypes.models import ContentType, ref
 #from ..fields import GenericForeignKey
@@ -25,6 +26,7 @@ class Action(models.Model):
         default='action',
     )
     multiple = models.BooleanField(default=False, label='Restrict to lists')
+    qualname = models.CharField(help_text='System qualified name')
 
     class Meta:
         name = 'ui.action'
@@ -132,6 +134,15 @@ class ViewAction(Action):
     class Meta:
         name = 'ui.action.view'
 
+    def _get_info(self, context):
+        res = super()._get_info(context)
+        # it's a system class
+        if self.qualname:
+            admin_class = import_string(self.qualname)
+            res.update(admin_class.render(None))
+            del res['qualname']
+        return res
+
     @api.classmethod
     def get_view(cls, id):
         if isinstance(id, list):
@@ -202,11 +213,10 @@ class ClientAction(Action):
     class Meta:
         name = 'ui.action.client'
 
-    @api.method
-    def get_view(self, id):
+    @api.method(request=True)
+    def get_view(self, id, request):
         vw = self.objects.get(id)
         if vw.view:
             return {
                 'content': vw.view.render({}),
             }
-

@@ -27,7 +27,7 @@ class Portlet(Registrable):
         return {}
 
     @classmethod
-    def _update_info(cls):
+    def update_info(cls):
         return cls._register_object(apps['ui.portlet'], cls.get_qualname(), cls._get_info())
 
     @classmethod
