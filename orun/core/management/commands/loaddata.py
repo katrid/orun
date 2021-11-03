@@ -1,5 +1,5 @@
 import os
-from itertools import product
+import inspect
 from pathlib import Path
 
 from orun.apps import apps
@@ -14,20 +14,32 @@ def load_fixture(schema, *filenames, **options):
     else:
         addon = schema
     for filename in filenames:
-        filename = os.path.join(addon.path, 'fixtures', filename)
-        fixture, fmt = filename.rsplit('.', 1)
-        deserializer = serializers.get_deserializer(fmt)
-        # find fixture by the database alias
-        fname = f'{fixture}.{options["database"]}.{fmt}'
-        if not os.path.isfile(fname):
-            fname = filename
-        d = deserializer(Path(fname), addon=addon, format=fmt, filename=filename, **options)
+        if callable(filename):
+            filename = filename()
+        # load data from module registrable objects
+        if inspect.ismodule(filename):
+            from orun.contrib.contenttypes.models import Registrable
+            for attr in dir(filename):
+                if attr.startswith('_'):
+                    continue
+                member = getattr(filename, attr)
+                if isinstance(member, type) and member.__module__ == filename.__name__ and issubclass(member, Registrable):
+                    member.update_info()
+        else:
+            filename = os.path.join(addon.path, 'fixtures', filename)
+            fixture, fmt = filename.rsplit('.', 1)
+            deserializer = serializers.get_deserializer(fmt)
+            # find fixture by the database alias
+            fname = f'{fixture}.{options["database"]}.{fmt}'
+            if not os.path.isfile(fname):
+                fname = filename
+            d = deserializer(Path(fname), addon=addon, format=fmt, filename=filename, **options)
 
-        with transaction.atomic(options['database']):
-            d.deserialize()
-        if d.postpone:
-            for op in d.postpone:
-                op()
+            with transaction.atomic(options['database']):
+                d.deserialize()
+            if d.postpone:
+                for op in d.postpone:
+                    op()
 
 
 class Command(BaseCommand):
