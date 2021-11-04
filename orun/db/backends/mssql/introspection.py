@@ -49,19 +49,23 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         """
         if not schema_name:
             schema_name = 'dbo'
-        cursor.columns(table=table_name, schema=schema_name)
-        return [
-            FieldInfo(
-                line[3],
-                line[4],
-                line[6],
-                line[7],
-                line[7],
-                line[8],
-                line[10],
-                line[12],
-            )
-            for line in cursor.fetchall()
-        ]
+        if self.connection.settings_dict['OPTIONS']['driver'] == 'pytds':
+            desc = cursor.execute(f'select * from {schema_name}.{table_name} where 1 = 0')
+            return [FieldInfo(*line) for line in desc]
+        else:
+            cursor.columns(table=table_name, schema=schema_name)
+            return [
+                FieldInfo(
+                    line[3],
+                    line[4],
+                    line[6],
+                    line[7],
+                    line[7],
+                    line[8],
+                    line[10],
+                    line[12],
+                )
+                for line in cursor.fetchall()
+            ]
 
 
