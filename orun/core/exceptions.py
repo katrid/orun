@@ -1,6 +1,7 @@
 """
 Global Orun exception and warning classes.
 """
+from orun.utils.hashable import make_hashable
 
 
 class RPCError(Exception):
@@ -204,6 +205,22 @@ class ValidationError(Exception):
 
     def __repr__(self):
         return 'ValidationError(%s)' % self
+
+    def __eq__(self, other):
+        if not isinstance(other, ValidationError):
+            return NotImplemented
+        return hash(self) == hash(other)
+
+    def __hash__(self):
+        if hasattr(self, 'message'):
+            return hash((
+                self.message,
+                self.code,
+                make_hashable(self.params),
+            ))
+        if hasattr(self, 'error_dict'):
+            return hash(make_hashable(self.error_dict))
+        return hash(tuple(sorted(self.error_list, key=operator.attrgetter('message'))))
 
 
 class EmptyResultSet(Exception):
