@@ -1898,9 +1898,12 @@ class Model(metaclass=ModelBase):
                 else:
                     child.set(instance, v)
             except ValidationError as e:
-                for k, v in dict(e.message_dict).items():
-                    e.message_dict[k] = e.message_dict.pop(k)
-                    # e.error_dict[f"{child.name}.{k}"] = e.error_dict.pop(k)
+                if isinstance(e.message, str):
+                    e.error_list.append(e.message)
+                else:
+                    for k, v in dict(e.message_dict).items():
+                        e.message_dict[k] = e.message_dict.pop(k)
+                        # e.error_dict[f"{child.name}.{k}"] = e.error_dict.pop(k)
                 raise
         return instance
 
@@ -1922,6 +1925,7 @@ class Model(metaclass=ModelBase):
                 continue
             data[f.name] = f.value_to_json(getattr(self, f.name, None))
         if fields is None or 'record_name' in fields:
+            print(self.__class__, self.pk, self.__str__())
             data['record_name'] = str(self)
         if 'id' not in data:
             data['id'] = self.pk
