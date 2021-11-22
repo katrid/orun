@@ -193,10 +193,13 @@ class ValidationError(Exception):
                 yield field, list(ValidationError(errors))
         else:
             for error in self.error_list:
-                message = error.message
-                if error.params:
-                    message %= error.params
-                yield str(message)
+                if isinstance(error, str):
+                    yield error
+                else:
+                    message = error.message
+                    if error.params:
+                        message %= error.params
+                    yield str(message)
 
     def __str__(self):
         if hasattr(self, 'error_dict'):
