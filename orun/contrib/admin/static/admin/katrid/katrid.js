@@ -11007,6 +11007,8 @@ var Katrid;
                         if (res.error) {
                             if ('message' in res.error)
                                 Katrid.Forms.Dialogs.Alerts.error(res.error.message);
+                            else if ('messages' in res.error)
+                                Katrid.Forms.Dialogs.Alerts.error(res.error.messages.join('<br>'));
                             else
                                 Katrid.Forms.Dialogs.Alerts.error(res.error);
                             reject(res.error);
