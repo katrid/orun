@@ -2996,6 +2996,7 @@ var Katrid;
                 this.config = config;
                 this.$modifiedRecords = [];
                 this.refreshInterval = 1000;
+                this._fieldChanging = false;
                 this.readonly = false;
                 this.$modifiedRecords = [];
                 this.scope = config.scope;
@@ -3365,7 +3366,8 @@ var Katrid;
                     try {
                         controller.abort();
                     }
-                    catch { }
+                    catch {
+                    }
                 this.pendingPromises = [];
             }
             set masterSource(master) {
@@ -3863,6 +3865,7 @@ var Katrid;
                 if (_.isArray(obj))
                     return obj.map((v) => this.encodeObject(v));
                 else if (_.isObject(obj)) {
+                    obj.$$encoded = true;
                     let r = {};
                     for (let [k, v] of Object.entries(obj))
                         if (!k.startsWith('$'))
@@ -3881,15 +3884,22 @@ var Katrid;
                 return prepared;
             }
             _onFieldChange(field, newValue, record) {
+                this._fieldChanging = true;
                 if (field.name === this._lastFieldName)
                     clearTimeout(this.pendingOperation);
                 this._lastFieldName = field.name;
                 let fn = () => {
-                    let rec = this.encodeObject(DataSource.encodeRecord(this, record.serialize()));
-                    rec[field.name] = field.toJSON(newValue);
-                    if (this.parent)
-                        rec[this.field.info.field] = this.encodeObject(this.parent.record.$record);
-                    this.dispatchEvent('admin_on_field_change', [field.name, rec]);
+                    if (!this._fieldChanging)
+                        try {
+                            let rec = this.encodeObject(DataSource.encodeRecord(this, record.serialize()));
+                            rec[field.name] = field.toJSON(newValue);
+                            if (this.parent)
+                                rec[this.field.info.field] = this.encodeObject(this.parent.record.$record);
+                            this.dispatchEvent('admin_on_field_change', [field.name, rec]);
+                        }
+                        finally {
+                            this._fieldChanging = false;
+                        }
                 };
                 this.pendingOperation = setTimeout(fn, 50);
             }
