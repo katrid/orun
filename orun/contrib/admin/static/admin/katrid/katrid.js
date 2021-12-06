@@ -7878,6 +7878,10 @@ var Katrid;
                             async validate() {
                                 let msgs = [];
                                 for (let f of Object.values(me.fields)) {
+                                    if (!f.validate) {
+                                        console.log('Field not found', f);
+                                        continue;
+                                    }
                                     let v = f.validate(this.record);
                                     if (v !== true)
                                         msgs.push(`<span>${f.caption}</span><ul><li>${Katrid.i18n.gettext('This field cannot be empty.')}</li></ul>`);
