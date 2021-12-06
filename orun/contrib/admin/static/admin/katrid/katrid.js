@@ -3865,7 +3865,6 @@ var Katrid;
                 if (_.isArray(obj))
                     return obj.map((v) => this.encodeObject(v));
                 else if (_.isObject(obj)) {
-                    obj.$$encoded = true;
                     let r = {};
                     for (let [k, v] of Object.entries(obj))
                         if (!k.startsWith('$'))
@@ -4084,9 +4083,13 @@ var Katrid;
                 if (this.pk)
                     data.id = this.pk;
                 for (let k of Object.keys(data)) {
+                    if (k.startsWith('$'))
+                        continue;
                     let field = this.dataSource.fieldByName(k);
                     if (field)
                         data[k] = field.toJSON(data[k]);
+                    else
+                        console.log('Field not found', k, field);
                 }
                 return data;
             }
