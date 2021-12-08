@@ -4198,6 +4198,10 @@ var Katrid;
                         this.visible = info.visible;
                     if (info[':readonly'])
                         this.vReadonly = info[':readonly'];
+                    if (info.required === "")
+                        this.required = true;
+                    else if ('required' in info)
+                        this.required = info.required;
                     if (info.domain)
                         this.filter = info.domain;
                     if (info.filter)
@@ -4213,6 +4217,10 @@ var Katrid;
                 }
                 assign(el) {
                     for (let attr of el.attributes) {
+                        if (attr.name === ':required') {
+                            this.vRequired = attr.value;
+                            continue;
+                        }
                         this.attrs[attr.name] = attr.value;
                         let camelCase = toCamelCase(attr.name);
                         if (camelCase !== attr.name)
@@ -4279,14 +4287,16 @@ var Katrid;
                     section.setAttribute('name', this.name);
                     if (this.vIf)
                         section.setAttribute('v-if', this['v-if']);
-                    if (this['v-show'])
-                        section.setAttribute('v-show', this['v-show']);
+                    if (this.attrs['v-show'])
+                        section.setAttribute('v-show', this.attrs['v-show']);
                     if (this.vClass)
                         section.setAttribute(':class', this.vClass);
                     if (this.vReadonly)
                         section.setAttribute(':readonly', this.vReadonly);
                     else if (this.readonly)
                         section.setAttribute('readonly', null);
+                    if (this.vRequired)
+                        section.setAttribute(':required', this.vRequired);
                     section.classList.add('form-group');
                     if (this.cols && !isNaN(this.cols))
                         section.classList.add('col-md-' + this.cols);
@@ -4475,6 +4485,10 @@ var Katrid;
                     div.innerHTML = `
       <input input-field type="text" name="${this.name}" class="form-control form-field" inputmode="numeric">
       <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>`;
+                    let input = div.querySelector('input');
+                    console.log('date requried', this.required);
+                    if (this.required)
+                        input.required = true;
                     return div;
                 }
             }
@@ -7093,6 +7107,9 @@ var Katrid;
                     this._touched = false;
                     this._valid = true;
                 }
+                focus() {
+                    this.control.focus();
+                }
                 get dirty() {
                     return this._dirty;
                 }
@@ -7832,6 +7849,9 @@ var Katrid;
                                     me.action.pendingOperation = false;
                                 }
                             },
+                            focus(fieldName) {
+                                setTimeout(() => me.el.querySelector('.v-form').$form.fields[fieldName].focus());
+                            },
                             refresh() {
                                 me.dataSource.refresh();
                             },
@@ -7880,14 +7900,20 @@ var Katrid;
                             },
                             async validate() {
                                 let msgs = [];
+                                let $form = me.el.querySelector('.v-form').$form;
                                 for (let f of Object.values(me.fields)) {
                                     if (!f.validate) {
                                         console.log('Field not found', f);
                                         continue;
                                     }
-                                    let v = f.validate(this.record);
-                                    if (v !== true)
+                                    let formField = $form.fields[f.name];
+                                    if (formField && (formField.el.getAttribute('required') === 'true') && (this.record[f.name] == null))
                                         msgs.push(`<span>${f.caption}</span><ul><li>${Katrid.i18n.gettext('This field cannot be empty.')}</li></ul>`);
+                                    else {
+                                        let v = f.validate(this.record);
+                                        if (v !== true)
+                                            msgs.push(`<span>${f.caption}</span><ul><li>${Katrid.i18n.gettext('This field cannot be empty.')}</li></ul>`);
+                                    }
                                 }
                                 if (msgs.length) {
                                     let s = `<span>${Katrid.i18n.gettext('The following fields are invalid:')}</span><hr>`;
