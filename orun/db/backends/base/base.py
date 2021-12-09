@@ -449,6 +449,8 @@ class BaseDatabaseWrapper:
                 "This is forbidden when an 'atomic' block is active.")
 
     def validate_no_broken_transaction(self):
+        return
+
         if self.needs_rollback:
             raise TransactionManagementError(
                 "An error occurred in the current transaction. You can't "

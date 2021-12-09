@@ -1979,7 +1979,9 @@ class Model(metaclass=ModelBase):
         pass
 
     def before_update(self, old, values):
-        pass
+        if values:
+            for k, v in values.items():
+                setattr(self, k, v)
 
     def after_update(self, old, values):
         pass
