@@ -7900,6 +7900,8 @@ var Katrid;
                             },
                             async validate() {
                                 let msgs = [];
+                                if (!me.el)
+                                    return true;
                                 let $form = me.el.querySelector('.v-form').$form;
                                 for (let f of Object.values(me.fields)) {
                                     if (!f.validate) {
