@@ -1232,8 +1232,10 @@ class CharField(Field):
         return 'str'
 
     def to_python(self, value):
-        if isinstance(value, str) or value is None:
-            return value
+        if isinstance(value, str):
+            return value.strip()
+        elif value is None:
+            return
         return str(value)
 
     def get_prep_value(self, value):
