@@ -23,7 +23,7 @@ class Deserializer(base.Deserializer):
             filename = Path(filename)
         s = Template(self.stream.read()).render(deserializer=self)
         filename = filename.name.rsplit('.', 1)[0]
-        fmt = filename.split('.', 1)[1]
+        fmt = filename.rsplit('.', 1)[1]
         deserializer = get_deserializer(fmt)
         with tempfile.NamedTemporaryFile('r+', suffix=f'.{fmt}', delete=False) as f:
             try:
