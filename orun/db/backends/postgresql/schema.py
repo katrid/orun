@@ -29,9 +29,12 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
 
     def post_create_database(self):
         if self.connection.accent_insensitive:
-            self.execute('CREATE EXTENSION unaccent')
-            self.execute('CREATE TEXT SEARCH CONFIGURATION unaccent (COPY = pg_catalog.simple)')
-            self.execute('ALTER TEXT SEARCH CONFIGURATION unaccent ALTER MAPPING FOR hword, hword_part, word with unaccent, simple')
+            try:
+                self.execute('CREATE EXTENSION unaccent')
+                self.execute('CREATE TEXT SEARCH CONFIGURATION unaccent (COPY = pg_catalog.simple)')
+                self.execute('ALTER TEXT SEARCH CONFIGURATION unaccent ALTER MAPPING FOR hword, hword_part, word with unaccent, simple')
+            except Exception as e:
+                print(e)
 
     def _field_indexes_sql(self, model, field):
         output = super()._field_indexes_sql(model, field)

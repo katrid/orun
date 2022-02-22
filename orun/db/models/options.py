@@ -106,6 +106,8 @@ class Options:
     permissions = ()
     unique_together: List[str] = None
 
+    help_text: str = None
+
     #
     local_many_to_many: List['Field'] = None
 

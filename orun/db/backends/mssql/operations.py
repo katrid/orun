@@ -99,3 +99,23 @@ class DatabaseOperations(BaseDatabaseOperations):
 
     def conditional_expression_supported_in_where_clause(self, expression):
         return False
+
+    def sequence_reset_sql(self, style, model_list):
+        from orun.db import models
+        output = []
+        qn = self.quote_name
+        for model in model_list:
+            for f in model._meta.local_fields:
+                if isinstance(f, models.AutoField):
+                    output.append(
+                        "DBCC CHECKIDENT('%s', RESEED, ("
+                        "%s isnull(max(%s), 0) + 1 %s %s)" % (
+                            model._meta.db_table,
+                            style.SQL_KEYWORD('SELECT'),
+                            style.SQL_FIELD(f.column),
+                            style.SQL_KEYWORD('FROM'),
+                            style.SQL_TABLE(qn(model._meta.db_table)),
+                        )
+                    )
+                    break  # Only one AutoField is allowed per model, so don't bother continuing.
+        return output

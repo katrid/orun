@@ -1239,9 +1239,6 @@ class BaseDatabaseSchemaEditor:
         }
         self.execute(sql)
 
-    def reset_sequence(self, model):
-        pass
-
     def create_database(self, db: str):
         """
         Create a database.
