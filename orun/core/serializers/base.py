@@ -7,6 +7,7 @@ from pathlib import Path
 from orun.core.exceptions import ObjectDoesNotExist
 from orun.db import models, connections, DEFAULT_DB_ALIAS
 from orun.utils.functional import cached_property
+from orun.core.management.color import no_style
 
 DEFER_FIELD = object()
 
@@ -206,7 +207,9 @@ class Deserializer:
         pass
 
     def reset_sequence(self, model):
-        self.connection.schema_editor().reset_sequence(model)
+        cur = self.connection.cursor()
+        for s in self.connection.ops.sequence_reset_sql(no_style(), [model]):
+            cur.execute(s)
 
     def __iter__(self):
         return self
