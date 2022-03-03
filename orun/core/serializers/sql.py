@@ -2,6 +2,7 @@
 Execute SQL File Script
 """
 import os
+from pathlib import Path
 
 from orun.db import connections, DEFAULT_DB_ALIAS, connection
 from orun.core.serializers import base
@@ -19,10 +20,11 @@ class Deserializer(base.Deserializer):
         db_name = database['NAME']
         pwd = database['PASSWORD']
         filename = str(self.path)
-        # detect specific version of sql file
-        db_filename = f'%s.{db_engine}.sql' % filename.rsplit('.', 1)[0]
-        if os.path.isfile(db_filename):
-            filename = db_filename
+        # filename = self.options['filename']
+        if '%' in filename:
+            self.stream_or_string = self.options['filename'] = filename = Path(filename % {'db_vendor': connection.vendor})
+        else:
+            filename = Path(filename)
         if db_engine == 'mssql':
             if user_name:
                 additional_params = ''

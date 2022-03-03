@@ -29,11 +29,7 @@ def load_fixture(schema, *filenames, **options):
             filename = os.path.join(addon.path, 'fixtures', filename)
             fixture, fmt = filename.rsplit('.', 1)
             deserializer = serializers.get_deserializer(fmt)
-            # find fixture by the database alias
-            fname = f'{fixture}.{options["database"]}.{fmt}'
-            if not os.path.isfile(fname):
-                fname = filename
-            d = deserializer(Path(fname), addon=addon, format=fmt, filename=filename, **options)
+            d = deserializer(Path(filename), addon=addon, format=fmt, filename=filename, **options)
 
             with transaction.atomic(options['database']):
                 d.deserialize()
