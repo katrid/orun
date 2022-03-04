@@ -378,7 +378,7 @@ class Options:
         # Special field names
         if self.name_field is None and field.name == 'name':
             self.__class__.name_field = field.name
-        elif self.status_field is None and field.name == 'status':
+        elif field.name == 'status':
             self.__class__.status_field = field.name
             field.widget = 'StatusField'
         elif self.sequence_field is None and field.name == 'sequence':
