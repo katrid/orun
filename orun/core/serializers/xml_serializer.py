@@ -156,8 +156,8 @@ class Deserializer(base.Deserializer):
         if s is None and action:
             s = action.name
         if 'parent' in obj.attrib:
+            parent_id = obj.attrib['parent']
             try:
-                parent_id = obj.attrib['parent']
                 parent = Object.get_object(parent_id).object_id
             except ObjectDoesNotExist:
                 raise Exception('The object id "%s" does not exist' % parent_id)
