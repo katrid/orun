@@ -8136,6 +8136,9 @@ var Katrid;
                             await this.dataSource.get(options.id);
                         if (!el)
                             el = this.renderTo();
+                        if (!options)
+                            options = {};
+                        options.backdrop = 'static';
                         $(el).modal(options)
                             .on('hidden.bs.modal', () => {
                             resolve(this.$result);
