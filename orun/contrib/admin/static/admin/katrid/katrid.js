@@ -6067,7 +6067,7 @@ var Katrid;
                         this.el.find('form').first().addClass('row');
                         this.$compile(this.el)(this.scope);
                     }
-                    this.el.modal('show')
+                    this.el.modal({backdrop: true, show: true})
                         .on('shown.bs.modal', () => Katrid.UI.uiKatrid.setFocus(this.el.find('.form-field').first()));
                     return this.el;
                 }
@@ -8295,7 +8295,6 @@ var Katrid;
                         dlg.renderTo();
                         dlg.dataSource.open();
                         let el = dlg.actionView;
-                        console.log('show dialog');
                         $(el).modal(config.options)
                             .on('hidden.bs.modal', () => {
                             resolve(dlg.vm.$result);
