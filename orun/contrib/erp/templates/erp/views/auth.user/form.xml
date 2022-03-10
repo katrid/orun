@@ -13,4 +13,5 @@
   <field name="date_joined"/>
   <field name="signature"/>
   <field name="user_company"/>
+  <field name="groups"/>
 </form>
