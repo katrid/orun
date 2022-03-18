@@ -2317,12 +2317,20 @@ class SlugField(CharField):
 class TextField(Field):
     description = _("Text")
 
+    def __init__(
+            self, *args, **kwargs
+    ):
+        self.strip = kwargs.pop('strip', True)
+        super().__init__(*args, **kwargs)
+
     def get_internal_type(self):
         return "TextField"
 
     def to_python(self, value):
-        if isinstance(value, str) or value is None:
-            return value
+        if isinstance(value, str):
+            return value.strip()
+        elif value is None:
+            return
         return str(value)
 
     def get_prep_value(self, value):
