@@ -12972,7 +12972,7 @@ nav#header .nav-item .dropdown-menu {
   display: none;
 }
 .radio-button input[type=radio]:checked + label:before {
-  border-color: #337ab7;
+  border-color: rgb(51, 122, 183);
   animation: ripple 0.2s linear forwards;
 }
 .radio-button input[type=radio]:checked + label:after {
@@ -13007,7 +13007,7 @@ nav#header .nav-item .dropdown-menu {
   width: 10px;
   height: 10px;
   transform: scale(0);
-  background: #337ab7;
+  background: rgb(51, 122, 183);
 }
 
 .katrid-app .RadioField .form-label {
@@ -13621,7 +13621,7 @@ calendar-view .fc-header-toolbar {
   margin: 4px 0;
 }
 .katrid-app #header .header-link {
-  color: gainsboro;
+  color: rgb(220, 220, 220);
 }
 .katrid-app .form-control-dark {
   color: #fff;
@@ -14046,6 +14046,9 @@ calendar-view .fc-header-toolbar {
   margin-bottom: 10px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+.katrid-app .modal.show {
+  background-color: rgba(182, 182, 182, 0.2);
 }
 
 dashboard-view {
