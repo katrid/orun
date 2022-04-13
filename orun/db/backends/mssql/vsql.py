@@ -31,7 +31,7 @@ class Compiler(vsql.Compiler):
         schema = self._model._meta.db_schema or ''
         if schema:
             schema += '.'
-        self.fill(f'''IF OBJECT_ID ('{schema}.{name}', 'TR') IS NOT NULL DROP TRIGGER {name}.{name};''')
+        self.fill(f'''IF OBJECT_ID ('{schema}{name}', 'TR') IS NOT NULL DROP TRIGGER {schema}{name};''')
         self.end_sql()
         self.fill(f'''CREATE TRIGGER {schema}{name} ON {self._model._meta.db_table} {event}\nAS\nBEGIN\n''')
         # self.fill(f'CREATE OR ALTER TRIGGER {schema}{name} ON {self._model._meta.db_table} {event}\nAS\nBEGIN\n')
