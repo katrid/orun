@@ -19,6 +19,7 @@ def index(request: HttpRequest, template_name='/admin/index.jinja2', **context):
     context.update({
         'menu': menu_items,
         'user_info': json.dumps(request.user.user_info()),
+        'settings': settings,
     })
     if settings.USE_I18N:
         from .i18n import javascript_catalog
@@ -27,10 +28,9 @@ def index(request: HttpRequest, template_name='/admin/index.jinja2', **context):
 
 
 def search_menu(request: HttpRequest):
+    from orun.contrib.admin.models import Menu
     term = request.json.get('term')
-    items = apps['ui.menu'].api_search_by_name(term)['items']
-    for item in items:
-        item['type'] = 'menuitem'
+    items = Menu.admin_search_menu(term)
     return JsonResponse({'items': items})
 
 
@@ -77,7 +77,8 @@ def login(request: HttpRequest, **kwargs):
 
     from .i18n import javascript_catalog
     context = {
-        'i18n_js_catalog': javascript_catalog(request, packages=apps.addons.keys())
+        'i18n_js_catalog': javascript_catalog(request, packages=apps.addons.keys()),
+        'settings': settings,
     }
     return render(request, 'admin/login.jinja2', context, using=request.COOKIES.get('db'))
 

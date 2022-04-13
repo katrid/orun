@@ -19,7 +19,7 @@ from orun.db.models.signals import (
 from orun.db.models.aggregates import Count
 from orun.utils.encoding import force_str
 
-PAGE_SIZE = 100
+PAGE_SIZE = 10
 
 
 class AdminModel(models.Model, helper=True):
@@ -32,7 +32,9 @@ class AdminModel(models.Model, helper=True):
             limit = PAGE_SIZE
         elif limit == -1:
             limit = None
-        if page and limit:
+        if page is None:
+            page = 1
+        if limit:
             page = int(page)
             limit = int(limit)
             qs = qs[(page - 1) * limit:page * limit]
@@ -93,12 +95,12 @@ class AdminModel(models.Model, helper=True):
                             name_fields = list(
                                 chain(*(_resolve_fk_search(fk) for fk in f.related_model._meta.get_name_fields())))
                             if len(name_fields) == 1:
-                                _args.append(Q(**{f'{f.name}__{name_fields[0]}__icontains': v}))
+                                _args.append(Q(**{f'{f.name}__{name_fields[0]}': v}))
                             elif name_fields:
                                 _args.append(
                                     reduce(
                                         lambda f1, f2: f1 | f2,
-                                        [Q(**{f'{f.name}__{fk}__icontains': v}) for fk in name_fields]
+                                        [Q(**{f'{f.name}__{fk}': v}) for fk in name_fields]
                                     )
                                 )
                             else:
@@ -369,14 +371,14 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def admin_get_formview_action(self, id=None):
         return {
-            'action_type': 'ui.action.window',
+            'type': 'ui.action.window',
             'model': self._meta.name,
             'object_id': id,
-            'view_mode': 'form',
-            'view_type': 'form',
+            'viewModes': ['form'],
+            'viewMode': 'form',
             'target': 'current',
-            'views': {
-                'form': None,
+            'viewsInfo': {
+                'form': self._admin_get_view_info('form')
             },
             'context': {},
         }
@@ -401,10 +403,10 @@ class AdminModel(models.Model, helper=True):
     def admin_get_fields_info(cls, view_id=None, view_type='form', toolbar=False, context=None, xml=None):
         opts = cls._meta
         if xml is not None:
-            fields = get_xml_fields(xml)
+            fields = [opts.fields[f.attrib['name']] for f in get_xml_fields(xml) if 'name' in f.attrib]
             return {
                 f.name: cls.admin_get_field_info(f, view_type)
-                for f in [opts.fields[f.attrib['name']] for f in fields if 'name' in f.attrib] if f
+                for f in fields
             }
         if view_type == 'search':
             searchable_fields = opts.searchable_fields
@@ -415,10 +417,12 @@ class AdminModel(models.Model, helper=True):
             r = {}
             for field in opts.fields:
                 r[field.name] = cls.admin_get_field_info(field, view_type)
+            if opts.pk.name not in r:
+                r[opts.pk.name] = cls.admin_get_field_info(opts.pk, view_type)
             return r
 
-    @api.classmethod
-    def admin_get_view_info(cls, view_type, view=None, toolbar=False):
+    @classmethod
+    def _admin_get_view_info(cls, view_type, view=None, toolbar=False):
         View = apps['ui.view']
         model = apps['content.type']
 
@@ -430,13 +434,13 @@ class AdminModel(models.Model, helper=True):
         if view:
             xml_content = view.get_xml(cls, {'request': cls.env.request, 'opts': model._meta})
             r = {
-                'content': etree.tostring(xml_content, encoding='utf-8').decode('utf-8'),
+                'template': etree.tostring(xml_content, encoding='utf-8').decode('utf-8'),
                 'fields': cls.admin_get_fields_info(view_type=view_type, xml=xml_content)
             }
         else:
             content = cls._admin_get_default_view(view_type=view_type)
             r = {
-                'content': content,
+                'template': content,
                 'fields': cls.admin_get_fields_info(view_type=view_type, xml=content),
             }
         if toolbar and view_type != 'search':
@@ -448,6 +452,29 @@ class AdminModel(models.Model, helper=True):
                            view_type == 'list' or not action.multiple],
             }
         return r
+
+    @api.classmethod
+    def admin_get_view_info(cls, view_type, view=None, toolbar=False):
+        return cls._admin_get_view_info(view_type, view, toolbar)
+
+    @classmethod
+    def admin_load_views(cls, views=None, toolbar=False, **kwargs):
+        if views is None and 'action' in kwargs:
+            Action = apps['ui.action.window']
+            action = Action.objects.get(pk=kwargs.get('action'))
+            views = {mode: None for mode in action.view_mode.split(',')}
+            if 'search' not in views:
+                views['search'] = None
+        elif views is None:
+            views = {'form': None, 'list': None, 'search': None}
+
+        return {
+            'fields': cls.admin_get_fields_info(),
+            'views': {
+                mode: cls.admin_get_view_info(view_type=mode, view=v, toolbar=toolbar)
+                for mode, v in views.items()
+            }
+        }
 
     @api.classmethod
     def admin_load_views(cls, views=None, toolbar=False, **kwargs):

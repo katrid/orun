@@ -1,20 +1,15 @@
 <!DOCTYPE html>
-<html {% block html_attrs %}{% endblock %}>
+<html {% block html_attrs %}{% endblock %} class="katrid-app">
 <head>
-  <title>{% block page_title %}AgroMobi Gestão{% endblock %}</title>
+  <title>{% block page_title %}{{ settings.ADMIN_SITE_TITLE }}{% endblock %}</title>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
 
-  <link href="/static/admin/assets/js/toastr/toastr.min.css" rel="stylesheet">
   <link href="/static/admin/assets/css/fontawesome.css" rel="stylesheet">
-  <link href="/static/admin/assets/css/animate.css" type="text/css" rel="stylesheet">
-  <link href="/static/admin/assets/js/select2/select2.css" type="text/css" rel="stylesheet">
-  <link href="/static/admin/assets/js/datepicker/bootstrap-datetimepicker.min.css" rel="stylesheet" type="text/css"/>
-  <link href="/static/admin/assets/js/sweetalert2.css" rel="stylesheet"/>
-  <link href="/static/admin/assets/js/fullcalendar/main.min.css" rel="stylesheet"/>
-  <!-- Katrid style -->
+  <!-- Katrid.js style -->
   <link href="/static/admin/katrid/style.css" rel="stylesheet" type="text/css">
+  <script src="/static/admin/assets/js/underscore-min.js"></script>
 
   <!-- extra head -->
   {% block extra_head %}{% endblock %}
@@ -30,44 +25,8 @@
   </script>
 {% endif %}
 
-  <script src="/static/admin/assets/js/jquery.min.js"></script>
-  <script src="/static/admin/assets/js/jquery-ui.min.js"></script>
-  <script src="/static/admin/assets/js/moment/moment.js"></script>
-  <script src="/static/admin/assets/js/moment/moment-duration-format.js"></script>
-  <script src="/static/admin/assets/js/moment/pt-br.js"></script>
-  <script src="/static/admin/assets/js/nunjucks.js"></script>
-  <script src="/static/admin/assets/js/select2/select2.js"></script>
-  <script src="/static/admin/assets/js/popper.js"></script>
-  <script src="/static/admin/assets/js/sweetalert2.min.js"></script>
-  <script src="/static/admin/assets/js/bootstrap.bundle.min.js"></script>
-  <script src="/static/admin/assets/js/angular/angular.min.js"></script>
-  <script src="/static/admin/assets/js/angular/angular-sanitize.min.js"></script>
-  <script src="/static/admin/assets/js/hotkeys/hotkeys.min.js"></script>
-  <script src="/static/admin/assets/js/jquery.inputmask.min.js"></script>
-  <script src="/static/admin/assets/js/datepicker/bootstrap-datetimepicker.js"></script>
-  <script src="/static/admin/assets/js/toastr/toastr.min.js"></script>
-  <script src="/static/admin/assets/js/underscore-min.js"></script>
-  <script src="/static/admin/vue.js"></script>
-
-  <script src="/static/admin/libs/plotly/plotly.min.js"></script>
+  <script src="/static/admin/katrid/katrid.deps.js"></script>
   <script src="/static/admin/katrid/katrid.js"></script>
-
-<!-- additional scripts -->
-  {% if LANGUAGE_CODE != 'en-us' %}
-    <script src="/static/admin/assets/js/angular/i18n/angular-locale_{{ LANGUAGE_CODE }}.js"></script>
-    <script src="/static/admin/assets/js/select2/select2_locale_{{ LANGUAGE_CODE }}.min.js"></script>
-  {% endif %}
-
-
-<div id="loading-msg" class="animated fadeIn">
-  <span>{{ gettext('Loading...') }}</span>
-</div>
-<div id="overlay" class="animated fadeIn text-center">
-  <i class="fa-4x fas fa-circle-notch fa-spin"></i>
-  <h3 class="margin-top-16">
-    {{ gettext('Loading...') }}
-  </h3>
-</div>
 
 {% block page_loaded %}{% endblock %}
 {% block additional_assets %}{% endblock %}

@@ -240,8 +240,8 @@ msgstr "Nenhuma alteração pendente"
 msgid "Attachments"
 msgstr "Anexos"
 
-msgid "%d Attachment(s)"
-msgstr "%d Anexo(s)"
+msgid "%s Attachment(s)"
+msgstr "%s Anexo(s)"
 
 msgid "Add..."
 msgstr "Adicionar..."
@@ -309,3 +309,11 @@ msgstr "Erro"
 msgid "Back"
 msgstr "Voltar"
 
+msgid "Find resources here..."
+msgstr "Encontrar recursos aqui..."
+
+msgid "9999-99-99"
+msgstr "99/99/9999"
+
+msgid "9999-99-99 99:99"
+msgstr "99/99/9999 99:99"

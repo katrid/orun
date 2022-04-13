@@ -49,7 +49,9 @@ class Action(models.Model):
         except ValueError:
             if isinstance(name_or_id, str):
                 name_or_id = ref(name_or_id)
-        return cls.get(name_or_id).get_action()._get_info(context)
+        info = cls.get(name_or_id).get_action()._get_info(context)
+        info['type'] = info.pop('action_type')
+        return info
 
     def execute(self):
         raise NotImplemented()
@@ -115,6 +117,21 @@ class WindowAction(Action):
         if isinstance(model, models.Model):
             model = model._meta.name
         return cls.objects.filter(model=model).first()
+
+    def _get_info(self, context):
+        info = super()._get_info(context)
+        # Send action information as katrid.js protocol
+        modes = info['viewModes'] = info.pop('view_mode').split(',')
+        # info['viewMode'] = info.pop('view_type')
+        info['viewMode'] = modes[0]
+        model = apps[self.model]
+        info['fields'] = model.admin_get_fields_info()
+        info['caption'] = info.pop('name')
+        info['viewsInfo'] = {
+            k: model._admin_get_view_info(view_type=k, view=None, toolbar=True) for k in modes
+        }
+        info['viewsInfo']['search'] = model._admin_get_view_info(view_type='search')
+        return info
 
 
 class WindowActionView(models.Model):

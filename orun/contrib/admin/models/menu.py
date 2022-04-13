@@ -80,3 +80,7 @@ class Menu(models.Model):
             objs.insert(0, parent.name)
             parent = parent.parent
         return MENU_SEP.join(objs)
+
+    @classmethod
+    def admin_search_menu(cls, term: str):
+        pass
