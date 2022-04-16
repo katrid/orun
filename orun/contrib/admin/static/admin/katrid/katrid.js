@@ -2014,13 +2014,13 @@ var Katrid;
                 // this.scope.$emit('afterCancel', this);
             }
             _createRecord(obj) {
-                let rec = this.model.fromObject(obj);
+                let rec = this.model.fromObject(obj, this);
                 rec.$onFieldChange = this._onFieldChange;
                 return rec;
             }
             async copy(id) {
                 let res = await this.model.service.copy(id);
-                // this.setRecord({});
+                this.setRecord({});
                 await this.insert();
                 setTimeout(() => {
                     clearTimeout(this.pendingOperation);
@@ -2167,6 +2167,7 @@ var Katrid;
                 });
             }
             search(options) {
+                this._clearTimeout();
                 let params = options.where;
                 let page = options.page;
                 let fields = options.fields;
@@ -2176,7 +2177,6 @@ var Katrid;
                 this._params = params;
                 this._page = page;
                 this._fields = fields;
-                this._clearTimeout();
                 this.pendingRequest = true;
                 this.loading = true;
                 this.state = DataSourceState.loading;
@@ -2353,13 +2353,14 @@ var Katrid;
                 this.record.$flush();
                 // Save pending children
                 for (let child of this.children)
-                    if (child.changing)
+                    if (child.changing) {
                         child.flush();
+                        console.log('apply changes');
+                    }
                 if (await this.validate()) {
                     const data = this.record.$serialize();
                     if (data) {
                         this.uploading++;
-                        console.log(data);
                         return this.model.service.write([data])
                             .then((res) => {
                             // if (this.action && this.action.viewType && (this.action.viewType === 'form'))
@@ -2464,7 +2465,6 @@ var Katrid;
                 return data;
             }
             get(options) {
-                console.log('get record', this.model, options);
                 let id = options.id;
                 let timeout = options.timeout;
                 let index = options.index;
@@ -2526,7 +2526,7 @@ var Katrid;
                 this._clearTimeout();
                 for (let child of this.children)
                     child._clearTimeout();
-                let rec = this.model.newRecord();
+                let rec = this.model.newRecord(null, this);
                 let oldRecs = this._records;
                 this.record = rec;
                 this._records = oldRecs;
@@ -2545,7 +2545,7 @@ var Katrid;
                     res = await this.model.service.getDefaults(kwargs, { signal: controller.signal });
                 }
                 this.state = DataSourceState.inserting;
-                this.record['record_name'] = Katrid.i18n.gettext('(New)');
+                this.record['$str'] = Katrid.i18n.gettext('(New)');
                 console.log('pass default values', defaultValues);
                 let defaults = {};
                 if (this.masterSource && this.field && this.field.defaultValue)
@@ -2577,8 +2577,9 @@ var Katrid;
                     record = this.record;
                 Object.entries(values).forEach(([k, v]) => {
                     let fld = this.fields[k];
-                    if (fld)
-                        fld.setValue(record, v);
+                    if (fld) {
+                        fld.setValue(record, v, this);
+                    }
                     else
                         record[k] = v;
                 });
@@ -2637,8 +2638,9 @@ var Katrid;
                 return this._recordId;
             }
             set record(rec) {
-                if (typeof rec === 'object')
-                    rec = this.model.fromObject(rec);
+                if (!(rec instanceof Data.DataRecord) && (typeof rec === 'object')) {
+                    rec = this.model.fromObject(rec, this);
+                }
                 // Track field changes
                 if (rec) {
                     // if (rec.$record.dataSource !== this)
@@ -2711,14 +2713,17 @@ var Katrid;
             }
             addRecord(rec) {
                 let scope = this.vm;
-                let record = Katrid.Data.createRecord(null, this);
-                scope.records.push(record);
+                let record = this.model.newRecord();
+                if (!(scope.modelValue))
+                    scope.$parent.record[this.field.name] = [];
+                scope.modelValue.push(record);
                 this._record = record;
                 this.setValues(rec);
                 this._record = null;
+                console.log('add record to child', scope.modelValue);
                 // for (let [k, v] of Object.entries(rec))
                 //   record[k] = v;
-                this.parent.record.$record.addChild(record.$record);
+                // this.parent.record.$record.addChild(record.$record);
                 // if (!this.parent.record[this.field.name])
                 //   this.parent.record[this.field.name] = [];
                 // this.parent.record[this.field.name].push(record);
@@ -2781,6 +2786,8 @@ var Katrid;
             }
             set parent(value) {
                 this._masterSource = value;
+                if (value)
+                    value.children.push(this);
             }
             $setDirty(field) {
                 return;
@@ -2805,17 +2812,18 @@ var Katrid;
             async parentNotification(parentRecord) {
                 this._clearTimeout();
                 // exit the function if the parent record is new
-                if (!parentRecord || parentRecord.$created)
+                if (!parentRecord || (parentRecord.$state === Data.RecordState.created))
                     return;
                 this.state = DataSourceState.loading;
                 this.pendingOperation = setTimeout(async () => {
                     if (parentRecord.id != null) {
                         let data = {};
                         data[this.field.info.field] = parentRecord.id;
-                        let res = await this.getFieldChoices(data);
-                        if (this.vm)
-                            this.vm.records = res.data;
-                        parentRecord[this.field.name] = res.data;
+                        await this.getFieldChoices(data);
+                        let records = this.records;
+                        // if (this.vm)
+                        //   this.vm.records = res.data;
+                        parentRecord[this.field.name] = records;
                     }
                     else {
                         parentRecord[this.field.name] = [];
@@ -2828,7 +2836,7 @@ var Katrid;
                     this._masterSource.children.splice(this._masterSource.children.indexOf(this), 1);
             }
             /**
-             * Save record changes into memory
+             * Save record changes to memory
              * @param validate
              * @param browsing
              */
@@ -2837,7 +2845,7 @@ var Katrid;
                     this.validate();
                 // apply changes to the active record instance
                 // save record into memory
-                this.record.$record.flush();
+                this.record.$flush();
                 // change the datasource state
                 if (browsing)
                     this.state = DataSourceState.browsing;
@@ -2848,7 +2856,7 @@ var Katrid;
             }
             discardChanges() {
                 // load the latest flushed record
-                this.record.$record.discard();
+                this.record.$discard();
             }
             encodeObject(obj) {
                 if (_.isArray(obj))
@@ -2976,13 +2984,34 @@ var Katrid;
                     this._service = new Katrid.Services.ModelService(this.name);
                 return this._service;
             }
-            newRecord() {
-                let rec = new this.recordClass({});
+            newRecord(data, datasource) {
+                let rec = new this.recordClass();
                 rec.$state = Data.RecordState.created;
+                if (data) {
+                    Object.entries(data).forEach(([k, v]) => {
+                        let fld = this.fields[k];
+                        if (fld) {
+                            fld.setValue(rec, v);
+                        }
+                        else
+                            rec[k] = v;
+                    });
+                }
+                if (datasource) {
+                    rec.$parent = datasource.parent.record;
+                    rec.$parentField = datasource.field?.name;
+                }
                 return rec;
             }
-            fromObject(obj) {
-                return new this.recordClass(obj);
+            fromObject(obj, datasource) {
+                let rec = new this.recordClass(obj);
+                rec.$state = Data.RecordState.unmodified;
+                if (datasource?.parent) {
+                    // link to parent record
+                    rec.$parent = datasource.parent.record;
+                    rec.$parentField = datasource.field?.name;
+                }
+                return rec;
             }
             fromArray(list) {
                 return list.map(obj => this.fromObject(obj));
@@ -3041,14 +3070,27 @@ var Katrid;
                         if (!this.$modified.includes(k))
                             this.$modified.push(k);
                     }
-                this.$state = RecordState.modified;
+                if (this.$state === RecordState.unmodified)
+                    this.$state = RecordState.modified;
                 this.$pristine = {};
                 this.$dirty = false;
                 // nested data
                 if (this.$parent) {
                     if (!this.$parent.$childrenData)
                         this.$parent.$childrenData = [];
-                    this.$parent.$childrenData.push(this);
+                    if (!this.$parent.$childrenData.includes(this))
+                        this.$parent.$childrenData.push(this);
+                }
+            }
+            $destroy() {
+                // remove created records from pending list
+                if (this.$state === RecordState.created) {
+                    if (this.$parent?.$childrenData?.includes(this))
+                        this.$parent.$childrenData.splice(this.$parent.$childrenData.indexOf(this), 1);
+                }
+                else {
+                    this.$state = RecordState.destroyed;
+                    this.$flush();
                 }
             }
             $discard() {
@@ -3065,29 +3107,27 @@ var Katrid;
             }
             $serialize() {
                 let data = {};
-                Object.assign(data, this.$pending);
                 let model = Object.getPrototypeOf(this).constructor.$model;
-                if (this.children)
-                    for (let child of this.children) {
-                        if (!(child.dataSource.field.name in data))
-                            data[child.dataSource.field.name] = [];
-                        if (child.state === RecordState.created)
-                            data[child.dataSource.field.name].push({ action: 'CREATE', values: child.serialize() });
-                        else if (child.state === RecordState.modified)
-                            data[child.dataSource.field.name].push({ action: 'UPDATE', values: child.serialize() });
-                        else if (child.state === RecordState.destroyed)
-                            data[child.dataSource.field.name].push({ action: 'DESTROY', id: child.pk });
-                    }
                 data.id = this.id;
-                for (let k of Object.keys(data)) {
+                for (let [k, v] of Object.entries(this.$pending)) {
                     if (k.startsWith('$'))
                         continue;
                     let field = model.fields[k];
-                    if (field)
-                        data[k] = field.toJSON(data[k]);
-                    else
-                        console.log('Field not found', k, field);
+                    if (field && !(field instanceof Data.OneToManyField)) {
+                        data[k] = field.toJSON(v);
+                    }
                 }
+                if (this.$childrenData)
+                    for (let child of this.$childrenData) {
+                        if (!(child.$parentField in data))
+                            data[child.$parentField] = [];
+                        if (child.$state === RecordState.created)
+                            data[child.$parentField].push({ action: 'CREATE', values: child.$serialize() });
+                        else if (child.$state === RecordState.modified)
+                            data[child.$parentField].push({ action: 'UPDATE', values: child.$serialize() });
+                        else if (child.$state === RecordState.destroyed)
+                            data[child.$parentField].push({ action: 'DESTROY', id: child.id });
+                    }
                 return data;
             }
             $reset() {
@@ -3367,7 +3407,7 @@ var Katrid;
                 span.innerText = `{{ record.${this.name} }}`;
                 return span;
             }
-            setValue(record, value) {
+            setValue(record, value, datasource) {
                 record[this.name] = value;
             }
             get hasChoices() {
@@ -4029,19 +4069,23 @@ var Katrid;
                 if (el && el.hasAttribute('allow-paste'))
                     this.allowPaste = true;
             }
-            setValue(record, value) {
-                return;
+            setValue(record, value, datasource) {
+                let child = datasource.childByName(this.name);
                 if (value && value instanceof Array) {
-                    let child = record.$record.dataSource.childByName(this.name);
                     value.map(obj => {
                         if (obj.action === 'CLEAR') {
                             for (let rec of child.vm.records)
-                                rec.$record.delete();
-                            child.vm.records = [];
-                            record.$record.dataSource.record[this.name] = [];
+                                rec.$delete();
+                            child.vm.modelValue = [];
+                            // record.$record.dataSource.record[this.name] = [];
                         }
-                        else if (obj.action === 'CREATE')
-                            child.addRecord(obj.values);
+                        else if (obj.action === 'CREATE') {
+                            if (!record[this.name])
+                                record[this.name] = [];
+                            let rec = child.model.newRecord(obj.values, record, this.name);
+                            rec.$flush();
+                            record[this.name].push(rec);
+                        }
                     });
                 }
             }
@@ -5525,9 +5569,12 @@ var Katrid;
         function selectionDelete() {
             this.allSelected = false;
             for (let rec of this.selection) {
-                rec.$record.delete();
+                rec.$destroy();
+                let i = this.records.indexOf(rec);
+                if (i > -1)
+                    this.records.splice(i, 1);
             }
-            this.records = this.records.filter(rec => rec.$record.state !== Katrid.Data.RecordState.destroyed);
+            // this.records = this.records.filter(rec => rec.$state !== Katrid.Data.RecordState.destroyed);
             this.selection = [];
             this.selectionLength = 0;
         }
@@ -5815,7 +5862,7 @@ var Katrid;
                 super.create(info);
                 this.nestedViews = [];
                 if (info.record && this.model)
-                    this._record = this.model.fromObject(info.record);
+                    this.datasource.record = info.record;
                 else
                     this._record = null;
                 this._readonly = false;
@@ -5896,6 +5943,9 @@ var Katrid;
                         // boundField.form = this;
                         // boundField.field = fld;
                         // fld.assign(fieldEl);
+                        // add hook to v-sum attribute
+                        if (fieldEl.hasAttribute('v-sum'))
+                            this.addSumHook(fld, fieldEl);
                         if (!fieldEl.hasAttribute('invisible')) {
                             return fld.formCreate(fieldEl);
                             // boundField.control = boundField.container.querySelector('.form-field');
@@ -5903,6 +5953,20 @@ var Katrid;
                     }
                     else
                         console.error(`Field "${name}" not found`);
+                }
+            }
+            addSumHook(field, el) {
+                if (!this.sumHooks)
+                    this.sumHooks = {};
+                let sum = el.getAttribute('v-sum');
+                el.removeAttribute('v-sum');
+                if (sum.includes('.')) {
+                    let fields = sum.split('.');
+                    let field1 = fields[0];
+                    let field2 = fields[1];
+                    if (!this.sumHooks[field1])
+                        this.sumHooks[field1] = [];
+                    this.sumHooks[field1].push({ field: field, fieldToSum: field2 });
                 }
             }
             beforeRender(template) {
@@ -6133,7 +6197,8 @@ ${Katrid.i18n.gettext('Delete')}
             }
             async copy() {
                 let res = await this.model.service.copy(this.record.id);
-                this.insert();
+                this.setState(DataSourceState.inserting);
+                this.datasource.record = this.model.newRecord();
                 this.datasource.setValues(res);
                 // await this.datasource.copy(this.record.id);
             }
@@ -6253,6 +6318,21 @@ ${Katrid.i18n.gettext('Delete')}
                 });
                 return this.dialogPromise;
             }
+            $onFieldChange(field, value) {
+                // update auto sum fields
+                if (field.name in this.sumHooks) {
+                    let fields = this.sumHooks[field.name];
+                    for (let info of fields) {
+                        let sfield = info.fieldToSum;
+                        if (Array.isArray(value)) {
+                            let total = 0;
+                            value.forEach(obj => total += obj[sfield] || 0);
+                            console.log(info.field.name, total);
+                            this.vm.record[info.field.name] = total;
+                        }
+                    }
+                }
+            }
             static async createNew(config) {
                 // let formInfo = config.viewInfo;
                 let svc = new Katrid.Services.ModelService(config.model);
@@ -6290,12 +6370,14 @@ ${Katrid.i18n.gettext('Delete')}
             }
             saveAndClose(commit) {
                 // this.$result = this.flush(true, false);
-                console.log('commit', commit);
                 if (commit) {
                     this.$result = this.datasource.save();
                 }
                 else {
-                    this._record.$flush();
+                    // this._record.$flush();
+                    this.datasource.flush();
+                    // notify the datasource
+                    // this.datasource._flush(this._record);
                     this.$result = this._record;
                 }
                 this.closeDialog();
@@ -6315,7 +6397,6 @@ ${Katrid.i18n.gettext('Delete')}
             }
             /** Close the current dialog and deletes the current record */
             deleteAndClose() {
-                // this.vm.record.$record.delete();
                 let recIndex = this.records.indexOf(this.record);
                 if (recIndex) {
                     this.$result = this.vm.record;
@@ -6333,11 +6414,20 @@ ${Katrid.i18n.gettext('Delete')}
                     .map((field) => field.loadViews()));
             }
             $discard() {
-                if (this._record)
-                    this._record.$discard();
-                // discard nested changes
-                for (let child of this.nestedViews)
-                    child.$discard();
+                if (this.record.$state === Katrid.Data.RecordState.created) {
+                    if (this.records && this._recordIndex) {
+                        this.datasource.record = this.records[this._recordIndex];
+                        // this.refresh();
+                    }
+                }
+                else {
+                    // discard in-memory changes
+                    if (this.datasource.parent)
+                        this.record.$discard();
+                    // reload the record
+                    else
+                        this.refresh();
+                }
             }
         }
         FormView.viewType = 'form';
@@ -6848,12 +6938,13 @@ var Katrid;
                 //     'form-data-readonly': !(dataSource.changing && dataSource.recordIndex === index)
                 //     }`
                 //   );
-                let ngTrClass = list.getAttribute('ng-tr-class');
+                let ngTrClass = list.getAttribute('v-tr-class');
                 if (ngTrClass) {
                     if (!ngTrClass.startsWith('{'))
                         ngTrClass = '{' + ngTrClass + '}';
-                    this.tRow.setAttribute('ng-class', ngTrClass);
+                    this.tRow.setAttribute(':class', ngTrClass);
                 }
+                this.tRow.setAttribute(':class', '{modified: record.$state}');
                 if (options.allowGrouping) {
                     let tr = document.createElement('tr');
                     tr.setAttribute('v-else-if', 'groups.length > 0');
@@ -9403,8 +9494,8 @@ var Katrid;
             let toolbar = document.createElement('div');
             toolbar.classList.add('grid-toolbar');
             toolbar.innerHTML = `
-<button class="btn btn-sm btn-outline-secondary btn-action-add" type="button" v-on:click="createNew()">${Katrid.i18n.gettext('Add')}</button>
-<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="deleteSelection()" v-show="selectionLength">${Katrid.i18n.gettext('Delete')}</button>
+<button class="btn btn-sm btn-outline-secondary btn-action-add" type="button" v-on:click="createNew()" v-show="$parent.changing && !readonly">${Katrid.i18n.gettext('Add')}</button>
+<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="deleteSelection()" v-show="$parent.changing && !readonly && selectionLength">${Katrid.i18n.gettext('Delete')}</button>
 `;
             header.append(toolbar);
             let table = document.createElement('div');
@@ -9449,6 +9540,8 @@ var Katrid;
         }
         async function createDialog(config) {
             let form = config.field.getView('form');
+            form.datasource.parent = config.master;
+            form.datasource.field = config.field;
             await form.loadPendingViews();
             let relField = form.fields[config.field.info.field];
             // hide related field
@@ -9465,6 +9558,8 @@ var Katrid;
                     this.$field = field;
                     // keep the html structure cached
                     this.$view = field.getView('list');
+                    this.$fields = this.$view.fields;
+                    this.$view.datasource.vm = this;
                     this.$view.datasource.field = this.$field;
                     this.$view.datasource.parent = this.$parent.$view.datasource;
                     this.$compiledTemplate = Vue.compile(beforeRender(field, this.$view.renderTemplate(this.$view.domTemplate())));
@@ -9493,12 +9588,19 @@ var Katrid;
                     parent: null,
                     $editing: false,
                     loading: false,
+                    readonly: false,
                 };
             },
             methods: {
                 async setParentRecord(record) {
+                    return;
                     // load o2m data
-                    this.$view.datasource.parentNotification(record);
+                    if (!record)
+                        this.records = [];
+                    else if (record.$state === Katrid.Data.RecordState.created)
+                        this.records = [];
+                    else
+                        this.$view.datasource.parentNotification(record);
                 },
                 async recordClick(record, index, event) {
                     if (this.$editing)
@@ -9527,8 +9629,9 @@ var Katrid;
                                 { text: Katrid.i18n.gettext('Delete'), click: 'deleteAndClose()' },
                             ]) || ['close'];
                             let form = await createDialog({
-                                field: this.$field,
                                 index,
+                                field: this.$field,
+                                master: this.$parent.$view.datasource,
                                 options: {
                                     backdrop: 'static',
                                     buttons,
@@ -9537,8 +9640,12 @@ var Katrid;
                             });
                             // form.datasource.records = this.records;
                             // load from server if not loaded
-                            if ((!record.$loaded) && (!record.$created))
-                                await form.datasource.get({ id: record.id });
+                            if ((!record.$loaded) && (record.$state === Katrid.Data.RecordState.unmodified)) {
+                                let newRec = await form.datasource.get({ id: record.id });
+                            }
+                            else {
+                                form.datasource.record = this.records[index];
+                            }
                             // form.datasource.record = record;
                             if (parentChanging) {
                                 form.edit();
@@ -9546,7 +9653,11 @@ var Katrid;
                             }
                             let res = await form.dialogPromise;
                             if (res) {
-                                console.log('save modified record', res);
+                                if (res.$state === Katrid.Data.RecordState.destroyed)
+                                    this.records.splice(index, 1);
+                                else
+                                    this.records[index] = res;
+                                this.$parent.$view.$onFieldChange(this.$field, this.records);
                             }
                         }
                         // // clone record to a temp object
@@ -9610,6 +9721,7 @@ var Katrid;
                             this.$editing = true;
                             let form = await createDialog({
                                 field: this.$field,
+                                master: this.$parent.$view.datasource,
                                 options: {
                                     backdrop: 'static',
                                     buttons: [
@@ -9619,7 +9731,6 @@ var Katrid;
                                 },
                             });
                             form.insert();
-                            form.record.$parent = this.$parent.record;
                             let res = await form.dialogPromise;
                             if (res) {
                                 let rec = form.record;
@@ -9659,16 +9770,19 @@ var Katrid;
                 this.$view.vm = this;
                 let modelValue = this.modelValue;
                 if (modelValue) {
-                    modelValue = this.$view.model.fromArray(modelValue);
+                    // modelValue = this.$view.model.fromArray(modelValue);
                     this.records = modelValue;
                 }
             },
             watch: {
                 modelValue(value) {
                     if (value) {
-                        value = this.$view.model.fromArray(value);
-                        this.$oldValue = [].concat(value);
+                        // value = this.$view.model.fromArray(value);
+                        // console.log('set o2m value', value)
+                        // this.$oldValue = [].concat(value);
                     }
+                    else
+                        value = [];
                     this.records = value;
                 },
             },

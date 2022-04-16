@@ -13088,8 +13088,13 @@ nav#header .nav-item .dropdown-menu {
   padding: 2px 4px 4px 4px;
 }
 .table-sm tbody tr {
-  box-shadow: inset 0 -1px 0 0 rgba(100, 121, 143, 0.122);
   border-collapse: collapse;
+}
+.table-sm tbody tr.modified {
+  background-color: #fff8e0;
+}
+.table-sm tbody tr.modified td {
+  font-style: italic;
 }
 .table-sm tbody tr th, .table-sm tbody tr td {
   padding: 4px 4px 2px 4px;
