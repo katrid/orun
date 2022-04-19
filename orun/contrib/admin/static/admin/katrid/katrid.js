@@ -8476,6 +8476,7 @@ var Katrid;
                     if (multiple)
                         cfg['multiple'] = true;
                     const el = element.select2(cfg);
+                    el.addClass('col-12');
                     element.on('$destroy', function () {
                         $('.select2-hidden-accessible').remove();
                         $('.select2-drop').remove();
@@ -10034,28 +10035,28 @@ var Katrid;
             DecimalField(param) {
                 let secondField = '';
                 if (param.operation === 'between') {
-                    secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" input-decimal class="form-control"></div>`;
+                    secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" input-decimal class="form-control"></div>`;
                 }
-                return `<div class="col-sm-12 row"><div class="col-xs-6"><input id="rep-param-id-${param.id}" input-decimal v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" input-decimal v-model="param.value1" class="form-control"></div>${secondField}</div>`;
             },
             DateTimeField(param) {
                 let secondField = '';
                 if (param.operation === 'between') {
-                    secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" v-model="param.value2" class="form-control"></div>`;
+                    secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" v-model="param.value2" class="form-control"></div>`;
                 }
-                return `<div class="col-sm-12 row"><div class="col-xs-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
             },
             DateField(param) {
                 let secondField = '';
                 if (param.operation === 'between') {
-                    secondField = `<div class="col-xs-6">
+                    secondField = `<div class="col-6">
 <input-date class="input-group date" v-model="param.value2" date-picker="L">
 <input id="rep-param-id-${param.id}-2" type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
       <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
 </input-date>
 </div>`;
                 }
-                return `<div class="col-sm-12 row"><div class="col-xs-6">
+                return `<div class="col-sm-12 row"><div class="col-6">
 <input-date class="input-group date" v-model="param.value1" date-picker="L">
 <input id="rep-param-id-${param.id}" type="text" class="form-control" inputmode="numeric" autocomplete="off">
       <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
@@ -10087,7 +10088,7 @@ var Katrid;
                     multiple = 'multiple="multiple"';
                 }
                 else
-                    multiple = 'class="form-control"';
+                    multiple = 'class="form-select"';
                 return `<div><${tag} ${multiple} v-model="param.value1"><option :value="value" v-for="(name, value, index) in param.choices">{{name}}</option></${tag}></div>`;
             }
         };
@@ -10135,7 +10136,7 @@ var Katrid;
             }
             operationTemplate() {
                 const opts = this.getOperations();
-                return `<div class="col-sm-4"><select id="param-op-${this.id}" v-model="param.operation" class="form-control" onchange="$('#param-${this.id}').data('param').change();$('#rep-param-id-${this.id}')[0].focus()">
+                return `<div class="col-sm-4"><select id="param-op-${this.id}" v-model="param.operation" class="form-select" onchange="$('#param-${this.id}').data('param').change();$('#rep-param-id-${this.id}')[0].focus()">
   ${opts}
   </select></div>`;
             }
