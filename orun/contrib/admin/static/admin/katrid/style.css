@@ -13878,6 +13878,9 @@ calendar-view .fc-header-toolbar {
   flex-direction: column;
   flex: 1 1 auto;
 }
+.katrid-app .params-params {
+  padding: 10px 15px;
+}
 .katrid-app .params-params .form-group {
   margin-bottom: 0.5rem;
 }
