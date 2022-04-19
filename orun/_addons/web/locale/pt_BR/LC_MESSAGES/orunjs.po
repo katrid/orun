@@ -63,6 +63,9 @@ msgstr "As alterações do registro foram salvas com êxito"
 msgid "Record saved successfully."
 msgstr "Registro gravado com sucesso."
 
+msgid "Record(s) deleted successfully"
+msgstr "Registro(s) excluído(s) com sucesso"
+
 msgid "Error saving record changes"
 msgstr "Erro gravando as alterações do registro"
 

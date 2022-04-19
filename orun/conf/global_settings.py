@@ -662,3 +662,11 @@ SECURE_HSTS_SECONDS = 0
 SECURE_REDIRECT_EXEMPT = []
 SECURE_SSL_HOST = None
 SECURE_SSL_REDIRECT = False
+
+
+
+##############
+# ADMIN SITE #
+##############
+
+ADMIN_SITE_TITLE = 'Orun Admin'

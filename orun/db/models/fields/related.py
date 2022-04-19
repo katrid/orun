@@ -25,7 +25,7 @@ from .related_descriptors import (
 )
 from .related_lookups import (
     RelatedExact, RelatedGreaterThan, RelatedGreaterThanOrEqual, RelatedIn,
-    RelatedIsNull, RelatedLessThan, RelatedLessThanOrEqual,
+    RelatedIsNull, RelatedLessThan, RelatedLessThanOrEqual, ForeignKeyIContains
 )
 from .reverse_related import (
     ForeignObjectRel, ManyToManyRel, ManyToOneRel, OneToOneRel, OneToManyRel
@@ -1664,3 +1664,5 @@ class OneToManyField(RelatedField):
     def get_data_type(self) -> str:
         return 'onetomany'
 
+
+ForeignKey.register_lookup(ForeignKeyIContains, 'icontains')

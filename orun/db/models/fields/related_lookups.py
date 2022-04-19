@@ -1,6 +1,6 @@
 from orun.db.models.lookups import (
     Exact, GreaterThan, GreaterThanOrEqual, In, IsNull, LessThan,
-    LessThanOrEqual,
+    LessThanOrEqual, IContains
 )
 
 
@@ -152,3 +152,9 @@ class RelatedLessThanOrEqual(RelatedLookupMixin, LessThanOrEqual):
 
 class RelatedIsNull(RelatedLookupMixin, IsNull):
     pass
+
+
+class ForeignKeyIContains(IContains):
+    def process_lhs(self, compiler, connection, lhs=None):
+        lhs, params = super().process_lhs(compiler, connection, lhs)
+        print(lhs, params)
