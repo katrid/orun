@@ -1066,7 +1066,7 @@ var Katrid;
                     return window.open(res.open);
             }
             get name() {
-                return this.config.name;
+                return this.config.info.name;
             }
             userReportChanged(report) {
                 return this.location.search({
@@ -1091,17 +1091,17 @@ var Katrid;
                 this.renderParams();
             }
             renderParams() {
-                let templ = Katrid.element(Katrid.Reports.renderDialog(this));
+                let templ = Katrid.html(Katrid.Reports.renderDialog(this));
                 this.vm = this.createVm(templ);
                 $(Katrid.webApp.element).empty().append(templ);
             }
             createVm(el) {
                 let self = this;
                 this.report = new Katrid.Reports.Report(self);
-                this.report.loadFromXml(self.config.content);
+                this.report.loadFromXml(self.config.info.content);
                 this.report.render(el);
                 this.report.loadParams();
-                let vm = Katrid.createView({
+                let vm = Katrid.createVm({
                     data() {
                         return {
                             userReport: this.userReport || {},
@@ -1757,6 +1757,7 @@ var Katrid;
                     await this.actionManager.onHashChange(params, reset);
                 else if ((!('action' in params)) && ('menu_id' in params)) {
                     // find first visible action
+                    console.log('goto to 1st action', params.menu_id);
                     let actionItem = document.querySelector('app-header .navbar-menu-group[data-parent-id="' + params.menu_id + '"] .menu-item-action[href]');
                     if (actionItem) {
                         let child = actionItem.parentElement.querySelector('a.dropdown-item[href]');
@@ -2997,7 +2998,7 @@ var Katrid;
                             rec[k] = v;
                     });
                 }
-                if (datasource) {
+                if (datasource.parent?.record) {
                     rec.$parent = datasource.parent.record;
                     rec.$parentField = datasource.field?.name;
                 }
@@ -4913,6 +4914,16 @@ var Katrid;
             }
             static createViewModeButton(container) {
             }
+            async deleteSelection(sel) {
+                // auto apply destroyed records
+                if ((((sel.length === 1) && confirm(Katrid.i18n.gettext('Confirm delete record?'))) ||
+                    ((sel.length > 1) && confirm(Katrid.i18n.gettext('Confirm delete records?')))) && sel) {
+                    let res = await this.datasource.delete(sel.map(rec => rec.id));
+                    Katrid.Forms.Dialogs.Alerts.success(Katrid.i18n.gettext('Record(s) deleted successfully'));
+                    this.refresh();
+                    return true;
+                }
+            }
             create(info) {
                 this.action = info.action;
                 this._readonly = true;
@@ -5006,7 +5017,7 @@ var Katrid;
                     this.element.classList.remove('readonly');
                 }
             }
-            ready() {
+            async ready() {
                 // if (this.action.dataSource && (this.action.recordIndex >= 0)) {
                 //   this.dataSource._records = this.action.dataSource.records;
                 //   this.dataSource.recordIndex = this.action.recordIndex;
@@ -5077,6 +5088,10 @@ var Katrid;
                     doViewAction(action, target) {
                         return me.doViewAction(action, target);
                     },
+                    async deleteSelection() {
+                        if (await me.deleteSelection(this.selection))
+                            this.selection = [];
+                    }
                 });
                 comp.methods.setViewMode = async function (mode) {
                     return await me.action.showView(mode);
@@ -5305,11 +5320,6 @@ var Katrid;
                 group.$expanded = false;
             }
             // async groupBy(data: any[]);
-            ready() {
-                // if (this.autoLoad && !this.action.context.search_default)
-                //   this.dataSource.open();
-                // this.action.dataSource = this._dataSource;
-            }
             async setSearchParams(params) {
                 console.log('set empty params', params);
                 let p = {};
@@ -5383,17 +5393,13 @@ var Katrid;
                 let btnActions = document.createElement('div');
                 btnActions.classList.add('btn-group');
                 btnActions.innerHTML = `<div class="dropdown">
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" v-show="selectionLength"
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" v-show="selectionLength"
                 aria-haspopup="true">
           ${Katrid.i18n.gettext('Action')} <span class="caret"></span>
         </button>
         <div class="dropdown-menu dropdown-menu-actions">
-          <a class="dropdown-item" v-on:click="action.deleteSelection()">
+          <a class="dropdown-item" v-on:click="deleteSelection()">
             <i class="fa fa-fw fa-trash-o"></i> ${Katrid.i18n.gettext('Delete')}
-          </a>
-          <a class="dropdown-item" v-on:click="action.copy()">
-            <i class="fa fa-fw fa-files-o"></i>
-            ${Katrid.i18n.gettext('Duplicate')}
           </a>
           <!-- replace-actions -->
         </div>
@@ -5426,6 +5432,14 @@ var Katrid;
                     // if (options?.edit)
                     //   this.vm.dataSource.edit();
                 });
+            }
+            async ready() {
+                if (!this.records) {
+                    return this.datasource.open();
+                }
+                else {
+                    this.refresh();
+                }
             }
         }
         Forms.RecordCollectionView = RecordCollectionView;
@@ -5792,19 +5806,9 @@ var Katrid;
                 btn.setAttribute('v-on:click', `setViewMode('card')`);
                 container.append(btn);
             }
-            domTemplate() {
-                let el = super.domTemplate();
-                let templ = this.renderTemplate(el);
-                return templ;
-            }
             renderTemplate(template) {
                 let cardRenderer = new CardRenderer(this.fields);
                 return cardRenderer.render(template);
-            }
-            beforeRender(content) {
-                if (this.dialog)
-                    return this.createDialog(content, this.dialogButtons);
-                return super.beforeRender(content);
             }
             createComponent() {
                 let comp = super.createComponent();
@@ -6079,12 +6083,12 @@ var Katrid;
       </button>
     <div class="btn-group">
       <div class="dropdown">
+        <button type="button" class="btn toolbtn" v-if="!changing" v-on:click="refresh()" title="${Katrid.i18n.gettext('Refresh')}">
+          <i class="fa fa-fw fa-redo-alt"></i>
+        </button>
         <button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" name="actions" data-bs-toggle="dropdown"
                 aria-haspopup="true">
           ${Katrid.i18n.gettext('Action')} <span class="caret"></span>
-        </button>
-        <button type="button" class="btn toolbtn" v-if="!changing" v-on:click="refresh()" title="${Katrid.i18n.gettext('Refresh')}">
-          <i class="fa fa-fw fa-redo-alt"></i>
         </button>
         <div class="dropdown-menu dropdown-menu-actions">
           <a class="dropdown-item" v-on:click="deleteSelection()">
@@ -6242,6 +6246,10 @@ ${Katrid.i18n.gettext('Delete')}
                         },
                         discardAndClose() {
                             me.discardAndClose();
+                        },
+                        deleteSelection() {
+                            me.deleteSelection(this.selection);
+                            this.next();
                         },
                         formButtonClick(args) {
                             let res = me.model.service.doViewAction({ action_name: args.method, target: args.params.id });
@@ -7027,6 +7035,9 @@ var Katrid;
                 this._readonly = true;
                 this.rowSelector = true;
                 this.allowGrouping = true;
+                // async groupBy(data: any[]): Promise<any> {
+                //   this.vm.records = this.vm.groups;
+                // }
             }
             static createViewModeButton(container) {
                 let btn = document.createElement('button');
@@ -7200,14 +7211,6 @@ var Katrid;
                 div.className = 'table-responsive';
                 div.append(table);
                 return div;
-            }
-            // async groupBy(data: any[]): Promise<any> {
-            //   this.vm.records = this.vm.groups;
-            // }
-            async ready() {
-                if (!this.records) {
-                    return this.datasource.open();
-                }
             }
         }
         TableView.viewType = 'list';
@@ -9978,6 +9981,633 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    var Reports;
+    (function (Reports) {
+        let _counter = 0;
+        class Params {
+        }
+        Params.Operations = {
+            exact: 'exact',
+            in: 'in',
+            contains: 'contains',
+            startswith: 'startswith',
+            endswith: 'endswith',
+            gt: 'gt',
+            lt: 'lt',
+            between: 'between',
+            isnull: 'isnull'
+        };
+        Params.Labels = null;
+        Params.DefaultOperations = {
+            CharField: Params.Operations.exact,
+            IntegerField: Params.Operations.exact,
+            DateTimeField: Params.Operations.between,
+            DateField: Params.Operations.between,
+            FloatField: Params.Operations.between,
+            DecimalField: Params.Operations.between,
+            ForeignKey: Params.Operations.exact,
+            ModelChoices: Params.Operations.exact,
+            SelectionField: Params.Operations.exact,
+        };
+        Params.TypeOperations = {
+            CharField: [Params.Operations.exact, Params.Operations.in, Params.Operations.contains, Params.Operations.startswith, Params.Operations.endswith, Params.Operations.isnull],
+            IntegerField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+            FloatField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+            DecimalField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+            DateTimeField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+            DateField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+            ForeignKey: [Params.Operations.exact, Params.Operations.in, Params.Operations.isnull],
+            ModelChoices: [Params.Operations.exact, Params.Operations.in, Params.Operations.isnull],
+            SelectionField: [Params.Operations.exact, Params.Operations.isnull],
+        };
+        Params.Widgets = {
+            CharField(param) {
+                return `<div><input id="rep-param-id-${param.id}" v-model="param.value1" type="text" class="form-control"></div>`;
+            },
+            IntegerField(param) {
+                let secondField = '';
+                if (param.operation === 'between') {
+                    secondField = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" type="number" class="form-control"></div>`;
+                }
+                return `<div class="row"><div class="col-sm-6"><input id="rep-param-id-${param.id}" type="number" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+            },
+            DecimalField(param) {
+                let secondField = '';
+                if (param.operation === 'between') {
+                    secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" input-decimal class="form-control"></div>`;
+                }
+                return `<div class="col-sm-12 row"><div class="col-xs-6"><input id="rep-param-id-${param.id}" input-decimal v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+            },
+            DateTimeField(param) {
+                let secondField = '';
+                if (param.operation === 'between') {
+                    secondField = `<div class="col-xs-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" v-model="param.value2" class="form-control"></div>`;
+                }
+                return `<div class="col-sm-12 row"><div class="col-xs-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+            },
+            DateField(param) {
+                let secondField = '';
+                if (param.operation === 'between') {
+                    secondField = `<div class="col-xs-6">
+<input-date class="input-group date" v-model="param.value2" date-picker="L">
+<input id="rep-param-id-${param.id}-2" type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
+      <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
+</input-date>
+</div>`;
+                }
+                return `<div class="col-sm-12 row"><div class="col-xs-6">
+<input-date class="input-group date" v-model="param.value1" date-picker="L">
+<input id="rep-param-id-${param.id}" type="text" class="form-control" inputmode="numeric" autocomplete="off">
+      <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
+</input-date>
+</div>${secondField}</div>`;
+            },
+            ForeignKey(param) {
+                const serviceName = param.info.field.attr('model') || param.params.model;
+                let multiple = '';
+                if (param.operation === 'in') {
+                    multiple = 'multiple';
+                }
+                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="${serviceName}" field-name="${param.name}" v-model="param.value1" ${multiple}></div>`;
+            },
+            ModelChoices(param) {
+                let multiple = '';
+                if (param.operation === 'in') {
+                    multiple = 'multiple';
+                }
+                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ir.action.report" model-choices="${param.info.modelChoices}" v-model="param.value1" ${multiple}></div>`;
+            },
+            SelectionField(param) {
+                // param.info.choices = param.info.field.data('choices');
+                console.log(param);
+                let multiple = '';
+                let tag = 'select';
+                if (param.operation === 'in') {
+                    tag = 'multiple-tags';
+                    multiple = 'multiple="multiple"';
+                }
+                else
+                    multiple = 'class="form-control"';
+                return `<div><${tag} ${multiple} v-model="param.value1"><option :value="value" v-for="(name, value, index) in param.choices">{{name}}</option></${tag}></div>`;
+            }
+        };
+        Reports.Params = Params;
+        class Param {
+            constructor(info, params) {
+                this.info = info;
+                this.params = params;
+                this.choices = info.choices;
+                this.name = this.info.name;
+                this.field = this.params.info.fields && this.params.info.fields[this.name];
+                this.label = this.info.label || this.params.info.caption;
+                this.static = this.info.param === 'static';
+                this.type = this.info.type || (this.field && this.field.type) || 'CharField';
+                this.defaultOperation = this.info.operation || Params.DefaultOperations[this.type];
+                this.operation = this.defaultOperation;
+                // @operations = @info.operations or Params.TypeOperations[@type]
+                this.operations = this.getOperations();
+                this.exclude = this.info.exclude;
+                this.id = ++_counter;
+            }
+            defaultValue() {
+                return null;
+            }
+            setOperation(op, focus) {
+                if (focus == null) {
+                    focus = true;
+                }
+                this.createControls();
+                const el = this.el.find(`#rep-param-id-${this.id}`);
+                if (focus) {
+                    el.focus();
+                }
+            }
+            createControls() {
+                const el = this.el.find(".param-widget");
+                el.empty();
+                let widget = Params.Widgets[this.type](this);
+                console.log('create controls', widget);
+                widget = $(widget);
+                return el.append(widget);
+            }
+            getOperations() {
+                return (Array.from(Params.TypeOperations[this.type]).map((op) => ({ id: op, text: Params.Labels[op] })));
+            }
+            operationTemplate() {
+                const opts = this.getOperations();
+                return `<div class="col-sm-4"><select id="param-op-${this.id}" v-model="param.operation" class="form-control" onchange="$('#param-${this.id}').data('param').change();$('#rep-param-id-${this.id}')[0].focus()">
+  ${opts}
+  </select></div>`;
+            }
+            template() {
+                let operation = '';
+                if (!this.operation)
+                    operation = this.operationTemplate();
+                return `<div id="param-${this.id}" class="row form-group" data-param="${this.name}"><label class="control-label">${this.label}</label>${operation}<div id="param-widget-${this.id}"></div></div>`;
+            }
+            render(container) {
+                this.el = $(this.template());
+                this.el.data('param', this);
+                this.createControls();
+                console.log('render param', this.el[0]);
+                return container.append(this.el[0]);
+            }
+        }
+        Reports.Param = Param;
+        Katrid.component('report-param-widget', {
+            props: ['param'],
+            render() {
+                let widget = Params.Widgets[this.param.type](this.param);
+                return Vue.compile(widget)(this);
+            },
+            components: Katrid.componentsRegistry,
+            directives: Katrid.directivesRegistry,
+        });
+        class ReportEngine {
+            static load(el) {
+                $('row').each((idx, el) => {
+                    el.addClass('row');
+                });
+                $('column').each((idx, el) => {
+                    el.addClass('col');
+                });
+            }
+        }
+        Reports.ReportEngine = ReportEngine;
+    })(Reports = Katrid.Reports || (Katrid.Reports = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Reports;
+    (function (Reports) {
+        let _counter = 0;
+        Reports.currentReport = {};
+        Reports.currentUserReport = {};
+        class Report {
+            constructor(action) {
+                this.action = action;
+                this.info = this.action.info;
+                Reports.currentReport = this;
+                if ((Reports.Params.Labels == null)) {
+                    Reports.Params.Labels = {
+                        exact: Katrid.i18n.gettext('Is equal'),
+                        in: Katrid.i18n.gettext('Selection'),
+                        contains: Katrid.i18n.gettext('Contains'),
+                        startswith: Katrid.i18n.gettext('Starting with'),
+                        endswith: Katrid.i18n.gettext('Ending with'),
+                        gt: Katrid.i18n.gettext('Greater-than'),
+                        lt: Katrid.i18n.gettext('Less-than'),
+                        between: Katrid.i18n.gettext('Between'),
+                        isnull: Katrid.i18n.gettext('Is Null')
+                    };
+                }
+                this.name = this.info.name;
+                this.id = ++_counter;
+                this.values = {};
+                this.params = [];
+                this.filters = [];
+                this.groupables = [];
+                this.sortables = [];
+                this.totals = [];
+            }
+            telegram() {
+                // Katrid.Reports.Telegram.export(this);
+            }
+            getUserParams() {
+                let report = this;
+                let container = $(report.container);
+                let params = {
+                    data: [],
+                    file: container.find('#id-report-file').val()
+                };
+                for (let p of Array.from(this.params)) {
+                    let val1, val2;
+                    val1 = p.value1;
+                    val2 = p.value2;
+                    if (val1 === '')
+                        val1 = null;
+                    if (val2 === '')
+                        val2 = null;
+                    if (val1 === null)
+                        continue;
+                    params.data.push({
+                        name: p.name,
+                        op: p.operation,
+                        value1: val1,
+                        value2: val2,
+                        type: p.type
+                    });
+                }
+                let fields = container.find('#report-id-fields').val();
+                params['fields'] = fields;
+                let totals = container.find('#report-id-totals').val();
+                params['totals'] = totals;
+                let sorting = container.find('#report-id-sorting').val();
+                params['sorting'] = sorting;
+                let grouping = container.find('#report-id-grouping').val();
+                params['grouping'] = grouping;
+                return params;
+            }
+            loadFromXml(xml) {
+                let dataTypeDict = {
+                    date: 'DateField',
+                    datetime: 'DateTimeField',
+                };
+                let paras;
+                if (typeof xml === 'string') {
+                    xml = $.parseXML(xml).children[0];
+                }
+                this.action.customizableReport = xml.getAttribute('customizableReport');
+                this.action.advancedOptions = xml.getAttribute('advancedOptions');
+                this.model = xml.getAttribute('model');
+                const fields = [];
+                for (let f of xml.children) {
+                    let tag = f.tagName;
+                    if ((tag !== 'field') && (tag !== 'param'))
+                        continue;
+                    const name = f.getAttribute('name');
+                    let fld;
+                    if (this.info.fields)
+                        fld = this.info.fields[name];
+                    const label = f.getAttribute('label') || f.getAttribute('caption') || (fld && fld.caption) || name;
+                    const groupable = f.getAttribute('groupable');
+                    const sortable = f.getAttribute('sortable');
+                    const total = f.getAttribute('total');
+                    let param = f.getAttribute('param');
+                    if ((tag === 'field') && (!param))
+                        param = 'static';
+                    const required = f.getAttribute('required');
+                    const autoCreate = f.getAttribute('autoCreate') || required || (param === 'static');
+                    const operation = f.getAttribute('operation');
+                    let type = f.getAttribute('type') || $(f).data('type') || (fld && fld.type);
+                    if (type in dataTypeDict)
+                        type = dataTypeDict[type];
+                    let choices = {};
+                    console.log(f);
+                    for (let option of f.querySelectorAll('option')) {
+                        choices[option.getAttribute('value')] = option.childNodes[0].textContent;
+                    }
+                    const modelChoices = f.getAttribute('model-choices');
+                    if (!type && modelChoices)
+                        type = 'ModelChoices';
+                    fields.push({
+                        name,
+                        label,
+                        choices,
+                        groupable,
+                        sortable,
+                        total,
+                        param,
+                        required,
+                        operation,
+                        modelChoices,
+                        type,
+                        autoCreate,
+                        field: f,
+                    });
+                }
+                let params = Array.from(xml.querySelectorAll('param')).map((p) => p.getAttribute('name'));
+                return this.load(fields, params);
+            }
+            saveDialog() {
+                const params = this.getUserParams();
+                const name = window.prompt(Katrid.i18n.gettext('Report name'), Katrid.Reports.currentUserReport.name);
+                if (name) {
+                    Katrid.Reports.currentUserReport.name = name;
+                    $.ajax({
+                        type: 'POST',
+                        url: this.container.find('#report-form').attr('action') + '?save=' + name,
+                        contentType: "application/json; charset=utf-8",
+                        dataType: 'json',
+                        data: JSON.stringify(params)
+                    });
+                }
+                return false;
+            }
+            load(fields, params) {
+                if (!fields)
+                    fields = this.info.fields;
+                if (!params)
+                    params = [];
+                this.fields = fields;
+                // Create params
+                for (let p of fields) {
+                    this.action.fields[p.name] = p;
+                    if (p.groupable)
+                        this.groupables.push(p);
+                    if (p.sortable)
+                        this.sortables.push(p);
+                    if (p.total)
+                        this.totals.push(p);
+                    if (!p.autoCreate)
+                        p.autoCreate = params.includes(p.name);
+                }
+            }
+            loadParams() {
+                for (let p of this.fields) {
+                    if (p.autoCreate)
+                        this.addParam(p.name);
+                }
+            }
+            addParam(paramName, value) {
+                console.log('add param', paramName, value);
+                let elParams = this.container.querySelector('#params-params');
+                for (let p of this.fields)
+                    if (p.name === paramName) {
+                        let param = new Reports.Param(p, this);
+                        this.params.push(param);
+                        // param.render(elParams);
+                        break;
+                    }
+            }
+            getValues() { }
+            export(format) {
+                if (format == null)
+                    format = localStorage.katridReportViewer || 'pdf';
+                const params = this.getUserParams();
+                const svc = new Katrid.Services.ModelService('ui.action.report');
+                svc.post('export_report', { args: [this.info.id], kwargs: { format, params } });
+                return false;
+            }
+            preview() {
+                return this.export(localStorage.katridReportViewer);
+            }
+            renderFields() {
+                let p;
+                let el = $('<div></div>');
+                const flds = this.fields.map((p) => `<option value="${p.name}">${p.label}</option>`).join('');
+                const aggs = ((() => {
+                    const result1 = [];
+                    for (p of Array.from(this.fields)) {
+                        if (p.total) {
+                            result1.push(`<option value="${p.name}">${p.label}</option>`);
+                        }
+                    }
+                    return result1;
+                })()).join('');
+                el = $(this.container).find('#report-params');
+                let sel = el.find('#report-id-fields');
+                sel.append($(flds))
+                    .select2({ tags: ((() => {
+                        const result2 = [];
+                        for (let p of Array.from(this.fields))
+                            result2.push({ id: p.name, text: p.label });
+                        return result2;
+                    })()) });
+                if (Katrid.Reports.currentUserReport.params && Katrid.Reports.currentUserReport.params.fields) {
+                    console.log(Katrid.Reports.currentUserReport.params.fields);
+                    sel.select2('val', Katrid.Reports.currentUserReport.params.fields);
+                }
+                //sel.data().select2.updateSelection([{ id: 'vehicle', text: 'Vehicle'}])
+                sel = el.find('#report-id-totals');
+                sel.append(aggs)
+                    .select2({ tags: ((() => {
+                        const result3 = [];
+                        for (let p of Array.from(this.fields)) {
+                            if (p.total) {
+                                result3.push({ id: p.name, text: p.label });
+                            }
+                        }
+                        return result3;
+                    })()) });
+                return el;
+            }
+            renderParams(container) {
+                let p;
+                let el = $('<div></div>');
+                this.elParams = el;
+                let loaded = {};
+                const userParams = Katrid.Reports.currentUserReport.params;
+                if (userParams && userParams.data) {
+                    for (let p of Array.from(userParams.data)) {
+                        loaded[p.name] = true;
+                        this.addParam(p.name, p.value);
+                    }
+                }
+                console.log('render params', this.action.info);
+                for (p of Array.from(this.params)) {
+                    if (p.static && !loaded[p.name]) {
+                        $(p.render(el));
+                    }
+                }
+                console.log('el', this.params);
+                return container.querySelector('#params-params').append(el[0]);
+            }
+            renderGrouping(container) {
+                const opts = (Array.from(this.groupables).map((p) => `<option value="${p.name}">${p.label}</option>`)).join('');
+                const el = container.find("#params-grouping");
+                const sel = el.find('select').select2();
+                return sel.append(opts)
+                    .select2("container").find("ul.select2-choices").sortable({
+                    containment: 'parent',
+                    start() { return sel.select2("onSortStart"); },
+                    update() { return sel.select2("onSortEnd"); }
+                });
+            }
+            renderSorting(container) {
+                const opts = (Array.from(this.sortables).filter((p) => p.sortable).map((p) => `<option value="${p.name}">${p.label}</option>`)).join('');
+                const el = container.find("#params-sorting");
+                const sel = el.find('select').select2();
+                return sel.append(opts)
+                    .select2("container").find("ul.select2-choices").sortable({
+                    containment: 'parent',
+                    start() { return sel.select2("onSortStart"); },
+                    update() { return sel.select2("onSortEnd"); }
+                });
+            }
+            render(container) {
+                this.container = container;
+                let el = this.renderFields();
+                if (this.sortables.length) {
+                    el = this.renderSorting(container);
+                }
+                else {
+                    $(container).find("#params-sorting").hide();
+                }
+                if (this.groupables.length) {
+                    el = this.renderGrouping(container);
+                }
+                else {
+                    $(container).find("#params-grouping").hide();
+                }
+                return el = this.renderParams(container);
+            }
+        }
+        Reports.Report = Report;
+        function renderDialog(action) {
+            return `
+    <div class="report-dialog">
+      <form id="report-form" method="get" action="/web/reports/report/">
+        <div class="data-heading panel panel-default">
+          <div class="panel-body">
+          <h2>${action.name}</h2>
+          <div class="toolbar">
+            <button class="btn btn-primary" type="button" v-on:click="report.preview()"><span class="fa fa-print fa-fw"></span> ${Katrid.i18n.gettext('Preview')}</button>
+
+            <div class="btn-group">
+              <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+                      aria-expanded="false">${Katrid.i18n.gettext('Export')} <span class="caret"></span></button>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" v-on:click="Katrid.Reports.Reports.preview()">PDF</a>
+                <a class="dropdown-item" v-on:click="$event.preventDefault();report.telegram();">Telegram</a>
+                <a class="dropdown-item" v-on:click="report.export('docx')">Word</a>
+                <a class="dropdown-item" v-on:click="report.export('xlsx')">Excel</a>
+                <a class="dropdown-item" v-on:click="report.export('pptx')">PowerPoint</a>
+                <a class="dropdown-item" v-on:click="report.export('csv')">CSV</a>
+                <a class="dropdown-item" v-on:click="report.export('txt')">${Katrid.i18n.gettext('Text File')}</a>
+              </div>
+            </div>
+
+            <div class="btn-group">
+              <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+                      aria-expanded="false">${Katrid.i18n.gettext('My reports')} <span class="caret"></span></button>
+              <ul class="dropdown-menu">
+              </ul>
+            </div>
+
+          <div class="pull-right btn-group">
+            <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+                    aria-expanded="false"><i class="fa fa-sliders-h"></i></button>
+            <div class="dropdown-menu">
+              <a class="dropdown-item" v-on:click="report.saveDialog()">${Katrid.i18n.gettext('Save')}</a>
+              <a class="dropdown-item">${Katrid.i18n.gettext('Load')}</a>
+              <div class="dropdown-divider"></div>
+              <h6 class="dropdown-header">Report Viewer</h6>
+              <a class="dropdown-item" onclick="localStorage.setItem('katridReportViewer', 'pdf')">Visualizar em PDF</a>
+              <a class="dropdown-item" onclick="localStorage.setItem('katridReportViewer', 'native')">Visualizador Nativo</a>
+            </div>
+          </div>
+
+          </div>
+        </div>
+        </div>
+        <div class="col-sm-12">
+          <table class="col-sm-12" style="margin-top: 20px; display:none;">
+            <tr>
+              <td colspan="2" style="padding-top: 8px;">
+                <label>${Katrid.i18n.gettext('My reports')}</label>
+
+                <select class="form-control" v-on:change="userReportChanged(userReport.id)" v-model="userReport.id">
+                    <option value=""></option>
+                    <option v-for="rep in userReports" :value="rep.id">{{ rep.name }}</option>
+                </select>
+              </td>
+            </tr>
+          </table>
+        </div>
+      <div id="report-params">
+      <div id="params-fields" class="col-sm-12 form-group" v-if="customizableReport">
+        <div class="checkbox"><label><input type="checkbox" v-model="paramsAdvancedOptions"> ${Katrid.i18n.gettext('Advanced options')}</label></div>
+        <div v-show="paramsAdvancedOptions">
+          <div class="form-group">
+            <label>${Katrid.i18n.gettext('Printable Fields')}</label>
+            <input type="hidden" id="report-id-fields"/>
+          </div>
+          <div class="form-group">
+            <label>${Katrid.i18n.gettext('Totalizing Fields')}</label>
+            <input type="hidden" id="report-id-totals"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="clearfix"></div>
+
+      </div>
+        <div v-if="advancedOptions">
+        <div id="params-sorting" class="col-sm-12 form-group">
+          <label class="control-label">${Katrid.i18n.gettext('Sorting')}</label>
+          <select multiple id="report-id-sorting"></select>
+        </div>
+
+        <div id="params-grouping" class="col-sm-12 form-group">
+          <label class="control-label">${Katrid.i18n.gettext('Grouping')}</label>
+          <select multiple id="report-id-grouping"></select>
+        </div>
+        <hr>
+        <table class="col-sm-12">
+          <tr>
+            <td class="col-sm-4">
+              <select class="form-control" v-model="newParam">
+                <option value="">--- ${Katrid.i18n.gettext('FILTERS')} ---</option>
+                <option v-for="field in report.fields" :value="field.name">{{ field.label }}</option>
+              </select>
+            </td>
+            <td class="col-sm-8">
+              <button
+                  class="btn btn-outline-secondary" type="button"
+                  v-on:click="report.addParam(newParam)">
+                <i class="fa fa-plus fa-fw"></i> ${Katrid.i18n.gettext('Add Parameter')}
+              </button>
+            </td>
+          </tr>
+        </table>
+        <div class="clearfix"></div>
+        <hr>
+      </div>
+      <div id="params-params" class="params-params margin-top-8 row">
+        <div v-for="param in report.params" class="col-lg-6 form-group">
+          <div class="col-12">
+            <label class="control-label">{{ param.label }}</label>
+          </div>
+          <div class="col-4" v-if="param.operationsVisible">
+            <select v-model="param.operation" class="form-control" ng-change="param.setOperation(param.operation)">
+              <option v-for="op in param.operations" :value="op.id">{{ op.text }}</option>
+            </select>
+          </div>
+          <div class="col param-widget">
+          <report-param-widget :param="param"/>
+</div>
+        </div>
+      </div>
+      </form>
+    </div>
+    `;
+        }
+        Reports.renderDialog = renderDialog;
+    })(Reports = Katrid.Reports || (Katrid.Reports = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
     var Services;
     (function (Services) {
         class BaseAdapter {
@@ -10647,7 +11277,7 @@ var Katrid;
             }
             createDropdownItem(item) {
                 let el = document.createElement('a');
-                el.classList.add('dropdown-item');
+                el.classList.add('dropdown-item', 'menu-item-action');
                 el.setAttribute('id', 'ui-menu-' + item.id.toString());
                 el.setAttribute('data-menu-id', item.id.toString());
                 if (item.url) {

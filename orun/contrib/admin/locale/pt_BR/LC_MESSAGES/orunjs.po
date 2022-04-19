@@ -60,6 +60,9 @@ msgstr "Confirma a exclusão dos registros?"
 msgid "Confirm delete attachment?"
 msgstr "Confirma a exclusão do anexo?"
 
+msgid "Record(s) deleted successfully"
+msgstr "Registro(s) excluído(s) com sucesso"
+
 msgid "yes"
 msgstr "sim"
 

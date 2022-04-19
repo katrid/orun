@@ -13493,6 +13493,7 @@ calendar-view .fc-header-toolbar {
   display: flex;
   overflow-x: visible;
   align-content: stretch;
+  flex-wrap: wrap;
 }
 .katrid-app .content .data-panel .card-view .card-group .card-header {
   display: flex;
