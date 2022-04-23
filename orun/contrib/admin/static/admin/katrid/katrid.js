@@ -6202,7 +6202,7 @@ ${Katrid.i18n.gettext('Delete')}
             async copy() {
                 let res = await this.model.service.copy(this.record.id);
                 this.setState(DataSourceState.inserting);
-                this.datasource.record = this.model.newRecord();
+                this.datasource.record = this.model.newRecord(null, this.datasource);
                 this.datasource.setValues(res);
                 // await this.datasource.copy(this.record.id);
             }
@@ -6251,8 +6251,10 @@ ${Katrid.i18n.gettext('Delete')}
                             me.deleteSelection(this.selection);
                             this.next();
                         },
-                        formButtonClick(args) {
-                            let res = me.model.service.doViewAction({ action_name: args.method, target: args.params.id });
+                        async formButtonClick(args) {
+                            let res = await me.model.service.doViewAction({ action_name: args.method, target: args.params.id });
+                            if (res.location)
+                                window.location.href = res.location;
                         },
                         actionClick(selection, methodName, event) {
                             me.action.formButtonClick(selection.map(obj => obj.id), methodName);
@@ -6485,6 +6487,7 @@ var Katrid;
                     dataOffset: 1,
                     dataOffsetLimit: 1,
                     availableItems: null,
+                    currentIndex: 0,
                 };
             }
             get dataOffset() {
@@ -7423,7 +7426,7 @@ var Katrid;
                                     let item = vm.availableItems[vm.currentIndex];
                                     if (item)
                                         item.select();
-                                    this.searchText = '';
+                                    vm.searchText = '';
                                     break;
                                 case Katrid.UI.keyCode.BACKSPACE:
                                     if (vm.searchText === '') {
@@ -7523,9 +7526,7 @@ var Katrid;
                         filters.selectAll();
                     }
                     first() {
-                        return;
-                        this.menu.querySelector('li.active a.search-menu-item').classList.remove('active');
-                        this.menu.querySelector('li').classList.add('active');
+                        this.vm.currentIndex = 0;
                     }
                     removeItem(index) {
                         let facet = this.facets[index];
@@ -7617,7 +7618,7 @@ var Katrid;
                             fieldConditions: {},
                             action: this.$parent.action,
                             fieldName: null,
-                            currentIndex: 0,
+                            currentIndex: -1,
                             searchText: '',
                             groupByExpanded: false,
                             facets: [],
