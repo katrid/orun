@@ -13166,6 +13166,7 @@ calendar-view .fc-header-toolbar {
 .katrid-app .card-view .card-item {
   position: relative;
   min-width: 150px;
+  max-width: 400px;
   margin: 4px 4px 4px 0;
   padding: 8px;
   background-color: #fff;
@@ -13473,6 +13474,9 @@ calendar-view .fc-header-toolbar {
 .katrid-app .data-heading > .panel-body {
   padding: 10px 15px;
 }
+.katrid-app .content-container {
+  padding: 15px;
+}
 .katrid-app .content {
   padding: 0;
 }
@@ -13488,28 +13492,27 @@ calendar-view .fc-header-toolbar {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   border-radius: 0;
 }
-.katrid-app .content .data-panel .card-view {
-  min-height: 100%;
+.katrid-app .card-view {
   display: flex;
   overflow-x: visible;
   align-content: stretch;
   flex-wrap: wrap;
 }
-.katrid-app .content .data-panel .card-view .card-group .card-header {
+.katrid-app .card-view .card-group .card-header {
   display: flex;
   border-bottom: none;
   padding: 10px 0;
   background-color: transparent;
 }
-.katrid-app .content .data-panel .card-view .card-group .card-header .btn {
+.katrid-app .card-view .card-group .card-header .btn {
   font-size: 10px;
   color: #a7a7a7;
 }
-.katrid-app .content .data-panel .card-view .card-group .card-header .card-h {
+.katrid-app .card-view .card-group .card-header .card-h {
   flex: 1 1 auto;
   font-size: 1.2rem;
 }
-.katrid-app .content .data-panel .card-view .card-group .card-item {
+.katrid-app .card-view .card-group .card-item {
   margin: 0;
   border-radius: 0;
 }

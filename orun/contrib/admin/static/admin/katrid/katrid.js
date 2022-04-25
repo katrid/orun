@@ -4671,7 +4671,9 @@ var Katrid;
                     this.container = info.container;
             }
             getComponentData() {
-                return {};
+                return {
+                    data: null,
+                };
             }
             createComponent() {
                 let me = this;
@@ -4684,17 +4686,27 @@ var Katrid;
                 };
             }
             cloneTemplate() {
-                if (this.template)
-                    return this.template.content.firstElementChild.cloneNode(true);
-                return Katrid.html(this.html);
-            }
-            domTemplate() {
-                let templ = this.cloneTemplate();
+                let templ, el;
+                if (this.template) {
+                    templ = this.template;
+                }
+                else {
+                    el = templ = Katrid.html(this.html);
+                }
+                if (templ instanceof HTMLTemplateElement) {
+                    templ = templ.content;
+                    el = templ.firstElementChild.cloneNode(true);
+                }
                 this.scripts = [];
+                console.debug('template', templ.querySelectorAll('script'));
                 for (let script of templ.querySelectorAll('script')) {
                     this.scripts.push(script.text);
                     script.parentNode.removeChild(script);
                 }
+                return el;
+            }
+            domTemplate() {
+                let templ = this.cloneTemplate();
                 return templ;
             }
             createDialogButtons(buttons) {
@@ -4765,15 +4777,18 @@ var Katrid;
             }
             createVm(el) {
                 let component = this.createComponent();
+                console.debug('create vm', this.scripts);
                 if (this.scripts) {
                     this._readyEventListeners = [];
                     for (let script of this.scripts) {
                         let setup = eval(`(${script})`);
-                        let def = setup.call(this);
-                        if (def.methods)
-                            Object.assign(component.methods, def.methods);
-                        if (def.ready)
-                            this._readyEventListeners.push(def);
+                        if (setup) {
+                            let def = setup.call(this);
+                            if (def.methods)
+                                Object.assign(component.methods, def.methods);
+                            if (def.ready)
+                                this._readyEventListeners.push(def);
+                        }
                     }
                 }
                 let vm = Katrid.createVm(component).mount(el);

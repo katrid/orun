@@ -97,14 +97,15 @@ class View(models.Model):
         if obj:
             return obj.name
 
-    def get_content(self, model):
+    def get_content(self, model=None):
         xml = etree.tostring(self.get_xml(model))
         return xml
 
     def get_xml(self, model, context=None):
         if context is None:
             context = {}
-        context.update({'opts': model._meta if model else None})
+        if model:
+            context.update({'opts': model._meta if model else None})
         context['env'] = apps
         return self.compile(context)
 

@@ -152,12 +152,16 @@ class ViewAction(Action):
         name = 'ui.action.view'
 
     def _get_info(self, context):
+        from orun.contrib.admin.models.ui import View
         res = super()._get_info(context)
         # it's a system class
         if self.qualname:
             admin_class = import_string(self.qualname)
             res.update(admin_class.render(None))
             del res['qualname']
+        view = res.get('view')
+        if view and view['id']:
+            res['template'] = View.objects.get(pk=view['id']).get_content()
         return res
 
     @api.classmethod
