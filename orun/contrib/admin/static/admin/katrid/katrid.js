@@ -1568,6 +1568,9 @@ var Katrid;
             }
             setUserInfo(userInfo) {
             }
+            searchParams() {
+                return new URLSearchParams(window.location.hash);
+            }
             appReady() {
                 document.body.append($(`<div id="loading-msg" class="animated fadeIn">\n  <span>${Katrid.i18n.gettext('Loading...')}</span>\n</div>\n`)[0]);
                 document.body.append($(`<div id="overlay" class="animated fadeIn text-center">\n  <i class="fa-4x fas fa-circle-notch fa-spin"></i>\n  <h3 class="margin-top-16">\n    ${Katrid.i18n.gettext('Loading...')}\n  </h3>\n</div>`)[0]);
@@ -1734,6 +1737,7 @@ var Katrid;
                 }
             }
             async loadPage(hash, reset = true) {
+                this.$search = this.searchParams();
                 let url = hash;
                 if (hash.indexOf('?') > -1) {
                     url = hash.substring(0, hash.indexOf('?'));
@@ -4686,6 +4690,12 @@ var Katrid;
                     },
                     methods: {},
                     computed: {},
+                    created() {
+                        // load `created` event listeners
+                        for (let def of me._readyEventListeners)
+                            if (def.created)
+                                def.created.call(this);
+                    },
                 };
             }
             cloneTemplate() {
@@ -4780,7 +4790,6 @@ var Katrid;
             }
             createVm(el) {
                 let component = this.createComponent();
-                console.debug('create vm', this.scripts);
                 if (this.scripts) {
                     this._readyEventListeners = [];
                     for (let script of this.scripts) {
@@ -4789,7 +4798,7 @@ var Katrid;
                             let def = setup.call(this);
                             if (def.methods)
                                 Object.assign(component.methods, def.methods);
-                            if (def.ready)
+                            if (def.ready || def.created)
                                 this._readyEventListeners.push(def);
                         }
                     }
@@ -4820,9 +4829,8 @@ var Katrid;
                     // dispatch ready event listeners
                     if (this._readyEventListeners) {
                         for (let event of this._readyEventListeners)
-                            event.ready.call(this);
-                        // clear callbacks
-                        this._readyEventListeners = null;
+                            if (event.ready)
+                                event.ready.call(this.vm, this);
                     }
                 }
                 return this.element;
