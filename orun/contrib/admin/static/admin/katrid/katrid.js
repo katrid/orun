@@ -837,10 +837,11 @@ var Katrid;
                     // check if we need to invoke a nested action
                     if (res.action) {
                         let action = await Katrid.Actions.goto(res.action, { view_type: 'form' });
-                        await action.view.dataSource.insert(true, res.values);
+                        console.log('def values');
+                        await action.view.insert(res.values);
                     }
                     else
-                        this.dataSource.insert(true, res.values);
+                        this.view.datasource.insert(true, res.values);
                 }
                 else if (res.type) {
                     const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
@@ -2998,6 +2999,7 @@ var Katrid;
                             rec[k] = v;
                     });
                 }
+                console.debug('new record', datasource.parent);
                 if (datasource.parent?.record) {
                     rec.$parent = datasource.parent.record;
                     rec.$parentField = datasource.field?.name;
@@ -4083,7 +4085,7 @@ var Katrid;
                         else if (obj.action === 'CREATE') {
                             if (!record[this.name])
                                 record[this.name] = [];
-                            let rec = child.model.newRecord(obj.values, record, this.name);
+                            let rec = child.model.newRecord(obj.values, child);
                             rec.$flush();
                             record[this.name].push(rec);
                         }
@@ -4284,6 +4286,7 @@ var Katrid;
             prepare(elements) {
                 let atts = this.view.element.querySelector('.btn-toolbar');
                 for (let actions of elements.values()) {
+                    console.log('actions', actions.innerHTML);
                     if (!this.view.toolbarVisible) {
                         actions.remove();
                         continue;
@@ -6178,10 +6181,11 @@ ${Katrid.i18n.gettext('Delete')}
             edit() {
                 this.setState(DataSourceState.editing);
             }
-            insert() {
+            insert(defaultValues) {
                 this.record = null;
                 this.setState(DataSourceState.inserting);
-                return this.datasource.insert().then(() => setTimeout(() => {
+                return this.datasource.insert(true, defaultValues).then(() => setTimeout(() => {
+                    console.log('default values', defaultValues);
                     // put focus into the 1st field
                     this.focus();
                 }));
@@ -6285,6 +6289,16 @@ ${Katrid.i18n.gettext('Delete')}
                                 }
                                 else
                                     Katrid.webApp.loadPage(target.href, false);
+                            }
+                        },
+                        async doFormAction(meth, params) {
+                            try {
+                                me.pendingOperation++;
+                                let res = await me.model.service.rpc(meth, [this.recordId], params);
+                                await me.action._evalResponseAction(res);
+                            }
+                            finally {
+                                me.pendingOperation--;
                             }
                         }
                     },
@@ -10763,6 +10777,7 @@ var Katrid;
                         }
                         else {
                             if (res.result) {
+                                console.log('result', res.result);
                                 let result = res.result;
                                 if (Array.isArray(result) && (result.length === 1))
                                     result = result[0];
