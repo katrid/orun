@@ -2386,7 +2386,6 @@ var Katrid;
             constructor(config) {
                 this.config = config;
                 this.$modifiedRecords = [];
-                this.refreshInterval = 1000;
                 this._fieldChanging = false;
                 this._pendingPromises = [];
                 this.readonly = false;
@@ -2656,8 +2655,6 @@ var Katrid;
                     let controller = new AbortController();
                     let req = () => {
                         let ctx = this.context;
-                        if (this.getContext)
-                            ctx = this.getContext(this);
                         this.model.service.search(params, null, { signal: controller.signal }, ctx)
                             .catch((res) => {
                             return reject(res);
@@ -2669,7 +2666,6 @@ var Katrid;
                             else {
                                 this.offset = 1;
                             }
-                            // this.scope.$apply(() => {
                             if (res.count != null)
                                 this.recordCount = res.count;
                             let data = res.data;
@@ -2685,10 +2681,6 @@ var Katrid;
                                 rec.$index = idx;
                                 return rec;
                             });
-                            // list view uses only groups
-                            //this.scope.groups = this._records;
-                            // this.scope.records = this._records;
-                            // });
                             return resolve(res);
                         })
                             .finally(() => {
@@ -6429,7 +6421,6 @@ var Katrid;
       </div>
     </div>`;
                 let toolbar = Katrid.html(templ);
-                // this.createBreadcrumbs(toolbar);
                 this.createToolbarButtons(toolbar);
                 return toolbar;
             }
@@ -9452,6 +9443,7 @@ var Katrid;
                 this.closeOnChange = true;
                 this.term = '';
                 this.multiple = false;
+                this.allowOpen = false;
                 this._tags = [];
                 this._facets = [];
             }
@@ -9461,8 +9453,12 @@ var Katrid;
                 let prepend = '';
                 let name = this.getAttribute('name');
                 let model = this.getAttribute('data-model');
-                if (this.hasAttribute('allow-open'))
-                    append = `<span class="fa fa-fw fa-folder-open autocomplete-open" v-on:click="openObject('${model}', record.${name}.id)"></span>`;
+                if (this.hasAttribute('allow-open')) {
+                    // show only when filled
+                    append = `<span class="fa fa-fw fa-folder-open autocomplete-open" title="${Katrid.i18n.gettext('Open this object')}" v-on:click="openObject('${model}', record.${name}.id)"></span>`;
+                    // allow open object
+                    this.allowOpen = true;
+                }
                 this.classList.add('form-control');
                 if (this.multiple) {
                     prepend = `<div class="input-dropdown">`;
@@ -9666,10 +9662,16 @@ var Katrid;
                 this.$selectedItem = value;
                 if (!this.input)
                     return;
-                if (value)
+                if (value) {
                     this.input.value = value.text;
-                else
+                    if (this.allowOpen)
+                        this.classList.add('allow-open');
+                }
+                else {
                     this.input.value = '';
+                    if (this.allowOpen)
+                        this.classList.remove('allow-open');
+                }
             }
             get selectedValue() {
                 if (this.$selectedItem)
