@@ -161,6 +161,7 @@ class View(models.Model):
         context['ref'] = ref
         context['exec_scalar'] = exec_scalar
         context['exec_query'] = exec_query
+        context['models'] = apps
         xml = self._get_content(context)
         xml = etree.fromstring(self._get_content(context))
         if self.parent:
