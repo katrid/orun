@@ -159,6 +159,8 @@ class View(models.Model):
         view_cls = self.__class__
         children = view_cls.objects.filter(parent_id=self.pk, mode='extension')
         context['ref'] = ref
+        context['exec_scalar'] = exec_scalar
+        context['exec_query'] = exec_query
         xml = self._get_content(context)
         xml = etree.fromstring(self._get_content(context))
         if self.parent:

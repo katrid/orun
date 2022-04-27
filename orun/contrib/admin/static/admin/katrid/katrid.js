@@ -109,6 +109,7 @@ var Katrid;
                                 this._context[k] = v;
                     }
                 }
+                console.debug('get context', this._context);
                 return this._context;
             }
             doAction(act) {
@@ -1521,6 +1522,34 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    var BI;
+    (function (BI) {
+        function newPlot(el, data, layout, config) {
+            // create new plotly plot
+            if (!layout)
+                layout = {};
+            if (!('hovermode' in layout))
+                layout['hovermode'] = 'closest';
+            // define the default layout separator
+            if (!layout.separators)
+                layout.separators = Katrid.i18n.formats.DECIMAL_SEPARATOR + Katrid.i18n.formats.THOUSAND_SEPARATOR;
+            // if (!layout.colorway)
+            //   layout.colorway = [
+            //     '#86AED1', '#FF99A9', '#A1DE93',
+            //     '#CAC3F7', '#FEE0CC', '#F47C7C', '#88CEFB', '#FBB4C9', '#AFF1F1', '#8DD1F1', '#B3C8C8', '#FCE2C2',
+            //     '#6CB2D1', '#b3c8c8', '#f3cec9', '#64E987', '#cd7eaf', '#a262a9', '#6f4d96', '#4F9EC4', '#3d3b72', '#182844'
+            //   ];
+            if (!config)
+                config = {};
+            if (!('responsive' in config))
+                config['responsive'] = true;
+            return Plotly.newPlot(el, data, layout, config);
+        }
+        BI.newPlot = newPlot;
+    })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
     var Components;
     (function (Components) {
         class Component {
@@ -1932,6 +1961,7 @@ var Katrid;
                 this.$modifiedRecords = [];
                 this.refreshInterval = 1000;
                 this._fieldChanging = false;
+                this._pendingPromises = [];
                 this.readonly = false;
                 this.$modifiedRecords = [];
                 // this.onFieldChange = this.onFieldChange.bind(this);
@@ -1948,7 +1978,7 @@ var Katrid;
                 this.offset = 0;
                 this.offsetLimit = 0;
                 this.requestInterval = DEFAULT_REQUEST_INTERVAL;
-                this.pendingOperation = null;
+                this.pendingTimeout = null;
                 this.pendingRequest = false;
                 this.children = [];
                 this.modifiedData = null;
@@ -1961,8 +1991,9 @@ var Katrid;
                     this.recordId = null;
                 // this.scope.$fieldLog = {};
                 this._records = [];
-                this.pendingPromises = [];
                 this.vm = config.vm;
+                this.domain = config.domain;
+                this.context = config.context;
             }
             get pageIndex() {
                 return this._pageIndex;
@@ -2029,7 +2060,7 @@ var Katrid;
                 this.setRecord({});
                 await this.insert();
                 setTimeout(() => {
-                    clearTimeout(this.pendingOperation);
+                    clearTimeout(this.pendingTimeout);
                     this.setValues(res);
                 }, this.requestInterval);
                 return res;
@@ -2114,7 +2145,7 @@ var Katrid;
                         let args = {
                             field: this.field.name,
                             config: { signal: controller.signal },
-                            context: this.action?.context,
+                            context: this.context,
                             filter: where,
                         };
                         this.parent.model.service.getFieldChoices(args)
@@ -2153,21 +2184,11 @@ var Katrid;
                             this.pendingRequest = false;
                         });
                     };
-                    this.pendingPromises.push(controller);
+                    // add pending abort controller
+                    this._pendingPromises.push(controller);
                     timeout = 0;
                     if (((this.requestInterval > 0) || timeout) && (timeout !== false))
-                        this.pendingOperation = setTimeout(req, timeout || this.requestInterval);
-                    else
-                        req();
-                });
-            }
-            _search(req, timeout) {
-                return new Promise((resolve, reject) => {
-                    let controller = new AbortController();
-                    this.pendingPromises.push(controller);
-                    timeout = 0;
-                    if (((this.requestInterval > 0) || timeout) && (timeout !== false))
-                        this.pendingOperation = setTimeout(req, timeout || this.requestInterval);
+                        this.pendingTimeout = setTimeout(req, timeout || this.requestInterval);
                     else
                         req();
                 });
@@ -2179,7 +2200,6 @@ var Katrid;
                 let fields = options.fields;
                 let timeout = options.timeout;
                 let master = this.masterSource;
-                this.pendingPromises = [];
                 this._params = params;
                 this._page = page;
                 this._fields = fields;
@@ -2188,14 +2208,13 @@ var Katrid;
                 this.state = DataSourceState.loading;
                 page = page || 1;
                 this._pageIndex = page;
-                let domain;
-                if (this.action?.info)
-                    domain = this.action.info.domain;
-                if (this.where)
-                    domain = this.where;
-                else if (domain) {
+                let domain = this.domain;
+                if (typeof domain === 'string')
                     domain = JSON.parse(domain);
-                }
+                else if (!domain)
+                    domain = {};
+                if (this.where)
+                    Object.assign(domain, this.where);
                 if (_.isObject(fields))
                     fields = Object.keys(fields);
                 params = {
@@ -2209,7 +2228,7 @@ var Katrid;
                 return new Promise((resolve, reject) => {
                     let controller = new AbortController();
                     let req = () => {
-                        let ctx;
+                        let ctx = this.context;
                         if (this.getContext)
                             ctx = this.getContext(this);
                         this.model.service.search(params, null, { signal: controller.signal }, ctx)
@@ -2250,10 +2269,11 @@ var Katrid;
                             this.state = DataSourceState.browsing;
                         });
                     };
-                    this.pendingPromises.push(controller);
+                    // add pending abort controller
+                    this._pendingPromises.push(controller);
                     timeout = 0;
                     if (((this.requestInterval > 0) || timeout) && (timeout !== false))
-                        this.pendingOperation = setTimeout(req, timeout || this.requestInterval);
+                        this.pendingTimeout = setTimeout(req, timeout || this.requestInterval);
                     else
                         req();
                 });
@@ -2315,14 +2335,15 @@ var Katrid;
                 this.loadingRecord = false;
                 this._canceled = true;
                 this.pendingRequest = false;
-                clearTimeout(this.pendingOperation);
-                for (let controller of this.pendingPromises)
+                clearTimeout(this.pendingTimeout);
+                for (let controller of this._pendingPromises)
                     try {
                         controller.abort();
                     }
                     catch {
+                        console.debug('Abort signal');
                     }
-                this.pendingPromises = [];
+                this._pendingPromises = [];
             }
             set masterSource(master) {
                 this._masterSource = master;
@@ -2480,7 +2501,7 @@ var Katrid;
                 return new Promise((resolve, reject) => {
                     let _get = () => {
                         let controller = new AbortController();
-                        this.pendingPromises.push(controller);
+                        this._pendingPromises.push(controller);
                         let fields;
                         if (this.fields)
                             fields = Object.keys(this.fields);
@@ -2515,20 +2536,11 @@ var Katrid;
                     if (!timeout && !this.requestInterval)
                         return _get();
                     else
-                        this.pendingOperation = setTimeout(_get, timeout || this.requestInterval);
+                        this.pendingTimeout = setTimeout(_get, timeout || this.requestInterval);
                 });
             }
-            get defaultValues() {
-                return;
-            }
-            set defaultValues(values) {
-                for (let [k, v] of Object.entries(values)) {
-                    if (_.isObject(v) && (k in this.fields)) {
-                        this.fields[k].defaultValue = v;
-                    }
-                }
-            }
             async insert(loadDefaults = true, defaultValues, kwargs) {
+                await Promise.all(this._pendingPromises);
                 this._clearTimeout();
                 for (let child of this.children)
                     child._clearTimeout();
@@ -2544,26 +2556,22 @@ var Katrid;
                 if (loadDefaults) {
                     if (!kwargs)
                         kwargs = {};
-                    kwargs.context = this.action?.context || {};
+                    kwargs.context = this.context;
                     // load default fields values with optional kwargs
                     let controller = new AbortController();
-                    this.pendingPromises.push(controller);
+                    this._pendingPromises.push(controller);
                     res = await this.model.service.getDefaults(kwargs, { signal: controller.signal });
                 }
                 this.state = DataSourceState.inserting;
                 this.record['$str'] = Katrid.i18n.gettext('(New)');
-                console.log('pass default values', defaultValues);
                 let defaults = {};
                 if (this.masterSource && this.field && this.field.defaultValue)
                     Object.assign(defaults, this.field.defaultValue);
                 for (let v of Object.values(this.fields))
                     if (v.defaultValue)
                         defaults[v.name] = v.defaultValue;
-                // TODO dynamic default values
-                // if (this.config.ngDefaultValues)
-                //   Object.assign(defaults, this.scope.$eval(this.config.ngDefaultValues));
-                if (this.action?.context && this.action?.context?.default_values)
-                    Object.assign(defaults, this.action?.context?.default_values);
+                if (this.defaultValues)
+                    Object.assign(defaults, this.defaultValues);
                 if (res)
                     Object.assign(defaults, res);
                 if (defaultValues)
@@ -2726,7 +2734,6 @@ var Katrid;
                 this._record = record;
                 this.setValues(rec);
                 this._record = null;
-                console.log('add record to child', scope.modelValue);
                 // for (let [k, v] of Object.entries(rec))
                 //   record[k] = v;
                 // this.parent.record.$record.addChild(record.$record);
@@ -2821,7 +2828,7 @@ var Katrid;
                 if (!parentRecord || (parentRecord.$state === Data.RecordState.created))
                     return;
                 this.state = DataSourceState.loading;
-                this.pendingOperation = setTimeout(async () => {
+                this.pendingTimeout = setTimeout(async () => {
                     if (parentRecord.id != null) {
                         let data = {};
                         data[this.field.info.field] = parentRecord.id;
@@ -2835,7 +2842,7 @@ var Katrid;
                         parentRecord[this.field.name] = [];
                     }
                     this.state = Katrid.Data.DataSourceState.browsing;
-                }, this.refreshInterval);
+                }, this.requestInterval);
             }
             destroy() {
                 if (this._masterSource)
@@ -2899,7 +2906,7 @@ var Katrid;
              */
             _onFieldChange(field, newValue, record) {
                 if (field.name === this._lastFieldName)
-                    clearTimeout(this.pendingOperation);
+                    clearTimeout(this.pendingTimeout);
                 this._lastFieldName = field.name;
                 let fn = () => {
                     if (!this._fieldChanging)
@@ -2916,7 +2923,7 @@ var Katrid;
                         this._fieldChanging = false;
                     }
                 };
-                this.pendingOperation = setTimeout(fn, 50);
+                this.pendingTimeout = setTimeout(fn, 50);
             }
         }
         Data.DataSource = DataSource;
@@ -4119,6 +4126,7 @@ var Katrid;
                 }
                 else {
                     if (mode === 'list') {
+                        console.log('list', this.info.views.list);
                         let table = new Katrid.Forms.TableView({
                             model: new Katrid.Data.Model({ name: this.model, fields: this.info.views.list.fields }),
                         });
@@ -4684,12 +4692,20 @@ var Katrid;
             }
             createComponent() {
                 let me = this;
+                let computed = {};
+                if (this.parentVm)
+                    computed = {
+                        parent() {
+                            console.log('get parrent', me.parentVm);
+                            return me.parentVm;
+                        }
+                    };
                 return {
                     data() {
                         return me.getComponentData();
                     },
                     methods: {},
-                    computed: {},
+                    computed,
                     created() {
                         // load `created` event listeners
                         for (let def of me._readyEventListeners)
@@ -4711,7 +4727,6 @@ var Katrid;
                     el = templ.firstElementChild.cloneNode(true);
                 }
                 this.scripts = [];
-                console.debug('template', templ.querySelectorAll('script'));
                 for (let script of templ.querySelectorAll('script')) {
                     this.scripts.push(script.text);
                     script.parentNode.removeChild(script);
@@ -4794,7 +4809,7 @@ var Katrid;
                     this._readyEventListeners = [];
                     for (let script of this.scripts) {
                         let setup = eval(`(${script})`);
-                        if (setup) {
+                        if (setup && setup.call) {
                             let def = setup.call(this);
                             if (def.methods)
                                 Object.assign(component.methods, def.methods);
@@ -4969,7 +4984,9 @@ var Katrid;
                 }
                 this.fields = this.model.fields;
                 // init the datasource
-                this.datasource = new Katrid.Data.DataSource({ model: this.model });
+                this.datasource = new Katrid.Data.DataSource({
+                    model: this.model, context: this.action?.context, domain: this.action?.config?.domain,
+                });
                 this.datasource.dataCallback = (data) => this.dataSourceCallback(data);
                 if (info.records)
                     this.records = this.model.fromArray(info.records);
@@ -5099,7 +5116,6 @@ var Katrid;
             }
             createComponent() {
                 let comp = super.createComponent();
-                comp.props = ['parent'];
                 let me = this;
                 Object.assign(comp.methods, {
                     refresh() {
@@ -5123,7 +5139,7 @@ var Katrid;
                     return await me.action.showView(mode);
                 };
                 comp.methods.formButtonClick = function () {
-                    console.log('args', arguments);
+                    console.log('form button click', arguments);
                 };
                 comp.methods.insert = async function () {
                     let view = await this.setViewMode('form');
@@ -6147,7 +6163,6 @@ ${Katrid.i18n.gettext('Delete')}
                     loadingRecord: false,
                     // recordIndex: this.action.recordIndex,
                     // recordCount: this.action.dataSource?.recordCount,
-                    parent: null,
                     changing: this.changing,
                     inserting: this.inserting,
                     editing: this.editing,
@@ -6310,16 +6325,17 @@ ${Katrid.i18n.gettext('Delete')}
                             }
                         }
                     },
-                    computed: {
-                        selection() {
-                            return [this.record];
-                        },
-                        recordId() {
-                            return this.record.id;
-                        },
-                        $fields() {
-                            return me.fields;
-                        }
+                });
+                // override computed props
+                Object.assign(comp.computed, {
+                    selection() {
+                        return [this.record];
+                    },
+                    recordId() {
+                        return this.record.id;
+                    },
+                    $fields() {
+                        return me.fields;
                     },
                 });
                 return comp;
@@ -9582,6 +9598,8 @@ var Katrid;
         }
         async function createDialog(config) {
             let form = config.field.getView('form');
+            form.parentVm = config.parentVm;
+            console.log('parent vm', form.parentVm);
             form.datasource.parent = config.master;
             form.datasource.field = config.field;
             await form.loadPendingViews();
@@ -9627,7 +9645,6 @@ var Katrid;
                     dataOffset: 0,
                     dataOffsetLimit: 0,
                     selectionLength: 0,
-                    parent: null,
                     $editing: false,
                     loading: false,
                     readonly: false,
@@ -9673,6 +9690,7 @@ var Katrid;
                             let form = await createDialog({
                                 index,
                                 field: this.$field,
+                                parentVm: this.$parent,
                                 master: this.$parent.$view.datasource,
                                 options: {
                                     backdrop: 'static',
@@ -9763,6 +9781,7 @@ var Katrid;
                             this.$editing = true;
                             let form = await createDialog({
                                 field: this.$field,
+                                parentVm: this.$parent,
                                 master: this.$parent.$view.datasource,
                                 options: {
                                     backdrop: 'static',
@@ -9828,8 +9847,11 @@ var Katrid;
                     this.records = value;
                 },
             },
-            unmounted() {
-                console.log('component unmount');
+            computed: {
+                parentx() {
+                    console.log('get parent', this.$parent);
+                    return this.$parent;
+                }
             },
             directives: Katrid.directivesRegistry,
         });
@@ -10785,7 +10807,6 @@ var Katrid;
                         }
                         else {
                             if (res.result) {
-                                console.log('result', res.result);
                                 let result = res.result;
                                 if (Array.isArray(result) && (result.length === 1))
                                     result = result[0];

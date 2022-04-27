@@ -225,10 +225,10 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def api_get_defaults(cls, context=None, *args, **kwargs):
         r = {}
-        defaults = context or {}
+        defaults = (context or {}).get('default')
         for f in cls._meta.fields:
-            if 'default_' + f.name in defaults:
-                val = r[f.name] = defaults['default_' + f.name]
+            if defaults and f.name in defaults:
+                val = r[f.name] = defaults[f.name]
                 if val and isinstance(f, models.ForeignKey):
                     r[f.name] = f.remote_field.model.objects.get(pk=val)._api_format_choice()
             elif f.editable:
