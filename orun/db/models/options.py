@@ -324,6 +324,15 @@ class Options:
                     continue
                 if k == 'field_groups' and model._meta.field_groups:
                     model._meta.field_groups.update(v)
+                elif k == 'field_overrides':
+                    for field_name, attrs in meta.field_overrides.items():
+                        f = model._meta.fields[field_name]
+                        for fk, fv in attrs.items():
+                            attr = getattr(f, fk, None)
+                            if callable(attr):
+                                attr(fv)
+                            else:
+                                setattr(f, fk, fv)
                 else:
                     setattr(model._meta, k, v)
 

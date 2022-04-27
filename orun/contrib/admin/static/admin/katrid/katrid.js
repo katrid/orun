@@ -3756,7 +3756,9 @@ var Katrid;
                 if (attrs[':required'])
                     section.setAttribute(':required', attrs[':required']);
                 section.classList.add('form-group');
-                if (this.cols && !isNaN(this.cols))
+                if (attrs.cols)
+                    section.classList.add('col-md-' + attrs.cols);
+                else if (this.cols && !isNaN(this.cols))
                     section.classList.add('col-md-' + this.cols);
                 else if (typeof this.cols === 'string')
                     section.classList.add(this.cols);
@@ -6320,10 +6322,9 @@ var Katrid;
                         // add hook to v-sum attribute
                         if (fieldEl.hasAttribute('v-sum'))
                             this.addSumHook(fld, fieldEl);
-                        if (!fieldEl.hasAttribute('invisible')) {
+                        if (!fieldEl.hasAttribute('invisible'))
                             return fld.formCreate(fieldEl);
-                            // boundField.control = boundField.container.querySelector('.form-field');
-                        }
+                        // boundField.control = boundField.container.querySelector('.form-field');
                     }
                     else
                         console.error(`Field "${name}" not found`);
@@ -6352,8 +6353,10 @@ var Katrid;
                 for (let child of form.querySelectorAll('field')) {
                     if ((child.parentElement.tagName === 'FORM') && (child.parentElement !== form))
                         continue;
-                    if (child.hasAttribute('invisible') || (child.getAttribute('visible') === 'False'))
+                    if (child.hasAttribute('invisible') || (child.getAttribute('visible') === 'false')) {
+                        child.remove();
                         continue;
+                    }
                     let newField = this.renderField(child);
                     if (newField) {
                         child.parentElement.insertBefore(newField, child);

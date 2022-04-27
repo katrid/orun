@@ -2608,6 +2608,9 @@ class ChoiceField(CharField):
         kwargs.setdefault('max_length', 32)
         super(ChoiceField, self).__init__(*args[1:], **kwargs)
 
+    def add_choices(self, items):
+        self.choices += list(items)
+
 
 SelectionField = ChoiceField
 
