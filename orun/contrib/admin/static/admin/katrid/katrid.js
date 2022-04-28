@@ -1869,6 +1869,7 @@ var Katrid;
             }
             async execute() {
                 let queryViewer = document.createElement('query-viewer');
+                queryViewer.className = 'content-container';
                 this.app.element.innerHTML = '';
                 this.app.element.append(queryViewer);
             }
@@ -2016,125 +2017,830 @@ var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
-        class MenuItem {
-            constructor(menu, text = null) {
-                this.menu = menu;
-                this.text = text;
-                if (text === '-') {
-                    this.el = document.createElement('div');
-                    this.el.classList.add('dropdown-divider');
+        class BaseView {
+            constructor(config) {
+                this.config = config;
+                this.dialog = false;
+                this.create(config);
+                if (this.container)
+                    this.render();
+            }
+            create(info) {
+                if (info?.template instanceof HTMLTemplateElement)
+                    this.template = info.template;
+                else if (typeof info?.template === 'string')
+                    this.html = info.template;
+                else if (typeof info?.info?.template === 'string')
+                    this.html = info.info.template;
+                if (info?.container)
+                    this.container = info.container;
+            }
+            _applyDataDefinition(data) {
+                if (this._readyEventListeners)
+                    for (let def of this._readyEventListeners)
+                        if (def.data)
+                            Object.assign(data, def.data);
+                return data;
+            }
+            getComponentData() {
+                let data = {
+                    data: null,
+                };
+                this._applyDataDefinition(data);
+                return data;
+            }
+            createComponent() {
+                let me = this;
+                let computed = {};
+                if (this.parentVm)
+                    computed = {
+                        parent() {
+                            console.log('get parrent', me.parentVm);
+                            return me.parentVm;
+                        }
+                    };
+                return {
+                    data() {
+                        return me.getComponentData();
+                    },
+                    methods: {},
+                    computed,
+                    created() {
+                        // load `created` event listeners
+                        for (let def of me._readyEventListeners)
+                            if (def.created)
+                                def.created.call(this);
+                    },
+                };
+            }
+            cloneTemplate() {
+                let templ, el;
+                if (this.template) {
+                    templ = this.template;
                 }
                 else {
-                    this.el = document.createElement('a');
-                    this.el.classList.add('dropdown-item');
+                    el = templ = Katrid.html(this.html);
                 }
-                this.el.innerHTML = text;
+                if (templ instanceof HTMLTemplateElement) {
+                    templ = templ.content;
+                    el = templ.firstElementChild.cloneNode(true);
+                }
+                this.scripts = [];
+                for (let script of templ.querySelectorAll('script')) {
+                    this.scripts.push(script.text);
+                    script.parentNode.removeChild(script);
+                }
+                return el;
             }
-            addEventListener(type, listener, options) {
-                return this.el.addEventListener(type, listener, options);
+            domTemplate() {
+                let templ = this.cloneTemplate();
+                return templ;
             }
-            get index() {
-                return this.menu.items.indexOf(this);
+            createDialogButtons(buttons) {
+                const defButtons = {
+                    close: {
+                        dismiss: 'modal',
+                        text: Katrid.i18n.gettext('Close'),
+                    },
+                    ok: {
+                        dismiss: 'modal',
+                        text: Katrid.i18n.gettext('OK'),
+                        modalResult: true,
+                    },
+                    cancel: {
+                        dismiss: 'modal',
+                        text: Katrid.i18n.gettext('Cancel'),
+                        modalResult: false,
+                    },
+                };
+                let res = [];
+                for (let b of buttons) {
+                    if (Katrid.isString(b))
+                        b = defButtons[b];
+                    let btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.innerText = b.text;
+                    if (b.modalResult)
+                        btn.setAttribute('v-on:click', '$result = ' + b.modalResult.toString());
+                    else if (b.click)
+                        btn.setAttribute('v-on:click', b.click);
+                    if (b.dismiss)
+                        btn.setAttribute('data-bs-dismiss', b.dismiss);
+                    if (b.class)
+                        btn.className = b.class;
+                    else
+                        btn.className = 'btn btn-outline-secondary';
+                    res.push(btn);
+                }
+                return res;
             }
-        }
-        Forms.MenuItem = MenuItem;
-        class MenuItemSeparator extends MenuItem {
-            constructor(menu) {
-                super(menu, '-');
+            createDialog(content, buttons = ['close']) {
+                let templ = Katrid.html(`
+    <div class="modal" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              {{ title }}
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body data-form data-panel">
+               
+            <div class="clearfix"></div>
+          </div>
+          <div class="modal-footer">
+<!--buttons-->
+          </div>
+        </div>
+      </div>
+    </div>
+      `);
+                templ.querySelector('.modal-body').append(content);
+                let footer = templ.querySelector('.modal-footer');
+                for (let b of this.createDialogButtons(buttons))
+                    footer.append(b);
+                return templ;
             }
-        }
-        Forms.MenuItemSeparator = MenuItemSeparator;
-        class ContextMenu {
-            constructor(container = null) {
-                this.container = container;
-                this.items = [];
-                if (!container)
-                    this.container = document.body;
+            createVm(el) {
+                let component = this.createComponent();
+                if (this.scripts) {
+                    this._readyEventListeners = [];
+                    for (let script of this.scripts) {
+                        let setup = eval(`(${script})`);
+                        if (setup && setup.call) {
+                            let def = setup.call(this);
+                            if (def.methods)
+                                Object.assign(component.methods, def.methods);
+                            if (def.ready || def.created || def.data)
+                                this._readyEventListeners.push(def);
+                        }
+                    }
+                }
+                let vm = Katrid.createVm(component).mount(el);
+                this.vm = vm;
+                // let vForm = el.querySelector('.v-form') as any;
+                return vm;
             }
-            add(item, clickCallback) {
-                let menuItem = this.insert(-1, item);
-                if (menuItem.text !== '-')
-                    menuItem.addEventListener('mouseup', event => {
-                        this.close();
-                        if (clickCallback)
-                            clickCallback(event, menuItem);
-                    });
-                menuItem.addEventListener('mousedown', event => event.stopPropagation());
-                return menuItem;
-            }
-            insert(index, item) {
-                let menuItem;
-                if (Katrid.isString(item))
-                    menuItem = new MenuItem(this, item);
-                else if (item instanceof MenuItem)
-                    menuItem = item;
-                if (index === -1)
-                    this.items.push(menuItem);
-                else
-                    this.items.splice(index, 0, menuItem);
-                return menuItem;
-            }
-            addSeparator() {
-                this.items.push(new MenuItemSeparator(this));
-            }
-            destroyElement() {
-                if (this.el)
-                    this.el.remove();
+            beforeRender(templ) {
+                return templ;
             }
             createElement() {
-                this.el = document.createElement('div');
-                this.el.classList.add('dropdown-menu', 'context-menu');
-                for (let item of this.items)
-                    this.el.append(item.el);
+                if (!this.element) {
+                    this.element = this.beforeRender(this.domTemplate());
+                    this.applyCustomTags(this.element);
+                }
             }
-            show(x, y, target = null) {
-                // create menu element
-                this.destroyElement();
+            applyCustomTags(template) {
+                Katrid.Forms.CustomTag.render(this, template);
+            }
+            render() {
                 this.createElement();
-                // set menu position
-                this.el.style.left = x + 'px';
-                this.el.style.top = y + 'px';
-                this.target = target;
-                this._visible = true;
-                this._eventHook = event => {
-                    if (event.target.parentElement !== this.el)
-                        this.close();
-                };
-                this._eventKeyDownHook = event => {
-                    if (event.keyCode === 27)
-                        this.close();
-                };
-                document.addEventListener('mousedown', this._eventHook);
-                document.addEventListener('wheel', this._eventHook);
-                document.addEventListener('keydown', this._eventKeyDownHook);
-                document.body.append(this.el);
-                $(this.el).show();
+                if (!this.vm)
+                    this.createVm(this.element);
+                if (this.container) {
+                    this.container.append(this.element);
+                    // dispatch ready event listeners
+                    if (this._readyEventListeners) {
+                        for (let event of this._readyEventListeners)
+                            if (event.ready)
+                                event.ready.call(this.vm, this);
+                    }
+                }
+                return this.element;
             }
-            close() {
-                // unhook event
-                document.removeEventListener('mousedown', this._eventHook);
-                document.removeEventListener('wheel', this._eventHook);
-                document.removeEventListener('keydown', this._eventKeyDownHook);
-                // remove element
-                this.el.remove();
-                this._eventHook = null;
+            closeDialog() {
+                this._modal.hide();
             }
-            get visible() {
-                return this._visible;
+            /** Render the view content into a container */
+            renderTo(container) {
+                this.container = container;
+                this.render();
+            }
+            async onHashChange(params) {
             }
         }
-        Forms.ContextMenu = ContextMenu;
+        Forms.BaseView = BaseView;
+        function compileButtons(container) {
+            let sendFileCounter = 0;
+            return container.querySelectorAll('button').forEach((btn, index) => {
+                let $btn = $(btn);
+                let type = $btn.attr('type');
+                if (!$btn.attr('type') || ($btn.attr('type') === 'object'))
+                    $btn.attr('type', 'button');
+                if (type === 'object') {
+                    let sendFile = $btn.attr('send-file');
+                    $btn.attr('button-object', $btn.attr('name'));
+                    if (sendFile === undefined) {
+                        $btn.attr('v-on:click', `actionClick(selection, '${$btn.attr('name')}', $event)`);
+                    }
+                    else {
+                        let idSendFile = `__send_file_${++sendFileCounter}`;
+                        $btn.parent().append(`<input id="${idSendFile}" type="file" style="display: none" v-on:change="sendFile('${$btn.attr('name')}', $event.target)"/>`);
+                        $btn.attr('send-file', $btn.attr('name'));
+                        $btn.attr('onclick', `$('#${idSendFile}').trigger('click')`);
+                    }
+                }
+                else if (type === 'tag') {
+                    $btn.attr('button-tag', $btn.attr('name'));
+                    $btn.attr('onclick', `Katrid.Actions.ClientAction.tagButtonClick($(this))`);
+                }
+                if (!$btn.attr('class'))
+                    $btn.addClass('btn btn-outline-secondary');
+            });
+        }
+        Forms.compileButtons = compileButtons;
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        Forms.searchModes = ['table', 'card'];
+        Forms.registry = {};
+        class ModelView extends Forms.BaseView {
+            // protected _modifiedRecords: any[];
+            constructor(info) {
+                super(info);
+                this.pendingOperation = 0;
+                this._active = false;
+            }
+            /** Create views instances based on template strings */
+            static fromTemplate(action, model, template) {
+                return new Katrid.Forms.Views.registry[this.viewType]({ action, model, template });
+            }
+            static createViewModeButton(container) {
+            }
+            async deleteSelection(sel) {
+                // auto apply destroyed records
+                if ((((sel.length === 1) && confirm(Katrid.i18n.gettext('Confirm delete record?'))) ||
+                    ((sel.length > 1) && confirm(Katrid.i18n.gettext('Confirm delete records?')))) && sel) {
+                    let res = await this.datasource.delete(sel.map(rec => rec.id));
+                    Katrid.Forms.Dialogs.Alerts.success(Katrid.i18n.gettext('Record(s) deleted successfully'));
+                    this.refresh();
+                    return true;
+                }
+            }
+            create(info) {
+                this.action = info.action;
+                this._readonly = true;
+                let viewInfo = info.viewInfo;
+                if (info.model)
+                    this.model = info.model;
+                else if (info.name || info.action?.modelName)
+                    this.model = new Katrid.Data.Model({ name: info.name || info.action.modelName, fields: info.fields || viewInfo?.fields });
+                else if (info.fields) {
+                    // Create the model based on specified fields
+                    this.model = new Katrid.Data.Model({ fields: info.fields, name: this.action?.modelName });
+                }
+                else if (viewInfo?.fields || viewInfo?.info?.fields) {
+                    console.log(viewInfo);
+                    this.model = new Katrid.Data.Model({ name: viewInfo.info.name, fields: viewInfo.fields || viewInfo.info.fields });
+                    console.log('create model', this.model);
+                }
+                this.fields = this.model.fields;
+                // init the datasource
+                this.datasource = new Katrid.Data.DataSource({
+                    model: this.model, context: this.action?.context, domain: this.action?.config?.domain,
+                });
+                this.datasource.dataCallback = (data) => this.dataSourceCallback(data);
+                if (info.records)
+                    this.records = this.model.fromArray(info.records);
+                else
+                    this.records = null;
+                if ((this.toolbarVisible == null) && this.action)
+                    this.toolbarVisible = true;
+                else
+                    this.toolbarVisible = info.toolbarVisible;
+                super.create(info);
+            }
+            dataSourceCallback(data) {
+                if (data.record)
+                    this.record = data.record;
+                else if (data.records)
+                    this.records = data.records;
+            }
+            createDialog(content, buttons = ['close']) {
+                let el = super.createDialog(content, buttons);
+                el.setAttribute('data-model', this.model.name);
+                return el;
+            }
+            get records() {
+                return this._records;
+            }
+            set records(value) {
+                this._records = value;
+                if (value)
+                    this.recordCount = value.length;
+                else
+                    this.recordCount = null;
+                if (this.vm)
+                    this.vm.records = value;
+            }
+            get recordCount() {
+                return this._recordCount;
+            }
+            set recordCount(value) {
+                this._recordCount = value;
+                if (this.vm)
+                    this.vm.recordCount = value;
+                if (this.action?.searchView?.vm)
+                    this.action.searchView.vm.recordCount = value;
+            }
+            get active() {
+                return this._active;
+            }
+            set active(value) {
+                this._active = value;
+                this.setActive(value);
+            }
+            setActive(value) {
+            }
+            getComponentData() {
+                let data = super.getComponentData();
+                data.records = this.records;
+                data.pendingRequest = false;
+                return data;
+            }
+            get readonly() {
+                return this._readonly;
+            }
+            set readonly(value) {
+                this._readonly = value;
+                if (value) {
+                    this.element.classList.add('readonly');
+                    this.element.classList.remove('editable');
+                }
+                else {
+                    this.element.classList.add('editable');
+                    this.element.classList.remove('readonly');
+                }
+            }
+            async ready() {
+                // if (this.action.dataSource && (this.action.recordIndex >= 0)) {
+                //   this.dataSource._records = this.action.dataSource.records;
+                //   this.dataSource.recordIndex = this.action.recordIndex;
+                // } else if (this.action.params?.id && !this.dataSource.inserting)
+                //   this.dataSource.get(this.action.params.id);
+                // else if (!this.dataSource.inserting)
+                //   this.dataSource.insert();
+            }
+            refresh() {
+                // this.dataSource.get(this.dataSource.recordId);
+                this.datasource.refresh();
+            }
+            _search(options) {
+                if (options.id)
+                    return this.datasource.get({ id: options.id, timeout: options.timeout });
+                return this.datasource.search({ where: options.where, page: options.page, limit: options.limit });
+            }
+            _mergeHeader(parent, header) {
+                for (let child of Array.from(header.children)) {
+                    if (child.tagName === 'HEADER')
+                        this._mergeHeader(parent, child);
+                    else {
+                        header.removeChild(child);
+                        parent.append(child);
+                    }
+                }
+            }
+            mergeHeader(parent, container) {
+                let headerEl = container.querySelector('header');
+                Forms.compileButtons(container);
+                if (headerEl) {
+                    // let statusField = headerEl.querySelector('field[name=status]');
+                    // if (statusField)
+                    //   statusField.setAttribute('status-field', 'status-field');
+                    headerEl.remove();
+                    this._mergeHeader(parent, headerEl);
+                }
+                return parent;
+            }
+            _vmCreated(vm) {
+                vm.$view = this;
+                vm.$fields = this.fields;
+                this.datasource.vm = vm;
+            }
+            async doViewAction(action, target) {
+                return this._evalResponseAction(await this.model.service.doViewAction({ action_name: action, target }));
+            }
+            async _evalResponseAction(res) {
+                if (res?.open) {
+                    window.open(res.open);
+                }
+                return res;
+            }
+            createComponent() {
+                let comp = super.createComponent();
+                let me = this;
+                Object.assign(comp.methods, {
+                    refresh() {
+                        me.refresh();
+                    },
+                    nextPage() {
+                        me.datasource.nextPage();
+                    },
+                    rpc(methodName, params) {
+                        return me.model.service.rpc(methodName, params.args, params.kwargs);
+                    },
+                    doViewAction(action, target) {
+                        return me.doViewAction(action, target);
+                    },
+                    async deleteSelection() {
+                        if (await me.deleteSelection(this.selection))
+                            this.selection = [];
+                    },
+                    sum(iterable, member) {
+                        let res = 0;
+                        for (let obj of iterable)
+                            res += obj[member] || 0;
+                        return res;
+                    }
+                });
+                comp.methods.setViewMode = async function (mode) {
+                    return await me.action.showView(mode);
+                };
+                comp.methods.formButtonClick = function () {
+                    console.log('form button click', arguments);
+                };
+                comp.methods.insert = async function () {
+                    let view = await this.setViewMode('form');
+                    view.vm.insert();
+                };
+                comp.computed.$fields = function () {
+                    return me.fields;
+                };
+                comp.created = function () {
+                    me._vmCreated(this);
+                };
+                return comp;
+            }
+            getViewType() {
+                return Object.getPrototypeOf(this).constructor.viewType;
+            }
+            autoCreateView() {
+                let el = document.createElement(this.getViewType() + '-view');
+                for (let f of Object.values(this.model.fields)) {
+                    let field = document.createElement('field');
+                    field.setAttribute('name', f.name);
+                    el.append(field);
+                }
+                return el;
+            }
+            domTemplate() {
+                // auto create view
+                if (!this.template && !this.html)
+                    return this.autoCreateView();
+                return super.domTemplate();
+            }
+            beforeRender(template) {
+                // save and remove the original header to add it to content-scroll later
+                let header = template.querySelector(':scope > header');
+                Forms.compileButtons(template);
+                if (header)
+                    template.removeChild(header);
+                let templ = this.renderTemplate(template);
+                if (this.dialog)
+                    return this.createDialog(templ, this.dialogButtons);
+                let actionView = document.createElement('div');
+                actionView.className = 'view-content';
+                let viewContent = document.createElement('div');
+                viewContent.classList.add('action-view-content', 'content-scroll');
+                if (this.toolbarVisible)
+                    actionView.append(this.createToolbar());
+                // merge header
+                let newHeader = document.createElement('div');
+                newHeader.className = 'content-container-heading';
+                if (header)
+                    this._mergeHeader(newHeader, header);
+                // viewContent.append(newHeader);
+                let content = document.createElement('div');
+                content.className = 'content no-padding';
+                content.append(newHeader);
+                content.append(templ);
+                viewContent.append(content);
+                actionView.append(viewContent);
+                // viewContent.append(content);
+                // viewContent.append(templ);
+                return actionView;
+            }
+            renderTemplate(template) {
+                return template;
+            }
+            // protected createElement() {
+            //   return this.domTemplate();
+            // }
+            createToolbar() {
+                let el = document.createElement('div');
+                el.className = 'toolbar';
+                return el;
+            }
+        }
+        Forms.ModelView = ModelView;
+        class RecordCollectionView extends ModelView {
+            constructor(info) {
+                super(info);
+                this.autoLoad = true;
+            }
+            create(info) {
+                super.create(info);
+                this.recordGroups = info.recordGroups || null;
+            }
+            async _recordClick(record, index) {
+                if (this.dialog) {
+                    this.vm.$result = record;
+                    this.closeDialog();
+                }
+                else {
+                    this.record = record;
+                    if (this.action) {
+                        let formView = await this.action.showView('form');
+                        formView.records = this.vm.records;
+                        // formView.record = record;
+                        formView.recordIndex = index;
+                    }
+                }
+            }
+            nextPage() {
+                this.datasource.nextPage();
+            }
+            prevPage() {
+                this.datasource.prevPage();
+            }
+            createComponent() {
+                let comp = super.createComponent();
+                let me = this;
+                comp.methods.recordClick = this.config.recordClick || async function (record, index, event) {
+                    await me._recordClick(record, index);
+                };
+                comp.methods.toggleGroup = function (group) {
+                    if (group.$expanded)
+                        me.collapseGroup(group);
+                    else
+                        me.expandGroup(group);
+                };
+                return comp;
+            }
+            setActive(value) {
+                if (this._searchView) {
+                    let btn = this._searchView.element.querySelector('.btn-view-' + Object.getPrototypeOf(this).constructor.viewType);
+                    if (btn) {
+                        if (value)
+                            btn.classList.add('active');
+                        else
+                            btn.classList.remove('active');
+                    }
+                }
+            }
+            get searchView() {
+                return this._searchView;
+            }
+            set searchView(value) {
+                this._searchView = value;
+                if (value && this.toolbarVisible) {
+                    this.setSearchView(value);
+                    value.resultView = this;
+                }
+            }
+            dataSourceCallback(data) {
+                super.dataSourceCallback(data);
+                if (this._searchView) {
+                    this._searchView.vm.dataOffset = this.datasource.offset;
+                    this._searchView.vm.dataOffsetLimit = this.datasource.offsetLimit;
+                    this._searchView.vm.recordCount = this.datasource.recordCount;
+                }
+            }
+            setSearchView(searchView) {
+                // render the search view
+                if (this.element) {
+                    let div = this.element.querySelector('.search-view-area');
+                    if (div) {
+                        div.innerHTML = '';
+                        div.append(searchView.element);
+                    }
+                }
+            }
+            getComponentData() {
+                let data = super.getComponentData();
+                data.selection = [];
+                data.groups = this.prepareGroup(this.recordGroups);
+                data.recordCount = this.recordCount;
+                return data;
+            }
+            prepareGroup(groups) {
+                return groups;
+            }
+            async applyGroups(groups, params) {
+                // let res = await this.dataSource.groupBy(groups, params);
+                // await this.groupBy(res);
+            }
+            _addRecordsToGroup(index, list) {
+            }
+            /**
+             * Expands a group
+             */
+            async expandGroup(group) {
+                group.$expanded = true;
+                let idx = this.vm.groups.indexOf(group);
+                // check if data is cached
+                let children = group.$children;
+                if (!children) {
+                    // load from adapter api
+                }
+                let groups = this.vm.groups;
+                this.vm.groups = [...groups.slice(0, idx + 1), ...children, ...groups.slice(idx + 1)];
+            }
+            /**
+             * Expands all groups
+             */
+            expandAll() {
+                for (let g of this.vm.groups) {
+                    if (g.$hasChildren && !g.$expanded) {
+                        this.expandGroup(g);
+                    }
+                }
+            }
+            /**
+             * Collapses all groups
+             */
+            collapseAll() {
+                for (let g of this.vm.groups)
+                    if (g.$hasChildren && g.$expanded)
+                        this.collapseGroup(g);
+            }
+            /**
+             * Collapses a group
+             */
+            collapseGroup(group) {
+                let idx = this.vm.groups.indexOf(group);
+                let groups = this.vm.groups;
+                for (let sub of group.$children) {
+                    if (!sub.$hasChildren)
+                        break;
+                    else if (sub.$expanded)
+                        this.collapseGroup(sub);
+                }
+                groups.splice(idx + 1, group.$children.length);
+                group.$expanded = false;
+            }
+            // async groupBy(data: any[]);
+            async setSearchParams(params) {
+                console.log('set empty params', params);
+                let p = {};
+                if (this.action.info?.domain)
+                    p = JSON.parse(this.action.info.domain);
+                for (let [k, v] of Object.entries(p)) {
+                    let arg = {};
+                    arg[k] = v;
+                    params.push(arg);
+                }
+                console.log('params', params);
+                await this.datasource.search({ where: params });
+            }
+            createToolbar() {
+                let templ = `<div class="data-heading panel panel-default">
+      <div class="panel-body">
+        <div class="row">
+        <div class="col-md-6">
+        
+          <action-navbar></action-navbar>
+          <p class="help-block"></p>
+          <div class="toolbar">
+            <div class="toolbar-action-buttons"></div>
+        </div>
+      </div>
+          <div class="search-view-area col-md-6"></div>
+        </div>
+      </div>
+    </div>`;
+                let toolbar = Katrid.html(templ);
+                toolbar.querySelector('action-navbar').actionManager = this.action.actionManager;
+                this.createToolbarButtons(toolbar);
+                return toolbar;
+            }
+            createToolbarButtons(container) {
+                let parent = container.querySelector('.toolbar-action-buttons');
+                let btnCreate = document.createElement('button');
+                btnCreate.className = 'btn btn-primary btn-action-create';
+                btnCreate.innerText = Katrid.i18n.gettext('Create');
+                btnCreate.setAttribute('v-on:click', 'insert()');
+                parent.append(btnCreate);
+                if (this.config?.toolbar?.print) {
+                    // print
+                    let btnPrint = document.createElement('div');
+                    btnPrint.classList.add('btn-group');
+                    btnPrint.innerHTML = `<button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" name="print" data-bs-toggle="dropdown" aria-haspopup="true">
+        ${Katrid.i18n.gettext('Print')} <span class="caret"></span>
+      </button>
+      <div class="dropdown-menu">
+        <a class="dropdown-item" v-on:click="autoReport()">${Katrid.i18n.gettext('Auto Report')}</a>
+      </div>`;
+                    let dropdown = btnPrint.querySelector('.dropdown-menu');
+                    for (let bindingAction of this.config?.toolbar?.print) {
+                        let a = document.createElement('a');
+                        a.classList.add('dropdown-item');
+                        a.setAttribute('data-id', bindingAction.id);
+                        a.innerText = bindingAction.name;
+                        dropdown.append(a);
+                    }
+                    parent.append(btnPrint);
+                }
+                // refresh
+                let btnRefresh = document.createElement('button');
+                btnRefresh.type = 'button';
+                btnRefresh.classList.add('btn', 'toolbtn');
+                btnRefresh.innerHTML = '<i class="fas fa-redo-alt"></i>';
+                btnRefresh.title = Katrid.i18n.gettext('Refresh');
+                btnRefresh.setAttribute('v-on:click', 'refresh()');
+                parent.append(btnRefresh);
+                // actions
+                let btnActions = document.createElement('div');
+                btnActions.classList.add('btn-group');
+                btnActions.innerHTML = `<div class="dropdown">
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" v-show="selectionLength"
+                aria-haspopup="true">
+          ${Katrid.i18n.gettext('Action')} <span class="caret"></span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-actions">
+          <a class="dropdown-item" v-on:click="deleteSelection()">
+            <i class="fa fa-fw fa-trash-o"></i> ${Katrid.i18n.gettext('Delete')}
+          </a>
+          <!-- replace-actions -->
+        </div>
+      </div>`;
+                parent.append(btnActions);
+                return parent;
+            }
+            get $modalResult() {
+                return this.vm.$result;
+            }
+            set $modalResult(value) {
+                this.vm.$result = value;
+            }
+            showDialog(options) {
+                if (!options)
+                    options = {};
+                if (options.backdrop === undefined)
+                    options.backdrop = 'static';
+                this.dialog = true;
+                return new Promise(async (resolve, reject) => {
+                    let el = this.element;
+                    if (!el)
+                        el = this.render();
+                    $(el).modal(options)
+                        .on('hidden.bs.modal', () => {
+                        resolve(this.vm.$modalResult);
+                        $(el).data('bs.modal', null);
+                        el.remove();
+                    });
+                    // if (options?.edit)
+                    //   this.vm.dataSource.edit();
+                });
+            }
+            async ready() {
+                if (!this.records) {
+                    return this.datasource.open();
+                }
+                else {
+                    this.refresh();
+                }
+            }
+        }
+        Forms.RecordCollectionView = RecordCollectionView;
+        class ActionViewElement extends Katrid.WebComponent {
+            create() {
+                this.classList.add('action-view');
+            }
+        }
+        Forms.ActionViewElement = ActionViewElement;
+        Katrid.define('action-view', ActionViewElement);
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            Views.registry = {};
+            function fromTemplates(action, model, templates) {
+                let res = {};
+                for (let [k, t] of Object.entries(templates)) {
+                    res[k] = Views.registry[k].fromTemplate(action, model, t);
+                }
+                return res;
+            }
+            Views.fromTemplates = fromTemplates;
+        })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 /// <reference path="../core/app.ts"/>
-/// <reference path="../forms/contextmenu.ts"/>
+/// <reference path="../forms/index.ts"/>
+/// <reference path="../forms/model.ts"/>
 var Katrid;
 (function (Katrid) {
     var BI;
     (function (BI) {
-        var ContextMenu = Katrid.Forms.ContextMenu;
-        // import SearchViewElement = Katrid.Forms.Views.Search.SearchViewElement;
-        class QueryView extends HTMLElement {
+        class _QueryView extends HTMLElement {
             get queryId() {
                 return this._queryId;
             }
@@ -2229,8 +2935,119 @@ var Katrid;
                 navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
             }
         }
+        BI._QueryView = _QueryView;
+        // Katrid.define('query-view', QueryView);
+        class QueryView extends Katrid.Forms.RecordCollectionView {
+            get queryId() {
+                return this._queryId;
+            }
+            set queryId(value) {
+                this._queryId = value;
+                if (value) {
+                    this.queryChange(value);
+                }
+            }
+            async queryChange(query) {
+                $(this).empty();
+                // this.searchView = <SearchViewElement>document.createElement('search-view');
+                // this.searchView.addEventListener('searchUpdate', () => {
+                //   this.refresh(query, this.searchView.getParams());
+                // })
+                // this.append(this.searchView);
+                let container = document.createElement('div');
+                container.classList.add('table-responsive');
+                // let res = await this.refreshQuery(query);
+                // render the result on table
+                // transform result to list of objects
+                // this.action.search = this.getSearchView(query);
+                // this.$scope.action.views.search = this.$scope.action.search;
+                // this.renderSearch();
+                // this.renderTable(res);
+                // this.$scope.$apply();
+            }
+            async refreshQuery(query, params) {
+                $(this.container).empty();
+                let res = await Katrid.Services.Query.read({ id: query, details: true, params });
+                let fields = this.fields = res.fields;
+                // this.searchView.fields = this.fields = Katrid.Data.Fields.fromArray(res.fields);
+                this.fieldList = Object.values(this.fields);
+                // for (let f of res.fields)
+                // f.filter = this.getFilter(f);
+                let _toObject = (fields, values) => {
+                    let r = {}, i = 0;
+                    for (let f of fields) {
+                        r[f.name] = values[i];
+                        i++;
+                    }
+                    return r;
+                };
+                // this.$scope.records = res.data.map(row => _toObject(res.fields, row));
+                // this.$scope.$apply();
+                return res;
+            }
+            async loadData(data) {
+                let table = this.table = document.createElement('table');
+                table.classList.add('table', 'table-hover');
+                let thead = table.createTHead();
+                let thr = thead.insertRow(0);
+                let tbody = table.createTBody();
+                for (let f of this.fieldList) {
+                    let th = document.createElement('th');
+                    if (f.type)
+                        th.className = f.type;
+                    th.innerText = f.caption;
+                    thr.append(th);
+                }
+                for (let row of data) {
+                    let tr = document.createElement('tr');
+                    let i = 0;
+                    for (let col of row) {
+                        let field = this.fieldList[i];
+                        let td = document.createElement('td');
+                        if (_.isNumber(col))
+                            col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
+                        else if (field.type === 'DateField')
+                            col = moment(col).format('DD/MM/YYYY');
+                        else if (field.type === 'DateTimeField')
+                            col = moment(col).format('DD/MM/YYYY HH:mm');
+                        if (field.type)
+                            td.className = field.type;
+                        td.innerText = col;
+                        tr.append(td);
+                        i++;
+                    }
+                    tbody.append(tr);
+                }
+                this.element.append(table);
+                table.addEventListener('contextmenu', evt => this.contextMenu(evt));
+                // this.searchView.render();
+            }
+            async ready() {
+                this.fieldList = Object.values(this.fields);
+                this.element = document.createElement('div');
+                this.element.classList.add('table-responsive');
+                this.loadData(this.data);
+                let searchView = new Katrid.Forms.SearchView({ fields: this.fields });
+                searchView.renderTo(this.container);
+                this.container.append(this.element);
+            }
+            contextMenu(evt) {
+                evt.stopPropagation();
+                evt.preventDefault();
+                // create context menu
+                let menu = new Katrid.Forms.ContextMenu();
+                menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => this.copyToClipboard());
+                // menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => this.filterByFieldContent(td, rec));
+                // menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteRow());
+                // menu.add('Arquivar', this.copyClick);
+                menu.show(evt.pageX, evt.pageY);
+            }
+            copyToClipboard() {
+                navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
+            }
+        }
+        QueryView.viewType = 'query';
         BI.QueryView = QueryView;
-        Katrid.define('query-view', QueryView);
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
 /// <reference path="../core/app.ts"/>
@@ -2238,14 +3055,14 @@ var Katrid;
 (function (Katrid) {
     var BI;
     (function (BI) {
-        class QueryViewer extends HTMLElement {
-            connectedCallback() {
-                this.innerHTML = `<div class="col-12"><h5>Visualizador de Consultas</h5><div class="toolbar"><select id="select-query" class="form-control"></select></div></div><query-view class="col-12"></query-view>`;
+        class QueryViewer extends Katrid.WebComponent {
+            create() {
+                this.innerHTML = `<div class="col-12"><h5>Visualizador de Consultas</h5><div class="toolbar"><select id="select-query" class="form-select"></select></div></div><div class="query-view col-12"></div>`;
                 this.load();
             }
             async load() {
                 let sel = this.querySelector('#select-query');
-                this.queryView = this.querySelector('query-view');
+                this.container = this.querySelector('.query-view');
                 let res = await Katrid.Services.Query.all();
                 if (res.data) {
                     // group items
@@ -2263,13 +3080,28 @@ var Katrid;
                         sel.append(g);
                     }
                 }
-                sel.addEventListener('change', () => this.queryId = sel.value);
-            }
-            set queryId(value) {
-                this.queryView.queryId = value;
-            }
-            get queryId() {
-                return this.queryView.queryId;
+                sel.addEventListener('change', async () => {
+                    $(this.container).empty();
+                    let res = await Katrid.Services.Query.read({ id: sel.value, details: true, params: {} });
+                    let fields = res.fields;
+                    // this.searchView.fields = this.fields = Katrid.Data.Fields.fromArray(res.fields);
+                    let fieldList = Object.values(fields);
+                    // for (let f of res.fields)
+                    // f.filter = this.getFilter(f);
+                    let _toObject = (fields, values) => {
+                        let r = {}, i = 0;
+                        for (let f of fields) {
+                            r[f.name] = values[i];
+                            i++;
+                        }
+                        return r;
+                    };
+                    let queryView = new BI.QueryView({ fields });
+                    queryView.data = res.data;
+                    // queryView.queryId = sel.value;
+                    queryView.container = this.container;
+                    queryView.ready();
+                });
             }
         }
         BI.QueryViewer = QueryViewer;
@@ -4502,7 +5334,7 @@ var Katrid;
             }
             setElement(el) {
                 if (el && el.hasAttribute('allow-paste'))
-                    this.allowPaste = true;
+                    this.pasteAllowed = true;
             }
             setValue(record, value, datasource) {
                 let child = datasource.childByName(this.name);
@@ -4565,6 +5397,120 @@ var Katrid;
         Data.OneToManyField = OneToManyField;
         Katrid.Data.Fields.registry.OneToManyField = OneToManyField;
     })(Data = Katrid.Data || (Katrid.Data = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        class MenuItem {
+            constructor(menu, text = null) {
+                this.menu = menu;
+                this.text = text;
+                if (text === '-') {
+                    this.el = document.createElement('div');
+                    this.el.classList.add('dropdown-divider');
+                }
+                else {
+                    this.el = document.createElement('a');
+                    this.el.classList.add('dropdown-item');
+                }
+                this.el.innerHTML = text;
+            }
+            addEventListener(type, listener, options) {
+                return this.el.addEventListener(type, listener, options);
+            }
+            get index() {
+                return this.menu.items.indexOf(this);
+            }
+        }
+        Forms.MenuItem = MenuItem;
+        class MenuItemSeparator extends MenuItem {
+            constructor(menu) {
+                super(menu, '-');
+            }
+        }
+        Forms.MenuItemSeparator = MenuItemSeparator;
+        class ContextMenu {
+            constructor(container = null) {
+                this.container = container;
+                this.items = [];
+                if (!container)
+                    this.container = document.body;
+            }
+            add(item, clickCallback) {
+                let menuItem = this.insert(-1, item);
+                if (menuItem.text !== '-')
+                    menuItem.addEventListener('mouseup', event => {
+                        this.close();
+                        if (clickCallback)
+                            clickCallback(event, menuItem);
+                    });
+                menuItem.addEventListener('mousedown', event => event.stopPropagation());
+                return menuItem;
+            }
+            insert(index, item) {
+                let menuItem;
+                if (Katrid.isString(item))
+                    menuItem = new MenuItem(this, item);
+                else if (item instanceof MenuItem)
+                    menuItem = item;
+                if (index === -1)
+                    this.items.push(menuItem);
+                else
+                    this.items.splice(index, 0, menuItem);
+                return menuItem;
+            }
+            addSeparator() {
+                this.items.push(new MenuItemSeparator(this));
+            }
+            destroyElement() {
+                if (this.el)
+                    this.el.remove();
+            }
+            createElement() {
+                this.el = document.createElement('div');
+                this.el.classList.add('dropdown-menu', 'context-menu');
+                for (let item of this.items)
+                    this.el.append(item.el);
+            }
+            show(x, y, target = null) {
+                // create menu element
+                this.destroyElement();
+                this.createElement();
+                // set menu position
+                this.el.style.left = x + 'px';
+                this.el.style.top = y + 'px';
+                this.target = target;
+                this._visible = true;
+                this._eventHook = event => {
+                    if (event.target.parentElement !== this.el)
+                        this.close();
+                };
+                this._eventKeyDownHook = event => {
+                    if (event.keyCode === 27)
+                        this.close();
+                };
+                document.addEventListener('mousedown', this._eventHook);
+                document.addEventListener('wheel', this._eventHook);
+                document.addEventListener('keydown', this._eventKeyDownHook);
+                document.body.append(this.el);
+                $(this.el).show();
+            }
+            close() {
+                // unhook event
+                document.removeEventListener('mousedown', this._eventHook);
+                document.removeEventListener('wheel', this._eventHook);
+                document.removeEventListener('keydown', this._eventKeyDownHook);
+                // remove element
+                this.el.remove();
+                this._eventHook = null;
+            }
+            get visible() {
+                return this._visible;
+            }
+        }
+        Forms.ContextMenu = ContextMenu;
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -4974,245 +5920,6 @@ var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
-        class BaseView {
-            constructor(config) {
-                this.config = config;
-                this.dialog = false;
-                this.create(config);
-                if (this.container)
-                    this.render();
-            }
-            create(info) {
-                if (info?.template instanceof HTMLTemplateElement)
-                    this.template = info.template;
-                else if (typeof info?.template === 'string')
-                    this.html = info.template;
-                else if (typeof info?.info?.template === 'string')
-                    this.html = info.info.template;
-                if (info?.container)
-                    this.container = info.container;
-            }
-            _applyDataDefinition(data) {
-                if (this._readyEventListeners)
-                    for (let def of this._readyEventListeners)
-                        if (def.data)
-                            Object.assign(data, def.data);
-                return data;
-            }
-            getComponentData() {
-                let data = {
-                    data: null,
-                };
-                this._applyDataDefinition(data);
-                return data;
-            }
-            createComponent() {
-                let me = this;
-                let computed = {};
-                if (this.parentVm)
-                    computed = {
-                        parent() {
-                            console.log('get parrent', me.parentVm);
-                            return me.parentVm;
-                        }
-                    };
-                return {
-                    data() {
-                        return me.getComponentData();
-                    },
-                    methods: {},
-                    computed,
-                    created() {
-                        // load `created` event listeners
-                        for (let def of me._readyEventListeners)
-                            if (def.created)
-                                def.created.call(this);
-                    },
-                };
-            }
-            cloneTemplate() {
-                let templ, el;
-                if (this.template) {
-                    templ = this.template;
-                }
-                else {
-                    el = templ = Katrid.html(this.html);
-                }
-                if (templ instanceof HTMLTemplateElement) {
-                    templ = templ.content;
-                    el = templ.firstElementChild.cloneNode(true);
-                }
-                this.scripts = [];
-                for (let script of templ.querySelectorAll('script')) {
-                    this.scripts.push(script.text);
-                    script.parentNode.removeChild(script);
-                }
-                return el;
-            }
-            domTemplate() {
-                let templ = this.cloneTemplate();
-                return templ;
-            }
-            createDialogButtons(buttons) {
-                const defButtons = {
-                    close: {
-                        dismiss: 'modal',
-                        text: Katrid.i18n.gettext('Close'),
-                    },
-                    ok: {
-                        dismiss: 'modal',
-                        text: Katrid.i18n.gettext('OK'),
-                        modalResult: true,
-                    },
-                    cancel: {
-                        dismiss: 'modal',
-                        text: Katrid.i18n.gettext('Cancel'),
-                        modalResult: false,
-                    },
-                };
-                let res = [];
-                for (let b of buttons) {
-                    if (Katrid.isString(b))
-                        b = defButtons[b];
-                    let btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.innerText = b.text;
-                    if (b.modalResult)
-                        btn.setAttribute('v-on:click', '$result = ' + b.modalResult.toString());
-                    else if (b.click)
-                        btn.setAttribute('v-on:click', b.click);
-                    if (b.dismiss)
-                        btn.setAttribute('data-bs-dismiss', b.dismiss);
-                    if (b.class)
-                        btn.className = b.class;
-                    else
-                        btn.className = 'btn btn-outline-secondary';
-                    res.push(btn);
-                }
-                return res;
-            }
-            createDialog(content, buttons = ['close']) {
-                let templ = Katrid.html(`
-    <div class="modal" tabindex="-1" role="dialog">
-      <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">
-              {{ title }}
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body data-form data-panel">
-               
-            <div class="clearfix"></div>
-          </div>
-          <div class="modal-footer">
-<!--buttons-->
-          </div>
-        </div>
-      </div>
-    </div>
-      `);
-                templ.querySelector('.modal-body').append(content);
-                let footer = templ.querySelector('.modal-footer');
-                for (let b of this.createDialogButtons(buttons))
-                    footer.append(b);
-                return templ;
-            }
-            createVm(el) {
-                let component = this.createComponent();
-                if (this.scripts) {
-                    this._readyEventListeners = [];
-                    for (let script of this.scripts) {
-                        let setup = eval(`(${script})`);
-                        if (setup && setup.call) {
-                            let def = setup.call(this);
-                            if (def.methods)
-                                Object.assign(component.methods, def.methods);
-                            if (def.ready || def.created || def.data)
-                                this._readyEventListeners.push(def);
-                        }
-                    }
-                }
-                let vm = Katrid.createVm(component).mount(el);
-                this.vm = vm;
-                // let vForm = el.querySelector('.v-form') as any;
-                return vm;
-            }
-            beforeRender(templ) {
-                return templ;
-            }
-            createElement() {
-                if (!this.element) {
-                    this.element = this.beforeRender(this.domTemplate());
-                    this.applyCustomTags(this.element);
-                }
-            }
-            applyCustomTags(template) {
-                Katrid.Forms.CustomTag.render(this, template);
-            }
-            render() {
-                this.createElement();
-                if (!this.vm)
-                    this.createVm(this.element);
-                if (this.container) {
-                    this.container.append(this.element);
-                    // dispatch ready event listeners
-                    if (this._readyEventListeners) {
-                        for (let event of this._readyEventListeners)
-                            if (event.ready)
-                                event.ready.call(this.vm, this);
-                    }
-                }
-                return this.element;
-            }
-            closeDialog() {
-                this._modal.hide();
-            }
-            /** Render the view content into a container */
-            renderTo(container) {
-                this.container = container;
-                this.render();
-            }
-            async onHashChange(params) {
-            }
-        }
-        Forms.BaseView = BaseView;
-        function compileButtons(container) {
-            let sendFileCounter = 0;
-            return container.querySelectorAll('button').forEach((btn, index) => {
-                let $btn = $(btn);
-                let type = $btn.attr('type');
-                if (!$btn.attr('type') || ($btn.attr('type') === 'object'))
-                    $btn.attr('type', 'button');
-                if (type === 'object') {
-                    let sendFile = $btn.attr('send-file');
-                    $btn.attr('button-object', $btn.attr('name'));
-                    if (sendFile === undefined) {
-                        $btn.attr('v-on:click', `actionClick(selection, '${$btn.attr('name')}', $event)`);
-                    }
-                    else {
-                        let idSendFile = `__send_file_${++sendFileCounter}`;
-                        $btn.parent().append(`<input id="${idSendFile}" type="file" style="display: none" v-on:change="sendFile('${$btn.attr('name')}', $event.target)"/>`);
-                        $btn.attr('send-file', $btn.attr('name'));
-                        $btn.attr('onclick', `$('#${idSendFile}').trigger('click')`);
-                    }
-                }
-                else if (type === 'tag') {
-                    $btn.attr('button-tag', $btn.attr('name'));
-                    $btn.attr('onclick', `Katrid.Actions.ClientAction.tagButtonClick($(this))`);
-                }
-                if (!$btn.attr('class'))
-                    $btn.addClass('btn btn-outline-secondary');
-            });
-        }
-        Forms.compileButtons = compileButtons;
-    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Forms;
-    (function (Forms) {
         class ModelViewInfo {
             constructor(info) {
                 this.info = info;
@@ -5250,587 +5957,6 @@ var Katrid;
             }
         }
         Forms.ModelViewInfo = ModelViewInfo;
-    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Forms;
-    (function (Forms) {
-        Forms.searchModes = ['table', 'card'];
-        Forms.registry = {};
-        class ModelView extends Forms.BaseView {
-            // protected _modifiedRecords: any[];
-            constructor(info) {
-                super(info);
-                this.pendingOperation = 0;
-                this._active = false;
-            }
-            /** Create views instances based on template strings */
-            static fromTemplate(action, model, template) {
-                return new Katrid.Forms.Views.registry[this.viewType]({ action, model, template });
-            }
-            static createViewModeButton(container) {
-            }
-            async deleteSelection(sel) {
-                // auto apply destroyed records
-                if ((((sel.length === 1) && confirm(Katrid.i18n.gettext('Confirm delete record?'))) ||
-                    ((sel.length > 1) && confirm(Katrid.i18n.gettext('Confirm delete records?')))) && sel) {
-                    let res = await this.datasource.delete(sel.map(rec => rec.id));
-                    Katrid.Forms.Dialogs.Alerts.success(Katrid.i18n.gettext('Record(s) deleted successfully'));
-                    this.refresh();
-                    return true;
-                }
-            }
-            create(info) {
-                this.action = info.action;
-                this._readonly = true;
-                let viewInfo = info.viewInfo;
-                if (info.model)
-                    this.model = info.model;
-                else if (info.name || info.action?.modelName)
-                    this.model = new Katrid.Data.Model({ name: info.name || info.action.modelName, fields: info.fields || viewInfo?.fields });
-                else if (info.fields) {
-                    // Create the model based on specified fields
-                    this.model = new Katrid.Data.Model({ fields: info.fields, name: this.action.modelName });
-                }
-                else if (viewInfo?.fields || viewInfo?.info?.fields) {
-                    console.log(viewInfo);
-                    this.model = new Katrid.Data.Model({ name: viewInfo.info.name, fields: viewInfo.fields || viewInfo.info.fields });
-                    console.log('create model', this.model);
-                }
-                this.fields = this.model.fields;
-                // init the datasource
-                this.datasource = new Katrid.Data.DataSource({
-                    model: this.model, context: this.action?.context, domain: this.action?.config?.domain,
-                });
-                this.datasource.dataCallback = (data) => this.dataSourceCallback(data);
-                if (info.records)
-                    this.records = this.model.fromArray(info.records);
-                else
-                    this.records = null;
-                if ((this.toolbarVisible == null) && this.action)
-                    this.toolbarVisible = true;
-                else
-                    this.toolbarVisible = info.toolbarVisible;
-                super.create(info);
-            }
-            dataSourceCallback(data) {
-                if (data.record)
-                    this.record = data.record;
-                else if (data.records)
-                    this.records = data.records;
-            }
-            createDialog(content, buttons = ['close']) {
-                let el = super.createDialog(content, buttons);
-                el.setAttribute('data-model', this.model.name);
-                return el;
-            }
-            get records() {
-                return this._records;
-            }
-            set records(value) {
-                this._records = value;
-                if (value)
-                    this.recordCount = value.length;
-                else
-                    this.recordCount = null;
-                if (this.vm)
-                    this.vm.records = value;
-            }
-            get recordCount() {
-                return this._recordCount;
-            }
-            set recordCount(value) {
-                this._recordCount = value;
-                if (this.vm)
-                    this.vm.recordCount = value;
-                if (this.action?.searchView?.vm)
-                    this.action.searchView.vm.recordCount = value;
-            }
-            get active() {
-                return this._active;
-            }
-            set active(value) {
-                this._active = value;
-                this.setActive(value);
-            }
-            setActive(value) {
-            }
-            getComponentData() {
-                let data = super.getComponentData();
-                data.records = this.records;
-                data.pendingRequest = false;
-                return data;
-            }
-            get readonly() {
-                return this._readonly;
-            }
-            set readonly(value) {
-                this._readonly = value;
-                if (value) {
-                    this.element.classList.add('readonly');
-                    this.element.classList.remove('editable');
-                }
-                else {
-                    this.element.classList.add('editable');
-                    this.element.classList.remove('readonly');
-                }
-            }
-            async ready() {
-                // if (this.action.dataSource && (this.action.recordIndex >= 0)) {
-                //   this.dataSource._records = this.action.dataSource.records;
-                //   this.dataSource.recordIndex = this.action.recordIndex;
-                // } else if (this.action.params?.id && !this.dataSource.inserting)
-                //   this.dataSource.get(this.action.params.id);
-                // else if (!this.dataSource.inserting)
-                //   this.dataSource.insert();
-            }
-            refresh() {
-                // this.dataSource.get(this.dataSource.recordId);
-                this.datasource.refresh();
-            }
-            _search(options) {
-                if (options.id)
-                    return this.datasource.get({ id: options.id, timeout: options.timeout });
-                return this.datasource.search({ where: options.where, page: options.page, limit: options.limit });
-            }
-            _mergeHeader(parent, header) {
-                for (let child of Array.from(header.children)) {
-                    if (child.tagName === 'HEADER')
-                        this._mergeHeader(parent, child);
-                    else {
-                        header.removeChild(child);
-                        parent.append(child);
-                    }
-                }
-            }
-            mergeHeader(parent, container) {
-                let headerEl = container.querySelector('header');
-                Forms.compileButtons(container);
-                if (headerEl) {
-                    // let statusField = headerEl.querySelector('field[name=status]');
-                    // if (statusField)
-                    //   statusField.setAttribute('status-field', 'status-field');
-                    headerEl.remove();
-                    this._mergeHeader(parent, headerEl);
-                }
-                return parent;
-            }
-            _vmCreated(vm) {
-                vm.$view = this;
-                vm.$fields = this.fields;
-                this.datasource.vm = vm;
-            }
-            async doViewAction(action, target) {
-                return this._evalResponseAction(await this.model.service.doViewAction({ action_name: action, target }));
-            }
-            async _evalResponseAction(res) {
-                if (res?.open) {
-                    window.open(res.open);
-                }
-                return res;
-            }
-            createComponent() {
-                let comp = super.createComponent();
-                let me = this;
-                Object.assign(comp.methods, {
-                    refresh() {
-                        me.refresh();
-                    },
-                    nextPage() {
-                        me.datasource.nextPage();
-                    },
-                    rpc(methodName, params) {
-                        return me.model.service.rpc(methodName, params.args, params.kwargs);
-                    },
-                    doViewAction(action, target) {
-                        return me.doViewAction(action, target);
-                    },
-                    async deleteSelection() {
-                        if (await me.deleteSelection(this.selection))
-                            this.selection = [];
-                    },
-                    sum(iterable, member) {
-                        let res = 0;
-                        for (let obj of iterable)
-                            res += obj[member] || 0;
-                        return res;
-                    }
-                });
-                comp.methods.setViewMode = async function (mode) {
-                    return await me.action.showView(mode);
-                };
-                comp.methods.formButtonClick = function () {
-                    console.log('form button click', arguments);
-                };
-                comp.methods.insert = async function () {
-                    let view = await this.setViewMode('form');
-                    view.vm.insert();
-                };
-                comp.computed.$fields = function () {
-                    return me.fields;
-                };
-                comp.created = function () {
-                    me._vmCreated(this);
-                };
-                return comp;
-            }
-            getViewType() {
-                return Object.getPrototypeOf(this).constructor.viewType;
-            }
-            autoCreateView() {
-                let el = document.createElement(this.getViewType() + '-view');
-                for (let f of Object.values(this.model.fields)) {
-                    let field = document.createElement('field');
-                    field.setAttribute('name', f.name);
-                    el.append(field);
-                }
-                return el;
-            }
-            domTemplate() {
-                // auto create view
-                if (!this.template && !this.html)
-                    return this.autoCreateView();
-                return super.domTemplate();
-            }
-            beforeRender(template) {
-                // save and remove the original header to add it to content-scroll later
-                let header = template.querySelector(':scope > header');
-                Forms.compileButtons(template);
-                if (header)
-                    template.removeChild(header);
-                let templ = this.renderTemplate(template);
-                if (this.dialog)
-                    return this.createDialog(templ, this.dialogButtons);
-                let actionView = document.createElement('div');
-                actionView.className = 'view-content';
-                let viewContent = document.createElement('div');
-                viewContent.classList.add('action-view-content', 'content-scroll');
-                if (this.toolbarVisible)
-                    actionView.append(this.createToolbar());
-                // merge header
-                let newHeader = document.createElement('div');
-                newHeader.className = 'content-container-heading';
-                if (header)
-                    this._mergeHeader(newHeader, header);
-                // viewContent.append(newHeader);
-                let content = document.createElement('div');
-                content.className = 'content no-padding';
-                content.append(newHeader);
-                content.append(templ);
-                viewContent.append(content);
-                actionView.append(viewContent);
-                // viewContent.append(content);
-                // viewContent.append(templ);
-                return actionView;
-            }
-            renderTemplate(template) {
-                return template;
-            }
-            // protected createElement() {
-            //   return this.domTemplate();
-            // }
-            createToolbar() {
-                let el = document.createElement('div');
-                el.className = 'toolbar';
-                return el;
-            }
-        }
-        Forms.ModelView = ModelView;
-        class RecordCollectionView extends ModelView {
-            constructor(info) {
-                super(info);
-                this.autoLoad = true;
-            }
-            create(info) {
-                super.create(info);
-                this.recordGroups = info.recordGroups || null;
-            }
-            async _recordClick(record, index) {
-                if (this.dialog) {
-                    this.vm.$result = record;
-                    this.closeDialog();
-                }
-                else {
-                    this.record = record;
-                    if (this.action) {
-                        let formView = await this.action.showView('form');
-                        formView.records = this.vm.records;
-                        // formView.record = record;
-                        formView.recordIndex = index;
-                    }
-                }
-            }
-            nextPage() {
-                this.datasource.nextPage();
-            }
-            prevPage() {
-                this.datasource.prevPage();
-            }
-            createComponent() {
-                let comp = super.createComponent();
-                let me = this;
-                comp.methods.recordClick = this.config.recordClick || async function (record, index, event) {
-                    await me._recordClick(record, index);
-                };
-                comp.methods.toggleGroup = function (group) {
-                    if (group.$expanded)
-                        me.collapseGroup(group);
-                    else
-                        me.expandGroup(group);
-                };
-                return comp;
-            }
-            setActive(value) {
-                if (this._searchView) {
-                    let btn = this._searchView.element.querySelector('.btn-view-' + Object.getPrototypeOf(this).constructor.viewType);
-                    if (btn) {
-                        if (value)
-                            btn.classList.add('active');
-                        else
-                            btn.classList.remove('active');
-                    }
-                }
-            }
-            get searchView() {
-                return this._searchView;
-            }
-            set searchView(value) {
-                this._searchView = value;
-                if (value && this.toolbarVisible) {
-                    this.setSearchView(value);
-                    value.resultView = this;
-                }
-            }
-            dataSourceCallback(data) {
-                super.dataSourceCallback(data);
-                if (this._searchView) {
-                    this._searchView.vm.dataOffset = this.datasource.offset;
-                    this._searchView.vm.dataOffsetLimit = this.datasource.offsetLimit;
-                    this._searchView.vm.recordCount = this.datasource.recordCount;
-                }
-            }
-            setSearchView(searchView) {
-                // render the search view
-                if (this.element) {
-                    let div = this.element.querySelector('.search-view-area');
-                    if (div) {
-                        div.innerHTML = '';
-                        div.append(searchView.element);
-                    }
-                }
-            }
-            getComponentData() {
-                let data = super.getComponentData();
-                data.selection = [];
-                data.groups = this.prepareGroup(this.recordGroups);
-                data.recordCount = this.recordCount;
-                return data;
-            }
-            prepareGroup(groups) {
-                return groups;
-            }
-            async applyGroups(groups, params) {
-                // let res = await this.dataSource.groupBy(groups, params);
-                // await this.groupBy(res);
-            }
-            _addRecordsToGroup(index, list) {
-            }
-            /**
-             * Expands a group
-             */
-            async expandGroup(group) {
-                group.$expanded = true;
-                let idx = this.vm.groups.indexOf(group);
-                // check if data is cached
-                let children = group.$children;
-                if (!children) {
-                    // load from adapter api
-                }
-                let groups = this.vm.groups;
-                this.vm.groups = [...groups.slice(0, idx + 1), ...children, ...groups.slice(idx + 1)];
-            }
-            /**
-             * Expands all groups
-             */
-            expandAll() {
-                for (let g of this.vm.groups) {
-                    if (g.$hasChildren && !g.$expanded) {
-                        this.expandGroup(g);
-                    }
-                }
-            }
-            /**
-             * Collapses all groups
-             */
-            collapseAll() {
-                for (let g of this.vm.groups)
-                    if (g.$hasChildren && g.$expanded)
-                        this.collapseGroup(g);
-            }
-            /**
-             * Collapses a group
-             */
-            collapseGroup(group) {
-                let idx = this.vm.groups.indexOf(group);
-                let groups = this.vm.groups;
-                for (let sub of group.$children) {
-                    if (!sub.$hasChildren)
-                        break;
-                    else if (sub.$expanded)
-                        this.collapseGroup(sub);
-                }
-                groups.splice(idx + 1, group.$children.length);
-                group.$expanded = false;
-            }
-            // async groupBy(data: any[]);
-            async setSearchParams(params) {
-                console.log('set empty params', params);
-                let p = {};
-                if (this.action.info?.domain)
-                    p = JSON.parse(this.action.info.domain);
-                for (let [k, v] of Object.entries(p)) {
-                    let arg = {};
-                    arg[k] = v;
-                    params.push(arg);
-                }
-                console.log('params', params);
-                await this.datasource.search({ where: params });
-            }
-            createToolbar() {
-                let templ = `<div class="data-heading panel panel-default">
-      <div class="panel-body">
-        <div class="row">
-        <div class="col-md-6">
-        
-          <action-navbar></action-navbar>
-          <p class="help-block"></p>
-          <div class="toolbar">
-            <div class="toolbar-action-buttons"></div>
-        </div>
-      </div>
-          <div class="search-view-area col-md-6"></div>
-        </div>
-      </div>
-    </div>`;
-                let toolbar = Katrid.html(templ);
-                toolbar.querySelector('action-navbar').actionManager = this.action.actionManager;
-                this.createToolbarButtons(toolbar);
-                return toolbar;
-            }
-            createToolbarButtons(container) {
-                let parent = container.querySelector('.toolbar-action-buttons');
-                let btnCreate = document.createElement('button');
-                btnCreate.className = 'btn btn-primary btn-action-create';
-                btnCreate.innerText = Katrid.i18n.gettext('Create');
-                btnCreate.setAttribute('v-on:click', 'insert()');
-                parent.append(btnCreate);
-                if (this.config?.toolbar?.print) {
-                    // print
-                    let btnPrint = document.createElement('div');
-                    btnPrint.classList.add('btn-group');
-                    btnPrint.innerHTML = `<button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" name="print" data-bs-toggle="dropdown" aria-haspopup="true">
-        ${Katrid.i18n.gettext('Print')} <span class="caret"></span>
-      </button>
-      <div class="dropdown-menu">
-        <a class="dropdown-item" v-on:click="autoReport()">${Katrid.i18n.gettext('Auto Report')}</a>
-      </div>`;
-                    let dropdown = btnPrint.querySelector('.dropdown-menu');
-                    for (let bindingAction of this.config?.toolbar?.print) {
-                        let a = document.createElement('a');
-                        a.classList.add('dropdown-item');
-                        a.setAttribute('data-id', bindingAction.id);
-                        a.innerText = bindingAction.name;
-                        dropdown.append(a);
-                    }
-                    parent.append(btnPrint);
-                }
-                // refresh
-                let btnRefresh = document.createElement('button');
-                btnRefresh.type = 'button';
-                btnRefresh.classList.add('btn', 'toolbtn');
-                btnRefresh.innerHTML = '<i class="fas fa-redo-alt"></i>';
-                btnRefresh.title = Katrid.i18n.gettext('Refresh');
-                btnRefresh.setAttribute('v-on:click', 'refresh()');
-                parent.append(btnRefresh);
-                // actions
-                let btnActions = document.createElement('div');
-                btnActions.classList.add('btn-group');
-                btnActions.innerHTML = `<div class="dropdown">
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" v-show="selectionLength"
-                aria-haspopup="true">
-          ${Katrid.i18n.gettext('Action')} <span class="caret"></span>
-        </button>
-        <div class="dropdown-menu dropdown-menu-actions">
-          <a class="dropdown-item" v-on:click="deleteSelection()">
-            <i class="fa fa-fw fa-trash-o"></i> ${Katrid.i18n.gettext('Delete')}
-          </a>
-          <!-- replace-actions -->
-        </div>
-      </div>`;
-                parent.append(btnActions);
-                return parent;
-            }
-            get $modalResult() {
-                return this.vm.$result;
-            }
-            set $modalResult(value) {
-                this.vm.$result = value;
-            }
-            showDialog(options) {
-                if (!options)
-                    options = {};
-                if (options.backdrop === undefined)
-                    options.backdrop = 'static';
-                this.dialog = true;
-                return new Promise(async (resolve, reject) => {
-                    let el = this.element;
-                    if (!el)
-                        el = this.render();
-                    $(el).modal(options)
-                        .on('hidden.bs.modal', () => {
-                        resolve(this.vm.$modalResult);
-                        $(el).data('bs.modal', null);
-                        el.remove();
-                    });
-                    // if (options?.edit)
-                    //   this.vm.dataSource.edit();
-                });
-            }
-            async ready() {
-                if (!this.records) {
-                    return this.datasource.open();
-                }
-                else {
-                    this.refresh();
-                }
-            }
-        }
-        Forms.RecordCollectionView = RecordCollectionView;
-        class ActionViewElement extends Katrid.WebComponent {
-            create() {
-                this.classList.add('action-view');
-            }
-        }
-        Forms.ActionViewElement = ActionViewElement;
-        Katrid.define('action-view', ActionViewElement);
-    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
-})(Katrid || (Katrid = {}));
-(function (Katrid) {
-    var Forms;
-    (function (Forms) {
-        var Views;
-        (function (Views) {
-            Views.registry = {};
-            function fromTemplates(action, model, templates) {
-                let res = {};
-                for (let [k, t] of Object.entries(templates)) {
-                    res[k] = Views.registry[k].fromTemplate(action, model, t);
-                }
-                return res;
-            }
-            Views.fromTemplates = fromTemplates;
-        })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;

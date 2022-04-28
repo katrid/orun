@@ -14,37 +14,12 @@ class LogEntry(models.Model):
 
     class Meta:
         log_changes = False
-        name = 'ir.admin.log'
-
-
-class ObjectEntry(models.Model):
-    """
-    Register entries to the quick search on Admin UI menu
-    """
-    object_id = models.BigIntegerField(null=False)
-    content_type = models.ForeignKey('content.type', null=False)
-    content_object = models.CharField(250)
-
-    class Meta:
-        log_changes = False
-        name = 'ui.admin.entry'
-
-    @classmethod
-    def log(cls, obj: models.Model):
-        """
-        Logs a new entry to the quick search menu
-        :param obj:
-        :return:
-        """
-        ct = cls.env['content.type'].get_for_model(obj)
-        entry = cls.objects.get_or_create(object_id=obj.pk, content_type=ct)
-        entry.content_object = str(obj)
-        entry.save()
+        name = 'ui.admin.log'
 
 
 class UserActionCounter(models.Model):
     """
-    Ranking the number of times that an action is accessed by an user on Admin UI
+    Ranking the number of times that an action is accessed by user on Admin UI
     """
     user = models.ForeignKey('auth.user', null=False, db_index=True)
     action = models.ForeignKey('ui.action', null=False, on_delete=models.DB_CASCADE)

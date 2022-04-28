@@ -98,6 +98,9 @@ class Query(models.Model):
             datetime.date: 'DateField',
             datetime.datetime: 'DateTimeField',
             str: 'CharField',
+            Decimal: 'DecimalField',
+            float: 'FloatField',
+            int: 'IntegerField',
         }
         if with_description:
             fields = [
