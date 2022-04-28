@@ -4167,18 +4167,36 @@ var Katrid;
                     if (!this._fieldChanging)
                         this._fieldChanging = true;
                     try {
-                        let rec = this.encodeObject(DataSource.encodeRecord(this, record.serialize()));
-                        rec[field.name] = field.toJSON(newValue);
+                        let rec = this.encode(record);
+                        // rec[field.name] = field.toJSON(newValue);
                         // encode parent record
+                        console.debug('rec', rec);
                         if (this.parent)
-                            rec[this.field.info.field] = this.encodeObject(this.parent.record.$record);
+                            rec[this.field.info.field] = this.parent.encode(this.parent.record);
+                        // rec[this.field.info.field] = this.encodeObject(this.parent.record.$record);
                         this.dispatchEvent('admin_on_field_change', [field.name, rec]);
                     }
                     finally {
                         this._fieldChanging = false;
                     }
                 };
-                this.pendingTimeout = setTimeout(fn, 50);
+                this.pendingTimeout = setTimeout(fn, 10);
+            }
+            /**
+             * Encode data to be sent on field changed
+             * @param record
+             */
+            encode(record) {
+                let res = {};
+                for (let [k, v] of Object.entries(record.$data)) {
+                    let f = this.model.fields[k];
+                    // avoid circular reference error
+                    if (!f)
+                        continue;
+                    if (!k.startsWith('$') && !(f instanceof Data.OneToManyField))
+                        res[k] = f.toJSON(v);
+                }
+                return res;
             }
         }
         Data.DataSource = DataSource;
@@ -4240,6 +4258,8 @@ var Katrid;
                                         this.$transient[k] = this.$data[k];
                                     // save the new value
                                     this.$data[k] = value;
+                                    if (field.onChange && me.onFieldChange)
+                                        me.onFieldChange(field, value);
                                 }
                             });
                         }
@@ -4265,7 +4285,6 @@ var Katrid;
                             rec[k] = v;
                     });
                 }
-                console.debug('new record', datasource.parent);
                 if (datasource.parent?.record) {
                     rec.$parent = datasource.parent.record;
                     rec.$parentField = datasource.field?.name;
@@ -6351,10 +6370,17 @@ var Katrid;
         var DataSourceState = Katrid.Data.DataSourceState;
         Forms.changingStates = [DataSourceState.inserting, DataSourceState.editing];
         class FormView extends Forms.ModelView {
-            constructor() {
-                super(...arguments);
+            constructor(info) {
+                super(info);
                 this.dataCallbacks = [];
                 this._pendingViews = true;
+                // create field change hook events
+                if (this.fields)
+                    for (let field of Object.values(this.fields))
+                        if (field.onChange) {
+                            this.model.onFieldChange = (field, value) => this.$onFieldChange(field, value);
+                            break;
+                        }
             }
             create(info) {
                 super.create(info);
@@ -6626,7 +6652,7 @@ ${Katrid.i18n.gettext('Delete')}
                 this._applyDataDefinition(data);
                 return data;
             }
-            ready() {
+            async ready() {
                 if (this.action?.params)
                     this.onHashChange(this.action.params);
             }
@@ -6847,6 +6873,8 @@ ${Katrid.i18n.gettext('Delete')}
                         }
                     }
                 }
+                if (field.onChange && this.datasource)
+                    this.datasource._onFieldChange(field, value, this.datasource.record);
             }
             static async createNew(config) {
                 // let formInfo = config.viewInfo;
@@ -11559,6 +11587,7 @@ var Katrid;
                         resolve(res);
                     })
                         .catch(res => {
+                        // display alert
                         if (res?.error && (typeof res.error === 'string'))
                             Katrid.Forms.Dialogs.Alerts.error(res.error);
                         else if (res.messages && _.isObject(res.messages)) {
