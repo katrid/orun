@@ -5357,7 +5357,7 @@ var Katrid;
                 }
             }
             formSpanTemplate() {
-                return '<span>...</span>';
+                return '';
             }
             formControl() {
                 let grid = document.createElement('onetomany-field');
@@ -10217,9 +10217,7 @@ var Katrid;
                     }
                 },
                 $discard() {
-                    console.log('discard changes');
                     for (let rec of this.records) {
-                        console.log('record', rec);
                         if (rec.$state === Katrid.Data.RecordState.created)
                             this.records.splice(this.records.indexOf(rec), 1);
                         if (rec.$$discard)
@@ -10227,7 +10225,6 @@ var Katrid;
                     }
                 },
                 $onChange() {
-                    console.log('field changed');
                     this.$parent.$view.$onFieldChange(this.$field, this.records);
                     this.$emit('change', this.value);
                     this.$emit('update:modelValue', this.modelValue);
@@ -10235,8 +10232,8 @@ var Katrid;
                 recordContextMenu(record, index, event) {
                     // Katrid.Forms.Views.listRecordContextMenu.call(this, ...arguments);
                 },
-                tableContextMenu(event) {
-                    // Katrid.Forms.Views.tableContextMenu.call(this, ...arguments);
+                tabeContextMenu(event) {
+                    Forms.tableContextMenu.call(this, ...arguments);
                 },
                 async createNew() {
                     if (this.$editing)

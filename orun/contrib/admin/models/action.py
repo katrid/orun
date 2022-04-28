@@ -127,9 +127,16 @@ class WindowAction(Action):
         model = apps[self.model]
         info['fields'] = model.admin_get_fields_info()
         info['caption'] = info.pop('name')
-        info['viewsInfo'] = {
-            k: model._admin_get_view_info(view_type=k, view=None, toolbar=True) for k in modes
-        }
+        view_id = self.view_id
+        views_info = info['viewsInfo'] = {}
+        # check if there's a specified view
+        if view_id:
+            views_info[self.view.view_type] = model._admin_get_view_info(
+                view_type=self.view_type, view=view_id, toolbar=True
+            )
+        views_info.update({
+            k: model._admin_get_view_info(view_type=k, view=None, toolbar=True) for k in modes if k not in views_info
+        })
         info['viewsInfo']['search'] = model._admin_get_view_info(view_type='search')
         return info
 
