@@ -2443,6 +2443,10 @@ var Katrid;
                     rpc(methodName, params) {
                         return me.model.service.rpc(methodName, params.args, params.kwargs);
                     },
+                    actionClick(selection, methodName, event) {
+                        console.log('action click', selection, methodName);
+                        me.action.formButtonClick(selection.map(obj => obj.id), methodName);
+                    },
                     doViewAction(action, target) {
                         return me.doViewAction(action, target);
                     },
@@ -6749,9 +6753,6 @@ ${Katrid.i18n.gettext('Delete')}
                         let res = await me.model.service.doViewAction({ action_name: args.method, target: args.params.id });
                         if (res.location)
                             window.location.href = res.location;
-                    },
-                    actionClick(selection, methodName, event) {
-                        me.action.formButtonClick(selection.map(obj => obj.id), methodName);
                     },
                     refresh() {
                         me.refresh();
@@ -11558,14 +11559,17 @@ var Katrid;
                         resolve(res);
                     })
                         .catch(res => {
-                        // if (res.messages && _.isObject(res.messages)) {
-                        //   for (let msg of Object.values(res.messages))
-                        //     if (typeof msg === 'string')
-                        //       Katrid.Forms.Dialogs.Alerts.error(msg);
-                        //     else if (msg instanceof Array)
-                        //       Katrid.Forms.Dialogs.Alerts.error(msg.join('\n'));
-                        // } else
-                        //   Katrid.Forms.Dialogs.Alerts.error(res.message);
+                        if (res?.error && (typeof res.error === 'string'))
+                            Katrid.Forms.Dialogs.Alerts.error(res.error);
+                        else if (res.messages && _.isObject(res.messages)) {
+                            for (let msg of Object.values(res.messages))
+                                if (typeof msg === 'string')
+                                    Katrid.Forms.Dialogs.Alerts.error(msg);
+                                else if (msg instanceof Array)
+                                    Katrid.Forms.Dialogs.Alerts.error(msg.join('\n'));
+                        }
+                        else
+                            Katrid.Forms.Dialogs.Alerts.error(res.message);
                         reject(res);
                     });
                 });
