@@ -3313,9 +3313,7 @@ var Katrid;
                 // this.scope.$emit('afterCancel', this);
             }
             _createRecord(obj) {
-                let rec = this.model.fromObject(obj, this);
-                rec.$onFieldChange = this._onFieldChange;
-                return rec;
+                return this.model.fromObject(obj, this);
             }
             async copy(id) {
                 let res = await this.model.service.copy(id);
@@ -4159,18 +4157,17 @@ var Katrid;
              * @param newValue
              * @param record
              */
-            _onFieldChange(field, newValue, record) {
+            $onFieldChange(field, newValue, record) {
                 if (field.name === this._lastFieldName)
                     clearTimeout(this.pendingTimeout);
                 this._lastFieldName = field.name;
-                let fn = () => {
+                this.pendingTimeout = setTimeout(() => {
                     if (!this._fieldChanging)
                         this._fieldChanging = true;
                     try {
                         let rec = this.encode(record);
                         // rec[field.name] = field.toJSON(newValue);
                         // encode parent record
-                        console.debug('rec', rec);
                         if (this.parent)
                             rec[this.field.info.field] = this.parent.encode(this.parent.record);
                         // rec[this.field.info.field] = this.encodeObject(this.parent.record.$record);
@@ -4179,8 +4176,7 @@ var Katrid;
                     finally {
                         this._fieldChanging = false;
                     }
-                };
-                this.pendingTimeout = setTimeout(fn, 10);
+                }, 10);
             }
             /**
              * Encode data to be sent on field changed
@@ -4190,9 +4186,9 @@ var Katrid;
                 let res = {};
                 for (let [k, v] of Object.entries(record.$data)) {
                     let f = this.model.fields[k];
-                    // avoid circular reference error
                     if (!f)
                         continue;
+                    // avoid circular reference error
                     if (!k.startsWith('$') && !(f instanceof Data.OneToManyField))
                         res[k] = f.toJSON(v);
                 }
@@ -6874,7 +6870,7 @@ ${Katrid.i18n.gettext('Delete')}
                     }
                 }
                 if (field.onChange && this.datasource)
-                    this.datasource._onFieldChange(field, value, this.datasource.record);
+                    this.datasource.$onFieldChange(field, value, this.datasource.record);
             }
             static async createNew(config) {
                 // let formInfo = config.viewInfo;
@@ -9122,7 +9118,6 @@ var Katrid;
         })(Controls = Forms.Controls || (Forms.Controls = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
-// import {TempusDominus} from "@eonasdan/tempus-dominus";
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -9152,7 +9147,7 @@ var Katrid;
                     mask,
                     insertMode: false,
                     onincomplete: function () {
-                        console.log('inc', vm.$changing);
+                        // console.log('inc', vm.$changing);
                         if (vm.$changing)
                             vm.$emit('update:modelValue', applyValue(input.value));
                     },
@@ -9172,11 +9167,18 @@ var Katrid;
                     if (this.$lastValue === 'Invalid date')
                         this.$lastValue = null;
                     vm.$emit('change', this.$lastValue);
-                    console.log('last value', this.$lastValue);
                     return this.$lastValue;
                 };
                 // initializes the popup calendar component
-                // let td = new TempusDominus(vm.$el);
+                let calendar = new Katrid.Controls.Calendar(this.$el, {
+                    change: newDate => {
+                        let v = moment(newDate).format($format);
+                        vm.$input.value = v;
+                        vm.$emit('update:modelValue', applyValue(v));
+                    }
+                });
+                let label = this.$el.querySelector('label');
+                label.addEventListener('click', () => calendar.show());
             },
             watch: {
                 modelValue(value) {
@@ -9190,7 +9192,6 @@ var Katrid;
                     }
                     else {
                         this.$input.value = '';
-                        console.log('set to null');
                     }
                 }
             }
@@ -12075,6 +12076,109 @@ var Katrid;
             }
         }
     })(UI = Katrid.UI || (Katrid.UI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Controls;
+    (function (Controls) {
+        class Calendar {
+            constructor(el, config) {
+                this.config = config;
+                this.target = el;
+                if (!this.config)
+                    this.config = {};
+                console.debug('calendar config', this.config);
+            }
+            _renderMonthCalendar(year, month) {
+                const calendar = document.createElement('div');
+                calendar.classList.add('month-calendar');
+                let cd = new Date(year, month, 1);
+                let dow = cd.getDay();
+                // render header
+                let header = document.createElement('div');
+                header.classList.add('month-header');
+                let nav = document.createElement('button');
+                nav.type = 'button';
+                nav.classList.add('btn');
+                nav.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                header.append(nav);
+                let label = document.createElement('label');
+                label.classList.add('month-name');
+                label.innerText = moment(cd).format('MMMM');
+                header.append(label);
+                nav = document.createElement('button');
+                nav.type = 'button';
+                nav.classList.add('btn');
+                nav.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                header.append(nav);
+                this.element.append(header);
+                // render days of week
+                for (let i = 0; i < 7; i++) {
+                    let el = document.createElement('div');
+                    el.classList.add('dow');
+                    let od = new Date();
+                    od.setDate(cd.getDate() - (6 - i));
+                    el.innerText = moment(od).format('ddd');
+                    calendar.append(el);
+                }
+                // render days
+                let dayClick = event => this.dayClick(event);
+                cd.setDate(cd.getDate() - dow);
+                for (let i = 0; i < 42; i++) {
+                    let el = this._renderDay(cd);
+                    let m = cd.getMonth();
+                    if (m > month)
+                        el.classList.add('new');
+                    else if (m < month)
+                        el.classList.add('old');
+                    calendar.append(el);
+                    cd.setDate(cd.getDate() + 1);
+                    el.addEventListener('click', dayClick);
+                    el.addEventListener('pointerdown', this.dayMouseDown);
+                }
+                this.element.append(calendar);
+            }
+            dayMouseDown(event) {
+                event.stopPropagation();
+            }
+            dayClick(event) {
+                if (this.config.change)
+                    this.config.change(event.target.getAttribute('data-value'));
+                this.hide();
+            }
+            _renderDay(date) {
+                let el = document.createElement('div');
+                el.classList.add('day');
+                el.innerText = date.getDate().toString();
+                el.setAttribute('data-value', moment(date).format('YYYY-MM-DD'));
+                return el;
+            }
+            render() {
+                this.element = document.createElement('div');
+                this.element.classList.add('date-calendar');
+                // initial date
+                let date = new Date();
+                this._renderMonthCalendar(date.getFullYear(), date.getMonth());
+                return this.element;
+            }
+            show() {
+                this._docMouseEvent = () => {
+                    document.removeEventListener('pointerdown', this._docMouseEvent);
+                    this.hide();
+                };
+                document.addEventListener('pointerdown', this._docMouseEvent);
+                let el = this.render();
+                this._popper = Popper.createPopper(this.target, el, { placement: 'bottom-start' });
+                el.classList.add('show');
+                document.body.append(el);
+            }
+            hide() {
+                this.element.remove();
+                this._popper.destroy();
+            }
+        }
+        Controls.Calendar = Calendar;
+    })(Controls = Katrid.Controls || (Katrid.Controls = {}));
 })(Katrid || (Katrid = {}));
 Katrid.filter('date', function (value, fmt = 'MM/DD/YYYY') {
     if (value) {

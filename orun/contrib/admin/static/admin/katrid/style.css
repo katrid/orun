@@ -13146,6 +13146,45 @@ calendar-view .fc-header-toolbar {
   margin: 10px;
 }
 
+.date-calendar.show {
+  background-color: #FFFFFF;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+.date-calendar .month-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 4px 6px 4px;
+}
+.date-calendar .month-header .month-name {
+  padding: 6px 10px;
+  font-weight: 600;
+}
+.date-calendar .month-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  cursor: default;
+}
+.date-calendar .month-calendar .dow {
+  width: 35px;
+  height: 30px;
+  padding-top: 5px;
+}
+.date-calendar .month-calendar .day {
+  width: 35px;
+  height: 30px;
+  padding-top: 5px;
+  cursor: pointer;
+}
+.date-calendar .month-calendar .day.old, .date-calendar .month-calendar .day.new {
+  color: #6c757d;
+}
+.date-calendar .month-calendar .day:hover {
+  background-color: #e1e1e1;
+}
+
 .katrid-app {
   height: 100%;
 }
