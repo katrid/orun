@@ -4837,7 +4837,7 @@ var Katrid;
                 div.setAttribute('date-picker', "L");
                 div.innerHTML = `
       <input type="text" name="${this.name}" class="form-control form-field" inputmode="numeric">
-      <label class="input-group-text" type="button"><i class="fa fa-calendar fa-sm"></i></label>`;
+      <label class="input-group-text btn-calendar" type="button"><i class="fa fa-calendar fa-sm"></i></label>`;
                 let input = div.querySelector('input');
                 if (this.attrs.required)
                     input.required = true;
@@ -6798,7 +6798,11 @@ ${Katrid.i18n.gettext('Delete')}
                         finally {
                             me.pendingOperation--;
                         }
-                    }
+                    },
+                    sendFile(name, file) {
+                        return Katrid.Services.Upload.sendFile({ model: this.action.model, method: name, file, vm: this });
+                    },
+                    // console.log('inc', vm.$changing);
                 });
                 // override computed props
                 Object.assign(comp.computed, {
@@ -9147,7 +9151,6 @@ var Katrid;
                     mask,
                     insertMode: false,
                     onincomplete: function () {
-                        // console.log('inc', vm.$changing);
                         if (vm.$changing)
                             vm.$emit('update:modelValue', applyValue(input.value));
                     },
@@ -9169,16 +9172,22 @@ var Katrid;
                     vm.$emit('change', this.$lastValue);
                     return this.$lastValue;
                 };
-                // initializes the popup calendar component
-                let calendar = new Katrid.Controls.Calendar(this.$el, {
-                    change: newDate => {
-                        let v = moment(newDate).format($format);
-                        vm.$input.value = v;
-                        vm.$emit('update:modelValue', applyValue(v));
-                    }
+                this.$el.querySelector('.btn-calendar').addEventListener('click', () => {
+                    let val = this.modelValue;
+                    if (val)
+                        val = moment(val).toDate();
+                    // initializes the popup calendar component
+                    let calendar = new Katrid.Controls.Calendar(this.$el, {
+                        change: newDate => {
+                            // change callback
+                            let v = moment(newDate).format($format);
+                            input.value = v;
+                            vm.$emit('update:modelValue', applyValue(v));
+                        },
+                        date: val,
+                    });
+                    calendar.show();
                 });
-                let label = this.$el.querySelector('label');
-                label.addEventListener('click', () => calendar.show());
             },
             watch: {
                 modelValue(value) {
@@ -12087,13 +12096,19 @@ var Katrid;
                 this.target = el;
                 if (!this.config)
                     this.config = {};
-                console.debug('calendar config', this.config);
+                this._date = this.config.date || new Date();
+            }
+            get date() {
+                return this._date;
+            }
+            set date(value) {
+                this._date = value;
             }
             _renderMonthCalendar(year, month) {
                 const calendar = document.createElement('div');
                 calendar.classList.add('month-calendar');
-                let cd = new Date(year, month, 1);
-                let dow = cd.getDay();
+                let date = new Date(year, month, 1);
+                let dow = date.getDay();
                 // render header
                 let header = document.createElement('div');
                 header.classList.add('month-header');
@@ -12101,15 +12116,31 @@ var Katrid;
                 nav.type = 'button';
                 nav.classList.add('btn');
                 nav.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                nav.addEventListener('pointerdown', event => event.stopPropagation());
+                nav.addEventListener('click', event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.element.innerHTML = '';
+                    let date = moment(new Date(year, month, 1)).add(-1, 'months');
+                    this._renderMonthCalendar(date.year(), date.month());
+                });
                 header.append(nav);
                 let label = document.createElement('label');
                 label.classList.add('month-name');
-                label.innerText = moment(cd).format('MMMM');
+                label.innerText = moment(date).format('MMMM');
                 header.append(label);
                 nav = document.createElement('button');
                 nav.type = 'button';
                 nav.classList.add('btn');
                 nav.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                nav.addEventListener('pointerdown', event => event.stopPropagation());
+                nav.addEventListener('click', event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.element.innerHTML = '';
+                    let date = moment(new Date(year, month, 1)).add(1, 'months');
+                    this._renderMonthCalendar(date.year(), date.month());
+                });
                 header.append(nav);
                 this.element.append(header);
                 // render days of week
@@ -12117,22 +12148,22 @@ var Katrid;
                     let el = document.createElement('div');
                     el.classList.add('dow');
                     let od = new Date();
-                    od.setDate(cd.getDate() - (6 - i));
+                    od.setDate(date.getDate() - (6 - i));
                     el.innerText = moment(od).format('ddd');
                     calendar.append(el);
                 }
                 // render days
                 let dayClick = event => this.dayClick(event);
-                cd.setDate(cd.getDate() - dow);
+                date.setDate(date.getDate() - dow);
                 for (let i = 0; i < 42; i++) {
-                    let el = this._renderDay(cd);
-                    let m = cd.getMonth();
+                    let el = this._renderDay(date);
+                    let m = date.getMonth();
                     if (m > month)
                         el.classList.add('new');
                     else if (m < month)
                         el.classList.add('old');
                     calendar.append(el);
-                    cd.setDate(cd.getDate() + 1);
+                    date.setDate(date.getDate() + 1);
                     el.addEventListener('click', dayClick);
                     el.addEventListener('pointerdown', this.dayMouseDown);
                 }
@@ -12157,8 +12188,7 @@ var Katrid;
                 this.element = document.createElement('div');
                 this.element.classList.add('date-calendar');
                 // initial date
-                let date = new Date();
-                this._renderMonthCalendar(date.getFullYear(), date.getMonth());
+                this._renderMonthCalendar(this._date.getFullYear(), this._date.getMonth());
                 return this.element;
             }
             show() {
