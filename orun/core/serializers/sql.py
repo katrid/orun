@@ -2,6 +2,7 @@
 Execute SQL File Script
 """
 import os
+import sys
 from pathlib import Path
 
 from orun.db import connections, DEFAULT_DB_ALIAS, connection
@@ -31,6 +32,8 @@ class Deserializer(base.Deserializer):
                 if os.name == 'nt':
                     additional_params = '-f 65001'
                     cmd = 'sqlcmd'
+                elif sys.platform == 'linux':
+                    cmd = '/opt/mssql-tools/bin/sqlcmd'
                 else:
                     cmd = 'sqlcmd'
                 shcmd = '%s -U %s -P "%s" -S %s -d %s -i "%s" %s' % (cmd, user_name, pwd, host, db_name, filename, additional_params)

@@ -88,11 +88,12 @@ class ViewAction(Action):
     @classmethod
     def render(cls, request):
         from orun.template.loader import get_template
-        from orun.contrib.admin.models.ui import exec_query, exec_scalar, ref
+        from orun.contrib.admin.models.ui import exec_query, exec_scalar, ref, query
         ctx = cls.get_context(request)
         ctx['env'] = apps
         ctx['_'] = gettext
         ctx['exec_query'] = exec_query
+        ctx['query'] = query
         ctx['exec_scalar'] = exec_scalar
         ctx['models'] = apps
         ctx['ref'] = ref

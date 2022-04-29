@@ -26,6 +26,12 @@ def exec_query(q: str, fmt='json'):
         return json.dumps(res, cls=OrunJSONEncoder)
 
 
+def query(q: str):
+    cur = connection.cursor()
+    cur.execute(q)
+    return [list(row) for row in cur.fetchall()]
+
+
 def exec_scalar(q: str):
     cur = connection.cursor()
     cur.execute(q)
@@ -161,6 +167,7 @@ class View(models.Model):
         context['ref'] = ref
         context['exec_scalar'] = exec_scalar
         context['exec_query'] = exec_query
+        context['query'] = query
         context['models'] = apps
         xml = self._get_content(context)
         xml = etree.fromstring(self._get_content(context))
@@ -214,6 +221,7 @@ class View(models.Model):
         context['env'] = apps
         context['_'] = gettext
         context['exec_query'] = exec_query
+        context['query'] = query
         context['exec_scalar'] = exec_scalar
         context['models'] = apps
         context['ref'] = ref

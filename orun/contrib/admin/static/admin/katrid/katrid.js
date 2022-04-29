@@ -3114,6 +3114,415 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    var Services;
+    (function (Services) {
+        // bypass the fetch function
+        let $fetch = window.fetch;
+        window.fetch = function () {
+            let ajaxStart = new CustomEvent('ajax.start', { detail: document, bubbles: true, cancelable: false });
+            let ajaxStop = new CustomEvent('ajax.stop', { detail: document, bubbles: true, cancelable: false });
+            // Pass the supplied arguments to the real fetch function
+            let promise = $fetch.apply(this, arguments);
+            // Trigger the fetchStart event
+            document.dispatchEvent(ajaxStart);
+            promise.finally(() => {
+                document.dispatchEvent(ajaxStop);
+            });
+            return promise;
+        };
+        class Service {
+            constructor(name) {
+                this.name = name;
+            }
+            static $fetch(url, config, params) {
+                return this.adapter.$fetch(url, config, params);
+            }
+            static $post(url, data, params) {
+                return this.adapter.$fetch(url, {
+                    method: 'POST',
+                    credentials: "same-origin",
+                    body: JSON.stringify(data),
+                    headers: {
+                        'content-type': 'application/json',
+                    }
+                }, params)
+                    .then(res => res.json());
+            }
+            get(name, params) {
+                // Using http protocol
+                const methName = this.name ? this.name + '/' : '';
+                const rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
+                return $.get(rpcName, params);
+            }
+            post(name, data, params, config, context) {
+                // if (!context && Katrid.app)
+                //   context = Katrid.app.context;
+                if (!data)
+                    data = {};
+                if (context)
+                    data.context = context;
+                data = {
+                    method: name,
+                    params: data,
+                };
+                if (!config)
+                    config = {};
+                Object.assign(config, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const methName = this.name ? this.name + '/' : '';
+                let rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
+                if (params) {
+                    rpcName += `?${$.param(params)}`;
+                }
+                return new Promise((resolve, reject) => {
+                    Service.adapter.$fetch(rpcName, config)
+                        .then(async (response) => {
+                        let contentType = response.headers.get('Content-Type');
+                        if (response.status === 500) {
+                            let res = await response.json();
+                            // show server error
+                            Katrid.Forms.Dialogs.ExceptionDialog.show(`Server Error 500`, res.error);
+                            return reject(res);
+                        }
+                        let res;
+                        if (contentType === 'application/json')
+                            res = await response.json();
+                        else
+                            return downloadBytes(response);
+                        if (res.error) {
+                            if ('message' in res.error)
+                                Katrid.Forms.Dialogs.Alerts.error(res.error.message);
+                            else if ('messages' in res.error)
+                                Katrid.Forms.Dialogs.Alerts.error(res.error.messages.join('<br>'));
+                            else
+                                Katrid.Forms.Dialogs.Alerts.error(res.error);
+                            reject(res.error);
+                        }
+                        else {
+                            if (res.result) {
+                                let result = res.result;
+                                if (Array.isArray(result) && (result.length === 1))
+                                    result = result[0];
+                                let messages;
+                                if (result.messages)
+                                    messages = result.messages;
+                                else
+                                    messages = [];
+                                if (result.message) {
+                                    if (result.message.info)
+                                        messages.push({ type: 'info', message: result.message.info });
+                                    else
+                                        messages.push(result.message);
+                                }
+                                else if (result.warn)
+                                    messages.push({ type: 'warn', message: result.warn });
+                                else if (result.error) {
+                                    if (typeof result.error === 'string')
+                                        messages.push({ type: 'error', message: result.error });
+                                    else
+                                        messages.push({ type: 'error', message: result.error.message });
+                                }
+                                messages.forEach(function (msg) {
+                                    if (Katrid.isString(msg))
+                                        Katrid.Forms.Dialogs.Alerts.success(msg);
+                                    else if (msg.type === 'warn')
+                                        Katrid.Forms.Dialogs.Alerts.warn(msg.message);
+                                    else if (msg.type === 'info')
+                                        Katrid.Forms.Dialogs.Alerts.info(msg.message);
+                                    else if ((msg.type === 'error') || (msg.type === 'danger'))
+                                        Katrid.Forms.Dialogs.Alerts.error(msg.message);
+                                    else if (msg.type === 'toast')
+                                        Katrid.Forms.Dialogs.toast(msg.message);
+                                    else if (msg.type === 'alert')
+                                        Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
+                                });
+                                if (result) {
+                                    // open a document
+                                    if (result.open)
+                                        window.open(result.open);
+                                    // download a file
+                                    if (result.download) {
+                                        console.log(result.result);
+                                        let a = document.createElement('a');
+                                        a.href = result.download;
+                                        a.target = '_blank';
+                                        a.click();
+                                        return;
+                                    }
+                                }
+                                resolve(result);
+                            }
+                            else
+                                resolve(res);
+                        }
+                    })
+                        .catch(res => {
+                        console.log('error', res);
+                        reject(res);
+                    });
+                });
+            }
+        }
+        Service.url = '/api/rpc/';
+        Services.Service = Service;
+        class Data extends Service {
+            static get url() {
+                return '/web/data/';
+            }
+            ;
+            /**
+             * Reorder/reindex a collection of records
+             * @param model
+             * @param ids
+             * @param field
+             * @param offset
+             */
+            reorder(model, ids, field = 'sequence', offset = 0) {
+                return this.post('reorder', { args: [model, ids, field, offset] });
+            }
+        }
+        Services.Data = Data;
+        /**
+         * Represents the attachments services api
+         */
+        class Attachments {
+            static delete(id) {
+                let svc = new Katrid.Services.ModelService('content.attachment');
+                svc.delete(id);
+            }
+            static upload(file, config) {
+                return new Promise((resolve, reject) => {
+                    let data = new FormData();
+                    data.append('model', config.model.name);
+                    data.append('id', config.recordId);
+                    for (let f of file.files)
+                        data.append('attachment', f, f.name);
+                    return $.ajax({
+                        url: '/web/content/upload/',
+                        type: 'POST',
+                        data: data,
+                        processData: false,
+                        contentType: false
+                    })
+                        .done((res) => {
+                        resolve(res);
+                    });
+                });
+            }
+        }
+        Services.Attachments = Attachments;
+        class Auth extends Service {
+            static login(username, password) {
+                return this.$post('/web/login/', { username: username, password: password });
+            }
+        }
+        class Upload {
+            static sendFile(config) {
+                let { model, method, file, vm } = config;
+                let form = new FormData();
+                form.append('files', file.files[0]);
+                let url = `/web/file/upload/${model.name}/${method}/`;
+                if (vm.record && vm.record.id)
+                    form.append('id', vm.record.id);
+                // try to detect the current datasource to be refreshed if needed
+                let dataSource = vm.dataSource;
+                $.ajax({
+                    url: url,
+                    data: form,
+                    processData: false,
+                    contentType: false,
+                    type: 'POST',
+                    success: (data) => {
+                        if (dataSource)
+                            dataSource.refresh();
+                        Katrid.Forms.Dialogs.Alerts.success('Operação realizada com sucesso.');
+                    }
+                });
+            }
+            static uploadTo(url, file) {
+                let form = new FormData();
+                form.append('files', file.files[0]);
+                return $.ajax({
+                    url: url,
+                    data: form,
+                    processData: false,
+                    contentType: false,
+                    type: 'POST',
+                    success: (data) => {
+                        Katrid.Forms.Dialogs.Alerts.success('Arquivo enviado com sucesso!');
+                    }
+                });
+            }
+        }
+        Services.Upload = Upload;
+        Services.data = new Data('');
+        function post(url, data) {
+            // post json data to server
+            return fetch(url, {
+                method: 'POST',
+                body: JSON.stringify(data),
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+            }).then(res => res.json());
+        }
+        Services.post = post;
+        async function downloadBytes(res) {
+            let bytes = await res.blob();
+            let contentType = res.headers.get('Content-Type');
+            let name = res.headers.get('Content-Disposition');
+            let url = URL.createObjectURL(bytes);
+            let a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = name;
+            document.body.append(a);
+            if (contentType.indexOf('pdf') > 1)
+                window.open(url);
+            else
+                a.click();
+            URL.revokeObjectURL(url);
+            a.remove();
+        }
+    })(Services = Katrid.Services || (Katrid.Services = {}));
+})(Katrid || (Katrid = {}));
+/// <reference path="../services/services.ts"/>
+var Katrid;
+(function (Katrid) {
+    var BI;
+    (function (BI) {
+        class TableWidget {
+            constructor(el, config) {
+                this.el = el;
+                this.config = config;
+                this._waiting = false;
+                if (!this.config)
+                    this.config = {};
+            }
+            get queryCommand() {
+                return this._queryCommand;
+            }
+            set queryCommand(value) {
+                this._queryCommand = value;
+                this.waiting = true;
+                Katrid.Services.post('/bi/studio/query/', { query: value, withDescription: true, asDict: true })
+                    .then(res => this._refresh(res))
+                    .finally(() => this.waiting = false);
+            }
+            get waiting() {
+                return this._waiting;
+            }
+            set waiting(value) {
+                this._waiting = value;
+                if (value)
+                    this.el.innerHTML = `<div><i class="fas fa-spinner fa-spin"></i> <span>${Katrid.i18n.gettext('Loading...')}</span></div>`;
+                else {
+                    let spinner = this.el.querySelector('.fas.fa-spinner');
+                    if (spinner)
+                        spinner.remove();
+                }
+            }
+            _refresh(data) {
+                let fieldList = data.fields;
+                let fields = [];
+                if (this.config.fieldElements?.length) {
+                    let fieldByName = {};
+                    for (let f of fieldList)
+                        fieldByName[f.name] = f;
+                    fields = Array.from(this.config.fieldElements.map(el => {
+                        let name = el.getAttribute('name');
+                        let f;
+                        if (name)
+                            f = fieldByName[name];
+                        return new TableColumn(el, f);
+                    }));
+                }
+                else
+                    fields = Array.from(fieldList.map(f => new TableColumn(null, f)));
+                this.el.innerHTML = '';
+                if (this.config.caption)
+                    this.el.innerHTML = `<h4 class="widget-header">${this.config.caption}</h4>`;
+                let table = document.createElement('table');
+                table.classList.add('table');
+                let tr = document.createElement('tr');
+                table.createTHead().append(tr);
+                for (let f of fields) {
+                    let th = document.createElement('th');
+                    th.innerText = f.caption;
+                    th.className = f.type;
+                    tr.append(th);
+                }
+                let tbody = table.createTBody();
+                // render rows
+                for (let row of data.data) {
+                    let tr = document.createElement('tr');
+                    for (let f of fields) {
+                        let td = document.createElement('td');
+                        td.className = f.type;
+                        let col;
+                        if (f.name) {
+                            col = row[f.name];
+                            if (_.isNumber(col))
+                                col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
+                            else if (f.type === 'DateField')
+                                col = moment(col).format('DD/MM/YYYY');
+                            else if (f.type === 'DateTimeField')
+                                col = moment(col).format('DD/MM/YYYY HH:mm');
+                        }
+                        else
+                            col = '';
+                        if (f.type)
+                            td.className = f.type;
+                        td.innerText = col;
+                        tr.append(td);
+                    }
+                    tbody.append(tr);
+                }
+                this.el.append(table);
+            }
+        }
+        BI.TableWidget = TableWidget;
+        class TableWidgetElement extends Katrid.WebComponent {
+            create() {
+                super.create();
+                this.className = 'table-responsive';
+                let fieldElements = Array.from(this.querySelectorAll('field'));
+                for (let f of fieldElements)
+                    f.remove();
+                let tbl = new TableWidget(this, { caption: this.getAttribute('caption'), fieldElements });
+                tbl.queryCommand = this.getAttribute('query-command');
+            }
+        }
+        BI.TableWidgetElement = TableWidgetElement;
+        class TableColumn {
+            constructor(el, field) {
+                this.el = el;
+                this.field = field;
+                if (el) {
+                    this.name = el.getAttribute('name') || field?.name;
+                    this.caption = el.getAttribute('caption') || this.name;
+                    this.type = el.getAttribute('data-type') || field?.type;
+                }
+                else if (field) {
+                    this.caption = this.name = field.name;
+                    this.type = field.type;
+                }
+                if (!this.type)
+                    this.type = 'StringField';
+            }
+        }
+        Katrid.define('table-widget', TableWidgetElement);
+    })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
     var Components;
     (function (Components) {
         class Component {
@@ -11212,287 +11621,6 @@ var Katrid;
         class JsonRpcAdapter extends Services.FetchAdapter {
         }
         Services.JsonRpcAdapter = JsonRpcAdapter;
-    })(Services = Katrid.Services || (Katrid.Services = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Services;
-    (function (Services) {
-        // bypass the fetch function
-        let $fetch = window.fetch;
-        window.fetch = function () {
-            let ajaxStart = new CustomEvent('ajax.start', { detail: document, bubbles: true, cancelable: false });
-            let ajaxStop = new CustomEvent('ajax.stop', { detail: document, bubbles: true, cancelable: false });
-            // Pass the supplied arguments to the real fetch function
-            let promise = $fetch.apply(this, arguments);
-            // Trigger the fetchStart event
-            document.dispatchEvent(ajaxStart);
-            promise.finally(() => {
-                document.dispatchEvent(ajaxStop);
-            });
-            return promise;
-        };
-        class Service {
-            constructor(name) {
-                this.name = name;
-            }
-            static $fetch(url, config, params) {
-                return this.adapter.$fetch(url, config, params);
-            }
-            static $post(url, data, params) {
-                return this.adapter.$fetch(url, {
-                    method: 'POST',
-                    credentials: "same-origin",
-                    body: JSON.stringify(data),
-                    headers: {
-                        'content-type': 'application/json',
-                    }
-                }, params)
-                    .then(res => res.json());
-            }
-            get(name, params) {
-                // Using http protocol
-                const methName = this.name ? this.name + '/' : '';
-                const rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
-                return $.get(rpcName, params);
-            }
-            post(name, data, params, config, context) {
-                // if (!context && Katrid.app)
-                //   context = Katrid.app.context;
-                if (!data)
-                    data = {};
-                if (context)
-                    data.context = context;
-                data = {
-                    method: name,
-                    params: data,
-                };
-                if (!config)
-                    config = {};
-                Object.assign(config, {
-                    method: 'POST',
-                    body: JSON.stringify(data),
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                    },
-                });
-                const methName = this.name ? this.name + '/' : '';
-                let rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
-                if (params) {
-                    rpcName += `?${$.param(params)}`;
-                }
-                return new Promise((resolve, reject) => {
-                    Service.adapter.$fetch(rpcName, config)
-                        .then(async (response) => {
-                        let contentType = response.headers.get('Content-Type');
-                        if (response.status === 500) {
-                            let res = await response.json();
-                            // show server error
-                            Katrid.Forms.Dialogs.ExceptionDialog.show(`Server Error 500`, res.error);
-                            return reject(res);
-                        }
-                        let res;
-                        if (contentType === 'application/json')
-                            res = await response.json();
-                        else
-                            return downloadBytes(response);
-                        if (res.error) {
-                            if ('message' in res.error)
-                                Katrid.Forms.Dialogs.Alerts.error(res.error.message);
-                            else if ('messages' in res.error)
-                                Katrid.Forms.Dialogs.Alerts.error(res.error.messages.join('<br>'));
-                            else
-                                Katrid.Forms.Dialogs.Alerts.error(res.error);
-                            reject(res.error);
-                        }
-                        else {
-                            if (res.result) {
-                                let result = res.result;
-                                if (Array.isArray(result) && (result.length === 1))
-                                    result = result[0];
-                                let messages;
-                                if (result.messages)
-                                    messages = result.messages;
-                                else
-                                    messages = [];
-                                if (result.message) {
-                                    if (result.message.info)
-                                        messages.push({ type: 'info', message: result.message.info });
-                                    else
-                                        messages.push(result.message);
-                                }
-                                else if (result.warn)
-                                    messages.push({ type: 'warn', message: result.warn });
-                                else if (result.error) {
-                                    if (typeof result.error === 'string')
-                                        messages.push({ type: 'error', message: result.error });
-                                    else
-                                        messages.push({ type: 'error', message: result.error.message });
-                                }
-                                messages.forEach(function (msg) {
-                                    if (Katrid.isString(msg))
-                                        Katrid.Forms.Dialogs.Alerts.success(msg);
-                                    else if (msg.type === 'warn')
-                                        Katrid.Forms.Dialogs.Alerts.warn(msg.message);
-                                    else if (msg.type === 'info')
-                                        Katrid.Forms.Dialogs.Alerts.info(msg.message);
-                                    else if ((msg.type === 'error') || (msg.type === 'danger'))
-                                        Katrid.Forms.Dialogs.Alerts.error(msg.message);
-                                    else if (msg.type === 'toast')
-                                        Katrid.Forms.Dialogs.toast(msg.message);
-                                    else if (msg.type === 'alert')
-                                        Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
-                                });
-                                if (result) {
-                                    // open a document
-                                    if (result.open)
-                                        window.open(result.open);
-                                    // download a file
-                                    if (result.download) {
-                                        console.log(result.result);
-                                        let a = document.createElement('a');
-                                        a.href = result.download;
-                                        a.target = '_blank';
-                                        a.click();
-                                        return;
-                                    }
-                                }
-                                resolve(result);
-                            }
-                            else
-                                resolve(res);
-                        }
-                    })
-                        .catch(res => {
-                        console.log('error', res);
-                        reject(res);
-                    });
-                });
-            }
-        }
-        Service.url = '/api/rpc/';
-        Services.Service = Service;
-        class Data extends Service {
-            static get url() {
-                return '/web/data/';
-            }
-            ;
-            /**
-             * Reorder/reindex a collection of records
-             * @param model
-             * @param ids
-             * @param field
-             * @param offset
-             */
-            reorder(model, ids, field = 'sequence', offset = 0) {
-                return this.post('reorder', { args: [model, ids, field, offset] });
-            }
-        }
-        Services.Data = Data;
-        /**
-         * Represents the attachments services api
-         */
-        class Attachments {
-            static delete(id) {
-                let svc = new Katrid.Services.ModelService('content.attachment');
-                svc.delete(id);
-            }
-            static upload(file, config) {
-                return new Promise((resolve, reject) => {
-                    let data = new FormData();
-                    data.append('model', config.model.name);
-                    data.append('id', config.recordId);
-                    for (let f of file.files)
-                        data.append('attachment', f, f.name);
-                    return $.ajax({
-                        url: '/web/content/upload/',
-                        type: 'POST',
-                        data: data,
-                        processData: false,
-                        contentType: false
-                    })
-                        .done((res) => {
-                        resolve(res);
-                    });
-                });
-            }
-        }
-        Services.Attachments = Attachments;
-        class Auth extends Service {
-            static login(username, password) {
-                return this.$post('/web/login/', { username: username, password: password });
-            }
-        }
-        class Upload {
-            static sendFile(config) {
-                let { model, method, file, vm } = config;
-                let form = new FormData();
-                form.append('files', file.files[0]);
-                let url = `/web/file/upload/${model.name}/${method}/`;
-                if (vm.record && vm.record.id)
-                    form.append('id', vm.record.id);
-                // try to detect the current datasource to be refreshed if needed
-                let dataSource = vm.dataSource;
-                $.ajax({
-                    url: url,
-                    data: form,
-                    processData: false,
-                    contentType: false,
-                    type: 'POST',
-                    success: (data) => {
-                        if (dataSource)
-                            dataSource.refresh();
-                        Katrid.Forms.Dialogs.Alerts.success('Operação realizada com sucesso.');
-                    }
-                });
-            }
-            static uploadTo(url, file) {
-                let form = new FormData();
-                form.append('files', file.files[0]);
-                return $.ajax({
-                    url: url,
-                    data: form,
-                    processData: false,
-                    contentType: false,
-                    type: 'POST',
-                    success: (data) => {
-                        Katrid.Forms.Dialogs.Alerts.success('Arquivo enviado com sucesso!');
-                    }
-                });
-            }
-        }
-        Services.Upload = Upload;
-        Services.data = new Data('');
-        function post(url, data) {
-            // post json data to server
-            return fetch(url, {
-                method: 'POST',
-                body: JSON.stringify(data),
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-            }).then(res => res.json());
-        }
-        Services.post = post;
-        async function downloadBytes(res) {
-            let bytes = await res.blob();
-            let contentType = res.headers.get('Content-Type');
-            let name = res.headers.get('Content-Disposition');
-            let url = URL.createObjectURL(bytes);
-            let a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = name;
-            document.body.append(a);
-            if (contentType.indexOf('pdf') > 1)
-                window.open(url);
-            else
-                a.click();
-            URL.revokeObjectURL(url);
-            a.remove();
-        }
     })(Services = Katrid.Services || (Katrid.Services = {}));
 })(Katrid || (Katrid = {}));
 /// <reference path="services.ts"/>
