@@ -174,7 +174,8 @@ class ReportAction(Action):
             rep = id
         else:
             rep = cls.objects.get(pk=id)
-        where = params.pop('where', None)
+        if params:
+            where = params.pop('where', None)
         return rep._export_report(format=format, params=params, where=where)
 
     @api.classmethod

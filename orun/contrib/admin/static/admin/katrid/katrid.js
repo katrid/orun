@@ -115,7 +115,6 @@ var Katrid;
                                 this._context[k] = v;
                     }
                 }
-                console.debug('get context', this._context);
                 return this._context;
             }
             doAction(act) {
@@ -836,6 +835,13 @@ var Katrid;
                 finally {
                     this.pendingOperation = false;
                 }
+            }
+            onActionLink(actionId, actionType, context) {
+                let ctx = { active_id: this.view?.record?.id };
+                if (context)
+                    Object.assign(ctx, context);
+                Object.assign(ctx, this.context);
+                return Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx);
             }
             async _evalResponseAction(res) {
                 if (res.tag === 'refresh')
@@ -4039,6 +4045,8 @@ var Katrid;
                 return data;
             }
             async save(autoRefresh = true) {
+                let valid = await this.validate();
+                console.log('validated');
                 this.record.$flush();
                 // Save pending children
                 for (let child of this.children)
