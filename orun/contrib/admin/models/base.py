@@ -3,6 +3,7 @@ from collections import defaultdict
 import copy
 from functools import reduce
 from itertools import chain
+from io import StringIO
 
 from orun.apps import apps
 from orun.utils.xml import get_xml_fields, etree
@@ -403,7 +404,13 @@ class AdminModel(models.Model, helper=True):
     def admin_get_fields_info(cls, view_id=None, view_type='form', toolbar=False, context=None, xml=None):
         opts = cls._meta
         if xml is not None:
+            if isinstance(xml, str):
+                xml = etree.fromstring(xml)
             fields = [opts.fields[f.attrib['name']] for f in get_xml_fields(xml) if 'name' in f.attrib]
+            if view_type == 'calendar':
+                fields.append(opts.fields[xml.attrib.get('date-start')])
+                if 'date-end' in xml.attrib:
+                    fields.append(opts.fields[xml.attrib.get('date-end')])
             return {
                 f.name: cls.admin_get_field_info(f, view_type)
                 for f in fields

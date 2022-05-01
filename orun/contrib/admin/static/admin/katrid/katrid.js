@@ -6599,8 +6599,27 @@ var Katrid;
                 btn.setAttribute('v-on:click', `setViewMode('calendar')`);
                 container.append(btn);
             }
+            beforeRender(template) {
+                let templ = super.beforeRender(template);
+                // collect fields names
+                this.fieldStart = template.getAttribute('date-start');
+                this.fieldEnd = template.getAttribute('date-end');
+                return templ;
+            }
+            dataSourceCallback(data) {
+                super.dataSourceCallback(data);
+                this._refresh(data.records);
+            }
+            _refresh(records) {
+                this._calendar.removeAllEvents();
+                for (let rec of records) {
+                    let event = { title: rec.$str, start: rec[this.fieldStart] };
+                    if (this.fieldEnd)
+                        event['end'] = rec[this.fieldEnd];
+                    this._calendar.addEvent(event);
+                }
+            }
             renderTemplate(content) {
-                console.log('render template', content);
                 // template render
                 let calendarEl = document.createElement('div');
                 calendarEl.className = 'calendar-view';
