@@ -5740,7 +5740,6 @@ var Katrid;
                 if (this._loaded)
                     return;
                 this._loaded = true;
-                console.log('load pending views');
                 // render component
                 let preLoadedViews = {};
                 // detect pre loaded views
@@ -7281,8 +7280,11 @@ ${Katrid.i18n.gettext('Delete')}
                     // auto load record by id
                     if (options?.id)
                         await this.setRecordId(options.id);
-                    if (!el)
+                    if (!el) {
+                        this.createElement();
+                        await this.loadPendingViews();
                         el = this.render();
+                    }
                     if (options?.state != null) {
                         this.state = options.state;
                         options.backdrop = 'static';
@@ -7391,6 +7393,7 @@ ${Katrid.i18n.gettext('Delete')}
                 this.closeDialog();
             }
             async loadPendingViews() {
+                console.debug('load pending views', this._pendingViews);
                 if (!this._pendingViews)
                     return;
                 this._pendingViews = false;
@@ -10539,10 +10542,8 @@ var Katrid;
         async function createDialog(config) {
             let form = config.field.getView('form');
             form.parentVm = config.parentVm;
-            console.log('parent vm', form.parentVm);
             form.datasource.parent = config.master;
             form.datasource.field = config.field;
-            await form.loadPendingViews();
             let relField = form.fields[config.field.info.field];
             // hide related field
             if (relField)
@@ -10556,7 +10557,8 @@ var Katrid;
                 if (!this.$field) {
                     let field = this.$parent.$fields[this.$attrs.name];
                     this.$field = field;
-                    // keep the html structure cached
+                    // save html structure to cache
+                    console.debug('render field', field.name);
                     this.$view = field.getView('list');
                     this.$fields = this.$view.fields;
                     this.$view.datasource.vm = this;
@@ -10850,7 +10852,6 @@ var Katrid;
                     async recordLoaded(event) {
                         if (this.$timeout)
                             clearTimeout(this.$timeout);
-                        let rec = event.detail.record;
                         this.$timeout = setTimeout(async () => {
                             let rec = event.detail.record;
                             let data = {};
