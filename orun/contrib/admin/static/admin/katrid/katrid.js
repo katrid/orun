@@ -2640,9 +2640,13 @@ var Katrid;
             prepareGroup(groups) {
                 return groups;
             }
+            async groupBy(data) {
+                // this.vm.records = this.vm.groups;
+                console.log(data);
+            }
             async applyGroups(groups, params) {
-                // let res = await this.dataSource.groupBy(groups, params);
-                // await this.groupBy(res);
+                let res = await this.datasource.groupBy(groups, params);
+                await this.groupBy(res);
             }
             _addRecordsToGroup(index, list) {
             }
@@ -5987,7 +5991,6 @@ var Katrid;
             prepare(elements) {
                 let atts = this.view.element.querySelector('.btn-toolbar');
                 for (let actions of elements.values()) {
-                    console.log('actions', actions.innerHTML);
                     if (!this.view.toolbarVisible) {
                         actions.remove();
                         continue;
@@ -6829,10 +6832,12 @@ var Katrid;
             set record(value) {
                 this._record = value;
                 this.vm.record = value;
-                for (let child of this.nestedViews)
-                    child.setParentRecord(value);
+                // for (let child of this.nestedViews)
+                //   child.setParentRecord(value);
                 for (let cb of this.dataCallbacks)
-                    cb(value);
+                    cb(this.vm.record);
+                if (this.element)
+                    this.element.dispatchEvent(new CustomEvent('recordChanged', { detail: { record: this.vm.record } }));
             }
             addDataCallback(cb) {
                 this.dataCallbacks.push(cb);
@@ -6889,16 +6894,11 @@ var Katrid;
                 // this.boundFields[field.name].push(f);
                 return f;
             }
-            renderField(fieldEl) {
-                let name = fieldEl.getAttribute('name');
+            renderField(fld, fieldEl) {
+                let name = fld.name;
                 if (name) {
                     let fld = this.fields[name];
                     if (fld) {
-                        fld.fieldEl = fieldEl;
-                        // let boundField = this.bindField(fld);
-                        // boundField.form = this;
-                        // boundField.field = fld;
-                        // fld.assign(fieldEl);
                         // add hook to v-sum attribute
                         if (fieldEl.hasAttribute('v-sum'))
                             this.addSumHook(fld, fieldEl);
@@ -6933,14 +6933,21 @@ var Katrid;
                 for (let child of form.querySelectorAll('field')) {
                     if ((child.parentElement.tagName === 'FORM') && (child.parentElement !== form))
                         continue;
-                    if (child.hasAttribute('invisible') || (child.getAttribute('visible') === 'false')) {
-                        child.remove();
-                        continue;
-                    }
-                    let newField = this.renderField(child);
-                    if (newField) {
-                        child.parentElement.insertBefore(newField, child);
-                        child.remove();
+                    let name = child.getAttribute('name');
+                    if (name) {
+                        let fld = this.fields[name];
+                        if (fld) {
+                            fld.fieldEl = child;
+                            if (child.hasAttribute('invisible') || (child.getAttribute('visible') === 'false')) {
+                                child.remove();
+                                continue;
+                            }
+                            let newField = this.renderField(fld, child);
+                            if (newField) {
+                                child.parentElement.insertBefore(newField, child);
+                                child.remove();
+                            }
+                        }
                     }
                 }
                 if (this.dialog)
@@ -7546,7 +7553,6 @@ var Katrid;
                     },
                     fieldChange(cond) {
                         let field = cond.fieldName;
-                        console.log('field change', field);
                         if (field) {
                             cond.$field = me.fields[field];
                             cond.conditions = me.getFieldConditions(cond.$field);
@@ -8511,7 +8517,6 @@ var Katrid;
                         return r;
                     }
                     addFacet(facet) {
-                        console.log('add facet');
                         if (!this.vm.facets.includes(facet))
                             this.vm.facets.push(facet);
                     }
@@ -8548,14 +8553,13 @@ var Katrid;
                         return res;
                     }
                     async update() {
-                        console.log('get params', this.getParams());
                         if (this.groupLength !== this._groupLength) {
                             this._groupLength = this.groupLength;
-                            await this.view.applyGroups(this.groupBy(), this.getParams());
+                            await this.view.resultView.applyGroups(this.groupBy(), this.getParams());
                         }
-                        else
-                            // apply changes to window action
-                            this.action.setSearchParams(this.getParams());
+                        else { }
+                        // apply changes to window action
+                        // this.action.setSearchParams(this.getParams());
                         this.vm.update();
                     }
                     groupBy() {
@@ -10587,16 +10591,6 @@ var Katrid;
                 };
             },
             methods: {
-                async setParentRecord(record) {
-                    return;
-                    // load o2m data
-                    if (!record)
-                        this.records = [];
-                    else if (record.$state === Katrid.Data.RecordState.created)
-                        this.records = [];
-                    else
-                        this.$view.datasource.parentNotification(record);
-                },
                 async recordClick(record, index, event) {
                     if (this.$editing)
                         return;
@@ -10843,24 +10837,28 @@ var Katrid;
             Katrid.component('table-field', {
                 template: '<div class="table-responsive"><slot></slot></div>',
                 mounted() {
-                    let el = this.$parent.actionView.el;
+                    let el = this.$parent.$view.element;
                     this.$name = this.$el.getAttribute('name');
                     this.$elView = el;
                     this.$recordLoaded = (...args) => this.recordLoaded(...args);
-                    el.addEventListener('recordLoaded', this.$recordLoaded);
+                    el.addEventListener('recordChanged', this.$recordLoaded);
                 },
                 unmounted() {
-                    this.$elView.removeEventListener('recordLoaded', this.$recordLoaded);
+                    this.$elView.removeEventListener('recordChanged', this.$recordLoaded);
                 },
                 methods: {
                     async recordLoaded(event) {
+                        if (this.$timeout)
+                            clearTimeout(this.$timeout);
                         let rec = event.detail.record;
-                        console.log('record loaded', rec);
-                        let data = {};
-                        let field = this.$parent.actionView.fields[this.$name];
-                        data[field.info.field || 'id'] = rec.id;
-                        let res = await this.$parent.actionView.action.model.getFieldChoices({ field: this.$name, filter: data });
-                        this.$parent.record[this.$name] = res.data;
+                        this.$timeout = setTimeout(async () => {
+                            let rec = event.detail.record;
+                            let data = {};
+                            let field = this.$parent.$fields[this.$name];
+                            data[field.info.field || 'id'] = rec.id;
+                            let res = await this.$parent.$view.model.service.getFieldChoices({ field: this.$name, filter: data });
+                            rec[this.$name] = res.data;
+                        }, 1000);
                     }
                 }
             });
