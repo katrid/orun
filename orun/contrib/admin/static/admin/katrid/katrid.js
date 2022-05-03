@@ -6637,7 +6637,7 @@ var Katrid;
                         height: calendarEl.parentElement.getBoundingClientRect().height,
                     });
                     this._calendar.render();
-                }, 100);
+                });
                 return el;
             }
         }
@@ -7269,28 +7269,28 @@ ${Katrid.i18n.gettext('Delete')}
              * Shows the form as a modal dialog
              * @param options
              */
-            showDialog(options) {
+            async showDialog(options) {
                 this.dialog = true;
                 if (!options)
                     options = {};
                 if (options.buttons)
                     this.dialogButtons = options.buttons;
+                let el = this.element;
+                if (!el) {
+                    this.createElement();
+                    await this.loadPendingViews();
+                    el = this.render();
+                }
+                // auto load record by id
+                if (options?.id)
+                    await this.setRecordId(options.id);
+                if (options?.state != null) {
+                    this.state = options.state;
+                    options.backdrop = 'static';
+                }
+                else
+                    this.state = DataSourceState.browsing;
                 this.dialogPromise = new Promise(async (resolve, reject) => {
-                    let el = this.element;
-                    // auto load record by id
-                    if (options?.id)
-                        await this.setRecordId(options.id);
-                    if (!el) {
-                        this.createElement();
-                        await this.loadPendingViews();
-                        el = this.render();
-                    }
-                    if (options?.state != null) {
-                        this.state = options.state;
-                        options.backdrop = 'static';
-                    }
-                    else
-                        this.state = DataSourceState.browsing;
                     this._modal = new bootstrap.Modal(el, options);
                     el.addEventListener('hidden.bs.modal', () => {
                         resolve(this.$result);
@@ -7302,7 +7302,6 @@ ${Katrid.i18n.gettext('Delete')}
                     // if (options?.edit)
                     //   this.vm.dataSource.edit();
                 });
-                return this.dialogPromise;
             }
             $onFieldChange(field, value) {
                 // update auto sum fields
@@ -10548,7 +10547,7 @@ var Katrid;
             // hide related field
             if (relField)
                 relField.visible = false;
-            form.showDialog(config.options);
+            await form.showDialog(config.options);
             return form;
         }
         Katrid.component('onetomany-field', {

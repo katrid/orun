@@ -13142,8 +13142,8 @@ table-field .table tbody tr {
   margin: 0;
 }
 
-calendar-view .fc-header-toolbar {
-  margin: 10px;
+.calendar-view .fc-header-toolbar {
+  margin: 15px;
 }
 
 .date-calendar.show {
@@ -13343,6 +13343,7 @@ calendar-view .fc-header-toolbar {
 }
 .katrid-app .form-label {
   margin-bottom: 4px;
+  font-weight: 500;
 }
 .katrid-app .form-field-readonly {
   display: block;
