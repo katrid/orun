@@ -66,6 +66,9 @@ var Katrid;
                 if (this.actionManager)
                     this.actionManager.addAction(this);
             }
+            async confirmDiscard() {
+                return true;
+            }
             async debug() {
             }
             async render() {
@@ -347,8 +350,12 @@ var Katrid;
             }
             doAction(action) {
             }
+            async confirmDiscard() {
+                if (this.action)
+                    return await this.action?.confirmDiscard();
+                return true;
+            }
             async onHashChange(params, reset) {
-                console.log('hash change', params);
                 let actionId = params.action;
                 // check if action has changed
                 let oldAction, action;
@@ -1627,6 +1634,13 @@ var Katrid;
                 window.addEventListener('popstate', event => {
                     this.loadPage(location.hash, (event.state === null) || (event.state?.clear));
                 });
+                window.addEventListener('beforeunload', event => {
+                    console.debug('bla bla bla');
+                    this.beforeUnload();
+                });
+            }
+            beforeUnload() {
+                console.log('confirm unload', this.actionManager.action);
             }
             get actionManager() {
                 return this._actionManager;
@@ -1743,6 +1757,8 @@ var Katrid;
                 }
             }
             async loadPage(hash, reset = true) {
+                if (!(await this.actionManager.confirmDiscard()))
+                    return;
                 let url = hash;
                 if (hash.indexOf('?') > -1) {
                     url = hash.substring(0, hash.indexOf('?'));
@@ -6460,22 +6476,43 @@ var Katrid;
             let sep = '\t';
             if (!text.includes(sep))
                 text = ';';
-            text.split('\n').forEach((line, n) => {
+            let n = 0;
+            let fkCache = {};
+            for (let line of text.split('\n')) {
                 // ignore the header
                 if (n > 0) {
                     line = line.trim();
                     if (line) {
                         let record = {};
-                        line.split(sep).forEach((s, n) => {
-                            let field = vm.$view.$columns[n];
-                            if (field)
-                                record[field.name] = s;
-                        });
+                        let c = 0;
+                        for (let s of line.split(sep)) {
+                            let field = vm.$view.$columns[c];
+                            if (field) {
+                                if (field instanceof Katrid.Data.ForeignKey) {
+                                    // caching fk search
+                                    if (s) {
+                                        if (!fkCache[field.name])
+                                            fkCache[field.name] = {};
+                                        let fkValues = fkCache[field.name];
+                                        if (!fkValues[s]) {
+                                            let res = await vm.$view.model.service.getFieldChoice({ field: field.name, term: s, kwargs: { exact: true } });
+                                            if (res.items?.length)
+                                                fkValues[s] = res.items[0];
+                                        }
+                                        record[field.name] = fkValues[s];
+                                    }
+                                }
+                                else
+                                    record[field.name] = s;
+                            }
+                            c++;
+                        }
                         // save data to datasource
                         vm.$addRecord(record);
                     }
                 }
-            });
+                n++;
+            }
         }
         function unselectAll() {
             for (let rec of this.selection)
@@ -11768,6 +11805,15 @@ var Katrid;
                 if (config.context)
                     kwargs.context = config.context;
                 return this.post('api_get_field_choices', { args: [config.field, config.term], kwargs }, null, config.config);
+            }
+            /** Get a single object from field and natural key */
+            getFieldChoice(config) {
+                let kwargs = config.kwargs || {};
+                if (config.filter)
+                    kwargs.filter = config.filter;
+                if (config.context)
+                    kwargs.context = config.context;
+                return this.post('api_get_field_choice', { args: [config.field, config.term], kwargs }, null, config.config);
             }
             doViewAction(data) {
                 return this.post('admin_do_view_action', { kwargs: data });

@@ -135,13 +135,14 @@ class AdminModel(models.Model, helper=True):
         q = None
         if name:
             if name_fields is None:
-                name_fields = chain(*(_resolve_fk_search(f) for f in cls._meta.get_name_fields()))
+                name_fields = chain(*(_resolve_fk_search(f, exact=exact) for f in cls._meta.get_name_fields()))
+                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f: name}) for f in name_fields])
             else:
                 name_fields = [f.name for f in name_fields]
-            if exact:
-                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f}__iexact': name}) for f in name_fields])
-            else:
-                q = reduce(lambda f1, f2: f1 | f2, [Q(**{f: name}) for f in name_fields])
+                if exact:
+                    q = reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f}__iexact': name}) for f in name_fields])
+                else:
+                    q = reduce(lambda f1, f2: f1 | f2, [Q(**{f: name}) for f in name_fields])
         if where:
             if q is None:
                 q = Q(**where)
@@ -170,6 +171,10 @@ class AdminModel(models.Model, helper=True):
             'count': count,
             'items': res,
         }
+
+    @api.classmethod
+    def api_get_field_choice(cls, field: str, q, **kwargs):
+        return cls.api_get_field_choices(field, q, exact=True, limit=1)
 
     @api.classmethod
     def api_get_field_choices(cls, field: str, q=None, count=False, ids=None, page=None, exact=False, limit=None,
@@ -545,7 +550,7 @@ class AdminModel(models.Model, helper=True):
         cls.objects.bulk_update(objs, [cls._meta.sequence_field])
 
 
-def _resolve_fk_search(field: models.Field):
+def _resolve_fk_search(field: models.Field, exact=False):
     if isinstance(field, models.ForeignKey):
         rel_model = apps[field.remote_field.model]
         name_fields = field.name_fields
@@ -553,9 +558,12 @@ def _resolve_fk_search(field: models.Field):
             name_fields = []
             for f in rel_model._meta.get_name_fields():
                 if isinstance(f, models.ForeignKey):
-                    name_fields.extend(_resolve_fk_search(f))
+                    name_fields.extend(_resolve_fk_search(f, exact=exact))
                 elif isinstance(f, models.CharField):
-                    name_fields.append(f.name + '__icontains')
+                    if exact:
+                        name_fields.append(f.name + '__iexact')
+                    else:
+                        name_fields.append(f.name + '__icontains')
                 else:
                     name_fields.append(f.name)
         return [f'{field.name}__{f}' for f in name_fields]
@@ -563,5 +571,8 @@ def _resolve_fk_search(field: models.Field):
         if field.full_text_search:
             return [f'{field.name}__search']
         else:
-            return [f'{field.name}__icontains']
+            if exact:
+                return [f'{field.name}__iexact']
+            else:
+                return [f'{field.name}__icontains']
     return [field.name]
