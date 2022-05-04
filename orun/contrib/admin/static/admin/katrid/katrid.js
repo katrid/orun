@@ -6509,6 +6509,10 @@ var Katrid;
                                     if (s) {
                                         if (s.length === 1)
                                             record[field.name] = s === yes[0];
+                                        else if (s === '0')
+                                            record[field.name] = false;
+                                        else if (s === '1')
+                                            record[field.name] = true;
                                         else
                                             record[field.name] = s === no;
                                     }
