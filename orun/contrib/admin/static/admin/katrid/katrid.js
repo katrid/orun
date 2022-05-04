@@ -8079,7 +8079,10 @@ var Katrid;
                 tr.setAttribute('data-form-id', (++this._formCounter).toString());
                 if (this.rowSelector)
                     tr.append(document.createElement('th'));
+                // TODO: replace by column instance
                 for (let f of Object.values(this.fields)) {
+                    if (!f.visible)
+                        continue;
                     let td = document.createElement('td');
                     let control = f.formControl();
                     control.setAttribute('v-form-field', null);
@@ -8096,6 +8099,7 @@ var Katrid;
             }
             createFormComponent(record) {
                 let me = this;
+                console.debug('rec', record);
                 return {
                     created() {
                         this.$fields = me.fields;
@@ -8104,7 +8108,7 @@ var Katrid;
                     data() {
                         return {
                             selection: [],
-                            record: new me.model.recordClass(record),
+                            record: record,
                         };
                     },
                 };
@@ -8139,13 +8143,17 @@ var Katrid;
                 let tr = this.createInlineEditor();
                 tr.setAttribute('data-index', index.toString());
                 let vm = Katrid.createVm(this.createFormComponent(this.vm.records[index])).mount(tr);
-                setTimeout(() => {
-                    let oldRow = tbody.rows[index];
-                    this.forms[this._formCounter] = { formRow: tr, relRow: oldRow, index, record: vm.record || {} };
-                    tbody.insertBefore(tr, oldRow);
-                    tbody.removeChild(oldRow);
-                });
+                // setTimeout(() => {
+                let oldRow = tbody.rows[index];
+                this.forms[this._formCounter] = { formRow: tr, relRow: oldRow, index, record: vm.record || {} };
+                tbody.insertBefore(tr, oldRow);
+                tbody.removeChild(oldRow);
+                // });
                 return tr;
+            }
+            insert() {
+                let rec = this.model.newRecord();
+                this.vm.records.unshift(rec);
             }
             _removeForm(formId) {
                 let form = this.forms[formId];
@@ -10138,6 +10146,8 @@ var Katrid;
                 this.input.addEventListener('keydown', (event) => this.onKeyDown(event));
                 if (this.hasAttribute('placeholder'))
                     this.input.placeholder = this.getAttribute('placeholder');
+                if (this.$selectedItem)
+                    this.selectedItem = this.$selectedItem;
             }
             _addTag(tag) {
                 if (this.querySelector(`[data-id="${tag.id}"]`))
@@ -10456,7 +10466,7 @@ var Katrid;
             Controls.InputForeignKeyElement = InputForeignKeyElement;
             Katrid.define('input-foreignkey', InputForeignKeyElement);
             Katrid.component('field-autocomplete', {
-                props: ['modelValue', 'field'],
+                props: ['modelValue'],
                 template: '<input-foreignkey class="input-autocomplete"><slot/></input-foreignkey>',
                 mounted() {
                     this.$field = this.$parent.$fields[this.$attrs.name];
@@ -10464,6 +10474,8 @@ var Katrid;
                     this.$el.addEventListener('selectItem', (evt) => {
                         this.$emit('update:modelValue', evt.detail.item);
                     });
+                    if (this.modelValue)
+                        this.$el.selectedItem = this.modelValue;
                 },
                 watch: {
                     modelValue: function (value) {
@@ -10732,6 +10744,7 @@ var Katrid;
                         return;
                     try {
                         if (this.$field.editor === 'inline') {
+                            this.$view.insert();
                         }
                         else {
                             this.$editing = true;
