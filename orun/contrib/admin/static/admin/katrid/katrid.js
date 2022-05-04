@@ -5701,6 +5701,9 @@ var Katrid;
                 super.create();
                 this.cols = 12;
             }
+            get editor() {
+                return this.fieldEl.getAttribute('editor') || 'inline';
+            }
             get field() {
                 return this.info.field;
             }
@@ -10620,7 +10623,7 @@ var Katrid;
                         return;
                     let parentChanging = this.$parent.$view.changing;
                     try {
-                        if (this.$field.inlineEditor) {
+                        if (this.$field.editor === 'inline') {
                             // the table allows direct input data
                             let tr = this.$view.edit(index);
                             let el = event.target;
@@ -10732,7 +10735,7 @@ var Katrid;
                     if (this.$editing)
                         return;
                     try {
-                        if (this.$field.inlineEditor) {
+                        if (this.$field.editor === 'inline') {
                         }
                         else {
                             this.$editing = true;
