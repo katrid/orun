@@ -2611,6 +2611,8 @@ var Katrid;
                 data.selection = [];
                 data.groups = this.prepareGroup(this.recordGroups);
                 data.recordCount = this.recordCount;
+                console.debug('attrs', this.fields);
+                data.$fields = this.fields;
                 return data;
             }
             prepareGroup(groups) {
@@ -5530,6 +5532,7 @@ var Katrid;
             }
             formControl(fieldEl) {
                 let control = document.createElement(this.tag);
+                control.setAttribute(':field', `$fields && $fields[${this.name}]`);
                 control.setAttribute('v-model', 'record.' + this.name);
                 if ('allow-open' in this.attrs)
                     control.setAttribute('allow-open', null);
@@ -5696,6 +5699,7 @@ var Katrid;
             constructor() {
                 super(...arguments);
                 this.viewMode = 'list';
+                this.pasteAllowed = true;
             }
             create() {
                 super.create();
@@ -6404,12 +6408,13 @@ var Katrid;
             }
         }
         Forms.selectionToggleAll = selectionToggleAll;
-        function tableContextMenu(event) {
+        function tableContextMenu(event, config) {
             event.preventDefault();
             event.stopPropagation();
             let menu = new Forms.ContextMenu();
             menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => copyClick(event.target.closest('table')));
-            if (this.field?.pasteAllowed && this.$parent.dataSource.changing)
+            console.log(config);
+            if (config.pasteAllowed)
                 menu.add('<i class="fa fa-fw fa-paste"></i> Colar', (...args) => pasteClick(this));
             menu.show(event.pageX, event.pageY);
         }
@@ -6464,7 +6469,7 @@ var Katrid;
                                 record[field.name] = s;
                         });
                         // save data to datasource
-                        vm.dataSource.addRecord(record);
+                        vm.datasource.addRecord(record);
                     }
                 }
             });
@@ -8092,12 +8097,16 @@ var Katrid;
             createFormComponent(record) {
                 let me = this;
                 return {
+                    created() {
+                        this.$fields = me.fields;
+                        this.$view = me;
+                    },
                     data() {
                         return {
                             selection: [],
                             record: new me.model.recordClass(record),
                         };
-                    }
+                    },
                 };
             }
             createComponent() {
@@ -8122,6 +8131,8 @@ var Katrid;
                 return comp;
             }
             edit(index) {
+                this.readonly = false;
+                this.element.removeAttribute('readonly');
                 // let rec = this.vm.records[index];
                 let table = this.element.querySelector('table');
                 let tbody = table.tBodies[0];
@@ -8129,7 +8140,6 @@ var Katrid;
                 tr.setAttribute('data-index', index.toString());
                 let vm = Katrid.createVm(this.createFormComponent(this.vm.records[index])).mount(tr);
                 setTimeout(() => {
-                    console.log(vm.record);
                     let oldRow = tbody.rows[index];
                     this.forms[this._formCounter] = { formRow: tr, relRow: oldRow, index, record: vm.record || {} };
                     tbody.insertBefore(tr, oldRow);
@@ -10446,7 +10456,7 @@ var Katrid;
             Controls.InputForeignKeyElement = InputForeignKeyElement;
             Katrid.define('input-foreignkey', InputForeignKeyElement);
             Katrid.component('field-autocomplete', {
-                props: ['modelValue'],
+                props: ['modelValue', 'field'],
                 template: '<input-foreignkey class="input-autocomplete"><slot/></input-foreignkey>',
                 mounted() {
                     this.$field = this.$parent.$fields[this.$attrs.name];
@@ -10579,17 +10589,20 @@ var Katrid;
         }
         Katrid.component('onetomany-field', {
             props: ['modelValue'],
+            beforeCreate() {
+                let field = this.$parent.$fields[this.$attrs.name];
+                this.$field = field;
+                this.$view = field.getView('list');
+                this.$fields = this.$view.fields;
+                this.$view.datasource.vm = this;
+                this.$view.datasource.field = this.$field;
+                this.$view.datasource.parent = this.$parent.$view.datasource;
+            },
             render() {
-                if (!this.$field) {
-                    let field = this.$parent.$fields[this.$attrs.name];
-                    this.$field = field;
+                if (!this.$compiledTemplate) {
                     // save html structure to cache
-                    this.$view = field.getView('list');
-                    this.$fields = this.$view.fields;
-                    this.$view.datasource.vm = this;
-                    this.$view.datasource.field = this.$field;
-                    this.$view.datasource.parent = this.$parent.$view.datasource;
-                    this.$compiledTemplate = Vue.compile(beforeRender(field, this.$view.renderTemplate(this.$view.domTemplate())));
+                    let el = beforeRender(this.$field, this.$view.renderTemplate(this.$view.domTemplate()));
+                    this.$compiledTemplate = Vue.compile(el);
                 }
                 return this.$compiledTemplate(this);
             },
@@ -10677,23 +10690,6 @@ var Katrid;
                                 this.$onChange();
                             }
                         }
-                        // // clone record to a temp object
-                        // let rec: any = record;
-                        // // rec = Object.assign(rec, record);
-                        // // console.log('record click', rec, record);
-                        // form.dataSource.record = rec;
-                        // form.vm.parent = this.$parent;
-                        // record = await record.$record.load(record);
-                        // let res = await form.showDialog({edit: this.$parent.changing, backdrop: 'static'});
-                        // if (res) {
-                        //   if (res.$record.state === Katrid.Data.RecordState.destroyed)
-                        //     this.records.splice(index, 1);
-                        //   else {
-                        //     this.records[index] = res;
-                        //     this.record = res;
-                        //   }
-                        //   this.$emit('change', this.record);
-                        // }
                     }
                     finally {
                         this.$editing = false;
@@ -10726,10 +10722,10 @@ var Katrid;
                     this.$emit('update:modelValue', this.modelValue);
                 },
                 recordContextMenu(record, index, event) {
-                    // Katrid.Forms.Views.listRecordContextMenu.call(this, ...arguments);
+                    Forms.listRecordContextMenu.call(this, ...arguments);
                 },
-                tabeContextMenu(event) {
-                    Forms.tableContextMenu.call(this, ...arguments);
+                tableContextMenu(event) {
+                    Forms.tableContextMenu.call(this, ...arguments, { pasteAllowed: this.$field.pasteAllowed && this.$parent.$view.changing });
                 },
                 async createNew() {
                     if (this.$editing)
@@ -10790,7 +10786,7 @@ var Katrid;
                 },
             },
             mounted() {
-                this.$view.element = this.$el;
+                this.$view.element = this.$el.parentElement;
                 this.$view.vm = this;
                 let modelValue = this.modelValue;
                 if (modelValue) {
@@ -10799,6 +10795,12 @@ var Katrid;
                 }
             },
             emits: ['update:modelValue'],
+            computed: {
+                $fields() {
+                    console.debug('get $fields', this.$view.fields);
+                    return this.$view.fields;
+                }
+            },
             watch: {
                 modelValue(value) {
                     if (value) {
