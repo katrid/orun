@@ -6514,7 +6514,7 @@ var Katrid;
                                         else if (s === '1')
                                             record[field.name] = true;
                                         else
-                                            record[field.name] = s === no;
+                                            record[field.name] = s === yes;
                                     }
                                 }
                                 else
