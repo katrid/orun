@@ -7113,6 +7113,9 @@ ${Katrid.i18n.gettext('Delete')}
                 // this.datasource.record = this.model.newRecord();
             }
             async save() {
+                // flush nested children
+                for (let child of this.nestedViews)
+                    child.$flush();
                 this.setState(DataSourceState.browsing);
                 return this.datasource.save();
             }
@@ -8164,13 +8167,15 @@ var Katrid;
                 return form;
             }
             save(formId) {
-                let form = this._removeForm(formId);
-                if (form.index > -1) {
-                    // this.vm.records[form.index] = form.record;
-                    form.record.$flush();
+                for (let fid of ((formId && [formId] || Object.keys(this.forms)))) {
+                    let form = this._removeForm(fid);
+                    if (form.index > -1) {
+                        // this.vm.records[form.index] = form.record;
+                        form.record.$flush();
+                    }
+                    else
+                        this.vm.records.push(form.record);
                 }
-                else
-                    this.vm.records.push(form.record);
             }
             cancel(formId) {
                 let form = this._removeForm(formId);
@@ -10719,6 +10724,9 @@ var Katrid;
                         let formId = control.closest('tr').getAttribute('data-form-id');
                         this.$view.save(formId);
                     }
+                },
+                $flush() {
+                    this.$view.save();
                 },
                 $discard() {
                     for (let rec of this.records) {
