@@ -4379,7 +4379,10 @@ var Katrid;
             }
             addRecord(rec) {
                 let scope = this.vm;
-                let record = this.model.newRecord();
+                let record = this.model.newRecord(null, this);
+                this.setValues(rec, record);
+                this.records.push(record);
+                return;
                 if (!(scope.modelValue))
                     scope.$parent.record[this.field.name] = [];
                 scope.modelValue.push(record);
@@ -6464,12 +6467,12 @@ var Katrid;
                     if (line) {
                         let record = {};
                         line.split(sep).forEach((s, n) => {
-                            let field = vm.$grid.$columns[n];
+                            let field = vm.$view.$columns[n];
                             if (field)
                                 record[field.name] = s;
                         });
                         // save data to datasource
-                        vm.datasource.addRecord(record);
+                        vm.$addRecord(record);
                     }
                 }
             });
@@ -8188,6 +8191,7 @@ var Katrid;
                 let table = renderer.render(template);
                 div.className = 'table-responsive';
                 div.append(table);
+                this.$columns = renderer.columns;
                 return div;
             }
         }
@@ -10619,6 +10623,7 @@ var Katrid;
                 if (!this.$compiledTemplate) {
                     // save html structure to cache
                     let el = beforeRender(this.$field, this.$view.renderTemplate(this.$view.domTemplate()));
+                    this.$columns = this.$view.$columns;
                     this.$compiledTemplate = Vue.compile(el);
                 }
                 return this.$compiledTemplate(this);
@@ -10740,6 +10745,12 @@ var Katrid;
                     this.$parent.$view.$onFieldChange(this.$field, this.records);
                     this.$emit('change', this.value);
                     this.$emit('update:modelValue', this.modelValue);
+                },
+                $addRecord(data) {
+                    let ds = this.$view.datasource;
+                    let rec = ds.model.newRecord(data, ds);
+                    rec.$flush();
+                    this.modelValue.push(rec);
                 },
                 recordContextMenu(record, index, event) {
                     Forms.listRecordContextMenu.call(this, ...arguments);
