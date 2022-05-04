@@ -6472,6 +6472,8 @@ var Katrid;
             navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(table));
         }
         async function pasteClick(vm) {
+            let yes = Katrid.i18n.gettext('Yes').toLowerCase();
+            let no = Katrid.i18n.gettext('No').toLowerCase();
             let text = await navigator.clipboard.readText();
             let sep = '\t';
             if (!text.includes(sep))
@@ -6500,6 +6502,15 @@ var Katrid;
                                                 fkValues[s] = res.items[0];
                                         }
                                         record[field.name] = fkValues[s];
+                                    }
+                                }
+                                else if (field instanceof Katrid.Data.BooleanField) {
+                                    s = s.trim().toLowerCase();
+                                    if (s) {
+                                        if (s.length === 1)
+                                            record[field.name] = s === yes[0];
+                                        else
+                                            record[field.name] = s === no;
                                     }
                                 }
                                 else
