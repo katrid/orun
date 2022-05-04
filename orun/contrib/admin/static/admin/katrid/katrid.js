@@ -9540,6 +9540,28 @@ var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
+        function autoComplete(s, format) {
+            let match = Array.from(s.matchAll(/(\d)+/g));
+            if (match.length) {
+                let today = new Date();
+                let day = Number.parseInt(match[0][0]);
+                let month = today.getMonth();
+                let year = today.getFullYear();
+                if (match.length > 1) {
+                    // auto complete month
+                    month = Number.parseInt(match[1][0]) - 1;
+                }
+                if (match.length > 2) {
+                    let y = match[2][0];
+                    // auto complete year
+                    if (y.length === 2)
+                        y = '20' + y;
+                    year = Number.parseInt(y);
+                }
+                return new Date(year, month, day);
+            }
+            return;
+        }
         Katrid.component('input-date', {
             props: ['modelValue'],
             template: '<div><slot></slot></div>',
@@ -9548,6 +9570,7 @@ var Katrid;
                 // initializes the input mask
                 // TODO localize the date format
                 let mask = Katrid.i18n.gettext('9999-99-99');
+                let todayChar = Katrid.i18n.gettext('Today')[0].toLowerCase();
                 let format = vm.$attrs['date-picker'] || 'L';
                 let $format;
                 if (format === 'L LT') {
@@ -9561,12 +9584,42 @@ var Katrid;
                 this.$lastValue = '';
                 input.addEventListener('focusin', () => this.$changing = true);
                 input.addEventListener('focusout', () => this.$changing = false);
+                input.addEventListener('keydown', evt => {
+                    if (evt.code === 'ArrowUp') {
+                        // tomorrow
+                        let v = moment(this.modelValue || new Date()).add(1, 'days').format($format);
+                        input.value = v;
+                        vm.$emit('update:modelValue', applyValue(v));
+                    }
+                    else if (evt.code === 'ArrowDown') {
+                        // yesterday
+                        let v = moment(this.modelValue || new Date()).add(-1, 'days').format($format);
+                        input.value = v;
+                        vm.$emit('update:modelValue', applyValue(v));
+                    }
+                    else if (evt.key.toLowerCase() === todayChar) {
+                        // today
+                        let v = moment(new Date()).format($format);
+                        input.value = v;
+                        vm.$emit('update:modelValue', applyValue(v));
+                    }
+                });
                 $(input).inputmask({
                     mask,
                     insertMode: false,
                     onincomplete: function () {
-                        if (vm.$changing)
+                        // auto complete date
+                        if (vm.$changing) {
                             vm.$emit('update:modelValue', applyValue(input.value));
+                        }
+                        else if ($(input).inputmask('unmaskedvalue') !== '') {
+                            let v = autoComplete(input.value.replace('_', ''), $format);
+                            if (v)
+                                input.value = moment(v).format($format);
+                            else
+                                input.value = '';
+                            vm.$emit('update:modelValue', applyValue(v));
+                        }
                     },
                     oncomplete: function () {
                         if (vm.$changing)
@@ -11017,14 +11070,14 @@ var Katrid;
                     secondField = `<div class="col-6">
 <input-date class="input-group date" v-model="param.value2" date-picker="L">
 <input id="rep-param-id-${param.id}-2" type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
-      <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
+      <label class="input-group-text btn-calendar"><i class="fa fa-calendar fa-sm"></i></label>
 </input-date>
 </div>`;
                 }
                 return `<div class="col-sm-12 row"><div class="col-6">
 <input-date class="input-group date" v-model="param.value1" date-picker="L">
 <input id="rep-param-id-${param.id}" type="text" class="form-control" inputmode="numeric" autocomplete="off">
-      <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
+      <label class="input-group-text btn-calendar"><i class="fa fa-calendar fa-sm"></i></label>
 </input-date>
 </div>${secondField}</div>`;
             },
@@ -11049,7 +11102,7 @@ var Katrid;
                 let tag = 'select';
                 if (param.operation === 'in') {
                     tag = 'multiple-tags';
-                    multiple = 'multiple="multiple" style="width:100%"';
+                    multiple = 'multiple="multiple" class="multiple-tags"';
                 }
                 else
                     multiple = 'class="form-select"';

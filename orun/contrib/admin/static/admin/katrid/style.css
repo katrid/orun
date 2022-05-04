@@ -13353,6 +13353,9 @@ table-field .table tbody tr {
   min-height: 26px;
   border-bottom: 1px solid #e4e4e4;
 }
+.katrid-app .multiple-tags {
+  width: 100%;
+}
 .katrid-app .tabset {
   width: 100%;
   margin-top: 10px;
