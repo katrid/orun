@@ -8222,15 +8222,17 @@ var Katrid;
                 return form;
             }
             save(formId) {
-                for (let fid of ((formId && [formId] || Object.keys(this.forms)))) {
-                    let form = this._removeForm(fid);
-                    if (form.index > -1) {
-                        // this.vm.records[form.index] = form.record;
-                        form.record.$flush();
+                let forms = Array.from(Object.keys(this.forms));
+                if (formId || forms.length)
+                    for (let fid of ((formId && [formId] || forms))) {
+                        let form = this._removeForm(fid);
+                        if (form.index > -1) {
+                            // this.vm.records[form.index] = form.record;
+                            form.record.$flush();
+                        }
+                        else
+                            this.vm.records.push(form.record);
                     }
-                    else
-                        this.vm.records.push(form.record);
-                }
             }
             cancel(formId) {
                 let form = this._removeForm(formId);
@@ -10708,6 +10710,7 @@ var Katrid;
                 async recordClick(record, index, event) {
                     if (this.$editing)
                         return;
+                    this.$view.save();
                     let parentChanging = this.$parent.$view.changing;
                     try {
                         if (this.$field.editor === 'inline') {
