@@ -4873,7 +4873,7 @@ var Katrid;
             }
             create() {
                 this.visible = true;
-                this.emptyText = '--';
+                this.emptyText = '';
                 this.cols = 6;
                 this.readonly = false;
                 this.defaultSearchLookup = '__icontains';
