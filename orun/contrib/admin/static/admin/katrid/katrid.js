@@ -7179,6 +7179,8 @@ ${Katrid.i18n.gettext('Delete')}
                 if (this._record)
                     this.vm.record = this._record;
                 this.$discard();
+                for (let child of this.nestedViews)
+                    child.$discard();
             }
             next() {
                 this.moveBy(1);
@@ -8214,6 +8216,7 @@ var Katrid;
                 this.vm.records.unshift(rec);
             }
             _removeForm(formId) {
+                console.debug('remove form', formId);
                 let form = this.forms[formId];
                 if (form.relRow)
                     form.formRow.parentElement.insertBefore(form.relRow, form.formRow);
@@ -8222,21 +8225,21 @@ var Katrid;
                 return form;
             }
             save(formId) {
-                let forms = Array.from(Object.keys(this.forms));
-                if (formId || forms.length)
-                    for (let fid of ((formId && [formId] || forms))) {
-                        let form = this._removeForm(fid);
-                        if (form.index > -1) {
-                            // this.vm.records[form.index] = form.record;
-                            form.record.$flush();
-                        }
-                        else
-                            this.vm.records.push(form.record);
+                for (let fid of ((formId && [formId]) || Array.from(Object.keys(this.forms)))) {
+                    let form = this._removeForm(fid);
+                    if (form.index > -1) {
+                        // this.vm.records[form.index] = form.record;
+                        form.record.$flush();
                     }
+                    else
+                        this.vm.records.push(form.record);
+                }
             }
-            cancel(formId) {
-                let form = this._removeForm(formId);
-                form.record.$discard();
+            discard(formId) {
+                for (let fid of ((formId && [formId]) || Array.from(Object.keys(this.forms)))) {
+                    let form = this._removeForm(fid);
+                    form.record.$discard();
+                }
             }
             renderTemplate(template) {
                 template.setAttribute('data-options', JSON.stringify({ rowSelector: this.rowSelector }));
@@ -10710,10 +10713,12 @@ var Katrid;
                 async recordClick(record, index, event) {
                     if (this.$editing)
                         return;
-                    this.$view.save();
                     let parentChanging = this.$parent.$view.changing;
                     try {
                         if (this.$field.editor === 'inline') {
+                            if (!this.$parent.changing)
+                                return;
+                            this.$view.save();
                             // the table allows direct input data
                             let tr = this.$view.edit(index);
                             let el = event.target;
@@ -10789,12 +10794,13 @@ var Katrid;
                     this.$view.save();
                 },
                 $discard() {
-                    for (let rec of this.records) {
-                        if (rec.$state === Katrid.Data.RecordState.created)
-                            this.records.splice(this.records.indexOf(rec), 1);
-                        if (rec.$$discard)
-                            rec.$$discard();
-                    }
+                    this.$view.discard();
+                    // for (let rec of this.records) {
+                    //   if (rec.$state === Katrid.Data.RecordState.created)
+                    //     this.records.splice(this.records.indexOf(rec), 1);
+                    //   if (rec.$$discard)
+                    //     rec.$$discard();
+                    // }
                 },
                 $onChange() {
                     this.$parent.$view.$onFieldChange(this.$field, this.records);
