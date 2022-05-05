@@ -4320,11 +4320,11 @@ var Katrid;
                 return this._recordId;
             }
             set record(rec) {
-                if (!(rec instanceof Data.DataRecord) && (typeof rec === 'object')) {
-                    rec = this.model.fromObject(rec, this);
-                }
                 // Track field changes
                 if (rec) {
+                    if (!(rec instanceof Data.DataRecord) && (typeof rec === 'object')) {
+                        rec = this.model.fromObject(rec, this);
+                    }
                     // if (rec.$record.dataSource !== this)
                     //   rec.$record.dataSource = this;
                     if (this.vm) {
@@ -7158,7 +7158,7 @@ ${Katrid.i18n.gettext('Delete')}
                 this.setState(DataSourceState.editing);
             }
             insert(defaultValues) {
-                this.record = null;
+                this.datasource.record = null;
                 this.setState(DataSourceState.inserting);
                 return this.datasource.insert(true, defaultValues).then(() => setTimeout(() => {
                     console.log('default values', defaultValues);
