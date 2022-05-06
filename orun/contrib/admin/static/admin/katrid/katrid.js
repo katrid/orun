@@ -8222,7 +8222,6 @@ var Katrid;
                 }
             }
             _removeForm(formId) {
-                console.debug('remove form', formId);
                 let form = this.forms[formId];
                 if (form.relRow)
                     form.formRow.parentElement.insertBefore(form.relRow, form.formRow);
@@ -8244,7 +8243,9 @@ var Katrid;
             discard(formId) {
                 for (let fid of ((formId && [formId]) || Array.from(Object.keys(this.forms)))) {
                     let form = this._removeForm(fid);
-                    form.record.$discard();
+                    if (form.record.$state === Katrid.Data.RecordState.created)
+                        this.vm.records.splice(this.vm.records.indexOf(form.record), 1);
+                    // form.record.$discard();
                 }
             }
             renderTemplate(template) {
@@ -10789,7 +10790,7 @@ var Katrid;
                         // cancel edition
                         let tr = control.closest('tr');
                         let formId = tr.getAttribute('data-form-id');
-                        this.$view.cancel(formId);
+                        this.$view.discard();
                     }
                     else if ((event.key === 'Enter') && !event.shiftKey && !event.altKey) {
                         let formId = control.closest('tr').getAttribute('data-form-id');
@@ -10801,12 +10802,14 @@ var Katrid;
                 },
                 $discard() {
                     this.$view.discard();
-                    // for (let rec of this.records) {
-                    //   if (rec.$state === Katrid.Data.RecordState.created)
-                    //     this.records.splice(this.records.indexOf(rec), 1);
-                    //   if (rec.$$discard)
-                    //     rec.$$discard();
-                    // }
+                    for (let rec of this.records) {
+                        if (rec.$state === Katrid.Data.RecordState.created) {
+                            console.debug('remove');
+                            this.records.splice(this.modelValue.indexOf(rec), 1);
+                        }
+                        if (rec.$$discard)
+                            rec.$$discard();
+                    }
                 },
                 $onChange() {
                     this.$parent.$view.$onFieldChange(this.$field, this.records);
