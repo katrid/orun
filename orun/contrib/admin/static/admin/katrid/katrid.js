@@ -8212,8 +8212,14 @@ var Katrid;
                 return tr;
             }
             insert() {
-                let rec = this.model.newRecord();
+                let rec = this.model.newRecord(null, this.datasource);
                 this.vm.records.unshift(rec);
+                let tr = this.edit(0);
+                let input = tr.querySelector(`input.form-field`);
+                if (input) {
+                    input.select();
+                    input.focus();
+                }
             }
             _removeForm(formId) {
                 console.debug('remove form', formId);
