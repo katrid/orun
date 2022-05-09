@@ -2442,7 +2442,6 @@ var Katrid;
                         return me.model.service.rpc(methodName, params.args, params.kwargs);
                     },
                     actionClick(selection, methodName, event) {
-                        console.log('action click', selection, methodName);
                         me.action.formButtonClick(selection.map(obj => obj.id), methodName);
                     },
                     doViewAction(action, target) {
@@ -2463,7 +2462,6 @@ var Katrid;
                     return await me.action.showView(mode);
                 };
                 comp.methods.formButtonClick = function () {
-                    console.log('form button click', arguments);
                 };
                 comp.methods.insert = async function () {
                     let view = await this.setViewMode('form');
@@ -2627,7 +2625,6 @@ var Katrid;
                 data.selection = [];
                 data.groups = this.prepareGroup(this.recordGroups);
                 data.recordCount = this.recordCount;
-                console.debug('attrs', this.fields);
                 data.$fields = this.fields;
                 return data;
             }
@@ -4814,7 +4811,6 @@ var Katrid;
                     if (k.startsWith('$'))
                         continue;
                     let field = model.allFields ? model.allFields[k] : model.fields[k];
-                    console.debug('serialize', field);
                     if (field && !(field instanceof Data.OneToManyField)) {
                         data[k] = field.toJSON(v);
                     }
