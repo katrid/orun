@@ -2284,8 +2284,11 @@ var Katrid;
                 let viewInfo = info.viewInfo;
                 if (info.model)
                     this.model = info.model;
-                else if (info.name || info.action?.modelName)
+                else if (info.name || info.action?.modelName) {
                     this.model = new Katrid.Data.Model({ name: info.name || info.action.modelName, fields: info.fields || viewInfo?.fields });
+                    if (info.action?.model)
+                        this.model.allFields = info.action.model.fields;
+                }
                 else if (info.fields) {
                     // Create the model based on specified fields
                     this.model = new Katrid.Data.Model({ fields: info.fields, name: this.action?.modelName });
@@ -2295,7 +2298,6 @@ var Katrid;
                 }
                 this.fields = this.model.fields;
                 // init the datasource
-                this.model.allFields = info.fields;
                 this.datasource = new Katrid.Data.DataSource({
                     model: this.model, context: this.action?.context, domain: this.action?.config?.domain,
                 });
@@ -4652,7 +4654,7 @@ var Katrid;
                     }
                     RecordProxy.$model = me;
                     let fields = this.allFields || this.fields;
-                    for (let [k, field] of Object.entries(this.fields)) {
+                    for (let [k, field] of Object.entries(fields)) {
                         Object.defineProperty(RecordProxy.prototype, k, {
                             get() {
                                 return this.$data[k];
@@ -4670,7 +4672,7 @@ var Katrid;
                                     this.$transient[k] = this.$data[k];
                                 // save the new value
                                 this.$data[k] = value;
-                                if (field.onChange && me.onFieldChange)
+                                if ((field instanceof Katrid.Data.Field) && field.onChange && me.onFieldChange)
                                     me.onFieldChange(field, value);
                             }
                         });
@@ -4689,10 +4691,9 @@ var Katrid;
                 rec.$state = Data.RecordState.created;
                 if (data) {
                     Object.entries(data).forEach(([k, v]) => {
-                        let fld = this.fields[k];
-                        if (fld) {
+                        let fld = this.allFields ? this.allFields[k] : this.fields[k];
+                        if (fld)
                             fld.setValue(rec, v);
-                        }
                         else
                             rec[k] = v;
                     });
@@ -4812,7 +4813,8 @@ var Katrid;
                 for (let [k, v] of Object.entries(this.$pending)) {
                     if (k.startsWith('$'))
                         continue;
-                    let field = model.fields[k];
+                    let field = model.allFields ? model.allFields[k] : model.fields[k];
+                    console.debug('serialize', field);
                     if (field && !(field instanceof Data.OneToManyField)) {
                         data[k] = field.toJSON(v);
                     }
@@ -5812,7 +5814,7 @@ var Katrid;
                 if (this.views) {
                     let info = this.views[mode];
                     let view = new Katrid.Forms.Views.registry[mode]({ name: this.model, viewInfo: info, template: info.info.template });
-                    view.model.allFields = this.info.fields;
+                    view.model.allFields = this.fields;
                     return view;
                 }
                 else {
@@ -11949,7 +11951,7 @@ var Katrid;
             static load(action) {
                 let svc = new ModelService('ui.action');
                 return svc.post('load', { args: [action], kwargs: {
-                    // context: Katrid.app.context
+                        context: Katrid.app.context
                     } });
             }
             static onExecuteAction(action, actionType, context) {
