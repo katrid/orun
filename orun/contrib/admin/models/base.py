@@ -353,7 +353,7 @@ class AdminModel(models.Model, helper=True):
                 cls._from_json(obj, row)
             if obj._state.adding:
                 cls._from_json(obj, row)
-            if obj._state.adding:
+                # dispatch event
                 if cls._meta.name in after_insert.models:
                     after_insert.send(cls._meta.name, old=None, new=obj)
 

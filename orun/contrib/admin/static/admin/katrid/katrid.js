@@ -2159,6 +2159,7 @@ var Katrid;
                     footer.append(b);
                 return templ;
             }
+            /** Create vue View Model instance */
             createVm(el) {
                 let component = this.createComponent();
                 if (this.scripts) {
@@ -2285,6 +2286,7 @@ var Katrid;
                 if (info.model)
                     this.model = info.model;
                 else if (info.name || info.action?.modelName) {
+                    console.warn('Please specify a model instance instead of name');
                     this.model = new Katrid.Data.Model({ name: info.name || info.action.modelName, fields: info.fields || viewInfo?.fields });
                     if (info.action?.model)
                         this.model.allFields = info.action.model.fields;
@@ -3185,6 +3187,7 @@ var Katrid;
                     Service.adapter.$fetch(rpcName, config)
                         .then(async (response) => {
                         let contentType = response.headers.get('Content-Type');
+                        console.debug('content type', contentType);
                         if (response.status === 500) {
                             let res = await response.json();
                             // show server error
@@ -3666,6 +3669,12 @@ var Katrid;
                 this.vm = config.vm;
                 this.domain = config.domain;
                 this.context = config.context;
+            }
+            /**
+             * Create a new record
+             */
+            create(data) {
+                return this.model.create(data, this);
             }
             get pageIndex() {
                 return this._pageIndex;
@@ -4683,6 +4692,9 @@ var Katrid;
                     this._service = new Katrid.Services.ModelService(this.name);
                 return this._service;
             }
+            create(data, datasource) {
+                return this.newRecord(data, datasource);
+            }
             newRecord(data, datasource) {
                 let rec = new this.recordClass();
                 rec.$state = Data.RecordState.created;
@@ -4695,7 +4707,7 @@ var Katrid;
                             rec[k] = v;
                     });
                 }
-                if (datasource.parent?.record) {
+                if (datasource?.parent?.record) {
                     rec.$parent = datasource.parent.record;
                     rec.$parentField = datasource.field?.name;
                 }
@@ -4757,7 +4769,7 @@ var Katrid;
                 else if (obj.$str !== undefined)
                     this.$str = obj.$str;
             }
-            $flush() {
+            $flush(validate = false) {
                 if (!this.$pending)
                     this.$pending = {};
                 if (!this.$modified)
@@ -4862,7 +4874,6 @@ var Katrid;
                 this.nolabel = false;
                 if (info.choices)
                     this.setChoices(info.choices);
-                this.choices = info.choices;
                 this.defaultValue = info.defaultValue;
                 this.create();
                 this.loadInfo(info);
@@ -4875,10 +4886,15 @@ var Katrid;
                 this.defaultSearchLookup = '__icontains';
             }
             setChoices(choices) {
-                if (Array.isArray(choices))
+                if (Array.isArray(choices)) {
                     this.displayChoices = Katrid.dict(choices);
-                else
+                    this.choices = choices;
+                }
+                else {
+                    // choices from array
                     this.displayChoices = choices;
+                    this.choices = Object.entries(choices).map(([k, v]) => [k, v]);
+                }
             }
             loadInfo(info) {
                 if (info.cols)
@@ -4938,8 +4954,11 @@ var Katrid;
                 input.setAttribute('v-model', 'record.' + this.name);
                 input.classList.add('form-field', 'form-control');
                 for (let k of Object.keys(this.attrs)) {
-                    if (k.includes(':'))
+                    // dynamic attributes
+                    if (k.includes(':')) {
+                        console.log('dyn attr', k);
                         input.setAttribute(k, this.attrs[k]);
+                    }
                 }
                 input.autocomplete = 'nope';
                 input.spellcheck = false;
@@ -4988,14 +5007,23 @@ var Katrid;
             formCreate(fieldEl) {
                 let attrs = this.attrs = this.getFieldAttributes(fieldEl);
                 let widget;
-                if (attrs.widget || this.widget) {
-                    widget = this.createWidget(attrs.widget || this.widget);
+                let widgetType = attrs.widget || this.widget;
+                let control;
+                let label;
+                let span;
+                if (widgetType) {
+                    widget = this.createWidget(widgetType);
                     if (widget.renderToForm)
                         return widget.renderToForm(fieldEl);
+                    else if (widget.formControl)
+                        control = widget.formControl();
+                    if (widget.formLabel)
+                        label = widget.formLabel();
                 }
-                let label = this.formLabel(fieldEl);
-                let control;
-                control = this.formControl(fieldEl);
+                else {
+                    label = this.formLabel(fieldEl);
+                    control = this.formControl(fieldEl);
+                }
                 let section = document.createElement('section');
                 section.classList.add('form-field-section');
                 section.setAttribute('v-form-field', null);
@@ -5006,8 +5034,10 @@ var Katrid;
                     section.setAttribute('v-show', attrs['v-show']);
                 if (attrs[':class'])
                     section.setAttribute(':class', attrs[':class']);
-                if (attrs[':readonly'])
+                if (attrs[':readonly']) {
+                    console.log('dyn ro', attrs[':readonly']);
                     section.setAttribute(':readonly', attrs[':readonly']);
+                }
                 else if (attrs.readonly)
                     section.setAttribute('readonly', 'readonly');
                 if (attrs[':required'])
@@ -5032,12 +5062,16 @@ var Katrid;
                     section.append(label);
                 }
                 section.append(control);
-                let spanTempl = this.formSpanTemplate();
-                if (spanTempl) {
-                    let span = document.createElement('div');
-                    span.classList.add('form-field-readonly');
-                    span.innerHTML = spanTempl;
-                    section.append(span);
+                // special field attributes
+                // section['$fieldEl'] = fieldEl;
+                if (!span) {
+                    let spanTempl = this.formSpanTemplate();
+                    if (spanTempl) {
+                        let span = document.createElement('div');
+                        span.classList.add('form-field-readonly');
+                        span.innerHTML = spanTempl;
+                        section.append(span);
+                    }
                 }
                 this.createTooltip(section);
                 if (widget)
@@ -5149,6 +5183,14 @@ var Katrid;
                     msgs.push(Katrid.i18n.gettext('The field cannot be empty.'));
                 return msgs;
             }
+            /** Validate a given value for a bound field */
+            validateForm(boundField, value) {
+                let msgs = [];
+                // required validation
+                if (boundField.required && (!value && value !== false && value !== 0))
+                    msgs.push(Katrid.i18n.gettext('The field cannot be empty.'));
+                return msgs;
+            }
             get defaultCondition() {
                 return '=';
             }
@@ -5168,6 +5210,23 @@ var Katrid;
                     { name: 'is not null', label: Katrid.i18n.gettext('Is defined'), input: false },
                     { name: 'is null', label: Katrid.i18n.gettext('Is not defined'), input: false },
                 ];
+            }
+            formBind(el, fieldEl) {
+                let boundField = new Katrid.Forms.BoundField(this, this.name, fieldEl);
+                boundField.container = el;
+                boundField.control = el.querySelector('.form-field');
+                if (!this.boundFields)
+                    this.boundFields = [];
+                this.boundFields.push(boundField);
+                return boundField;
+            }
+            formUnbind(el) {
+                if (this.boundFields)
+                    for (let bf of this.boundFields)
+                        if (bf.container === el) {
+                            this.boundFields.splice(this.boundFields.indexOf(bf), 1);
+                            break;
+                        }
             }
         }
         Data.Field = Field;
@@ -5774,6 +5833,8 @@ var Katrid;
                     this.pasteAllowed = true;
             }
             setValue(record, value, datasource) {
+                if (!datasource)
+                    return;
                 let child = datasource.childByName(this.name);
                 if (value && value instanceof Array) {
                     value.map(obj => {
@@ -6204,9 +6265,10 @@ var Katrid;
     (function (Forms) {
         /** Field bound to a form */
         class BoundField {
-            constructor(name, fieldElement) {
+            constructor(field, name, fieldEl) {
+                this.field = field;
                 this.name = name;
-                this.fieldElement = fieldElement;
+                this.fieldEl = fieldEl;
                 this._dirty = false;
                 this._touched = false;
                 this._valid = true;
@@ -6227,6 +6289,13 @@ var Katrid;
                     this.control.classList.remove('v-dirty');
                     this.control.classList.add('v-pristine');
                 }
+            }
+            get required() {
+                if (this.container.hasAttribute('required')) {
+                    let req = this.container.getAttribute('req');
+                    return (req === '') || (req === 'true') || (req === 'null');
+                }
+                return this.field.required;
             }
             reset() {
                 if (this.dirty)
@@ -6324,8 +6393,8 @@ var Katrid;
         Forms.DataForm = DataForm;
         Katrid.directive('data-form', {
             mounted(el) {
-                el.classList.add('v-form');
-                // let form = el.$form = new DataForm(el);
+                el.classList.add('v-data-form');
+                let form = el.$form = new DataForm(el);
                 // el.querySelectorAll('.form-field-section').forEach(child => {
                 //   let formField = <IFormField>child;
                 //   let field = formField.$field;
@@ -6854,10 +6923,7 @@ var Katrid;
             create(info) {
                 super.create(info);
                 this.nestedViews = [];
-                if (info.record && this.model)
-                    this.datasource.record = info.record;
-                else
-                    this._record = null;
+                this._record = info?.record || {};
                 this._readonly = false;
             }
             get record() {
@@ -7122,6 +7188,7 @@ ${Katrid.i18n.gettext('Delete')}
                     recordIndex: this._recordIndex,
                     recordCount: this.recordCount,
                 };
+                console.debug('record', this._record);
                 this._applyDataDefinition(data);
                 return data;
             }
@@ -8082,11 +8149,17 @@ var Katrid;
                 // if (!viewInfo)
                 // load list and search view info from server
                 let model = config.model;
+                if (typeof model === 'string')
+                    model = new Katrid.Data.Model({ name: model });
                 let viewsInfo = await model.service.loadViews({
                     views: { list: null, search: null },
                 });
                 let view = new this({ name: model.name, viewInfo: viewsInfo.views.list.info });
-                let search = new Katrid.Forms.SearchView({ name: model.name, viewInfo: viewsInfo.views.search.info });
+                let search = new Katrid.Forms.SearchView({
+                    name: model.name, viewInfo: viewsInfo.views.search.info,
+                    multiple: config.multiple,
+                    where: config.where,
+                });
                 view.dialog = true;
                 view.render();
                 search.render();
@@ -8106,9 +8179,10 @@ var Katrid;
             showDialog(options) {
                 if (!options)
                     options = {};
-                if (!options.multiple) {
+                if (!options.multiple && !this.config.multiple) {
                     this.rowSelector = false;
-                    delete options.multiple;
+                    if ('multiple' in options)
+                        delete options.multiple;
                 }
                 this.dialog = true;
                 if (!options.buttons) {
@@ -8128,7 +8202,6 @@ var Katrid;
                     let el = this.element;
                     if (!el)
                         el = this.render();
-                    console.log('el', el);
                     this._modal = new bootstrap.Modal(el, options);
                     el.addEventListener('hidden.bs.modal', () => {
                         resolve(this.vm.$result);
@@ -9914,6 +9987,9 @@ var Katrid;
                     this.field = field;
                     this.fieldEl = fieldEl;
                 }
+                formLabel() {
+                    return this.field.formLabel(this.fieldEl);
+                }
                 afterRender(el) {
                     return el;
                 }
@@ -9947,25 +10023,30 @@ var Katrid;
             Widgets.StatusField = StatusField;
             let RADIO_ID = 0;
             class RadioField extends Widgets.Widget {
-                renderToForm() {
+                formControl() {
+                    let div = document.createElement('div');
+                    div.className = 'form-field';
                     let label = document.createElement('div');
                     label.setAttribute('v-for', `(choice, index) in $fields.${this.field.name}.choices`);
-                    label.classList.add('radio-button', 'radio-inline');
+                    label.classList.add('form-check', 'form-check-inline');
                     let css = this.field.fieldEl.getAttribute('class');
                     if (css)
                         label.classList.add(...css.split(' '));
                     let input = document.createElement('input');
+                    input.className = 'form-check-input';
                     let id = `'RADIO_ID-${this.field.name}-${++RADIO_ID}-' + index`;
                     input.setAttribute(':id', id);
                     input.setAttribute('type', 'radio');
                     input.setAttribute('v-model', `record.${this.field.name}`);
                     input.setAttribute(':value', `choice[0]`);
                     let txt = document.createElement('label');
+                    txt.className = 'form-check-label';
                     txt.innerText = '{{ choice[1] }}';
                     txt.setAttribute(':for', id);
                     label.appendChild(input);
                     label.appendChild(txt);
-                    return label;
+                    div.append(label);
+                    return div;
                 }
             }
             Widgets.RadioField = RadioField;
