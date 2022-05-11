@@ -103,6 +103,7 @@ def onchange(*fields):
     def decorator(fn):
 
         def contribute_to_class(flds, cls, name: str):
+            setattr(cls, name, fn)
             if not isinstance(flds, (tuple, list)):
                 flds = [flds]
             for field in flds:
@@ -111,7 +112,6 @@ def onchange(*fields):
                 lst = cls._meta.field_change_event[field]
                 if fn not in lst:
                     lst.append(fn)
-            setattr(cls, name, fn)
 
         fn.contribute_to_class = partial(contribute_to_class, fields)
         return fn
