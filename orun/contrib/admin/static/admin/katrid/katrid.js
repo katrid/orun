@@ -4643,6 +4643,10 @@ var Katrid;
             constructor(info) {
                 /** Model records is readonly */
                 this.readonly = false;
+                /** The name of id field */
+                this.idField = 'id';
+                /** The field representing the record name */
+                this.nameField = '$str';
                 this.name = info.name;
                 if (info.fields)
                     this.fields = Katrid.Data.Fields.fromArray(info.fields);
@@ -7801,9 +7805,8 @@ var Katrid;
       <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
 </input-date>
               </div>
+              <input-autocomplete v-model="cond.value" :data-model="cond.$field.model" v-else-if="(cond.condition === '=') && (cond.$field.internalType === 'ForeignKey')"/>
               <input class="form-control" v-model="cond.value" type="text" v-else-if="(cond.$field.internalType !== 'BooleanField')">
-              <input class="form-control" v-model="cond.value" type="text" v-else-if="(cond.$field.internalType !== 'BooleanField')">
-              <input-autocomplete v-model="cond.value" :data-model="cond.$field.model.name" v-else-if="(cond.condition === '=') && (cond.$field.internalType === 'ForeignKey')"/>
             </div>
           </div>
           <div class="col-12">
