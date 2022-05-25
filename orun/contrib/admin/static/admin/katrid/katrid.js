@@ -2732,6 +2732,11 @@ var Katrid;
                 btnCreate.innerText = Katrid.i18n.gettext('Create');
                 btnCreate.setAttribute('v-on:click', 'insert()');
                 parent.append(btnCreate);
+                let btnXls = document.createElement('button');
+                btnXls.innerHTML = '<i class="fas fa-download"></i>';
+                btnXls.title = 'Download as excel';
+                btnXls.className = 'btn btn-outline-secondary btn-export-xls';
+                parent.append(btnXls);
                 if (this.config?.toolbar?.print) {
                     // print
                     let btnPrint = document.createElement('div');
@@ -3589,6 +3594,8 @@ var Katrid;
         document.body.classList.add('desktop');
     let initialized = false;
     function init() {
+        if (!Katrid.Services.Service.adapter)
+            Katrid.Services.Service.adapter = new Katrid.Services.FetchAdapter();
         if (!initialized) {
             initialized = true;
             // register custom elements
@@ -4854,6 +4861,17 @@ var Katrid;
         Data.DataRecord = DataRecord;
     })(Data = Katrid.Data || (Katrid.Data = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var sql;
+    (function (sql) {
+        async function exec(query, params) {
+            let res = await Katrid.Services.Service.$post('/sql/exec/', { query, params, withDescription: true, asDict: true });
+            return res;
+        }
+        sql.exec = exec;
+    })(sql = katrid.sql || (katrid.sql = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Data;
@@ -4960,7 +4978,6 @@ var Katrid;
                 for (let k of Object.keys(this.attrs)) {
                     // dynamic attributes
                     if (k.includes(':')) {
-                        console.log('dyn attr', k);
                         input.setAttribute(k, this.attrs[k]);
                     }
                 }
@@ -5310,15 +5327,13 @@ var Katrid;
             formControl(fieldEl) {
                 let div = document.createElement(this.tag);
                 div.setAttribute('v-model', 'record.' + this.name);
-                div.classList.add('input-group', 'date');
                 div.setAttribute('date-picker', "L");
-                div.innerHTML = `
-      <input type="text" name="${this.name}" class="form-control form-field" inputmode="numeric">
-      <label class="input-group-text btn-calendar" type="button"><i class="fa fa-calendar fa-sm"></i></label>`;
-                let input = div.querySelector('input');
+                // div.innerHTML = `
+                // <input type="text" name="${this.name}" class="form-control form-field" inputmode="numeric">
+                // <label class="input-group-text btn-calendar" type="button"><i class="fa fa-calendar fa-sm"></i></label>`;
                 if (this.attrs.required)
-                    input.required = true;
-                input.id = this.getControlId();
+                    div.setAttribute('required', 'true');
+                div.setAttribute('input-id', this.getControlId());
                 return div;
             }
         }
@@ -9743,7 +9758,9 @@ var Katrid;
         }
         Katrid.component('input-date', {
             props: ['modelValue'],
-            template: '<div><slot></slot></div>',
+            template: `<div class="input-group date">
+      <input type="text" class="form-control form-field" inputmode="numeric">
+      <label class="input-group-text btn-calendar" type="button"><i class="fa fa-calendar fa-sm"></i></label></div>`,
             mounted() {
                 let vm = this;
                 // initializes the input mask
@@ -9759,6 +9776,8 @@ var Katrid;
                 else
                     $format = Katrid.i18n.formats.shortDateFormat;
                 let input = vm.$el.querySelector('input');
+                if (vm.$attrs.name)
+                    input.name = vm.$attrs['name'];
                 vm.$input = input;
                 this.$lastValue = '';
                 input.addEventListener('focusin', () => this.$changing = true);
@@ -9834,6 +9853,9 @@ var Katrid;
                     });
                     calendar.show();
                 });
+                // initial value
+                if (this.modelValue)
+                    input.value = moment(this.modelValue).format(this.$format);
             },
             watch: {
                 modelValue(value) {
@@ -9853,7 +9875,7 @@ var Katrid;
         });
         Katrid.component('input-time', {
             props: ['modelValue'],
-            template: '<input type="text">',
+            template: '<input class="form-control" type="text">',
             mounted() {
                 let el = this.$el;
                 let mask = '99:99';
@@ -9864,6 +9886,8 @@ var Katrid;
                     mask,
                     insertMode: false,
                 });
+                if (this.modelValue)
+                    el.value = this.modelValue;
             },
             watch: {
                 modelValue(value) {
@@ -9920,7 +9944,7 @@ var Katrid;
     (function (Forms) {
         Katrid.component('input-decimal', {
             props: ['modelValue'],
-            template: `<input @input="$emit('update:modelValue', $event.target.value)">`,
+            template: `<input class="form-control" @input="$emit('update:modelValue', $event.target.value)">`,
             mounted() {
                 let vm = this;
                 let decimal = vm.$attrs['input-decimal'];
@@ -10503,22 +10527,25 @@ var Katrid;
             create() {
                 super.create();
                 let model = this.getAttribute('data-model');
-                let svc = new Katrid.Services.ModelService(model);
-                if (model)
+                if (model) {
+                    let svc = new Katrid.Services.ModelService(model);
                     this.setSource(async (query) => {
                         let res = await svc.searchByName({
                             args: [query.term]
                         });
                         return res.items;
                     });
+                }
             }
         }
         Katrid.define('input-autocomplete', InputAutoComplete);
         Katrid.component('input-autocomplete', {
-            props: ['modelValue'],
+            props: ['modelValue', 'items'],
             template: '<input-autocomplete/>',
             mounted() {
                 this.$el.create();
+                if (this.items)
+                    this.$el.setSource(this.items);
                 this.$el.addEventListener('selectItem', (evt) => {
                     this.$emit('update:modelValue', evt.detail.item);
                 });
@@ -12060,15 +12087,12 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
-    var Forms;
-    (function (Forms) {
-        class WebApplication extends HTMLElement {
-            connectedCallback() {
-            }
+    var ui;
+    (function (ui) {
+        class Application extends Katrid.Core.WebApplication {
         }
-        Forms.WebApplication = WebApplication;
-        Katrid.define('web-application', WebApplication);
-    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+        ui.Application = Application;
+    })(ui = Katrid.ui || (Katrid.ui = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -12469,6 +12493,20 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    var ui;
+    (function (ui) {
+        class Button {
+            constructor(config) {
+                this.config = config;
+                this.text = config.text;
+                this.onClick = config.click;
+            }
+        }
+        ui.Button = Button;
+    })(ui = Katrid.ui || (Katrid.ui = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
     var Controls;
     (function (Controls) {
         class Calendar {
@@ -12604,7 +12642,7 @@ Katrid.filter('number', function (value, digits) {
     if (value != null)
         return Katrid.intl.number(digits).format(value);
 });
-Katrid.filter('toFixed', function (value, digits) {
+Katrid.filter('toFixed', function (value, digits = 2) {
     if (value != null)
         return Katrid.intl.toFixed(digits).format(value);
 });
@@ -12616,6 +12654,54 @@ function sprintf(fmt, obj) {
 Katrid.filter('sprintf', function (fmt, ...args) {
     return sprintf(fmt, args);
 });
+var Katrid;
+(function (Katrid) {
+    var ui;
+    (function (ui) {
+        class DataControl {
+            constructor(config) {
+                this.datasource = config.datasource;
+            }
+            create() {
+            }
+            dataChangedCallback() {
+            }
+        }
+        ui.DataControl = DataControl;
+        class DataGridColumn {
+            constructor(info) {
+                this.name = info.name;
+            }
+        }
+        ui.DataGridColumn = DataGridColumn;
+        class DataGrid extends DataControl {
+            create() {
+                this.el = document.createElement('div');
+                const table = document.createElement('table');
+                table.classList.add('table', 'table-hover');
+                const tr = document.createElement('tr');
+                table.createTBody().append(tr);
+            }
+            dataChangedCallback() {
+                super.dataChangedCallback();
+            }
+        }
+        ui.DataGrid = DataGrid;
+    })(ui = Katrid.ui || (Katrid.ui = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var ui;
+    (function (ui) {
+        class Input {
+            constructor(input) {
+                this.input = input;
+                input.className = 'form-control';
+            }
+        }
+        ui.Input = Input;
+    })(ui = Katrid.ui || (Katrid.ui = {}));
+})(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
