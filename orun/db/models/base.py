@@ -1872,8 +1872,7 @@ class Model(metaclass=ModelBase):
                 setattr(instance, field.attname, v)
             field.save_form_data(instance, v)
 
-        # todo fix full clean
-        # instance.full_clean(validate_unique=False)
+        instance.full_clean(validate_unique=False)
         if instance.pk:
             flds = data.keys() - [f.name for f in children]
             if flds:
@@ -1925,7 +1924,6 @@ class Model(metaclass=ModelBase):
                 continue
             data[f.name] = f.value_to_json(getattr(self, f.name, None))
         if fields is None or 'record_name' in fields:
-            print(self.__class__, self.pk, self.__str__())
             data['record_name'] = str(self)
         if 'id' not in data:
             data['id'] = self.pk
