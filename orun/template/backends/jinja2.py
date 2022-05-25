@@ -36,6 +36,9 @@ class Jinja2(BaseEngine):
         from orun.utils.filters import default_filter
         self.env.filters['defaultformat'] = default_filter
         self.env.globals['_'] = gettext
+        # initialize special filters
+        from orun.html.components.table import Table
+        self.env.filters['table'] = Table
 
     def from_string(self, template_code):
         return Template(self.env.from_string(template_code), self)
@@ -114,3 +117,4 @@ def get_exception_info(exception):
         'top': top,
         'bottom': bottom,
     }
+
