@@ -10549,6 +10549,8 @@ var Katrid;
                 this.$el.addEventListener('selectItem', (evt) => {
                     this.$emit('update:modelValue', evt.detail.item);
                 });
+                if (this.modelValue)
+                    this.$el.selectedItem = this.modelValue;
             },
             watch: {
                 modelValue: function (value) {
