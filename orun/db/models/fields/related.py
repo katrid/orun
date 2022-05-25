@@ -818,6 +818,8 @@ class ForeignKey(ForeignObject):
         return name, path, args, kwargs
 
     def to_python(self, value):
+        if isinstance(value, dict) and 'id' in value:
+            value = value['id']
         return self.target_field.to_python(value)
 
     @property

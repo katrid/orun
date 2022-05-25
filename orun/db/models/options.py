@@ -214,6 +214,11 @@ class Options:
                 if not parent.Meta.field_groups:
                     parent.Meta.field_groups = {}
                 parent.Meta.field_groups.update(meta_attrs['field_groups'])
+            field_events = defaultdict(list)
+            for b in bases:
+                if b.field_change_event:
+                    field_events.update(b.field_change_event)
+            meta_attrs['field_change_event'] = field_events
         else:
             bases = (Options,)
 
@@ -234,6 +239,8 @@ class Options:
             opts.constraints = []
         if opts.indexes is None:
             opts.indexes = []
+        if opts.field_change_event is None:
+            opts.field_change_event = defaultdict(list)
         return opts
 
     def contribute_to_class(self, cls, name):
