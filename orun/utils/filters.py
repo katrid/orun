@@ -12,6 +12,8 @@ def default_filter(value):
         return formats.number_format(value, 2, force_grouping=True)
     if isinstance(value, datetime.datetime):
         return formats.date_format(value, 'SHORT_DATETIME_FORMAT')
+    if isinstance(value, datetime.time):
+        return formats.date_format(value, 'TIME_FORMAT')
     if isinstance(value, datetime.date):
         return formats.date_format(value, 'SHORT_DATE_FORMAT')
     if isinstance(value, types.GeneratorType):
