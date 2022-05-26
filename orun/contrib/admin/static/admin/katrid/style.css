@@ -13932,7 +13932,7 @@ table-field .table tbody tr {
 .katrid-app input[type=date].form-control, .katrid-app input[type=datetime-local] {
   padding: 2px 0 2px 8px;
 }
-.katrid-app [ng-cloak] {
+.katrid-app [v-cloak] {
   display: none !important;
 }
 .katrid-app h3 .form-control-lg, .katrid-app .h3 .form-control-lg {
@@ -13985,9 +13985,6 @@ table-field .table tbody tr {
 }
 .katrid-app div.ace_editor {
   height: 150px;
-}
-.katrid-app [ng\:cloak], .katrid-app [ng-cloak], .katrid-app [data-ng-cloak], .katrid-app [x-ng-cloak], .katrid-app .ng-cloak, .katrid-app .x-ng-cloak {
-  display: none !important;
 }
 .katrid-app .indent-1 {
   padding-left: 8px;
