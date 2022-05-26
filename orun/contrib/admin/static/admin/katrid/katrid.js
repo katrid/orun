@@ -2581,6 +2581,10 @@ var Katrid;
                     else
                         me.expandGroup(group);
                 };
+                comp.methods.download = function (config) {
+                    if (config.format)
+                        return this.rpc('api_export', { kwargs: { where: me._lastSearch } });
+                };
                 return comp;
             }
             setActive(value) {
@@ -2690,7 +2694,6 @@ var Katrid;
                 groups.splice(idx + 1, group.$children.length);
                 group.$expanded = false;
             }
-            // async groupBy(data: any[]);
             async setSearchParams(params) {
                 console.log('set empty params', params);
                 let p = {};
@@ -2701,7 +2704,7 @@ var Katrid;
                     arg[k] = v;
                     params.push(arg);
                 }
-                console.log('params', params);
+                this._lastSearch = params;
                 await this.datasource.search({ where: params });
             }
             createToolbar() {
@@ -2736,6 +2739,7 @@ var Katrid;
                 btnXls.innerHTML = '<i class="fas fa-download"></i>';
                 btnXls.title = 'Download as excel';
                 btnXls.className = 'btn btn-outline-secondary btn-export-xls';
+                btnXls.setAttribute('v-on:click', "download({format: 'xlsx'})");
                 parent.append(btnXls);
                 if (this.config?.toolbar?.print) {
                     // print
@@ -3069,7 +3073,7 @@ var Katrid;
     (function (BI) {
         class QueryViewer extends Katrid.WebComponent {
             create() {
-                this.innerHTML = `<div class="col-12"><h5>Visualizador de Consultas</h5><div class="toolbar"><select id="select-query" class="form-select"></select></div></div><div class="query-view col-12"></div>`;
+                this.innerHTML = `<div class="col-12"><h5>Visualizador de Consultas</h5><div class="toolbar"><select id="select-query" class="form-select"><option>SELECIONE A CONSULTA</option></select></div></div><div class="query-view col-12"></div>`;
                 this.load();
             }
             async load() {
@@ -3257,7 +3261,6 @@ var Katrid;
                                         window.open(result.open);
                                     // download a file
                                     if (result.download) {
-                                        console.log(result.result);
                                         let a = document.createElement('a');
                                         a.href = result.download;
                                         a.target = '_blank';
@@ -3391,6 +3394,8 @@ var Katrid;
             let a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
+            if (name?.includes('filename='))
+                name = name.split('filename=', 2)[1];
             a.download = name;
             document.body.append(a);
             if (contentType.indexOf('pdf') > 1)
