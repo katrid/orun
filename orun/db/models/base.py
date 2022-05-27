@@ -1872,7 +1872,7 @@ class Model(metaclass=ModelBase):
                 setattr(instance, field.attname, v)
             field.save_form_data(instance, v)
 
-        instance.full_clean(validate_unique=False)
+        # instance.full_clean(validate_unique=False)
         if instance.pk:
             flds = data.keys() - [f.name for f in children]
             if flds:
