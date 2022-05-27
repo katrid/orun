@@ -3196,7 +3196,6 @@ var Katrid;
                     Service.adapter.$fetch(rpcName, config)
                         .then(async (response) => {
                         let contentType = response.headers.get('Content-Type');
-                        console.debug('content type', contentType);
                         if (response.status === 500) {
                             let res = await response.json();
                             // show server error
