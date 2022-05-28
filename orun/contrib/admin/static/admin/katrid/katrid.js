@@ -9816,7 +9816,6 @@ var Katrid;
                             vm.$emit('update:modelValue', applyValue(input.value));
                         }
                         else if ($(input).inputmask('unmaskedvalue') !== '') {
-                            return;
                             let v = autoComplete(input.value.replace('_', ''), $format);
                             if (v)
                                 input.value = moment(v).format($format);
