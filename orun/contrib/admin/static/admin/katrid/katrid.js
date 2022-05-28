@@ -5337,7 +5337,7 @@ var Katrid;
                 // <label class="input-group-text btn-calendar" type="button"><i class="fa fa-calendar fa-sm"></i></label>`;
                 if (this.attrs.required)
                     div.setAttribute('required', 'true');
-                div.setAttribute('input-id', this.getControlId());
+                div.setAttribute('id', this.getControlId());
                 return div;
             }
         }
@@ -9780,6 +9780,7 @@ var Katrid;
                 else
                     $format = Katrid.i18n.formats.shortDateFormat;
                 let input = vm.$el.querySelector('input');
+                input.value = '';
                 if (vm.$attrs.name)
                     input.name = vm.$attrs['name'];
                 vm.$input = input;
@@ -9815,6 +9816,7 @@ var Katrid;
                             vm.$emit('update:modelValue', applyValue(input.value));
                         }
                         else if ($(input).inputmask('unmaskedvalue') !== '') {
+                            return;
                             let v = autoComplete(input.value.replace('_', ''), $format);
                             if (v)
                                 input.value = moment(v).format($format);
@@ -9858,8 +9860,9 @@ var Katrid;
                     calendar.show();
                 });
                 // initial value
-                if (this.modelValue)
+                if (this.modelValue) {
                     input.value = moment(this.modelValue).format(this.$format);
+                }
             },
             watch: {
                 modelValue(value) {
@@ -13214,6 +13217,13 @@ var Katrid;
     }
     Katrid.dict = dict;
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    function sleep(t) {
+        return new Promise(res => setTimeout(() => res(), t));
+    }
+    katrid.sleep = sleep;
+})(katrid || (katrid = {}));
 /**
  * jQuery number plug-in 2.1.3
  * Copyright 2012, Digital Fusion
