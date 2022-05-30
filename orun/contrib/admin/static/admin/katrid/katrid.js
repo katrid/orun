@@ -10180,7 +10180,10 @@ var Katrid;
                     });
                 }
                 else if (Array.isArray(this._source)) {
-                    this.loadItems(this._source);
+                    let items = this._source;
+                    if (this.input.term)
+                        items = items.filter(obj => obj.text?.toLowerCase().includes(this.input.term.toLowerCase()));
+                    this.loadItems(items);
                 }
             }
             cancelSearch() {
