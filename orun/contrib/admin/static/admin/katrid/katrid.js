@@ -499,10 +499,7 @@ var Katrid;
                         info = this.views['search'];
                     else
                         info = {};
-                    if (this.model)
-                        info.model = this.model;
-                    else
-                        info.name = this.modelName;
+                    info.model = this.model;
                     this.searchView = new Katrid.Forms.SearchView(info, this);
                     this.searchView.render();
                 }
@@ -2280,6 +2277,7 @@ var Katrid;
                 }
             }
             create(info) {
+                console.log(this.getViewType(), info);
                 this.action = info.action;
                 this._readonly = true;
                 let viewInfo = info.viewInfo;
@@ -7722,7 +7720,6 @@ var Katrid;
                 return comp;
             }
             update(vm) {
-                console.log('update');
                 if (this._resultView)
                     this._resultView.setSearchParams(this.controller.getParams());
                 else
@@ -7748,7 +7745,7 @@ var Katrid;
               <i class="fa" :class="{'fa-angle-down': item.expanded, 'fa-angle-right': !item.expanded}"></i>
             </a>
             <a href="#" class="search-menu-item" v-on:mousedown.prevent.stop
-               v-on:click.prevent="item.select();searchText = '';" :class="{'indent': item.indent}">
+               v-on:click.prevent="item.select()" :class="{'indent': item.indent}" v-show="item.test(searchText)">
               <span v-if="!item.indent" v-html="item.template"></span>
               <span v-if="item.indent">{{ item.text }}</span>
             </a>
@@ -7824,9 +7821,13 @@ var Katrid;
       <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
 </input-date>
               </div>
+              <input class="form-control" v-model="cond.value" type="text" v-else-if="cond.$field.internalType === 'StringField'">
+              <input class="form-control" v-model="cond.value" type="number" v-else-if="cond.$field.internalType === 'IntegerField'">
+              <input class="form-control" v-model="cond.value" type="number" v-else-if="cond.$field.internalType === 'DecimalField'">
+              <input class="form-control" v-model="cond.value" type="number" v-else-if="cond.$field.internalType === 'FloatField'">
               <input-autocomplete v-model="cond.value" :data-model="cond.$field.model" v-else-if="(cond.condition === '=') && (cond.$field.internalType === 'ForeignKey')"/>
-              <input class="form-control" v-model="cond.value" type="text" v-else-if="(cond.$field.internalType !== 'BooleanField')">
             </div>
+              <div>{{cond && cond.$field && cond.$field.internalType}}</div>
           </div>
           <div class="col-12">
             <div class="form-group">
@@ -8656,6 +8657,7 @@ var Katrid;
                     }
                     close() {
                         this.vm.availableItems = null;
+                        this.vm.searchText = '';
                         this.menu.classList.remove('show');
                         this.reset();
                         this.input.value = '';
@@ -8820,6 +8822,11 @@ var Katrid;
                         this.name = name;
                         this.el = el;
                         this.controller = view.controller;
+                    }
+                    test(s) {
+                        if (this.pattern && s)
+                            return this.pattern.test(s);
+                        return true;
                     }
                     getDisplayValue() {
                         if (this.value) {
@@ -8993,11 +9000,16 @@ var Katrid;
                         super(view, name, el);
                         this.field = field;
                         this._expanded = false;
+                        this.options = $(el).data('options');
                         if (field.type === 'ForeignKey') {
                             this.expandable = true;
                             this.children = [];
                         }
                         else {
+                            if (field.type === 'IntegerField')
+                                this.pattern = /^\d+$/;
+                            else if (field.type === 'DateField')
+                                this.pattern = /\d+/;
                             this.expandable = false;
                         }
                     }
@@ -9010,11 +9022,11 @@ var Katrid;
                             this._loadChildren();
                         else {
                             this.children = [];
-                            if (this.view.$items)
-                                for (let i = this.view.$items.length - 1; i > 0; i--) {
-                                    let obj = this.view.$items[i];
+                            if (this.view.controller.availableItems)
+                                for (let i = this.view.controller.availableItems.length - 1; i > 0; i--) {
+                                    let obj = this.view.controller.availableItems[i];
                                     if (obj.field === this) {
-                                        this.view.$items.splice(i, 1);
+                                        this.view.controller.availableItems.splice(i, 1);
                                     }
                                 }
                         }
@@ -9066,11 +9078,19 @@ var Katrid;
                             return this._value[1];
                         return this.view.vm.searchText;
                     }
-                    select() {
-                        this.facet.addValue(this.value);
-                        this.view.controller.addFacet(this.facet);
-                        this.view.controller.close();
-                        this.view.update();
+                    async select() {
+                        if (!(this.options?.allowSelect === false)) {
+                            this.view.vm.searchText = '';
+                            this.facet.addValue(this.value);
+                            this.view.controller.addFacet(this.facet);
+                            this.view.controller.close();
+                            this.view.update();
+                            return true;
+                        }
+                        else if (this.expandable) {
+                            this.expanded = !this.expanded;
+                            return false;
+                        }
                     }
                     selectItem(item) {
                         let domain = {};
@@ -13196,7 +13216,7 @@ var Katrid;
 (function (Katrid) {
     function toCamelCase(s) {
         // remove all characters that should not be in a variable name
-        // as well underscores an numbers from the beginning of the string
+        // as well underscores and numbers from the beginning of the string
         s = s.replace(/([^a-zA-Z0-9_\- ])|^[_0-9]+/g, "").trim().toLowerCase();
         // uppercase letters preceeded by a hyphen or a space
         s = s.replace(/([ -]+)([a-zA-Z0-9])/g, function (a, b, c) {
