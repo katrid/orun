@@ -7807,7 +7807,7 @@ var Katrid;
             </select>
             </div>
             <div class="form-group" v-if="cond.fieldName && cond.condition">
-              <select class="form-select" v-model="searchValue" v-if="field && field.choices">
+              <select class="form-select" v-model="cond.value" v-if="cond.$field.choices">
                 <option v-for="choice in cond.$field.choices" :value="choice[0]">{{choice[1]}}</option>
               </select>
               <input class="form-control" v-model="cond.value" type="text" v-else-if="cond.fieldName && (cond.$field.internalType === 'IntegerField')">
@@ -7822,12 +7822,12 @@ var Katrid;
 </input-date>
               </div>
               <input class="form-control" v-model="cond.value" type="text" v-else-if="cond.$field.internalType === 'StringField'">
-              <input class="form-control" v-model="cond.value" type="number" v-else-if="cond.$field.internalType === 'IntegerField'">
-              <input class="form-control" v-model="cond.value" type="number" v-else-if="cond.$field.internalType === 'DecimalField'">
-              <input class="form-control" v-model="cond.value" type="number" v-else-if="cond.$field.internalType === 'FloatField'">
+<div v-else-if="['IntegerField', 'FloatField', 'DecimalField'].includes(cond.$field.internalType)">
+              <input class="form-control" v-model="cond.value" type="number">
+              <input class="form-control" v-model="cond.value2" type="number" v-if="cond.condition === '..'">
+              </div>
               <input-autocomplete v-model="cond.value" :data-model="cond.$field.model" v-else-if="(cond.condition === '=') && (cond.$field.internalType === 'ForeignKey')"/>
             </div>
-              <div>{{cond && cond.$field && cond.$field.internalType}}</div>
           </div>
           <div class="col-12">
             <div class="form-group">
@@ -7958,7 +7958,7 @@ var Katrid;
                             'is null': Katrid.i18n.gettext('Is not filled'),
                         };
                     }
-                    else if (field.internalType === 'IntegerField') {
+                    else if (['IntegerField', 'DecimalField', 'FloatField'].includes(field.internalType)) {
                         return {
                             '=': Katrid.i18n.gettext('Is equal'),
                             '..': Katrid.i18n.gettext('Between'),
@@ -8793,6 +8793,7 @@ var Katrid;
             (function (Search) {
                 Search.conditionsLabels = {
                     '=': Katrid.i18n.gettext('Is equal'),
+                    '..': Katrid.i18n.gettext('Between'),
                     '!=': Katrid.i18n.gettext('Is different'),
                     '>': Katrid.i18n.gettext('Greater-than'),
                     '<': Katrid.i18n.gettext('Less-than'),
@@ -8803,6 +8804,7 @@ var Katrid;
                 };
                 Search.conditionSuffix = {
                     '=': '',
+                    '..': '__range',
                     '!=': '__isnot',
                     '%': '__icontains',
                     '!%': '__not_icontains',
@@ -9139,6 +9141,7 @@ var Katrid;
                     }
                     get value() {
                         let r = {};
+                        console.log('value', this._value);
                         r[this.field.name + Search.conditionSuffix[this.condition]] = this.field.getParamValue(this._value);
                         return r;
                     }
