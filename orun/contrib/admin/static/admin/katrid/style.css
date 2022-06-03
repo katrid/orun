@@ -13146,6 +13146,9 @@ table-field .table tbody tr {
   margin: 15px;
 }
 
+.date-calendar {
+  z-index: 1091;
+}
 .date-calendar.show {
   background-color: #FFFFFF;
   border: 1px solid #ced4da;

@@ -5324,8 +5324,22 @@ var Katrid;
             getParamTemplate() {
                 return 'view.param.Date';
             }
+            getParamValue(value) {
+                if (typeof value === 'string') {
+                    let format = Katrid.i18n.formats.shortDateFormat;
+                    if (value.includes('..'))
+                        return value.split('..').map(v => moment(katrid.utils.autoCompleteDate(v.trim(), format)).format('YYYY-MM-DD'));
+                    if (value.includes(';'))
+                        return value.split(';').map(v => moment(katrid.utils.autoCompleteDate(v.trim(), format)).format('YYYY-MM-DD'));
+                    // return iso date
+                    return moment(katrid.utils.autoCompleteDate(value, format)).format('YYYY-MM-DD');
+                }
+                return super.getParamValue(value);
+            }
             format(value) {
                 if (Katrid.isString(value))
+                    return moment(value).format(Katrid.i18n.gettext('yyyy-mm-dd').toUpperCase());
+                else if (value instanceof Date)
                     return moment(value).format(Katrid.i18n.gettext('yyyy-mm-dd').toUpperCase());
                 return '';
             }
@@ -5511,8 +5525,13 @@ var Katrid;
                 return `{{ ((record.${this.name} != null) && $filters.toFixed(record.${this.name}, ${this.decimalPlaces})) || '${this.emptyText}' }}`;
             }
             getParamValue(value) {
-                if (typeof value === 'string')
+                if (typeof value === 'string') {
+                    if (value.includes('..'))
+                        return value.split('..').map(v => parseFloat(v.trim()));
+                    if (value.includes(';'))
+                        return value.split(';').map(v => parseFloat(v.trim()));
                     return parseFloat(value);
+                }
                 return super.getParamValue(value);
             }
         }
@@ -8864,7 +8883,7 @@ var Katrid;
                         return true;
                     }
                     getDisplayValue() {
-                        if (this.value) {
+                        if (Array.isArray(this.value)) {
                             return this.value[1];
                         }
                         return this.searchString;
@@ -8964,7 +8983,6 @@ var Katrid;
                                 this.removeValue(item);
                             // this.facet.values = [];
                         }
-                        console.log(this);
                         this.view.update();
                     }
                     toggle() {
@@ -9027,7 +9045,6 @@ var Katrid;
                         this.indent = true;
                     }
                     select() {
-                        console.log('select', this);
                         this.field.selectItem(this.value);
                     }
                 }
@@ -9035,6 +9052,7 @@ var Katrid;
                 class SearchField extends SearchItem {
                     constructor(view, name, el, field) {
                         super(view, name, el);
+                        this.lookup = '';
                         this.field = field;
                         this._expanded = false;
                         this.options = $(el).data('options');
@@ -9044,9 +9062,15 @@ var Katrid;
                         }
                         else {
                             if (field.type === 'IntegerField')
-                                this.pattern = /^\d+$/;
+                                this.pattern = /^[\d]+[\d;.]*$/;
+                            else if (field.type === 'FloatField')
+                                this.pattern = /^[\d]+[\d,;.]*$/;
+                            else if (field.type === 'DecimalField')
+                                this.pattern = /^[\d]+[\d,;.]*$/;
                             else if (field.type === 'DateField')
-                                this.pattern = /\d+/;
+                                this.pattern = /^[\d.\s\-\/;]+$/;
+                            else if (field.type === 'DateTimeField')
+                                this.pattern = /^[\d.\s\-:\/;]+$/;
                             this.expandable = false;
                         }
                     }
@@ -9096,14 +9120,13 @@ var Katrid;
                         let r = {};
                         let name = this.name;
                         if (_.isArray(value)) {
-                            r[name] = value[0];
+                            r[name + this.lookup] = value[0];
                         }
                         else if (value instanceof SearchObject) {
                             return value.value;
                         }
                         else {
                             r[name + this.field.defaultSearchLookup] = value;
-                            console.log('get param value', this.field);
                         }
                         return r;
                     }
@@ -9112,12 +9135,34 @@ var Katrid;
                     }
                     get value() {
                         if (this._value)
-                            return this._value[1];
+                            return this._value;
                         return this.view.vm.searchText;
                     }
                     async select() {
-                        if (!(this.options?.allowSelect === false)) {
-                            this.facet.addValue(this.value);
+                        this._value = null;
+                        if (this.options?.allowSelect !== false) {
+                            // prepare value
+                            if (this.field) {
+                                this._value = this.field.getParamValue(this.value);
+                                let fmt;
+                                if (Array.isArray(this._value)) {
+                                    fmt = this._value.map(this.field.format);
+                                    if (this.view.vm.searchText.includes('..'))
+                                        this.lookup = '__range';
+                                    else if (this.view.vm.searchText.includes(';'))
+                                        this.lookup = '__in';
+                                }
+                                else
+                                    fmt = this.field.format(this._value);
+                                // direct search
+                                if (fmt === this._value)
+                                    this.facet.addValue(this.value);
+                                // add formatted value
+                                else
+                                    this.facet.addValue([this._value, fmt]);
+                            }
+                            else
+                                this.facet.addValue(this.value);
                             this.view.controller.addFacet(this.facet);
                             this.view.controller.close();
                             this.view.update();
@@ -9439,7 +9484,11 @@ var Katrid;
                         this.values = [];
                     }
                     get templateValue() {
-                        return (Array.from(this.values).map((s) => s instanceof Search.SearchObject ? s.display : s)).join(this.separator);
+                        return (Array.from(this.values).map((s) => {
+                            if (Array.isArray(s))
+                                return s[1];
+                            return s instanceof Search.SearchObject ? s.display : s;
+                        })).join(this.separator);
                     }
                     template() {
                         return;
@@ -9810,28 +9859,6 @@ var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
-        function autoComplete(s, format) {
-            let match = Array.from(s.matchAll(/(\d)+/g));
-            if (match.length) {
-                let today = new Date();
-                let day = Number.parseInt(match[0][0]);
-                let month = today.getMonth();
-                let year = today.getFullYear();
-                if (match.length > 1) {
-                    // auto complete month
-                    month = Number.parseInt(match[1][0]) - 1;
-                }
-                if (match.length > 2) {
-                    let y = match[2][0];
-                    // auto complete year
-                    if (y.length === 2)
-                        y = '20' + y;
-                    year = Number.parseInt(y);
-                }
-                return new Date(year, month, day);
-            }
-            return;
-        }
         Katrid.component('input-date', {
             props: ['modelValue'],
             template: `<div class="input-group date">
@@ -9888,7 +9915,7 @@ var Katrid;
                             vm.$emit('update:modelValue', applyValue(input.value));
                         }
                         else if ($(input).inputmask('unmaskedvalue') !== '') {
-                            let v = autoComplete(input.value.replace('_', ''), $format);
+                            let v = katrid.utils.autoCompleteDate(input.value.replace('_', ''), $format);
                             if (v)
                                 input.value = moment(v).format($format);
                             else
@@ -9979,6 +10006,35 @@ var Katrid;
         });
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var utils;
+    (function (utils) {
+        function autoCompleteDate(s, format) {
+            let match = Array.from(s.matchAll(/(\d)+/g));
+            if (match.length) {
+                let today = new Date();
+                let day = Number.parseInt(match[0][0]);
+                let month = today.getMonth();
+                let year = today.getFullYear();
+                if (match.length > 1) {
+                    // auto complete month
+                    month = Number.parseInt(match[1][0]) - 1;
+                }
+                if (match.length > 2) {
+                    let y = match[2][0];
+                    // auto complete year
+                    if (y.length === 2)
+                        y = '20' + y;
+                    year = Number.parseInt(y);
+                }
+                return new Date(year, month, day);
+            }
+            return;
+        }
+        utils.autoCompleteDate = autoCompleteDate;
+    })(utils = katrid.utils || (katrid.utils = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var UI;
