@@ -927,11 +927,12 @@ var Katrid;
             }
             filterByField(field, value) {
                 this.searchView.clear();
-                this.addFilter(field, value);
+                this.addFilter(field, [value]);
             }
             addFilter(field, value) {
                 let f = this.view.fields[field];
-                this.searchView.controller.addCustomFilter(f, value);
+                console.log('filter by field', value);
+                this.searchView.controller.addCustomFilter(f, [value]);
             }
             static async fromModel(model) {
                 let svc = new Katrid.Services.ModelService(model);
@@ -1702,6 +1703,11 @@ var Katrid;
           </li>
         </ul>
       </div>`;
+                new Katrid.ui.Tooltip(appHeader.querySelector('.navbar-search'), `
+<br>Pesquisar Cliente: <strong>cli: &lt;nome do cliente&gt;</strong>
+<br>Pesquisar Forncedor: <strong>for: &lt;nome do cliente&gt;</strong>
+<br>Pesquisar Nota Fiscal: <strong>nf: &lt;num da nota&gt;</strong>
+`);
                 this.rootElement.append(appHeader);
                 let mainContent = document.createElement('div');
                 mainContent.className = 'main-content';
@@ -2390,7 +2396,7 @@ var Katrid;
             _search(options) {
                 if (options.id)
                     return this.datasource.get({ id: options.id, timeout: options.timeout });
-                return this.datasource.search({ where: options.where, page: options.page, limit: options.limit });
+                return this.datasource.search({ where: options.where, page: options.page, limit: options.limit, fields: Array.from(Object.keys(this.fields)) });
             }
             _mergeHeader(parent, header) {
                 for (let child of Array.from(header.children)) {
@@ -2581,7 +2587,7 @@ var Katrid;
                 };
                 comp.methods.download = function (config) {
                     if (config.format)
-                        return this.rpc('api_export', { kwargs: { where: me._lastSearch } });
+                        return this.rpc('api_export', { kwargs: { where: me._lastSearch, fields: Array.from(Object.keys(me.fields)) } });
                 };
                 return comp;
             }
@@ -5507,6 +5513,11 @@ var Katrid;
             formSpanTemplate() {
                 return `{{ ((record.${this.name} != null) && $filters.toFixed(record.${this.name}, ${this.decimalPlaces})) || '${this.emptyText}' }}`;
             }
+            getParamValue(value) {
+                if (typeof value === 'string')
+                    return parseFloat(value);
+                return super.getParamValue(value);
+            }
         }
         Data.NumericField = NumericField;
         class IntegerField extends NumericField {
@@ -6013,7 +6024,21 @@ var Katrid;
                 document.addEventListener('wheel', this._eventHook);
                 document.addEventListener('keydown', this._eventKeyDownHook);
                 document.body.append(this.el);
-                $(this.el).show();
+                let virtualElement = {
+                    getBoundingClientRect() {
+                        return {
+                            width: 0,
+                            height: 0,
+                            left: x,
+                            top: y,
+                            right: x,
+                            bottom: y,
+                        };
+                    }
+                };
+                let _popper = Popper.createPopper(virtualElement, this.el, { placement: 'auto-start' });
+                this.el.classList.add('show');
+                // document.body.append(this.el);
             }
             close() {
                 // unhook event
@@ -6555,7 +6580,7 @@ var Katrid;
                 menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteSelection());
             }
             // menu.add('Arquivar', this.copyClick);
-            menu.show(event.pageX, event.pageY);
+            menu.show(event.pageX, event.pageY, td);
         }
         Forms.listRecordContextMenu = listRecordContextMenu;
         function copyClick(table) {
@@ -7696,12 +7721,20 @@ var Katrid;
                             cond.$field = me.fields[field];
                             cond.conditions = me.getFieldConditions(cond.$field);
                             cond.condition = Object.keys(cond.conditions)[0];
-                            cond.value = null;
-                            cond.value2 = null;
-                            cond.valeus = null;
+                            cond.value = [null];
+                            // cond.value2 = null;
+                            // cond.values = null;
                         }
                         else
                             cond.$field = null;
+                    },
+                    conditionChange(cond) {
+                        if (cond.condition === '..') {
+                            if (cond.value.length > 2)
+                                cond.value = [cond.value[0], cond.value[1]];
+                            else if (cond.value.length === 1)
+                                cond.value = [cond.value[0], null];
+                        }
                     },
                     addCustomGroup(field) {
                         if (field) {
@@ -7801,32 +7834,30 @@ var Katrid;
               </select>
             </div>
             <div class="form-group" v-if="cond.fieldName">
-            <select class="form-select" v-model="cond.condition">
+            <select class="form-select" v-model="cond.condition" v-on:change="conditionChange(cond)">
               <option></option>
               <option v-for="(name, value, index) in cond.conditions" :value="value">{{name}}</option>
             </select>
             </div>
             <div class="form-group" v-if="cond.fieldName && cond.condition">
-              <select class="form-select" v-model="cond.value" v-if="cond.$field.choices">
+              <select class="form-select" v-model="cond.value[0]" v-if="cond.$field.choices">
                 <option v-for="choice in cond.$field.choices" :value="choice[0]">{{choice[1]}}</option>
               </select>
-              <input class="form-control" v-model="cond.value" type="text" v-else-if="cond.fieldName && (cond.$field.internalType === 'IntegerField')">
-              <div v-else-if="cond.fieldName && (cond.$field.internalType === 'DateField')">
-<input-date class="input-group date" v-model="cond.value" date-picker="L">
-<input type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
-      <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
-</input-date>
-<input-date class="input-group date" v-model="cond.value2" date-picker="L" v-if="cond.condition === '..'">
-<input type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
-      <div class="input-group-append input-group-addon"><div class="input-group-text"><i class="fa fa-calendar fa-sm"></i></div></div>
-</input-date>
+              <input class="form-control" v-model="cond.value[0]" type="text" v-else-if="cond.fieldName && (cond.$field.internalType === 'IntegerField')">
+              <div v-else-if="cond.$field.internalType === 'DateField'">
+<input-date class="input-group date" v-model="cond.value[0]" date-picker="L"></input-date>
+<input-date class="input-group date" v-model="cond.value[1]" date-picker="L" v-if="cond.condition === '..'"></input-date>
               </div>
-              <input class="form-control" v-model="cond.value" type="text" v-else-if="cond.$field.internalType === 'StringField'">
+              <div v-else-if="cond.$field.internalType === 'DateTimeField'">
+<input-date class="input-group date" v-model="cond.value[0]" date-picker="L"></input-date>
+<input-date class="input-group date" v-model="cond.value[1]" date-picker="L" v-if="cond.condition === '..'"></input-date>
+              </div>
+              <input class="form-control" v-model="cond.value[0]" type="text" v-else-if="cond.$field.internalType === 'StringField'">
 <div v-else-if="['IntegerField', 'FloatField', 'DecimalField'].includes(cond.$field.internalType)">
-              <input class="form-control" v-model="cond.value" type="number">
-              <input class="form-control" v-model="cond.value2" type="number" v-if="cond.condition === '..'">
+              <input class="form-control" v-model="cond.value[0]" type="number">
+              <input class="form-control" v-model="cond.value[1]" type="number" v-if="cond.condition === '..'">
               </div>
-              <input-autocomplete v-model="cond.value" :data-model="cond.$field.model" v-else-if="(cond.condition === '=') && (cond.$field.internalType === 'ForeignKey')"/>
+              <input-autocomplete v-model="cond.value[0]" :data-model="cond.$field.model" v-else-if="(cond.condition === '=') && (cond.$field.internalType === 'ForeignKey')"/>
             </div>
           </div>
           <div class="col-12">
@@ -8801,6 +8832,10 @@ var Katrid;
                     '!%': Katrid.i18n.gettext('Not contains'),
                     'range': Katrid.i18n.gettext('Between'),
                     'like': Katrid.i18n.gettext('Like'),
+                    'in': Katrid.i18n.gettext('In'),
+                    '!in': Katrid.i18n.gettext('Not in'),
+                    'isnull': Katrid.i18n.gettext('Is null'),
+                    '!isnull': Katrid.i18n.gettext('Is not null'),
                 };
                 Search.conditionSuffix = {
                     '=': '',
@@ -8813,10 +8848,10 @@ var Katrid;
                     '<': '__lt',
                     '<=': '__lte',
                     'in': '__in',
-                    'not in': '__not_in',
+                    '!in': '__not_in',
                     'range': '__range',
-                    'is null': '__isnull',
-                    'is not null': '__isnnull',
+                    'isnull': '__isnull',
+                    '!isnull': '__isnull',
                 };
                 class SearchItem {
                     constructor(view, name, el) {
@@ -8931,6 +8966,7 @@ var Katrid;
                                 this.removeValue(item);
                             // this.facet.values = [];
                         }
+                        console.log(this);
                         this.view.update();
                     }
                     toggle() {
@@ -9136,13 +9172,28 @@ var Katrid;
                         this._selected = true;
                     }
                     toString() {
-                        let s = this.field.format(this._value);
+                        let v = this._value;
+                        let s;
+                        if (v.length === 1) {
+                            v = v[0];
+                            s = this.field.format(v);
+                        }
+                        else if (v.length > 1) {
+                            s = v.map(item => this.field.format(item));
+                        }
                         return this.field.caption + ' ' + Search.conditionsLabels[this.condition].toLowerCase() + ' "' + s + '"';
                     }
                     get value() {
                         let r = {};
-                        console.log('value', this._value);
-                        r[this.field.name + Search.conditionSuffix[this.condition]] = this.field.getParamValue(this._value);
+                        let fname = this.field.name + Search.conditionSuffix[this.condition];
+                        if (this.condition === '..')
+                            r[fname] = this._value.map(v => this.field.getParamValue(v));
+                        else if ((this.condition === '=') || (this.condition === '!='))
+                            r[fname] = this.field.getParamValue(this._value[0]);
+                        else if (this.condition === 'isnull')
+                            r[fname] = true;
+                        else if (this.condition === '!isnull')
+                            r[fname] = false;
                         return r;
                     }
                 }
@@ -11215,45 +11266,9 @@ var Katrid;
     (function (Forms) {
         var Widgets;
         (function (Widgets) {
-            const DELAY = 1500;
-            let timeout;
             Katrid.directive('ui-tooltip', {
                 mounted(el, binding, vnode) {
-                    let tooltip = bootstrap.Tooltip.getOrCreateInstance(el, {
-                        title: '--', trigger: 'manual', html: true,
-                        template: '<div class="tooltip"><div class="tooltip-inner"></div></div>',
-                        popperConfig: {
-                            placement: 'top-start',
-                        }
-                    });
-                    let field = binding.value;
-                    let title = el.getAttribute('data-title');
-                    if (title)
-                        el.removeAttribute('data-title');
-                    let helpText = '';
-                    if (field)
-                        helpText = field.helpText;
-                    let mouseout;
-                    el.addEventListener('show.bs.tooltip', evt => {
-                    });
-                    el.addEventListener('mouseenter', evt => {
-                        clearTimeout(timeout);
-                        timeout = setTimeout(() => {
-                            let s = el.getAttribute('data-tooltip') || '';
-                            s += '<br>' + title;
-                            el.setAttribute('data-bs-original-title', s);
-                            if (s)
-                                tooltip.show();
-                        }, DELAY);
-                        mouseout = setTimeout(() => tooltip.hide(), 150000);
-                    }, false);
-                    el.addEventListener('mouseleave', evt => {
-                        clearTimeout(timeout);
-                        clearTimeout(mouseout);
-                        mouseout = setTimeout(() => {
-                        });
-                        tooltip.hide();
-                    }, false);
+                    new Katrid.ui.Tooltip(el, null);
                 }
             });
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
@@ -12809,12 +12824,9 @@ var Katrid;
             function tableToText(table) {
                 let output = [];
                 let row = [];
-                let n = 0;
-                for (let td of table.tHead.rows[0].querySelectorAll('th')) {
-                    if (n > 0)
+                for (let td of table.tHead.rows[0].querySelectorAll('th'))
+                    if (!td.classList.contains('list-record-selector'))
                         row.push(td.innerText);
-                    n++;
-                }
                 output.push(row.join('\t'));
                 for (let tr of table.querySelectorAll('tr')) {
                     row = [];
@@ -12828,6 +12840,50 @@ var Katrid;
             Utils.tableToText = tableToText;
         })(Utils = UI.Utils || (UI.Utils = {}));
     })(UI = Katrid.UI || (Katrid.UI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var ui;
+    (function (ui) {
+        const DELAY = 1500;
+        let timeout;
+        class Tooltip {
+            constructor(el, helpText) {
+                let tooltip = bootstrap.Tooltip.getOrCreateInstance(el, {
+                    title: '--', trigger: 'manual', html: true,
+                    template: '<div class="tooltip"><div class="tooltip-inner"></div></div>',
+                    popperConfig: {
+                        placement: 'top-start',
+                    }
+                });
+                let title = el.getAttribute('data-title');
+                if (title)
+                    el.removeAttribute('data-title');
+                let mouseout;
+                el.addEventListener('show.bs.tooltip', evt => {
+                });
+                el.addEventListener('mouseenter', evt => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        let s = el.getAttribute('data-tooltip') || '';
+                        s += '<br>' + (title || helpText);
+                        el.setAttribute('data-bs-original-title', s);
+                        if (s)
+                            tooltip.show();
+                    }, DELAY);
+                    mouseout = setTimeout(() => tooltip.hide(), 150000);
+                }, false);
+                el.addEventListener('mouseleave', evt => {
+                    clearTimeout(timeout);
+                    clearTimeout(mouseout);
+                    mouseout = setTimeout(() => {
+                    });
+                    tooltip.hide();
+                }, false);
+            }
+        }
+        ui.Tooltip = Tooltip;
+    })(ui = Katrid.ui || (Katrid.ui = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {

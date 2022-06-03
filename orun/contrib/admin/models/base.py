@@ -3,7 +3,7 @@ from collections import defaultdict
 import copy
 from functools import reduce
 from itertools import chain
-from io import StringIO
+import io
 
 from orun.apps import apps
 from orun.utils.xml import get_xml_fields, etree
@@ -17,6 +17,7 @@ from orun.db.models.signals import (
     before_insert, before_update, before_delete,
     after_insert, after_update, after_delete,
 )
+from orun.http import HttpResponse
 from orun.db.models.aggregates import Count
 from orun.utils.encoding import force_str
 
@@ -419,6 +420,7 @@ class AdminModel(models.Model, helper=True):
             return {
                 f.name: cls.admin_get_field_info(f, view_type)
                 for f in fields
+                if f.serialize
             }
         if view_type == 'search':
             searchable_fields = opts.searchable_fields
@@ -428,7 +430,8 @@ class AdminModel(models.Model, helper=True):
         else:
             r = {}
             for field in opts.fields:
-                r[field.name] = cls.admin_get_field_info(field, view_type)
+                if field.serialize:
+                    r[field.name] = cls.admin_get_field_info(field, view_type)
             if opts.pk.name not in r:
                 r[opts.pk.name] = cls.admin_get_field_info(opts.pk, view_type)
             return r
@@ -548,6 +551,34 @@ class AdminModel(models.Model, helper=True):
         for obj in objs:
             obj.sequence = sequence[obj.pk]
         cls.objects.bulk_update(objs, [cls._meta.sequence_field])
+
+    @api.classmethod
+    def api_export(cls, where=None, format='xlsx', fields=None):
+
+        def serialize(field, value):
+            if value is not None:
+                if isinstance(field, models.ForeignKey):
+                    return str(value)
+                return value
+
+        if fields is None:
+            fields = [f.name for f in cls._meta.list_fields]
+        qs = cls._api_search(where=where, fields=fields)
+        if format == 'xlsx':
+            import xlsxwriter
+            buf = io.BytesIO()
+            wb = xlsxwriter.Workbook(buf, {'in_memory': True})
+            sheet = wb.add_worksheet()
+            header_style = wb.add_format({'bold': True})
+            caps = [cls._meta.get_field(f).label for f in fields]
+            sheet.write_row(0, 0, caps, header_style)
+            for i, obj in enumerate(qs):
+                sheet.write_row(i + 1, 0, [serialize(cls._meta.fields[f], getattr(obj, f, None)) for f in fields])
+            wb.close()
+            buf.seek(0)
+            res = HttpResponse(buf.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            res['Content-Disposition'] = f'attachment; filename={cls._meta.verbose_name_plural.replace("/", " ")}.xlsx'
+            return res
 
 
 def _resolve_fk_search(field: models.Field, exact=False):
