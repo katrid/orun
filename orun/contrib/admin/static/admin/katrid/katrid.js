@@ -831,7 +831,6 @@ var Katrid;
                     // check if we need to invoke a nested action
                     if (res.action) {
                         let action = await Katrid.Actions.goto(res.action, { view_type: 'form' });
-                        console.log('def values');
                         await action.view.insert(res.values);
                     }
                     else
@@ -925,13 +924,12 @@ var Katrid;
             markStar(record) {
                 // TODO mark as favorite
             }
-            filterByField(field, value) {
-                this.searchView.clear();
-                this.addFilter(field, [value]);
-            }
+            // filterByField(field: string, value: any) {
+            //   this.searchView.clear();
+            //   this.addFilter(field, [value]);
+            // }
             addFilter(field, value) {
                 let f = this.view.fields[field];
-                console.log('filter by field', value);
                 this.searchView.controller.addCustomFilter(f, [value]);
             }
             static async fromModel(model) {
@@ -3696,7 +3694,6 @@ var Katrid;
             }
             set pageIndex(page) {
                 this._pageIndex = page;
-                console.log('set page index', page);
                 this.search({ where: this._params, page, fields: this._fields, timeout: DEFAULT_REQUEST_INTERVAL });
             }
             get loadingRecord() {
@@ -7628,6 +7625,7 @@ var Katrid;
                     dataOffsetLimit: 1,
                     availableItems: null,
                     currentIndex: 0,
+                    customGroupField: null,
                 };
             }
             get dataOffset() {
@@ -7736,10 +7734,10 @@ var Katrid;
                                 cond.value = [cond.value[0], null];
                         }
                     },
-                    addCustomGroup(field) {
+                    addCustomGroupField(field) {
                         if (field) {
-                            let group = Katrid.Forms.Views.Search.SearchGroups.fromField({ view: this.search, field });
-                            this.search.groups.push(group);
+                            let group = Katrid.Forms.Views.Search.SearchGroups.fromField({ view: this.$view, field: this.$view.fields[field] });
+                            this.$view.controller.groups.push(group);
                             group.items[0].toggle();
                         }
                     },
@@ -7773,12 +7771,12 @@ var Katrid;
       <div class="col-sm-12">
         <ul class="search-dropdown-menu search-view-menu" role="menu">
           <li v-for="(item, index) in availableItems" :class="{active: currentIndex === index}">
-            <a v-if="item.expandable" class="expandable" v-on:click.prevent
+            <a v-if="item.expandable" class="expandable" v-on:click.prevent.stop
                v-on:mousedown.prevent.stop="item.expanded=!item.expanded">
               <i class="fa" :class="{'fa-angle-down': item.expanded, 'fa-angle-right': !item.expanded}"></i>
             </a>
             <a href="#" class="search-menu-item" v-on:mousedown.prevent.stop
-               v-on:click.prevent="item.select()" :class="{'indent': item.indent}" v-show="item.test(searchText)">
+               v-on:click.prevent="item.select()" :class="{'indent': item.indent}" v-show="!item.test || item.test(searchText)">
               <span v-if="!item.indent" v-html="item.template"></span>
               <span v-if="item.indent">{{ item.text }}</span>
             </a>
@@ -7899,13 +7897,13 @@ var Katrid;
           <div v-if="groupByExpanded" v-on:click.stop.prevent>
             <div class="col-12">
               <div class="form-group">
-                <select class="form-select" v-model="fieldName" v-on:change="fieldChange(fields[fieldName])">
+                <select class="form-select" v-model="customGroupField">
                   <option value=""></option>
-                  <option v-for="(field, name, index) in fields" :value="name">{{ field.caption }}</option>
+                  <option v-for="field in fieldList" :value="field.name">{{ field.caption }}</option>
                 </select>
               </div>
               <div class="form-group">
-                <button class="btn btn-primary" type="button" v-on:click="addCustomGroup(fields[fieldName]);fieldName='';">
+                <button class="btn btn-primary" type="button" v-on:click="addCustomGroupField(customGroupField)">
                   ${Katrid.i18n.gettext('Apply')}
                 </button>
               </div>
@@ -9029,6 +9027,7 @@ var Katrid;
                         this.indent = true;
                     }
                     select() {
+                        console.log('select', this);
                         this.field.selectItem(this.value);
                     }
                 }
@@ -9118,7 +9117,6 @@ var Katrid;
                     }
                     async select() {
                         if (!(this.options?.allowSelect === false)) {
-                            this.view.vm.searchText = '';
                             this.facet.addValue(this.value);
                             this.view.controller.addFacet(this.facet);
                             this.view.controller.close();
@@ -9548,11 +9546,11 @@ var Katrid;
                     }
                     _refresh() {
                         if (this.facet.values.length) {
-                            if (this.view.facets.indexOf(this.facet) === -1)
-                                this.view.facets.push(this.facet);
+                            if (this.view.controller.facets.indexOf(this.facet) === -1)
+                                this.view.controller.facets.push(this.facet);
                         }
-                        else if (this.view.facets.indexOf(this.facet) > -1)
-                            this.view.facets.splice(this.view.facets.indexOf(this.facet), 1);
+                        else if (this.view.controller.facets.indexOf(this.facet) > -1)
+                            this.view.controller.facets.splice(this.view.controller.facets.indexOf(this.facet), 1);
                     }
                 }
                 Search.SearchGroups = SearchGroups;
@@ -9921,7 +9919,7 @@ var Katrid;
                     if (val)
                         val = moment(val).toDate();
                     // initializes the popup calendar component
-                    let calendar = new Katrid.Controls.Calendar(this.$el, {
+                    let calendar = new Katrid.ui.Calendar(this.$el, {
                         change: newDate => {
                             // change callback
                             let v = moment(newDate).format($format);
@@ -12556,8 +12554,8 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
-    var Controls;
-    (function (Controls) {
+    var ui;
+    (function (ui) {
         class Calendar {
             constructor(el, config) {
                 this.config = config;
@@ -12641,6 +12639,7 @@ var Katrid;
                 event.stopPropagation();
             }
             dayClick(event) {
+                event.stopPropagation();
                 if (this.config.change)
                     this.config.change(event.target.getAttribute('data-value'));
                 this.hide();
@@ -12675,8 +12674,8 @@ var Katrid;
                 this._popper.destroy();
             }
         }
-        Controls.Calendar = Calendar;
-    })(Controls = Katrid.Controls || (Katrid.Controls = {}));
+        ui.Calendar = Calendar;
+    })(ui = Katrid.ui || (Katrid.ui = {}));
 })(Katrid || (Katrid = {}));
 Katrid.filter('date', function (value, fmt = 'MM/DD/YYYY') {
     if (value) {
