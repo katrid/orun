@@ -228,6 +228,36 @@ var Katrid;
         }
         Homepage.actionType = 'ui.action.homepage';
         Actions.Homepage = Homepage;
+        class HomepageView {
+            constructor() {
+                this.panels = [];
+            }
+            renderTo(container) {
+                let homepage = document.createElement('homepage-view');
+                let div = document.createElement('div');
+                div.classList.add('homepage-toolbar');
+                // enterprise version
+                let btn = document.createElement('a');
+                btn.classList.add('btn', 'btn-edit', 'btn-outline-secondary');
+                btn.innerHTML = '<i class="fas fa-pen"></i>';
+                div.append(btn);
+                // btn.addEventListener('click', () => this.edit());
+                homepage.append(div);
+                this.element = homepage;
+                container.append(homepage);
+            }
+            addPanel(panel) {
+                this.panels.push(panel);
+                panel.renderTo(this.element);
+                return panel;
+            }
+            createPanel(text) {
+                let panel = new Katrid.Actions.Portlets.PortletGroup({ text, homepage: this });
+                this.panels.push(panel);
+                return panel;
+            }
+        }
+        Actions.HomepageView = HomepageView;
         class HomepageElement extends HTMLElement {
             constructor() {
                 super(...arguments);
@@ -1245,6 +1275,62 @@ var Katrid;
         var Portlets;
         (function (Portlets) {
             let registry = {};
+            class BasePortlet {
+                render() {
+                    this.wrapper = document.createElement('div');
+                    this.wrapper.classList.add('portlet-wrapper');
+                    this.element = document.createElement('div');
+                    this.element.classList.add('portlet');
+                    if (this.header) {
+                        let h4 = document.createElement('h4');
+                        h4.innerText = this.header;
+                        this.element.append(h4);
+                    }
+                    if (this.text) {
+                        let h5 = document.createElement('h5');
+                        h5.innerText = this.text;
+                        this.element.append(h5);
+                    }
+                    this.wrapper.append(this.element);
+                }
+                renderTo(panel) {
+                }
+            }
+            Portlets.BasePortlet = BasePortlet;
+            class Portlet extends BasePortlet {
+                renderTo(panel) {
+                    this.wrapper = document.createElement('div');
+                    this.wrapper.classList.add('portlet-wrapper', 'col');
+                    if (!this.element)
+                        this.render();
+                    panel.append(this.wrapper);
+                }
+            }
+            Portlets.Portlet = Portlet;
+            class PortletGroup {
+                constructor(config) {
+                    this.portlets = [];
+                    this.element = document.createElement('div');
+                    this.element.classList.add('portlet-panel', 'col-12');
+                    this.text = config?.text;
+                    let legend = document.createElement('h3');
+                    if (this.text)
+                        legend.innerText = this.text;
+                    this.element.append(legend);
+                    if (config?.homepage)
+                        this.homepage = config.homepage;
+                    if (this.homepage.element)
+                        this.renderTo(this.homepage.element);
+                }
+                addPortlet(portlet) {
+                    this.portlets.push(portlet);
+                    portlet.renderTo(this.element);
+                }
+                renderTo(container) {
+                    container.append(this.element);
+                }
+            }
+            Portlets.PortletGroup = PortletGroup;
             class PortletPanel extends HTMLElement {
                 constructor() {
                     super(...arguments);
@@ -1377,7 +1463,7 @@ var Katrid;
                 }
             }
             Portlets.PortletEditor = PortletEditor;
-            class Portlet extends HTMLElement {
+            class PortletElement extends HTMLElement {
                 constructor() {
                     super(...arguments);
                     this.editing = false;
@@ -1404,7 +1490,7 @@ var Katrid;
                     container.append(title);
                 }
             }
-            Portlets.Portlet = Portlet;
+            Portlets.PortletElement = PortletElement;
             class CreateNew extends Portlet {
                 create() {
                     super.create();
@@ -1424,21 +1510,28 @@ var Katrid;
                 }
             }
             Portlets.CreateNew = CreateNew;
-            class PortletModelWindowAction extends Portlet {
+            class ModelActionPortlet extends Portlet {
+                constructor(actionId) {
+                    super();
+                    this.actionId = actionId;
+                }
                 render() {
                     super.render();
-                    let href = Katrid.webApp.formatActionHref(this.info.action);
+                    let href = '#' + this.actionId;
+                    // let href = Katrid.webApp.formatActionHref(this.actionId);
                     let btnNew = document.createElement('a');
                     btnNew.innerText = Katrid.i18n.gettext('Create');
-                    btnNew.classList.add('btn', 'btn-link');
-                    console.log('acton', this.info);
+                    btnNew.classList.add('btn', 'btn-light');
                     btnNew.href = href + '&view_type=form';
                     let btnSearch = document.createElement('a');
                     btnSearch.innerText = Katrid.i18n.gettext('Search');
-                    btnSearch.classList.add('btn', 'btn-link');
+                    btnSearch.classList.add('btn', 'btn-light');
                     btnSearch.href = href;
-                    this.append(btnNew);
-                    this.append(btnSearch);
+                    let div = document.createElement('div');
+                    div.className = 'portlet-footer';
+                    div.append(btnNew);
+                    div.append(btnSearch);
+                    this.element.append(div);
                 }
                 dump() {
                     return {
@@ -1455,7 +1548,7 @@ var Katrid;
                     this.model = info.model;
                 }
             }
-            Portlets.PortletModelWindowAction = PortletModelWindowAction;
+            Portlets.ModelActionPortlet = ModelActionPortlet;
             class GotoList extends Portlet {
                 create() {
                     super.create();
@@ -1502,12 +1595,12 @@ var Katrid;
                 }
             }
             Portlets.GotoReport = GotoReport;
-            Katrid.define('portlet-create-new', CreateNew);
-            Katrid.define('portlet-panel', PortletPanel);
-            Katrid.define('portlet-editor', PortletEditor);
-            Katrid.define('portlet-model-window-action', PortletModelWindowAction);
-            Katrid.define('portlet-goto-list', GotoList);
-            Katrid.define('portlet-goto-report', GotoReport);
+            // Katrid.define('portlet-create-new', CreateNew);
+            // Katrid.define('portlet-panel', PortletPanel);
+            // Katrid.define('portlet-editor', PortletEditor);
+            // Katrid.define('portlet-model-window-action', PortletModelWindowAction);
+            // Katrid.define('portlet-goto-list', GotoList);
+            // Katrid.define('portlet-goto-report', GotoReport);
         })(Portlets = Actions.Portlets || (Actions.Portlets = {}));
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
@@ -2460,6 +2553,11 @@ var Katrid;
                         for (let obj of iterable)
                             res += obj[member] || 0;
                         return res;
+                    },
+                    $closeDialog(result) {
+                        if (result !== undefined)
+                            this.$result = result;
+                        me.closeDialog();
                     }
                 });
                 comp.methods.setViewMode = async function (mode) {
@@ -4412,10 +4510,13 @@ var Katrid;
                 return this._recordIndex;
             }
             addRecord(rec) {
-                let scope = this.vm;
-                let record = this.model.newRecord(null, this);
-                this.setValues(rec, record);
+                // TODO automation test
+                let record = this.model.newRecord(rec, this);
+                record.$flush();
+                // this.setValues(rec, record);
+                this.vm.records.push(record);
                 this.records.push(record);
+                // this.parent.record[this.field.name].push(rec);
                 return;
                 if (!(scope.modelValue))
                     scope.$parent.record[this.field.name] = [];
@@ -5189,6 +5290,10 @@ var Katrid;
                 return value.toString();
             }
             getParamValue(value) {
+                if (typeof value === 'string') {
+                    if (value.includes(';'))
+                        return value.split(';').map(s => s.trim());
+                }
                 return value.toString();
             }
             $set(val) {
@@ -5326,13 +5431,15 @@ var Katrid;
             }
             getParamValue(value) {
                 if (typeof value === 'string') {
+                    value = value.trim();
                     let format = Katrid.i18n.formats.shortDateFormat;
+                    let re = Katrid.i18n.formats.reShortDateFormat;
                     if (value.includes('..'))
-                        return value.split('..').map(v => moment(katrid.utils.autoCompleteDate(v.trim(), format)).format('YYYY-MM-DD'));
+                        return value.split('..').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format('YYYY-MM-DD'));
                     if (value.includes(';'))
-                        return value.split(';').map(v => moment(katrid.utils.autoCompleteDate(v.trim(), format)).format('YYYY-MM-DD'));
+                        return value.split(';').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format('YYYY-MM-DD'));
                     // return iso date
-                    return moment(katrid.utils.autoCompleteDate(value, format)).format('YYYY-MM-DD');
+                    return moment(re.test(value) ? value.trim() : katrid.utils.autoCompleteDate(value, format)).format('YYYY-MM-DD');
                 }
                 return super.getParamValue(value);
             }
@@ -5355,6 +5462,13 @@ var Katrid;
                 div.setAttribute('id', this.getControlId());
                 return div;
             }
+            createTooltip(section) {
+                super.createTooltip(section);
+                section.setAttribute(':data-tooltip', `record && record.${this.name} && $filters.dateHumanize(record.${this.name})`);
+            }
+            listSpanTemplate() {
+                return `<span v-ui-tooltip="" :data-tooltip="record && record.${this.name} && $filters.dateHumanize(record.${this.name})">${this.formSpanTemplate()}</span>`;
+            }
         }
         Data.DateField = DateField;
         class DateTimeField extends DateField {
@@ -5365,10 +5479,17 @@ var Katrid;
                 super.create();
                 // this.widget = 'datetime';
             }
+            listSpanTemplate() {
+                return `<span v-ui-tooltip="" :data-tooltip="record && record.${this.name} && $filters.dateTimeHumanize(record.${this.name})">${this.formSpanTemplate()}</span>`;
+            }
             formControl(fieldEl) {
                 let control = super.formControl(fieldEl);
                 control.setAttribute('date-picker', "L LT");
                 return control;
+            }
+            createTooltip(section) {
+                super.createTooltip(section);
+                section.setAttribute(':data-tooltip', `record && record.${this.name} && $filters.dateTimeHumanize(record.${this.name})`);
             }
         }
         Data.DateTimeField = DateTimeField;
@@ -6196,16 +6317,19 @@ var Katrid;
                 };
             class Alerts {
                 static success(msg) {
-                    return toastr['success'](msg);
+                    return katrid.ui.Toast.success({ message: msg });
+                }
+                static warning(msg) {
+                    return katrid.ui.Toast.warning({ message: msg });
                 }
                 static warn(msg) {
-                    return toastr['warning'](msg);
+                    return katrid.ui.Toast.warning({ message: msg });
                 }
                 static info(msg) {
-                    return toastr['info'](msg);
+                    return katrid.ui.Toast.info({ message: msg });
                 }
                 static error(msg) {
-                    return toastr['error'](msg);
+                    return katrid.ui.Toast.danger({ message: msg });
                 }
             }
             Dialogs.Alerts = Alerts;
@@ -6262,6 +6386,8 @@ var Katrid;
             }
             Dialogs.toast = toast;
             function alert(message, title, icon) {
+                return katrid.ui.Toast.danger({ message: message.text });
+                return window.alert(message);
                 if (Katrid.isString(message))
                     Swal.fire({
                         title,
@@ -8232,6 +8358,12 @@ var Katrid;
                     where: config.where,
                 });
                 view.dialog = true;
+                view.rowSelector = true;
+                if (config.multiple && !config.buttons)
+                    view.dialogButtons = [
+                        { text: 'OK', click: '$closeDialog(selection)' },
+                        { text: Katrid.i18n.gettext('Cancel'), click: '$closeDialog(null)' },
+                    ];
                 view.render();
                 search.render();
                 let body = view.element.querySelector('.modal-body');
@@ -8250,17 +8382,12 @@ var Katrid;
             showDialog(options) {
                 if (!options)
                     options = {};
-                if (!options.multiple && !this.config.multiple) {
-                    this.rowSelector = false;
-                    if ('multiple' in options)
-                        delete options.multiple;
-                }
                 this.dialog = true;
                 if (!options.buttons) {
                     if (this.rowSelector)
                         this.dialogButtons = [
-                            { text: 'OK', click: '$modalResult = selection', dismiss: 'modal' },
-                            { text: Katrid.i18n.gettext('Cancel'), click: '$modalResult = false', dismiss: 'modal' },
+                            { text: 'OK', click: '$closeDialog(selection)' },
+                            { text: Katrid.i18n.gettext('Cancel'), click: '$closeDialog(null)' },
                         ];
                     else
                         this.dialogButtons = ['close'];
@@ -8486,7 +8613,10 @@ var Katrid;
     // Internationalization
     Katrid.i18n = {
         languageCode: navigator.language,
-        formats: {},
+        formats: {
+            shortDateFormat: 'YYYY-MM-DD',
+            reShortDateFormat: /\d+[-/]\d+[-/]\d+/,
+        },
         catalog: {},
         initialize(plural, catalog, formats) {
             Katrid.i18n.plural = plural;
@@ -12188,6 +12318,31 @@ var Katrid;
         Services.WebSQLAdapter = WebSQLAdapter;
     })(Services = Katrid.Services || (Katrid.Services = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var sql;
+    (function (sql) {
+        class Select {
+        }
+        sql.Select = Select;
+        class From {
+        }
+        sql.From = From;
+        class Alias {
+            constructor(name) {
+                this.name = name;
+            }
+        }
+        sql.Alias = Alias;
+        function select() {
+        }
+        sql.select = select;
+        function from() {
+        }
+        sql.from = from;
+    })(sql = katrid.sql || (katrid.sql = {}));
+})(katrid || (katrid = {}));
+const select = katrid.sql.select;
 var Katrid;
 (function (Katrid) {
     var ui;
@@ -12742,6 +12897,16 @@ Katrid.filter('date', function (value, fmt = 'MM/DD/YYYY') {
         return moment(value).format(fmt);
     }
 });
+Katrid.filter('dateHumanize', function (value) {
+    if (value) {
+        return moment(value).format('ddd, LL') + ' (' + moment(value).fromNow() + ')';
+    }
+});
+Katrid.filter('dateTimeHumanize', function (value) {
+    if (value) {
+        return moment(value).format('ddd, LLL') + ' (' + moment(value).fromNow() + ')';
+    }
+});
 Katrid.filter('number', function (value, digits) {
     if (value != null)
         return Katrid.intl.number(digits).format(value);
@@ -12896,6 +13061,59 @@ var Katrid;
         })(Utils = UI.Utils || (UI.Utils = {}));
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class Toast {
+            static createElement(config) {
+                if (!this._container) {
+                    let container = document.createElement('div');
+                    container.classList.add('toast-container', 'position-fixed', 'bottom-0', 'end-0', 'p-3');
+                    document.body.append(container);
+                    this._container = container;
+                }
+                let div = document.createElement('div');
+                div.classList.add('toast');
+                if (config.classList)
+                    div.classList.add(...config.classList);
+                div.innerHTML = `<div class="d-flex"><div class="toast-body">${config.message}</div></div>`;
+                if ((config.canClose === undefined) || config.canClose)
+                    div.querySelector('.d-flex').append($('<button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>')[0]);
+                this._container.append(div);
+                return div;
+            }
+            static show(config) {
+                let el = this.createElement(config);
+                const toast = new bootstrap.Toast(el);
+                toast.show();
+                el.addEventListener('hidden.bs.toast', () => el.remove());
+                return toast;
+            }
+            static danger(message) {
+                message.classList = ['text-bg-danger', 'toast-dark'];
+                return this.show(message);
+            }
+            static success(message) {
+                message.classList = ['text-bg-success', 'toast-dark'];
+                return this.show(message);
+            }
+            static info(message) {
+                message.classList = ['text-bg-info'];
+                return this.show(message);
+            }
+            static warning(message) {
+                message.classList = ['text-bg-warning'];
+                return this.show(message);
+            }
+        }
+        ui.Toast = Toast;
+        function showMessage(message) {
+            return Toast.show({ message });
+        }
+        ui.showMessage = showMessage;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var ui;
