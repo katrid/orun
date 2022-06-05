@@ -8352,6 +8352,8 @@ var Katrid;
                     views: { list: null, search: null },
                 });
                 let view = new this({ name: model.name, viewInfo: viewsInfo.views.list.info });
+                if (config.where)
+                    view.datasource.domain = config.where;
                 let search = new Katrid.Forms.SearchView({
                     name: model.name, viewInfo: viewsInfo.views.search.info,
                     multiple: config.multiple,
@@ -8439,7 +8441,6 @@ var Katrid;
             }
             createFormComponent(record) {
                 let me = this;
-                console.debug('rec', record);
                 return {
                     created() {
                         this.$fields = me.fields;
