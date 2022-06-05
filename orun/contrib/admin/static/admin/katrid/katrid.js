@@ -13494,6 +13494,21 @@ var Katrid;
         UI.TreeView = TreeView;
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        /** Show a search dialog for a given model */
+        async function search(config) {
+            if (config.multiple == null)
+                config.multiple = true;
+            let dlg = await Katrid.Forms.TableView.createSearchDialog(config);
+            dlg.ready();
+            return dlg.showDialog();
+        }
+        ui.search = search;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     function isString(obj) {

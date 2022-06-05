@@ -111,7 +111,7 @@ class AdminTestCaseMixin:
         self.wait_page_ready(timeout=timeout)
 
     def close_toasts(self):
-        for btn in self.selenium.find_elements_by_css_selector(".toast-close-button"):
+        for btn in self.selenium.find_elements_by_css_selector(".toast .btn-close"):
             btn.click()
 
     def select_foreignkey(self, name, text, value=None):
