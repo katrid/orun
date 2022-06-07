@@ -73,8 +73,12 @@ class SeleniumTestCaseBase(type(LiveServerTestCase)):
             return webdriver.Remote(
                 command_executor=self.selenium_hub,
                 desired_capabilities=self.get_capability(self.browser),
+                options=self.get_webdriver_options(),
             )
         return self.import_webdriver(self.browser)()
+
+    def get_webdriver_options(self):
+        return
 
 
 @tag('selenium')

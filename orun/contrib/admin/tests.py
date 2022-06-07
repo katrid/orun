@@ -1,6 +1,9 @@
+import json
 from contextlib import contextmanager
 from orun.test import modify_settings
 from orun.test.selenium import SeleniumTestCase
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
 from orun.utils.deprecation import MiddlewareMixin
 
 
@@ -12,6 +15,59 @@ class CSPMiddleware(MiddlewareMixin):
 
 
 class AdminTestCaseMixin:
+    def run_async_js(self, code: str):
+        self.selenium.set_script_timeout(100)
+        self.selenium.execute_async_script(f"""var __done = arguments[0];{code}.then(() => __done());""")
+
+    def menu_click(self, *menu):
+        menu = [f'"{m}"'for m in menu]
+        return self.run_async_js(f'katrid.test.menuClick({",".join(menu)})')
+
+    def tour(self, structure):
+        return self.run_async_js(f'katrid.test.runTour({json.dumps(structure)})')
+
+    def model_action_tour(self, structure):
+        return self.run_async_js(f'katrid.test.modelActionTour({json.dumps(structure)})')
+
+    def query_selector(self, css_selector: str):
+        return self.selenium.find_element(By.CSS_SELECTOR, css_selector)
+
+    def click(self, css_selector: str):
+        el = self.query_selector(css_selector)
+        el.click()
+
+    def send_keys(self, field: str, text: str, value=None, parent=None):
+        if parent:
+            el = parent.find_element(By.CSS_SELECTOR, f'.form-field-section[name="{field}"]')
+        else:
+            el = self.selenium.find_element(By.CSS_SELECTOR, f'.form-field-section[name="{field}"]')
+        css_class = el.get_attribute('class')
+
+        if 'ChoiceField' in css_class:
+            inp = Select(el.find_element(By.TAG_NAME, 'select'))
+            inp.select_by_value(text)
+        else:
+            inp = el.find_element(By.TAG_NAME, 'input')
+            inp.click()
+            inp.send_keys(text)
+            if 'ForeignKey' in css_class:
+                if value is None:
+                    selector = ".dropdown-item[data-item-id]"
+                else:
+                    selector = f".dropdown-item[data-item-id='{value}']"
+                self.wait_for(selector)
+                dropdown_item = self.selenium.find_element_by_css_selector(selector)
+                dropdown_item.click()
+
+    def add_record_to(self, selector, data: dict):
+        target = self.selenium.find_element(By.CSS_SELECTOR, selector)
+        btn = target.find_element(By.CSS_SELECTOR, '.btn-action-add')
+        btn.click()
+        dlg = self.wait_for(".modal[data-model]")
+        for k, v in data.items():
+            self.send_keys(k, str(v), parent=dlg)
+        dlg.find_element_by_css_selector('.modal-footer .btn').click()
+
     def wait_until(self, callback, timeout=10):
         """
         Block the execution of the tests until the specified callback returns a
@@ -42,6 +98,7 @@ class AdminTestCaseMixin:
             ec.presence_of_element_located((By.CSS_SELECTOR, css_selector)),
             timeout
         )
+        return self.query_selector(css_selector)
 
     def wait_for_text(self, css_selector, text, timeout=10):
         """
@@ -113,18 +170,6 @@ class AdminTestCaseMixin:
     def close_toasts(self):
         for btn in self.selenium.find_elements_by_css_selector(".toast .btn-close"):
             btn.click()
-
-    def select_foreignkey(self, name, text, value=None):
-        inp = self.selenium.find_element_by_name(name).find_element_by_tag_name('input')
-        inp.click()
-        inp.send_keys(text)
-        if value is None:
-            selector = ".dropdown-item[data-item-id]"
-        else:
-            selector = f".dropdown-item[data-item-id='{value}']"
-        self.wait_for(selector)
-        dropdown_item = self.selenium.find_element_by_css_selector(selector)
-        dropdown_item.click()
 
     def set_field_value(self, name, value, parent=None):
         if parent is None:

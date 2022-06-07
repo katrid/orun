@@ -5629,7 +5629,7 @@ var Katrid;
             create() {
                 super.create();
                 this.decimalPlaces = 2;
-                this.tag = 'input-decimal';
+                this.tag = 'input';
             }
             setValue(record, value) {
                 record[this.name] = parseFloat(value);
@@ -7330,7 +7330,7 @@ var Katrid;
       </button>
     <div class="btn-group">
       <div class="dropdown">
-        <button type="button" class="btn toolbtn" v-if="!changing" v-on:click="refresh()" title="${Katrid.i18n.gettext('Refresh')}">
+        <button type="button" class="btn toolbtn btn-action-refresh" v-if="!changing" v-on:click="refresh()" title="${Katrid.i18n.gettext('Refresh')}">
           <i class="fa fa-fw fa-redo-alt"></i>
         </button>
         <button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" name="actions" data-bs-toggle="dropdown"
@@ -10209,11 +10209,13 @@ var Katrid;
     (function (Forms) {
         Katrid.component('input-decimal', {
             props: ['modelValue'],
+            template: `<!--<input class="form-control">-->`,
             template: `<input class="form-control" @input="$emit('update:modelValue', $event.target.value)">`,
-            mounted() {
+            _mounted() {
                 let vm = this;
                 let decimal = vm.$attrs['input-decimal'];
                 let time;
+                return;
                 let opts = {
                     alias: 'numeric',
                     groupSeparator: Katrid.i18n.formats.THOUSAND_SEPARATOR || ',',
@@ -10421,7 +10423,7 @@ var Katrid;
             init() {
                 // initial search
                 this.cancelSearch();
-                this.search();
+                this._pending = this.search();
             }
             search() {
                 this.clearItems();
@@ -11007,7 +11009,7 @@ var Katrid;
             toolbar.classList.add('grid-toolbar');
             toolbar.innerHTML = `
 <button class="btn btn-sm btn-outline-secondary btn-action-add" type="button" v-on:click="createNew()" v-show="$parent.changing && !readonly">${Katrid.i18n.gettext('Add')}</button>
-<button class="btn btn-sm btn-outline-secondary" type="button" v-on:click="deleteSelection()" v-show="$parent.changing && !readonly && selectionLength">${Katrid.i18n.gettext('Delete')}</button>
+<button class="btn btn-sm btn-outline-secondary btn-action-delete" type="button" v-on:click="deleteSelection()" v-show="$parent.changing && !readonly && selectionLength">${Katrid.i18n.gettext('Delete')}</button>
 `;
             header.append(toolbar);
             let table = document.createElement('div');
@@ -12344,6 +12346,252 @@ var katrid;
     })(sql = katrid.sql || (katrid.sql = {}));
 })(katrid || (katrid = {}));
 const select = katrid.sql.select;
+var katrid;
+(function (katrid) {
+    var test;
+    (function (test) {
+        function click(selector) {
+            document.querySelector(selector).click();
+        }
+        test.click = click;
+        function modelActionTour(...args) {
+            const tour = new Tour();
+            return tour.modelActionTour(...args);
+        }
+        test.modelActionTour = modelActionTour;
+        function waitFor(selector, timeout = 10000) {
+            let observer;
+            return new Promise((resolve, reject) => {
+                let el = document.querySelector(selector);
+                if (el)
+                    return resolve(el);
+                observer = new MutationObserver((mutations) => mutations.forEach(mutation => {
+                    if (mutation.addedNodes) {
+                        el = document.querySelector(selector);
+                        if (el)
+                            resolve(el);
+                    }
+                }));
+                observer.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+                setTimeout(() => reject(), timeout);
+            }).finally(() => {
+                if (observer)
+                    observer.disconnect();
+            });
+        }
+        test.waitFor = waitFor;
+        async function menuClick(...path) {
+            let children = Katrid.webApp.config.menu;
+            for (let s of path) {
+                for (let m of children)
+                    if (m.name === s) {
+                        children = m.children;
+                        document.getElementById(`ui-menu-${m.id}`).click();
+                        await katrid.sleep(1000);
+                        break;
+                    }
+            }
+        }
+        test.menuClick = menuClick;
+        async function sendKeys(field, text, value = null) {
+        }
+        test.sendKeys = sendKeys;
+        function _sendKeys(el, text) {
+            for (let c of text) {
+                el.value += c;
+            }
+        }
+        class Tour {
+            constructor() {
+                this.navigationInterval = 1000;
+            }
+            async set(field, value) {
+                let el;
+                if (typeof field === 'string')
+                    el = document.querySelector(`.form-field-section[name="${field}"]`);
+                else
+                    el = field;
+                const input = el.querySelector('input,select');
+                if (input) {
+                    input.focus();
+                    input.click();
+                    input.value = value;
+                    input.dispatchEvent(new Event('input'));
+                    input.dispatchEvent(new Event('change'));
+                    if (el.classList.contains('ForeignKey')) {
+                        let dropdownItem = await this.waitFor('.dropdown-item[data-item-id]');
+                        dropdownItem.click();
+                    }
+                }
+            }
+            async menuClick(...path) {
+                return menuClick(...path);
+            }
+            waitFor(selector, timeout = 10000) {
+                return waitFor(selector, timeout);
+            }
+            click(selector) {
+                return document.querySelector(selector).click();
+            }
+            async sendKeys(el, value) {
+                el.focus();
+                el.click();
+                el.value = value;
+                el.dispatchEvent(new Event('input'));
+            }
+            async sendKeysToField(container, field, value) {
+                let el = container.querySelector(`.form-field-section[name="${field}"]`);
+                await this.set(el, value);
+            }
+            async addRecordTo(el, data) {
+                el.querySelector('.btn-action-add').click();
+                let dlg = await this.waitFor('.modal[data-model]');
+                for (let [field, v] of Object.entries(data)) {
+                    await this.sendKeysToField(dlg, field, v.toString());
+                }
+                await katrid.sleep(100);
+                // save changes
+                dlg.querySelector('.modal-footer .btn').click();
+            }
+            async editRecordFrom(el, data) {
+                el.click();
+                let dlg = await this.waitFor('.modal[data-model]');
+                for (let [field, v] of Object.entries(data))
+                    if (!field.startsWith('$') && !field.startsWith('_'))
+                        await this.sendKeysToField(dlg, field, v.toString());
+                await katrid.sleep(100);
+                dlg.querySelector('.modal-footer .btn').click();
+            }
+            async deleteRecordFrom(el, index) {
+                await katrid.sleep(1000);
+                el.querySelector(`tbody tr:nth-child(${index}) input[type=checkbox]`).click();
+                el.querySelector('.btn-action-delete').click();
+                await katrid.sleep(100);
+            }
+            async _setFields(data, container) {
+                for (let [field, v] of Object.entries(data)) {
+                    if (field.startsWith('$') || field.startsWith('_'))
+                        continue;
+                    let el = container.querySelector(`.form-field-section[name="${field}"]`);
+                    // OneToManyField has a different approach
+                    if (el.classList.contains('OneToManyField')) {
+                        if (Array.isArray(v)) {
+                            for (let row of v) {
+                                if (row['$edit'] !== undefined) {
+                                    await this.editRecordFrom(el.querySelector(`tbody tr:nth-child(${row['$edit'] + 1})`), row);
+                                }
+                                else if (row['$delete'])
+                                    await this.deleteRecordFrom(el, row['$delete']);
+                                else
+                                    await this.addRecordTo(el, row);
+                            }
+                        }
+                        else
+                            await this.addRecordTo(el, v);
+                    }
+                    else
+                        await this.set(el, v.toString());
+                }
+            }
+            async _modelAction(op, step) {
+                if ((op === 'create') || (op === 'new')) {
+                    let btn = await this.waitFor('.btn-action-create');
+                    btn.click();
+                    await katrid.sleep(500);
+                    await this._setFields(step, document);
+                    if (op === 'create')
+                        document.querySelector('.btn-action-save').click();
+                }
+                else if (op === 'update') {
+                    let btn = await this.waitFor('.btn-action-edit');
+                    btn.click();
+                    await this._setFields(step, document);
+                    await katrid.sleep(500);
+                    document.querySelector('.btn-action-save').click();
+                }
+                else if (op === 'refresh') {
+                    document.querySelector('.btn-action-refresh').click();
+                    await katrid.sleep(1000);
+                }
+            }
+            async modelActionTour(structure) {
+                for (let [k, v] of Object.entries(structure)) {
+                    switch (k) {
+                        case 'steps':
+                            await this.tour(v);
+                            break;
+                        case 'menu':
+                            await this.menuClick(...v);
+                            break;
+                        default:
+                            await this._modelAction(k, v);
+                            break;
+                    }
+                }
+            }
+            async assert(condition) {
+                if (typeof condition === 'object')
+                    if (!this._step(condition))
+                        throw Error('Assertion error');
+            }
+            async _step(step) {
+                for (let [k, v] of Object.entries(step))
+                    switch (k) {
+                        case 'steps':
+                            await this.tour(v);
+                            break;
+                        case 'model':
+                            await this.modelActionTour(v);
+                            break;
+                        case 'menu':
+                            await this.menuClick(...v);
+                            break;
+                        case 'click':
+                            await document.querySelector(v.toString()).click();
+                            break;
+                        case 'waitFor':
+                            await this.waitFor(v.toString());
+                            break;
+                        case 'waitAndClick':
+                            await this.waitFor(v.toString());
+                            await document.querySelector(v.toString()).click();
+                            break;
+                        case 'sleep':
+                            await katrid.sleep(Number(v));
+                            break;
+                        case 'eval':
+                            await eval(v.toString());
+                            break;
+                        case 'assert':
+                            await this.assert(v);
+                            break;
+                        case 'count':
+                            for (let [sel, count] of Object.entries(v))
+                                return document.querySelectorAll(sel).length === count;
+                    }
+            }
+            async tour(steps) {
+                if (Array.isArray(steps))
+                    for (let step of steps)
+                        await this._step(step);
+                else if (steps.steps)
+                    await this._step(steps);
+            }
+        }
+        test.Tour = Tour;
+        function runTour(steps) {
+            let tour = new Tour();
+            return tour.tour(steps);
+        }
+        test.runTour = runTour;
+        async function tour(fn) {
+            console.debug('Start test tour');
+            await fn.call(new Tour());
+            console.debug('Test tour finish');
+        }
+        test.tour = tour;
+    })(test = katrid.test || (katrid.test = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var ui;
@@ -12587,7 +12835,6 @@ var Katrid;
                             let re = new RegExp(term, 'i');
                             let aRes = Katrid.Services.Service.$post('/web/menu/search/', { term }).then(res => res.items);
                             // find by a menu item using javascript (TODO allow custom finder)
-                            console.log('menu', menu);
                             if (!this._localMenuCache.length)
                                 menu.forEach(item => this._registerMenuItem(item));
                             for (let item of this._localMenuCache)
