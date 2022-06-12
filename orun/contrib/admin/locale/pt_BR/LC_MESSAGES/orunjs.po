@@ -320,3 +320,9 @@ msgstr "99/99/9999"
 
 msgid "9999-99-99 99:99"
 msgstr "99/99/9999 99:99"
+
+msgid "Yesterday"
+msgstr "Ontem"
+
+msgid "Today"
+msgstr "Hoje"
