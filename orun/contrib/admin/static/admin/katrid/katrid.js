@@ -4993,6 +4993,7 @@ var Katrid;
                 this._loaded = false;
                 this.attrs = {};
                 this.tag = 'input';
+                this.widgetHelp = '';
                 this.visible = true;
                 if ('visible' in info)
                     this.visible = info.visible;
@@ -5211,12 +5212,14 @@ var Katrid;
             }
             createTooltip(section) {
                 if (!Katrid.settings.ui.isMobile) {
-                    section.setAttribute('v-ui-tooltip', '');
+                    section.setAttribute('v-ui-tooltip', '"teste"');
                     let title = '';
                     if (this.helpText)
                         title += '<br>' + this.helpText;
                     title += '<br>Field: ' + this.name;
                     // title += `<br>Content: ' + record.${this.name} + '`;
+                    if (this.widgetHelp)
+                        title += '<br>Dica:<br>' + this.widgetHelp;
                     if (this.model)
                         title += '<br>Model: ' + this.model;
                     section.setAttribute('data-title', title);
@@ -5413,6 +5416,7 @@ var Katrid;
         class DateField extends Data.Field {
             constructor() {
                 super(...arguments);
+                this.widgetHelp = '<i>Pressione H para hoje</i><br><span class="fa fa-arrow-up"></span> Amanhã<br><span class="fa fa-arrow-down"></span> Ontem';
                 this.tag = 'input-date';
             }
             loadInfo(info) {
@@ -5629,6 +5633,7 @@ var Katrid;
                 if (!info.cols)
                     info.cols = 3;
                 super(info);
+                this.widgetHelp = '<i>Pressione <strong>=</strong> para iniciar a calculadora</i>';
             }
             create() {
                 super.create();
@@ -6014,7 +6019,7 @@ var Katrid;
                         if (obj.action === 'CLEAR') {
                             for (let rec of child.vm.records)
                                 rec.$delete();
-                            child.vm.modelValue = [];
+                            child.parent.vm[this.name] = [];
                             // record.$record.dataSource.record[this.name] = [];
                         }
                         else if (obj.action === 'CREATE') {
@@ -10194,9 +10199,8 @@ var Katrid;
                     calendar.show();
                 });
                 // initial value
-                if (this.modelValue) {
+                if (this.modelValue)
                     input.value = moment(this.modelValue).format(this.$format);
-                }
             },
             watch: {
                 modelValue(value) {
@@ -10451,41 +10455,8 @@ var Katrid;
                     vm.$emit('update:modelValue', this.$el.getValue());
                     setTimeout(() => this.$changing = false);
                 });
-                return;
-                let opts = {
-                    alias: 'numeric',
-                    groupSeparator: Katrid.i18n.formats.THOUSAND_SEPARATOR || ',',
-                    unmaskAsNumber: true,
-                    radixPoint: Katrid.i18n.formats.DECIMAL_SEPARATOR || '.',
-                    autoGroup: true,
-                    digitsOptional: false,
-                    digits: 0,
-                    placeholder: '0',
-                    onKeyDown: function () {
-                        clearTimeout(time);
-                        let oldValue = this.value;
-                        vm.$changing = true;
-                        time = setTimeout(() => {
-                            if (oldValue !== this.value) {
-                                let v = parseFloat($(this).inputmask('unmaskedvalue'));
-                                vm.$emit('update:modelValue', v);
-                                vm.$emit('change', this.value);
-                            }
-                        }, 10);
-                    },
-                };
-                if (decimal)
-                    opts.digits = parseInt(decimal);
-                $(vm.$el).inputmask(opts);
-                if (vm.modelValue)
-                    $(vm.$el).inputmask('setvalue', vm.modelValue);
-                vm.$el.addEventListener('blur', () => {
-                    clearTimeout(time);
-                    vm.$changing = false;
-                    let v = parseFloat($(vm.$el).inputmask('unmaskedvalue'));
-                    vm.$emit('update:modelValue', v);
-                    // vm.$emit('change', this.value);
-                });
+                if (vm.modelValue != null)
+                    this.$el.setValue(vm.modelValue);
             },
             emits: ['update:modelValue'],
             watch: {
@@ -13434,6 +13405,20 @@ var Katrid;
         ui.DataGrid = DataGrid;
     })(ui = Katrid.ui || (Katrid.ui = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class HelpProvider {
+            getTooltipHelp(tooltip) {
+                // get the help text for a given control
+                return;
+            }
+        }
+        ui.HelpProvider = HelpProvider;
+        ui.helpProvider = new HelpProvider();
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var ui;
@@ -13630,18 +13615,31 @@ var Katrid;
                 }, false);
             }
             createElement(text) {
-                return $(`<div class="tooltip"><div class="tooltip-inner">${text}</div></div>`)[0];
+                return $(`<div class="tooltip"><div class="tooltip-inner">${text}<div class="documentation-tip"></div></div></div>`)[0];
             }
             show(text) {
-                if (!this.element)
+                if (!this.element) {
                     this.element = this.createElement(text);
-                let _popper = Popper.createPopper(this.target, this.element, { placement: 'top-start' });
+                    this._popper = Popper.createPopper(this.target, this.element, { placement: 'top-start' });
+                }
                 document.body.append(this.element);
                 this.element.classList.add('show');
+                if (this.documentation)
+                    this.loadAdditionalTip();
             }
             hide() {
-                if (this.element)
+                clearTimeout(this._additionalTip);
+                if (this.element) {
                     this.element.remove();
+                    this._popper = null;
+                    this.element = null;
+                }
+            }
+            loadAdditionalTip() {
+                this._additionalTip = setTimeout(() => {
+                    this.element.querySelector('.documentation-tip').innerHTML = this.documentation;
+                    this._popper.update();
+                }, DELAY);
             }
         }
         ui.Tooltip = Tooltip;
