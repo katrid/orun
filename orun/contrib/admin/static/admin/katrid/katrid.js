@@ -10214,12 +10214,14 @@ var Katrid;
                 }
             }
         });
+        class InputTime extends katrid.ui.InputMask {
+        }
+        Katrid.define('input-time', InputTime, { extends: 'input' });
         Katrid.component('input-time', {
             props: ['modelValue'],
-            template: '<input class="form-control" type="text">',
+            template: '<input is="input-time" input-mask="99:99" class="form-control" type="text">',
             mounted() {
                 let el = this.$el;
-                let mask = '99:99';
                 el.addEventListener('blur', () => {
                     if (el.value.length === 2)
                         el.value += ':';
