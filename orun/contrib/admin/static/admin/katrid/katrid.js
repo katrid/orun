@@ -9993,14 +9993,106 @@ var Katrid;
         })(Controls = Forms.Controls || (Forms.Controls = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class InputMask extends HTMLInputElement {
+            constructor() {
+                super();
+                this._created = false;
+                this._changed = false;
+                this.addEventListener('change', () => {
+                    this._invalidate();
+                });
+                this.addEventListener('blur', () => this._format());
+                this.addEventListener('keypress', this._keyPress);
+                this.addEventListener('keydown', this._keyDown);
+            }
+            _keyPress(event) {
+                if (this.inputMask) {
+                    if (!event.shiftKey && !event.altKey && !event.ctrlKey) {
+                        let start = this.selectionStart;
+                        let end = this.selectionEnd;
+                        let char = this._inputMask[start];
+                        if ((char === '9') && !/[\d]/.test(event.key)) {
+                            event.preventDefault();
+                            return false;
+                        }
+                        else if ((char !== '9') && (char === event.key))
+                            return true;
+                        if (start === end) {
+                            if (this.value.length > start) {
+                                if (char !== '9') {
+                                    start++;
+                                }
+                            }
+                            this.value = this.value.substring(0, start) + this.value.substring(start + 1);
+                            this.selectionEnd = start;
+                            if (!char)
+                                event.preventDefault();
+                            else if (char !== '9') {
+                                if (this.value.length > start)
+                                    return;
+                                this.value += char;
+                            }
+                        }
+                    }
+                }
+            }
+            _keyDown(event) {
+                if (this.inputMask) {
+                    if (event.code === 'Backspace') {
+                        if ((this.selectionEnd === this.value.length) && (this.selectionStart === this.value.length))
+                            return true;
+                        if (this.selectionStart > 0) {
+                            this.selectionStart--;
+                            event.preventDefault();
+                        }
+                        else if ((this.selectionStart === 0) && (this.selectionEnd < this.value.length)) {
+                            this.selectionEnd = this.value.length;
+                            event.preventDefault();
+                        }
+                    }
+                    else if (event.code === 'Delete') {
+                        this.selectionEnd = this.value.length;
+                    }
+                }
+            }
+            connectedCallback() {
+                if (!this._created) {
+                    this._created = true;
+                    this._create();
+                }
+            }
+            _format() {
+            }
+            _create() {
+            }
+            get inputMask() {
+                if (this._inputMask === undefined) {
+                    this._inputMask = this.getAttribute('input-mask');
+                }
+                return this._inputMask;
+            }
+            _invalidate() {
+            }
+        }
+        ui.InputMask = InputMask;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../../ui/mask.ts"/>
 var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
+        class InputDate extends katrid.ui.InputMask {
+        }
+        Katrid.define('input-date', InputDate, { extends: 'input' });
         Katrid.component('input-date', {
             props: ['modelValue'],
             template: `<div class="input-group date">
-      <input type="text" class="form-control form-field" inputmode="numeric">
+      <input is="input-date" type="text" class="form-control form-field" inputmode="numeric">
       <label class="input-group-text btn-calendar" type="button"><i class="fa fa-calendar fa-sm"></i></label></div>`,
             mounted() {
                 let vm = this;
@@ -10012,11 +10104,12 @@ var Katrid;
                 let $format;
                 if (format === 'L LT') {
                     mask = Katrid.i18n.gettext('9999-99-99 99:99');
-                    $format = Katrid.i18n.formats.shortDateTimeFormat;
+                    $format = Katrid.i18n.formats.shortDateTimeFormat || Katrid.i18n.formats.shortDateFormat;
                 }
                 else
                     $format = Katrid.i18n.formats.shortDateFormat;
                 let input = vm.$el.querySelector('input');
+                input.setAttribute('input-mask', mask);
                 input.value = '';
                 if (vm.$attrs.name)
                     input.name = vm.$attrs['name'];
@@ -10024,46 +10117,51 @@ var Katrid;
                 this.$lastValue = '';
                 input.addEventListener('focusin', () => this.$changing = true);
                 input.addEventListener('focusout', () => this.$changing = false);
-                input.addEventListener('keydown', evt => {
-                    if (evt.code === 'ArrowUp') {
+                input.addEventListener('keypress', (event) => {
+                    if (!event.shiftKey && !event.ctrlKey && !event.altKey) {
+                        if (event.code === 'Enter') {
+                            if (input.value) {
+                                let v = katrid.utils.autoCompleteDate(input.value.replace('_', ''), $format);
+                                if (v)
+                                    input.value = moment(v).format($format);
+                                else
+                                    input.value = '';
+                            }
+                            return true;
+                        }
+                    }
+                });
+                input.addEventListener('keydown', event => {
+                    if (event.code === 'ArrowUp') {
                         // tomorrow
                         let v = moment(this.modelValue || new Date()).add(1, 'days').format($format);
                         input.value = v;
                         vm.$emit('update:modelValue', applyValue(v));
                     }
-                    else if (evt.code === 'ArrowDown') {
+                    else if (event.code === 'ArrowDown') {
                         // yesterday
                         let v = moment(this.modelValue || new Date()).add(-1, 'days').format($format);
                         input.value = v;
                         vm.$emit('update:modelValue', applyValue(v));
                     }
-                    else if (evt.key.toLowerCase() === todayChar) {
+                    else if (event.key.toLowerCase() === todayChar) {
                         // today
                         let v = moment(new Date()).format($format);
                         input.value = v;
                         vm.$emit('update:modelValue', applyValue(v));
                     }
                 });
-                $(input).inputmask({
-                    mask,
-                    insertMode: false,
-                    onincomplete: function () {
-                        // auto complete date
-                        if (vm.$changing) {
-                            vm.$emit('update:modelValue', applyValue(input.value));
-                        }
-                        else if ($(input).inputmask('unmaskedvalue') !== '') {
-                            let v = katrid.utils.autoCompleteDate(input.value.replace('_', ''), $format);
+                input.addEventListener('change', () => {
+                    if (input.value) {
+                        // date autocomplete
+                        if (input.value.length < $format.length) {
+                            let v = katrid.utils.autoCompleteDate(input.value, $format);
                             if (v)
                                 input.value = moment(v).format($format);
                             else
                                 input.value = '';
-                            vm.$emit('update:modelValue', applyValue(v));
                         }
-                    },
-                    oncomplete: function () {
-                        if (vm.$changing)
-                            vm.$emit('update:modelValue', applyValue(input.value));
+                        vm.$emit('update:modelValue', applyValue(this.value));
                     }
                 });
                 this.$format = $format;
@@ -10123,11 +10221,13 @@ var Katrid;
                 let el = this.$el;
                 let mask = '99:99';
                 el.addEventListener('blur', () => {
-                    this.$emit('update:modelValue', el.value);
+                    if (el.value.length === 2)
+                        el.value += ':';
+                    if (el.value.length === 3)
+                        el.value += '00';
                 });
-                $(el).inputmask({
-                    mask,
-                    insertMode: false,
+                el.addEventListener('change', () => {
+                    this.$emit('update:modelValue', el.value);
                 });
                 if (this.modelValue)
                     el.value = this.modelValue;
@@ -10260,7 +10360,7 @@ var Katrid;
                         return true;
                     }
                     if (!evt.shiftKey && !evt.ctrlKey && !evt.altKey) {
-                        if ((evt.code === 'Return' || evt.code === 'Enter') && this._formula) {
+                        if ((evt.code === 'Enter') && this._formula) {
                             this._invalidate();
                             return true;
                         }
@@ -10285,12 +10385,6 @@ var Katrid;
                     if (s.includes(thousandSeparator))
                         this.value = s.replace(new RegExp(`\\${thousandSeparator}`, 'g'), '');
                     this.select();
-                });
-                this.addEventListener('keydown', (evt) => {
-                    if (evt.code === 'ArrowUp')
-                        console.log('increase');
-                    else if (evt.code === 'ArrowDown')
-                        console.log('decrease');
                 });
             }
             _invalidate() {
