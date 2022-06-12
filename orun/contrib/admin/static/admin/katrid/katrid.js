@@ -13596,39 +13596,52 @@ var Katrid;
     (function (ui) {
         const DELAY = 1500;
         let timeout;
+        let lastTooltip;
         class Tooltip {
-            constructor(el, helpText) {
-                let tooltip = bootstrap.Tooltip.getOrCreateInstance(el, {
-                    title: '--', trigger: 'manual', html: true,
-                    template: '<div class="tooltip"><div class="tooltip-inner"></div></div>',
-                    popperConfig: {
-                        placement: 'top-start',
-                    }
-                });
+            constructor(el, config) {
+                const popperConfig = {
+                    placement: 'top-start',
+                };
+                let helpText = config?.helpText;
+                this.target = el;
                 let title = el.getAttribute('data-title');
                 if (title)
                     el.removeAttribute('data-title');
                 let mouseout;
-                el.addEventListener('show.bs.tooltip', evt => {
-                });
                 el.addEventListener('mouseenter', evt => {
+                    if (lastTooltip)
+                        lastTooltip.hide();
                     clearTimeout(timeout);
                     timeout = setTimeout(() => {
+                        lastTooltip = this;
                         let s = el.getAttribute('data-tooltip') || '';
                         s += '<br>' + (title || helpText);
-                        el.setAttribute('data-bs-original-title', s);
                         if (s)
-                            tooltip.show();
+                            this.show(s);
                     }, DELAY);
-                    mouseout = setTimeout(() => tooltip.hide(), 150000);
+                    mouseout = setTimeout(() => this.hide(), 150000);
                 }, false);
                 el.addEventListener('mouseleave', evt => {
                     clearTimeout(timeout);
                     clearTimeout(mouseout);
                     mouseout = setTimeout(() => {
                     });
-                    tooltip.hide();
+                    this.hide();
                 }, false);
+            }
+            createElement(text) {
+                return $(`<div class="tooltip"><div class="tooltip-inner">${text}</div></div>`)[0];
+            }
+            show(text) {
+                if (!this.element)
+                    this.element = this.createElement(text);
+                let _popper = Popper.createPopper(this.target, this.element, { placement: 'top-start' });
+                document.body.append(this.element);
+                this.element.classList.add('show');
+            }
+            hide() {
+                if (this.element)
+                    this.element.remove();
             }
         }
         ui.Tooltip = Tooltip;
