@@ -1841,6 +1841,8 @@ var Katrid;
             }
             setUserInfo(value) {
                 if (value) {
+                    if (value.language)
+                        Katrid.i18n.languageCode = value.language;
                     let userMenu = document.querySelector('.user-menu');
                     if (userMenu) {
                         userMenu.querySelector('a.nav-link span').innerText = value.name;
@@ -3703,8 +3705,10 @@ var Katrid;
         if (!initialized) {
             initialized = true;
             // register custom elements
-            for (let entry of Object.entries(Katrid.customElementsRegistry))
-                customElements.define(entry[0], entry[1].constructor, entry[1].options);
+            for (let [tag, entry] of Object.entries(Katrid.customElementsRegistry)) {
+                console.log(tag, entry);
+                customElements.define(tag, entry.constructor, entry.options);
+            }
         }
     }
     Katrid.init = init;
@@ -5629,7 +5633,7 @@ var Katrid;
             create() {
                 super.create();
                 this.decimalPlaces = 2;
-                this.tag = 'input';
+                this.tag = 'input-decimal';
             }
             setValue(record, value) {
                 record[this.name] = parseFloat(value);
@@ -6604,7 +6608,10 @@ var Katrid;
                     input = el.querySelector('input');
                 // el.addEventListener('focusin', () => field.touched = true);
                 if (input?.tagName === 'INPUT')
-                    input.addEventListener('mouseup', () => input.select());
+                    input.addEventListener('mouseup', () => {
+                        input.select();
+                        console.log('select all');
+                    });
             }
         });
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -8613,7 +8620,7 @@ var Katrid;
     }
     // Internationalization
     Katrid.i18n = {
-        languageCode: navigator.language,
+        languageCode: 'en-us',
         formats: {
             shortDateFormat: 'YYYY-MM-DD',
             reShortDateFormat: /\d+[-/]\d+[-/]\d+/,
@@ -10207,14 +10214,147 @@ var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
+        const decimalSeparator = Katrid.i18n.formats.DECIMAL_SEPARATOR || '.';
+        const thousandSeparator = Katrid.i18n.formats.THOUSAND_SEPARATOR || ',';
+        const RE_INPUT = new RegExp(`[-=0-9\\${decimalSeparator}]`);
+        const RE_FORMULA = new RegExp(`[=+\-/*\d\\${decimalSeparator}]`);
+        class InputDecimal extends HTMLInputElement {
+            constructor() {
+                super();
+                this._created = false;
+                this._formula = false;
+                this._changed = false;
+                this.addEventListener('change', () => {
+                    this._invalidate();
+                    // this._format();
+                });
+                this.addEventListener('blur', () => this._format());
+            }
+            connectedCallback() {
+                if (!this._created) {
+                    this._created = true;
+                    this._create();
+                }
+            }
+            _format() {
+                let fmt = this.getAttribute('display-format') || '0.00';
+                if (!this.value)
+                    return;
+                let s;
+                if (fmt.endsWith('#')) {
+                    s = Katrid.intl.number({ minimumFractionDigits: 2 }).format(this.getValue());
+                }
+                else if (fmt.endsWith('0')) {
+                    s = Katrid.intl.toFixed(2).format(this.getValue());
+                }
+                else
+                    s = Katrid.intl.number({ maximumFractionDigits: 2 }).format(this.getValue());
+                if (s)
+                    this.value = s;
+            }
+            _create() {
+                this.addEventListener('keypress', (evt) => {
+                    if (this._formula) {
+                        if (!evt.shiftKey && !evt.ctrlKey && !evt.altKey && evt.code === 'Enter')
+                            this._invalidate();
+                        return true;
+                    }
+                    if (!evt.shiftKey && !evt.ctrlKey && !evt.altKey) {
+                        if ((evt.code === 'Return' || evt.code === 'Enter') && this._formula) {
+                            this._invalidate();
+                            return true;
+                        }
+                        else if (RE_INPUT.test(evt.key)) {
+                            if (evt.key === '=') {
+                                this.value = '=';
+                                this._formula = true;
+                                evt.preventDefault();
+                            }
+                            return true;
+                        }
+                    }
+                    evt.preventDefault();
+                });
+                this.addEventListener('input', () => {
+                    this._formula = this.value && this.value[0] === '=';
+                    return false;
+                });
+                this.addEventListener('focusin', () => {
+                    this._changed = false;
+                    let s = this.value;
+                    if (s.includes(thousandSeparator))
+                        this.value = s.replace(new RegExp(`\\${thousandSeparator}`, 'g'), '');
+                    this.select();
+                });
+                this.addEventListener('keydown', (evt) => {
+                    if (evt.code === 'ArrowUp')
+                        console.log('increase');
+                    else if (evt.code === 'ArrowDown')
+                        console.log('decrease');
+                });
+            }
+            _invalidate() {
+                if (this.value && this._formula) {
+                    this._formula = null;
+                    let s = this.value;
+                    s = s.replace(new RegExp(`\\${decimalSeparator}`, 'g'), '.');
+                    let val = eval(s.substring(1, s.length));
+                    if (typeof val === 'number')
+                        this.value = val.toString().replace(/\./g, decimalSeparator);
+                    else
+                        this.value = '0';
+                }
+            }
+            getValue() {
+                let s = this.value;
+                if (!s)
+                    return null;
+                if (s.includes(thousandSeparator))
+                    s = s.replace(new RegExp(`\\${thousandSeparator}`, 'g'), '');
+                if (decimalSeparator !== '.')
+                    s = s.replace(decimalSeparator, '.');
+                return parseFloat(s);
+            }
+            setValue(v) {
+                if ((v == null) || (v === '')) {
+                    this.value = '';
+                    return;
+                }
+                let fmt = this.getAttribute('display-format') || '0.00';
+                let s;
+                if (fmt.endsWith('#')) {
+                    s = Katrid.intl.number({ minimumFractionDigits: 2 }).format(v);
+                }
+                else if (fmt.endsWith('0')) {
+                    s = Katrid.intl.toFixed(2).format(v);
+                }
+                else
+                    s = Katrid.intl.number({ maximumFractionDigits: 2 }).format(v);
+                this.value = s;
+            }
+        }
+        Katrid.define('input-decimal', InputDecimal, { extends: 'input' });
         Katrid.component('input-decimal', {
             props: ['modelValue'],
-            template: `<!--<input class="form-control">-->`,
-            template: `<input class="form-control" @input="$emit('update:modelValue', $event.target.value)">`,
-            _mounted() {
+            //template: `<!--<input class="form-control">-->`,
+            template: `<input is="input-decimal" type="text" class="form-control">`,
+            mounted() {
                 let vm = this;
                 let decimal = vm.$attrs['input-decimal'];
-                let time;
+                // this.$el['$decimalSeparator'] = Katrid.i18n.formats.THOUSAND_SEPARATOR || '.';
+                // this.$el['$thousandSeparator'] = Katrid.i18n.formats.THOUSAND_SEPARATOR || ',';
+                this.$el.addEventListener('input', () => {
+                    if (!this.$el._formula) {
+                        this.$changing = true;
+                        vm.$emit('update:modelValue', this.$el.getValue());
+                        setTimeout(() => this.$changing = false);
+                    }
+                });
+                this.$el.addEventListener('change', () => {
+                    this.$changing = true;
+                    vm.$emit('update:modelValue', this.$el.getValue());
+                    setTimeout(() => this.$changing = false);
+                });
                 return;
                 let opts = {
                     alias: 'numeric',
@@ -10254,16 +10394,8 @@ var Katrid;
             emits: ['update:modelValue'],
             watch: {
                 modelValue: function (value) {
-                    if (value && !this.$changing) {
-                        if (value !== $(this.$el).inputmask('unmaskedvalue')) {
-                            // this.$el.value = value;
-                            $(this.$el).inputmask('setvalue', value);
-                        }
-                    }
-                    else if (!value)
-                        $(this.$el).val('');
-                    // console.log('val', value);
-                    // $(this.$el).val(value);
+                    if (!this.$changing)
+                        this.$el.setValue(value);
                 }
             }
         });

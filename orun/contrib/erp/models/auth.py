@@ -1,6 +1,7 @@
 from orun import api
 from orun.apps import apps
 from orun.contrib import auth
+from orun.conf import settings
 from orun.contrib.auth.hashers import check_password
 from orun.core.exceptions import PermissionDenied
 from orun.db import models
@@ -99,7 +100,7 @@ class User(AbstractUser, Partner):
             'avatar': (self.image and self.image.url) or None,
             'username': self.username,
             'last_login': self.__class__._meta.fields['last_login'].value_to_json(self.last_login),
-            'language': self.language and self.language.code,
+            'language': (self.language and self.language.code) or settings.LANGUAGE_CODE,
         }
 
 
