@@ -6019,7 +6019,7 @@ var Katrid;
                         if ((obj.action === 'CLEAR') && (record[this.name])) {
                             for (let rec of record[this.name])
                                 rec.$delete();
-                            child.parent.vm[this.name] = [];
+                            record[this.name] = [];
                             // record.$record.dataSource.record[this.name] = [];
                         }
                         else if (obj.action === 'CREATE') {
