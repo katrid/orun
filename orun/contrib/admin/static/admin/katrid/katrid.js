@@ -6016,8 +6016,8 @@ var Katrid;
                 let child = datasource.childByName(this.name);
                 if (value && value instanceof Array) {
                     value.map(obj => {
-                        if (obj.action === 'CLEAR') {
-                            for (let rec of child.vm.records)
+                        if ((obj.action === 'CLEAR') && (record[this.name])) {
+                            for (let rec of record[this.name])
                                 rec.$delete();
                             child.parent.vm[this.name] = [];
                             // record.$record.dataSource.record[this.name] = [];
