@@ -2557,7 +2557,7 @@ var Katrid;
                         return res;
                     },
                     sendFile(name, file) {
-                        return Katrid.Services.Upload.sendFile({ model: this.action.model, method: name, file, vm: this });
+                        return Katrid.Services.Upload.sendFile({ model: me.model || me.action?.model, method: name, file, vm: this });
                     },
                     $closeDialog(result) {
                         if (result !== undefined)
