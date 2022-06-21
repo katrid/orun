@@ -2556,6 +2556,9 @@ var Katrid;
                             res += obj[member] || 0;
                         return res;
                     },
+                    sendFile(name, file) {
+                        return Katrid.Services.Upload.sendFile({ model: this.action.model, method: name, file, vm: this });
+                    },
                     $closeDialog(result) {
                         if (result !== undefined)
                             this.$result = result;
@@ -6074,6 +6077,133 @@ var Katrid;
         Katrid.Data.Fields.registry.OneToManyField = OneToManyField;
     })(Data = Katrid.Data || (Katrid.Data = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var editor;
+    (function (editor_1) {
+        class BaseEditor {
+            constructor(container) {
+                this.container = container;
+                if (container)
+                    this.renderTo(container);
+            }
+            createEditor() {
+                let el = document.createElement('div');
+                el.className = 'block-text-editor';
+                this.element = el;
+                return el;
+            }
+            renderTo(container) {
+                let el = this.createEditor();
+                container.append(el);
+            }
+            addBlock(block) {
+                console.log('add a block');
+                block.renderTo(this);
+            }
+        }
+        class Editor extends BaseEditor {
+        }
+        editor_1.Editor = Editor;
+        class BaseBlock {
+            constructor(editor) {
+                this.editor = editor;
+                if (editor)
+                    editor.addBlock(this);
+            }
+            createElement() {
+                return;
+            }
+            createBlock() {
+                return;
+            }
+            createEvents(element) {
+                element.addEventListener('keydown', (event) => {
+                    if (!event.shiftKey && !event.ctrlKey && !event.altKey) {
+                        let el, parent;
+                        switch (event.code) {
+                            case 'ArrowDown':
+                            case 'ArrowRight':
+                                let selection = window.getSelection();
+                                el = selection.anchorNode;
+                                if (el.nextSibling || (selection.getRangeAt(0).endOffset < el.innerText?.length))
+                                    return;
+                                parent = el.parentElement;
+                                if (!parent.classList.contains('.block-editor'))
+                                    parent = parent.closest('.block-editor');
+                                let next = parent.nextSibling;
+                                if (next) {
+                                    parent.nextSibling.focus();
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                }
+                                break;
+                            case 'ArrowUp':
+                            case 'ArrowLeft':
+                                el = window.getSelection().anchorNode;
+                                if (el.previousSibling || (window.getSelection().getRangeAt(0).endOffset > 0))
+                                    return;
+                                parent = el.parentElement;
+                                if (!parent.classList.contains('.block-editor'))
+                                    parent = parent.closest('.block-editor');
+                                let previous = parent.previousSibling;
+                                if (previous) {
+                                    parent.previousSibling.focus();
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                }
+                                break;
+                        }
+                    }
+                });
+            }
+            renderTo(editor) {
+                let el = this.createBlock();
+                editor.element.append(el);
+            }
+        }
+        /** An alias to component */
+        BaseBlock.type = null;
+        class Paragraph extends BaseBlock {
+            createBlock() {
+                let block = document.createElement('p');
+                block.classList.add('block-editor', 'paragraph-block');
+                block.innerHTML = 'bla bla bla bla <b> bla bla bla</b> teste';
+                block.contentEditable = 'true';
+                block.spellcheck = false;
+                this.createEvents(block);
+                return block;
+            }
+        }
+        Paragraph.type = 'p';
+        editor_1.Paragraph = Paragraph;
+        class Heading extends BaseBlock {
+        }
+        Heading.type = 'h';
+        class Table extends BaseBlock {
+            createCell() {
+                const cell = document.createElement('td');
+                cell.classList.add('block-editor');
+                cell.contentEditable = 'true';
+                this.createEvents(cell);
+                return cell;
+            }
+            createBlock() {
+                let table = document.createElement('table');
+                table.classList.add('table', 'table-bordered');
+                let tbody = table.createTBody();
+                let newRow = document.createElement('tr');
+                tbody.append(newRow);
+                newRow.append(this.createCell());
+                newRow.append(this.createCell());
+                tbody.append(newRow);
+                return table;
+            }
+        }
+        Table.type = 'table';
+        editor_1.Table = Table;
+    })(editor = katrid.editor || (katrid.editor = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
