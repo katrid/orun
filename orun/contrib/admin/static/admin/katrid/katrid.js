@@ -5215,7 +5215,7 @@ var Katrid;
             }
             createTooltip(section) {
                 if (!Katrid.settings.ui.isMobile) {
-                    section.setAttribute('v-ui-tooltip', '"teste"');
+                    // section.setAttribute('v-ui-tooltip', '"teste"');
                     let title = '';
                     if (this.helpText)
                         title += '<br>' + this.helpText;
@@ -6297,6 +6297,7 @@ var Katrid;
                         this.close();
                 };
                 document.addEventListener('mousedown', this._eventHook);
+                document.addEventListener('pointerdown', this._eventHook, { once: true });
                 document.addEventListener('wheel', this._eventHook);
                 document.addEventListener('keydown', this._eventKeyDownHook);
                 document.body.append(this.el);
@@ -6314,7 +6315,7 @@ var Katrid;
                 };
                 let _popper = Popper.createPopper(virtualElement, this.el, { placement: 'auto-start' });
                 this.el.classList.add('show');
-                // document.body.append(this.el);
+                ContextMenu.instances.push(this);
             }
             close() {
                 // unhook event
@@ -6324,11 +6325,19 @@ var Katrid;
                 // remove element
                 this.el.remove();
                 this._eventHook = null;
+                let i = ContextMenu.instances.indexOf(this);
+                if (i > -1)
+                    ContextMenu.instances.splice(i, 1);
             }
             get visible() {
                 return this._visible;
             }
+            static closeAll() {
+                for (let m of Array.from(this.instances))
+                    m.close();
+            }
         }
+        ContextMenu.instances = [];
         Forms.ContextMenu = ContextMenu;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
