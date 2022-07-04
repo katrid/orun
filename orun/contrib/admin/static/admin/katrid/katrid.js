@@ -3119,6 +3119,7 @@ var Katrid;
                     th.innerText = f.caption;
                     thr.append(th);
                 }
+                let c = 0;
                 for (let row of data) {
                     let tr = document.createElement('tr');
                     let i = 0;
@@ -3137,7 +3138,13 @@ var Katrid;
                         tr.append(td);
                         i++;
                     }
+                    c++;
                     tbody.append(tr);
+                    // TODO show loading message on table
+                    if (c === 1000) {
+                        c = 0;
+                        await katrid.sleep(500);
+                    }
                 }
                 this.element.append(table);
                 table.addEventListener('contextmenu', evt => this.contextMenu(evt));
@@ -3157,7 +3164,7 @@ var Katrid;
                 evt.preventDefault();
                 // create context menu
                 let menu = new Katrid.Forms.ContextMenu();
-                menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => this.copyToClipboard());
+                menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', () => this.copyToClipboard());
                 // menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => this.filterByFieldContent(td, rec));
                 // menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteRow());
                 // menu.add('Arquivar', this.copyClick);
@@ -6021,7 +6028,7 @@ var Katrid;
                     value.map(obj => {
                         if ((obj.action === 'CLEAR') && (record[this.name])) {
                             for (let rec of record[this.name])
-                                rec.$delete();
+                                rec.$destroy();
                             record[this.name] = [];
                             // record.$record.dataSource.record[this.name] = [];
                         }
