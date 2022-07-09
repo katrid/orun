@@ -3,9 +3,13 @@ from orun.data.datasource import DataSource, Param
 
 
 class Query(DataSource, reptile.engine.DataSource):
-    def __init__(self, name=None):
+    def __init__(self, name=None, sql=None):
         reptile.engine.DataSource.__init__(self, name)
-        DataSource.__init__(self)
+        DataSource.__init__(self, sql=sql)
+
+    def load(self, structure: dict):
+        self.name = structure['name']
+        self.sql = structure['sql']
 
     def execute(self, params=None):
         rows = self._prepare(params)
