@@ -232,9 +232,12 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def api_get_defaults(cls, context=None, *args, **kwargs):
         r = {}
-        defaults = (context or {}).get('default')
+        defaults = (context or {}).get('default', {})
+        for k in context:
+            if k.startswith('default_'):
+                defaults[k[8:]] = context[k]
         for f in cls._meta.fields:
-            if defaults and f.name in defaults:
+            if f.name in defaults:
                 val = r[f.name] = defaults[f.name]
                 if val and isinstance(f, models.ForeignKey):
                     r[f.name] = f.remote_field.model.objects.get(pk=val)._api_format_choice()
@@ -471,25 +474,6 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def admin_get_view_info(cls, view_type, view=None, toolbar=False):
         return cls._admin_get_view_info(view_type, view, toolbar)
-
-    @classmethod
-    def admin_load_views(cls, views=None, toolbar=False, **kwargs):
-        if views is None and 'action' in kwargs:
-            Action = apps['ui.action.window']
-            action = Action.objects.get(pk=kwargs.get('action'))
-            views = {mode: None for mode in action.view_mode.split(',')}
-            if 'search' not in views:
-                views['search'] = None
-        elif views is None:
-            views = {'form': None, 'list': None, 'search': None}
-
-        return {
-            'fields': cls.admin_get_fields_info(),
-            'views': {
-                mode: cls.admin_get_view_info(view_type=mode, view=v, toolbar=toolbar)
-                for mode, v in views.items()
-            }
-        }
 
     @api.classmethod
     def admin_load_views(cls, views=None, toolbar=False, **kwargs):
