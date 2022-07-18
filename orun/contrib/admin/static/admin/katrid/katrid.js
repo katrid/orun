@@ -5469,7 +5469,9 @@ var Katrid;
                     if (value.includes(';'))
                         return value.split(';').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format('YYYY-MM-DD'));
                     // return iso date
-                    return moment(re.test(value) ? value.trim() : katrid.utils.autoCompleteDate(value, format)).format('YYYY-MM-DD');
+                    if (re.test(value))
+                        return moment(value, Katrid.i18n.formats.shortDateFormat).format('YYYY-MM-DD');
+                    return moment(katrid.utils.autoCompleteDate(value, format)).format('YYYY-MM-DD');
                 }
                 return super.getParamValue(value);
             }
@@ -8793,6 +8795,9 @@ var Katrid;
             Katrid.i18n.plural = plural;
             Katrid.i18n.catalog = catalog;
             Katrid.i18n.formats = expandFormats(formats);
+            if (!Katrid.i18n.formats.reShortDateFormat)
+                Katrid.i18n.formats.reShortDateFormat = /\d+[-/]\d+[-/]\d+/;
+            console.log('fmt', Katrid.i18n.formats.reShortDateFormat);
             if (plural) {
                 Katrid.i18n.pluralidx = function (n) {
                     if (plural instanceof Boolean) {
