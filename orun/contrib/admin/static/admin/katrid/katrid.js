@@ -2550,6 +2550,8 @@ var Katrid;
                         me.datasource.nextPage();
                     },
                     rpc(methodName, params) {
+                        if (Array.isArray(params))
+                            return me.model.service.rpc(methodName, params);
                         return me.model.service.rpc(methodName, params.args, params.kwargs);
                     },
                     actionClick(selection, methodName, event) {
