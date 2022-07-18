@@ -12822,7 +12822,7 @@ table-field .table tbody tr {
 .katrid-app {
   height: 100%;
 }
-.katrid-app body.desktop {
+.katrid-app body {
   height: 100%;
 }
 .katrid-app .form-field-readonly.bool-text,

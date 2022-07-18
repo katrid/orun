@@ -434,7 +434,14 @@ var Katrid;
             }
             async execAction(info) {
                 if (info.type === 'ui.action.view') {
+                    console.log('exec', info);
                     let action = new Katrid.Actions.ViewAction({ actionManager: this, info });
+                    return action.renderTo(this);
+                }
+                else if (info.type === 'ui.action.window') {
+                    const actInfo = Object.assign({ ActionManager: this }, info);
+                    actInfo.model = new Katrid.Data.Model({ name: info['model'], fields: info['fields'] });
+                    let action = new Katrid.Actions.WindowAction(actInfo);
                     return action.renderTo(this);
                 }
             }
@@ -476,6 +483,7 @@ var Katrid;
                     this.viewMode = this.config.info.viewMode;
                 else
                     this.viewMode = 'list';
+                console.log('model', config.model);
                 if (config.model instanceof Katrid.Data.Model) {
                     this.model = config.model;
                     this.modelName = config.model.name;
@@ -503,6 +511,7 @@ var Katrid;
                     this.views = {};
                     for (let [k, viewInfo] of Object.entries(config.viewsInfo))
                         this.views[k] = viewInfo;
+                    console.log('views info', this.views);
                 }
                 if (!config.viewModes) {
                     if (this._cachedViews)
@@ -833,6 +842,13 @@ var Katrid;
                         .then(function (res) {
                         let msg, result;
                         if (res.status === 'open') {
+                        }
+                        else if (res.status === 'download') {
+                            const a = document.createElement('a');
+                            a.href = res.download;
+                            const f = res.download.split('/');
+                            a.download = f[f.length - 1];
+                            a.click();
                         }
                     });
                 }
@@ -1794,11 +1810,6 @@ var Katrid;
           </li>
         </ul>
       </div>`;
-                new Katrid.ui.Tooltip(appHeader.querySelector('.navbar-search'), `
-<br>Pesquisar Cliente: <strong>cli: &lt;nome do cliente&gt;</strong>
-<br>Pesquisar Forncedor: <strong>for: &lt;nome do cliente&gt;</strong>
-<br>Pesquisar Nota Fiscal: <strong>nf: &lt;num da nota&gt;</strong>
-`);
                 this.rootElement.append(appHeader);
                 let mainContent = document.createElement('div');
                 mainContent.className = 'main-content';
@@ -2399,6 +2410,7 @@ var Katrid;
                 // init the datasource
                 this.datasource = new Katrid.Data.DataSource({
                     model: this.model, context: this.action?.context, domain: this.action?.config?.domain,
+                    fields: this.fields,
                 });
                 this.datasource.dataCallback = (data) => this.dataSourceCallback(data);
                 if (info.records)
@@ -3715,10 +3727,8 @@ var Katrid;
         if (!initialized) {
             initialized = true;
             // register custom elements
-            for (let [tag, entry] of Object.entries(Katrid.customElementsRegistry)) {
-                console.log(tag, entry);
+            for (let [tag, entry] of Object.entries(Katrid.customElementsRegistry))
                 customElements.define(tag, entry.constructor, entry.options);
-            }
         }
     }
     Katrid.init = init;
@@ -3784,6 +3794,8 @@ var Katrid;
                 this.modifiedData = null;
                 this.uploading = 0;
                 this.fields = config.fields || config.model.fields;
+                if (this.fields)
+                    this._fields = Array.from(Object.keys(this.fields));
                 this._state = null;
                 this.fieldWatchers = [];
                 this._pendingChanges = false;
@@ -4000,7 +4012,7 @@ var Katrid;
                 this._clearTimeout();
                 let params = options.where;
                 let page = options.page;
-                let fields = options.fields;
+                let fields = options.fields || this._fields;
                 let timeout = options.timeout;
                 let master = this.masterSource;
                 this._params = params;
@@ -4018,7 +4030,7 @@ var Katrid;
                     domain = {};
                 if (this.where)
                     Object.assign(domain, this.where);
-                if (_.isObject(fields))
+                if (fields && !Array.isArray(fields))
                     fields = Object.keys(fields);
                 params = {
                     count: true,
@@ -12304,7 +12316,7 @@ var Katrid;
         <div class="data-heading panel panel-default">
           <div class="panel-body">
           <h2>${action.name}</h2>
-          <div class="toolbar">
+          <div class="toolbar toolbar-action-buttons">
             <button class="btn btn-primary" type="button" v-on:click="report.preview()"><span class="fa fa-print fa-fw"></span> ${Katrid.i18n.gettext('Preview')}</button>
 
             <div class="btn-group">
@@ -12969,6 +12981,12 @@ var Katrid;
                 }
                 this.inputSearch = this.querySelector('#navbar-search');
                 this.autocomplete = new AppGlobalSearch(this.inputSearch, this.app.config.menu);
+                // todo implement help provider
+                const toolTip = new Katrid.ui.Tooltip(this.querySelector('.navbar-search'), { helpText: `<h5>Pesquisa rápida</h5>Cliente: <strong>cli: &lt;nome do cliente&gt;</strong>
+<br>Forncedor: <strong>for: &lt;nome do cliente&gt;</strong>
+<br>Nota Fiscal: <strong>nf: &lt;num da nota&gt;</strong>
+` });
+                this.inputSearch.addEventListener('input', () => toolTip.hide());
             }
             loadModules(items) {
                 this.nav = document.querySelector('#navbar');
@@ -13746,7 +13764,9 @@ var Katrid;
                     timeout = setTimeout(() => {
                         lastTooltip = this;
                         let s = el.getAttribute('data-tooltip') || '';
-                        s += '<br>' + (title || helpText);
+                        if (s)
+                            s += '<br>';
+                        s += (title || helpText);
                         if (s)
                             this.show(s);
                     }, DELAY);
