@@ -1457,7 +1457,7 @@ class BaseDatabaseSchemaEditor:
                 )
         if new_type != old_type:
             old_field.update(data_type=new_type)
-        if new_field.db_default != old_field.db_default:
+        if new_field.db_default != old_field.db_default and not new_field.primary_key:
             if new_field.db_default is NOT_PROVIDED and old_field.db_default is None:
                 return
             if new_field.db_default is NOT_PROVIDED or new_field.db_default is None:
