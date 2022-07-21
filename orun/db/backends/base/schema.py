@@ -1396,9 +1396,9 @@ class BaseDatabaseSchemaEditor:
                 old_field.model_name = field.model._meta.name
                 data_type = self.connection.introspection.data_types_reverse[field_info.type_code]
                 old_field.data_type = data_type
-                if data_type in ('str', 'bytes'):
+                if data_type in ('CharField', 'BinaryField'):
                     old_field.max_length = field_info.display_size
-                elif data_type == 'decimal':
+                elif data_type == 'DecimalField':
                     old_field.max_digits = field_info.precision
                 old_field.decimal_places = field_info.scale
                 old_field.save()
@@ -1421,20 +1421,38 @@ class BaseDatabaseSchemaEditor:
                         fields = {f.name: f for f in self.connection.introspection.get_table_description(cursor, model._meta.db_schema, model._meta.tablename)}
                     # add new field
                     create_field(field, fields.get(field.column))
-                else:
+                elif field.column:
                     # compare fields
                     self.sync_column(field, old_fields[field.name])
 
     def sync_column(self, new_field: Field, old_field):
+        old_style = {
+            'int': 'IntegerField',
+            'bigint': 'BigIntegerField',
+            'str': 'CharField',
+            'bytes': 'BinaryField',
+            'text': 'TextField',
+            'date': 'DateField',
+            'datetime': 'DateTimeField',
+            'time': 'TimeField',
+            'bool': 'BooleanField',
+        }
         new_type = new_field.get_data_type()
         old_type = old_field.data_type
-        if new_type != old_type:
-            print('Field %s type must be modified' % new_field.name, new_type, old_type)
+        if new_type != old_style.get(old_type, old_type):
+            print('Field %s type must be modified' % new_field.name, new_type, old_type, old_style.get(old_type, old_type))
         elif new_field.max_length != old_field.max_length:
             pass
         elif isinstance(new_field, DecimalField):
             if new_field.max_digits != old_field.max_digits or new_field.decimal_places != old_field.decimal_places:
-                print('Field %s type must be modified' % new_field.name, new_type, old_type)
+                print('DecimalField %s type must be modified (%s, %s)' % (new_field.name, new_field.max_digits, old_field.max_length), new_type, old_type)
+                # TODO bug fix postgresql view recreation
+                self.execute(
+                    self.sql_alter_column % {
+                        'table': new_field.model._meta.db_table,
+                        'changes': self.sql_alter_column_type % {'column': self.quote_name(new_field.column), 'type': new_field.db_type(self.connection)}
+                    }
+                )
 
     def sync_model_ddl(self, model: Model):
         """Synchronize DDL model objects"""

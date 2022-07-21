@@ -949,6 +949,9 @@ class Field(BaseField):
     def get_internal_type(self) -> str:
         return self.__class__.__name__
 
+    def get_data_type(self) -> str:
+        return self.get_internal_type()
+
     def pre_save(self, model_instance, add):
         """Return field's value just before saving."""
         if callable(self.on_update_value) and model_instance.pk is not None:
@@ -1148,9 +1151,6 @@ class BooleanField(Field):
     def get_internal_type(self):
         return "BooleanField"
 
-    def get_data_type(self) -> str:
-        return 'bool'
-
     def to_python(self, value):
         if self.null and value in self.empty_values:
             return None
@@ -1233,9 +1233,6 @@ class CharField(Field):
 
     def get_internal_type(self):
         return "CharField"
-
-    def get_data_type(self) -> str:
-        return 'str'
 
     def to_python(self, value):
         if isinstance(value, str) and self.trim:
@@ -1378,9 +1375,6 @@ class DateField(DateTimeCheckMixin, Field):
     def get_internal_type(self):
         return "DateField"
 
-    def get_data_type(self) -> str:
-        return 'date'
-
     def to_python(self, value):
         if value is None:
             return value
@@ -1513,9 +1507,6 @@ class DateTimeField(DateField):
     def get_internal_type(self):
         return "DateTimeField"
 
-    def get_data_type(self) -> str:
-        return 'datetime'
-
     def to_python(self, value):
         if value is None:
             return value
@@ -1616,7 +1607,7 @@ class DecimalField(Field):
     }
     description = _("Decimal number")
 
-    def __init__(self, max_digits=28, decimal_places=8, label=None, name=None, null=False, **kwargs):
+    def __init__(self, max_digits=28, decimal_places=6, label=None, name=None, null=False, **kwargs):
         self.max_digits, self.decimal_places = max_digits, decimal_places
         kwargs.setdefault('default', 0)
         kwargs.setdefault('db_default', 0)
@@ -1714,9 +1705,6 @@ class DecimalField(Field):
 
     def get_internal_type(self):
         return "DecimalField"
-
-    def get_data_type(self) -> str:
-        return 'decimal'
 
     def to_python(self, value):
         if value is None:
@@ -1899,9 +1887,6 @@ class FloatField(Field):
     def get_internal_type(self):
         return "FloatField"
 
-    def get_data_type(self) -> str:
-        return 'float'
-
     def to_python(self, value):
         if value is None:
             return value
@@ -1977,9 +1962,6 @@ class IntegerField(Field):
     def get_internal_type(self):
         return "IntegerField"
 
-    def get_data_type(self) -> str:
-        return 'int'
-
     def to_python(self, value):
         if value is None:
             return value
@@ -2001,9 +1983,6 @@ class SmallIntegerField(IntegerField):
     def get_internal_type(self):
         return "SmallIntegerField"
 
-    def get_data_type(self) -> str:
-        return 'smallint'
-
 
 class BigIntegerField(IntegerField):
     description = _("Big (8 byte) integer")
@@ -2011,9 +1990,6 @@ class BigIntegerField(IntegerField):
 
     def get_internal_type(self):
         return "BigIntegerField"
-
-    def get_data_type(self) -> str:
-        return 'bigint'
 
 
 class AutoFieldMixin:
@@ -2105,7 +2081,7 @@ class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):
         return "AutoField"
 
     def get_data_type(self) -> str:
-        return 'int'
+        return 'IntegerField'
 
     def rel_db_type(self, connection):
         return IntegerField().db_type(connection=connection)
@@ -2117,7 +2093,7 @@ class BigAutoField(AutoFieldMixin, BigIntegerField):
         return 'BigAutoField'
 
     def get_data_type(self) -> str:
-        return 'bigint'
+        return 'BigIntegerField'
 
     def rel_db_type(self, connection):
         return BigIntegerField().db_type(connection=connection)
@@ -2346,9 +2322,6 @@ class TextField(Field):
         value = super().get_prep_value(value)
         return self.to_python(value)
 
-    def get_data_type(self) -> str:
-        return 'text'
-
 
 class TimeField(DateTimeCheckMixin, Field):
     empty_strings_allowed = False
@@ -2424,9 +2397,6 @@ class TimeField(DateTimeCheckMixin, Field):
 
     def get_internal_type(self):
         return "TimeField"
-
-    def get_data_type(self) -> str:
-        return 'time'
 
     def to_python(self, value):
         if value is None:
@@ -2521,9 +2491,6 @@ class BinaryField(Field):
     def get_internal_type(self):
         return "BinaryField"
 
-    def get_data_type(self) -> str:
-        return 'bytes'
-
     def get_placeholder(self, value, compiler, connection):
         return connection.ops.binary_placeholder_sql(value)
 
@@ -2571,9 +2538,6 @@ class UUIDField(Field):
 
     def get_internal_type(self):
         return "UUIDField"
-
-    def get_data_type(self) -> str:
-        return 'uuid'
 
     def get_db_prep_value(self, value, connection, prepared=False):
         if value is None:
