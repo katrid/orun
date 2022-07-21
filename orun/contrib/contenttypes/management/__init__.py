@@ -38,6 +38,7 @@ def create_contenttypes(app_models, verbosity=2, interactive=True, using=DEFAULT
                 verbose_name=model._meta.verbose_name,
                 verbose_name_plural=model._meta.verbose_name_plural,
                 object_name=model._meta.object_name,
+                object_type='base',
             )
             created_models.append(ct)
             if verbosity >= 2:

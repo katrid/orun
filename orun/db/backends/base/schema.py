@@ -1408,17 +1408,19 @@ class BaseDatabaseSchemaEditor:
                 self.add_column(field)
 
         if model._meta.concrete:
+            if model._meta.name == 'content.field':
+                return
             old_fields = {f.name: f for f in apps['content.field'].objects.filter(model_name=model._meta.name)}
             new_fields = model._meta.local_concrete_fields
 
             # Get table structure from database
-            cursor = self.connection.cursor()
             fields = None
 
             for field in new_fields:
                 if field.name not in old_fields:
                     if not fields:
-                        fields = {f.name: f for f in self.connection.introspection.get_table_description(cursor, model._meta.db_schema, model._meta.tablename)}
+                        with self.connection.cursor() as cursor:
+                            fields = {f.name: f for f in self.connection.introspection.get_table_description(cursor, model._meta.db_schema, model._meta.tablename)}
                     # add new field
                     create_field(field, fields.get(field.column))
                 elif field.column:
@@ -1467,8 +1469,8 @@ class BaseDatabaseSchemaEditor:
                 )
                 old_field.update(db_default=None)
             elif str(new_field.db_default) != old_field.db_default:
-                print('db default changed', new_field.db_default, old_field.db_default)
-                print(
+                print('db default changed', new_field.column, new_field.db_default, old_field.db_default)
+                self.execute(
                     self.sql_alter_column % {
                         'table': new_field.model._meta.db_table,
                         'changes': self.sql_alter_column_default % {'column': self.quote_name(new_field.column), 'default': self.effective_default(new_field)}
