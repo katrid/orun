@@ -982,7 +982,7 @@ class Field(BaseField):
 
     def get_db_prep_default(self, value, connection):
         """Return field's value prepared for default into database"""
-        return value
+        return self.get_db_prep_save(value, connection)
 
     def has_default(self):
         """Return a boolean of whether this field has a default value."""

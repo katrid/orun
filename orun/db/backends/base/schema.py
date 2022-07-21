@@ -1456,7 +1456,6 @@ class BaseDatabaseSchemaEditor:
         if new_field.db_default != old_field.db_default:
             if new_field.db_default is NOT_PROVIDED and old_field.db_default is None:
                 return
-            print('db default changed', new_field.db_default, old_field.db_default)
             if new_field.db_default is NOT_PROVIDED or new_field.db_default is None:
                 self.execute(
                     self.sql_alter_column % {
@@ -1465,11 +1464,12 @@ class BaseDatabaseSchemaEditor:
                     }
                 )
                 old_field.update(db_default=None)
-            else:
+            elif old_field.db_default and str(new_field.db_default) != old_field.db_default:
+                print('db default changed', new_field.db_default, old_field.db_default)
                 self.execute(
                     self.sql_alter_column % {
                         'table': new_field.model._meta.db_table,
-                        'changes': self.sql_alter_column_default % {'column': self.quote_name(new_field.column), 'default': new_field.db_default}
+                        'changes': self.sql_alter_column_default % {'column': self.quote_name(new_field.column), 'default': self.effective_default(new_field)}
                     }
                 )
                 old_field.update(db_default=new_field.db_default)
