@@ -1447,12 +1447,32 @@ class BaseDatabaseSchemaEditor:
             if new_field.max_digits != old_field.max_digits or new_field.decimal_places != old_field.decimal_places:
                 print('DecimalField %s type must be modified (%s, %s)' % (new_field.name, new_field.max_digits, old_field.max_length), new_type, old_type)
                 # TODO bug fix postgresql view recreation
-                self.execute(
+                print(
                     self.sql_alter_column % {
                         'table': new_field.model._meta.db_table,
                         'changes': self.sql_alter_column_type % {'column': self.quote_name(new_field.column), 'type': new_field.db_type(self.connection)}
                     }
                 )
+        if new_field.db_default != old_field.db_default:
+            if new_field.db_default is NOT_PROVIDED and old_field.db_default is None:
+                return
+            print('db default changed', new_field.db_default, old_field.db_default)
+            if new_field.db_default is NOT_PROVIDED or new_field.db_default is None:
+                self.execute(
+                    self.sql_alter_column % {
+                        'table': new_field.model._meta.db_table,
+                        'changes': self.sql_alter_column_no_default % {'column': self.quote_name(new_field.column)}
+                    }
+                )
+                old_field.update(db_default=None)
+            else:
+                self.execute(
+                    self.sql_alter_column % {
+                        'table': new_field.model._meta.db_table,
+                        'changes': self.sql_alter_column_default % {'column': self.quote_name(new_field.column), 'default': new_field.db_default}
+                    }
+                )
+                old_field.update(db_default=new_field.db_default)
 
     def sync_model_ddl(self, model: Model):
         """Synchronize DDL model objects"""
