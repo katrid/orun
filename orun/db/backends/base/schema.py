@@ -228,7 +228,7 @@ class BaseDatabaseSchemaEditor:
 
     def effective_default(self, field):
         """Return a field's effective database default value."""
-        return field.get_db_prep_default(self._effective_default(field), self.connection)
+        return self.prepare_default(field.get_db_prep_default(self._effective_default(field), self.connection))
 
     def quote_value(self, value):
         """
@@ -1466,9 +1466,9 @@ class BaseDatabaseSchemaEditor:
                     }
                 )
                 old_field.update(db_default=None)
-            elif old_field.db_default and str(new_field.db_default) != old_field.db_default:
+            elif str(new_field.db_default) != old_field.db_default:
                 print('db default changed', new_field.db_default, old_field.db_default)
-                self.execute(
+                print(
                     self.sql_alter_column % {
                         'table': new_field.model._meta.db_table,
                         'changes': self.sql_alter_column_default % {'column': self.quote_name(new_field.column), 'default': self.effective_default(new_field)}
