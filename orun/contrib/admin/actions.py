@@ -21,12 +21,6 @@ class Action(Registrable):
         action_info = {'name': cls.name or cls.__name__, 'qualname': cls.get_qualname()}
         return cls._register_object(apps[cls.action_type], cls.get_qualname(), action_info)
 
-    @classmethod
-    def get_id(cls):
-        """Return id from database"""
-        obj = apps['ir.object'].get_by_natural_key(cls.get_qualname())
-        return obj.content_object.pk
-
 
 class WindowAction(Action):
     model: str = None

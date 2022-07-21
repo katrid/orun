@@ -997,7 +997,7 @@ def create_many_to_many_intermediary_model(field, klass):
     from orun.db import models
 
     def set_managed(model, related, through):
-        through._meta.managed = model._meta.managed or related._meta.managed
+        through._meta.managed = model._meta.managed
 
     to_model = resolve_relation(klass, field.remote_field.model)
     name = '%s_%s' % (klass._meta.object_name, field.name)

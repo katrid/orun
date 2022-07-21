@@ -6,12 +6,11 @@ from orun.db.backends.ddl_references import (
     Columns, Expressions, ForeignKeyName, IndexName, Statement, Table,
 )
 from orun.db.backends.utils import names_digest, split_identifier
-from orun.db.models.fields import Field, DecimalField
+from orun.db.models.fields import Field, DecimalField, NOT_PROVIDED
 from orun.db.backends.base.introspection import FieldInfo
 from orun.db.models import Deferrable, Index, Model
 from orun.db.models.sql import Query
 from orun.db.transaction import TransactionManagementError, atomic
-from orun.apps import apps
 from orun.utils import timezone
 
 logger = logging.getLogger('orun.db.backends.schema')
@@ -149,7 +148,7 @@ class BaseDatabaseSchemaEditor:
 
     # Field <-> database mapping functions
 
-    def column_sql(self, model, field, include_default=False):
+    def column_sql(self, model, field, include_default=True):
         """
         Take a field and return its column definition.
         The field must already have had set_attributes_from_name() called.
@@ -168,14 +167,7 @@ class BaseDatabaseSchemaEditor:
         if include_default:
             default_value = self.effective_default(field)
             if default_value is not None:
-                if self.connection.features.requires_literal_defaults:
-                    # Some databases can't take defaults as a parameter (oracle)
-                    # If this is the case, the individual schema backend should
-                    # implement prepare_default
-                    sql += " DEFAULT %s" % self.prepare_default(default_value)
-                else:
-                    sql += " DEFAULT %s"
-                    params += [default_value]
+                sql += " DEFAULT %s" % self.prepare_default(default_value)
         # Oracle treats the empty string ('') as null, so coerce the null
         # option whenever '' is a possible value.
         # if not field.primary_key:
@@ -201,20 +193,24 @@ class BaseDatabaseSchemaEditor:
         Some backends don't accept default values for certain columns types
         (i.e. MySQL longtext and longblob).
         """
-        return False
+        return field.db_default is NOT_PROVIDED
 
     def prepare_default(self, value):
         """
-        Only used for backends which have requires_literal_defaults feature
+        Convert a given value into database literal value for default value definition
         """
-        raise NotImplementedError(
-            'subclasses of BaseDatabaseSchemaEditor for backends which have '
-            'requires_literal_defaults must provide a prepare_default() method'
-        )
+        # raise NotImplementedError(
+        #     'subclasses of BaseDatabaseSchemaEditor for backends which have '
+        #     'requires_literal_defaults must provide a prepare_default() method'
+        # )
+        return str(value)
 
     @staticmethod
     def _effective_default(field):
         # This method allows testing its logic without a connection.
+        if field.db_default is not NOT_PROVIDED:
+            return field.db_default
+        return
         if field.has_default():
             default = field.get_default()
         elif getattr(field, 'auto_now', False) or getattr(field, 'auto_now_add', False):
@@ -232,7 +228,7 @@ class BaseDatabaseSchemaEditor:
 
     def effective_default(self, field):
         """Return a field's effective database default value."""
-        return field.get_db_prep_save(self._effective_default(field), self.connection)
+        return field.get_db_prep_default(self._effective_default(field), self.connection)
 
     def quote_value(self, value):
         """

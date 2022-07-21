@@ -46,30 +46,34 @@ class HtmlEngine:
     loop = asyncio.new_event_loop()
     report_footer = '<table class=\"page-footer\" style=\"margin: 0 5mm 0 5mm;width:100%; font-size:6pt;\"><tr><td>{{ company.report_footer }}</td><td style="text-align: right;"><span class=\"pageNumber\"></span> / <span class=\"totalPages\"></td></tr></table>'
 
+    def get_params(self, params):
+        where = {}
+        data = params['data']
+        params = {dt['name']: dt for dt in data}
+        where.update({
+            k: param.get('value1')
+            for k, param in params.items()
+        })
+        for k, v in list(where.items()):
+            param = params[k]
+            op = param['op']
+            if op == 'between':
+                where[f'{k}1'] = param.get('value1')
+                where[f'{k}2'] = param.get('value2')
+            if isinstance(v, list):
+                tp = param['type']
+                if tp == 'SelectionField':
+                    v = ','.join([f"""'{o.replace("'", "")}'""" for o in v])
+                else:
+                    v = ','.join([str(o) for o in v])
+                where[k] = v
+        return where
+
     def export(self, report, format='pdf', company=None, queryset=None, where=None, output_file=None, params=None, **kwargs):
         rep = Report(model=kwargs.get('model'))
         rep.title = kwargs.get('report_title')
         if not where and params:
-            where = {}
-            data = params['data']
-            params = {dt['name']: dt for dt in data}
-            where.update({
-                k: param.get('value1')
-                for k, param in params.items()
-            })
-            for k, v in list(where.items()):
-                param = params[k]
-                op = param['op']
-                if op == 'between':
-                    where[f'{k}1'] = param.get('value1')
-                    where[f'{k}2'] = param.get('value2')
-                if isinstance(v, list):
-                    tp = param['type']
-                    if tp == 'SelectionField':
-                        v = ','.join([f"""'{o.replace("'", "")}'""" for o in v])
-                    else:
-                        v = ','.join([str(o) for o in v])
-                    where[k] = v
+            where = self.get_params(params)
         rep.params = where
         rep.from_node(report)
         doc = rep.prepare()

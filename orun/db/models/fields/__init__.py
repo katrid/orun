@@ -977,6 +977,10 @@ class Field(BaseField):
         """Return field's value prepared for saving into a database."""
         return self.get_db_prep_value(value, connection=connection, prepared=False)
 
+    def get_db_prep_default(self, value, connection):
+        """Return field's value prepared for default into database"""
+        return value
+
     def has_default(self):
         """Return a boolean of whether this field has a default value."""
         return self.default is not NOT_PROVIDED
@@ -1136,7 +1140,9 @@ class BooleanField(Field):
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('null', False)
-        kwargs.setdefault('default', True)
+        default = kwargs.setdefault('default', False)
+        if default is True or default is False:
+            kwargs.setdefault('db_default', default)
         super().__init__(*args, **kwargs)
 
     def get_internal_type(self):
@@ -1172,7 +1178,7 @@ class CharField(Field):
     description = _("String (up to %(max_length)s)")
 
     def __init__(
-            self, max_length_or_label=None, db_collation: str=None, strip=True, full_text_search=False, *args, **kwargs
+            self, max_length_or_label=None, db_collation: str=None, trim=True, full_text_search=False, *args, **kwargs
     ):
         self.full_text_search = full_text_search
         if isinstance(max_length_or_label, str):
@@ -1180,7 +1186,7 @@ class CharField(Field):
         elif isinstance(max_length_or_label, int):
             kwargs.setdefault('max_length', max_length_or_label)
         super().__init__(*args, **kwargs)
-        self.strip = strip
+        self.trim = trim
         self.db_collation = db_collation
         self.validators.append(validators.MaxLengthValidator(self.max_length))
 
@@ -1232,7 +1238,7 @@ class CharField(Field):
         return 'str'
 
     def to_python(self, value):
-        if isinstance(value, str):
+        if isinstance(value, str) and self.trim:
             return value.strip()
         elif value is None:
             return
@@ -1732,6 +1738,8 @@ class DecimalField(Field):
         return value
 
     def get_db_prep_save(self, value, connection):
+        if value == 0:
+            return '0'
         return connection.ops.adapt_decimalfield_value(self.to_python(value), self.max_digits, self.decimal_places)
 
     def get_prep_value(self, value):
@@ -2320,14 +2328,14 @@ class TextField(Field):
     def __init__(
             self, *args, **kwargs
     ):
-        self.strip = kwargs.pop('strip', True)
+        self.trim = kwargs.pop('trim', True)
         super().__init__(*args, **kwargs)
 
     def get_internal_type(self):
         return "TextField"
 
     def to_python(self, value):
-        if isinstance(value, str):
+        if isinstance(value, str) and self.trim:
             return value.strip()
         elif value is None:
             return

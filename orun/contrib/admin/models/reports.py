@@ -192,7 +192,7 @@ class ReportAction(Action):
 
 class UserReport(models.Model):
     report = models.ForeignKey(ReportAction)
-    company = models.ForeignKey('res.company')
+    # company = models.ForeignKey('res.company')
     public = models.BooleanField(default=True)
     params = models.TextField()
 

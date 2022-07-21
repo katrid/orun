@@ -49,7 +49,7 @@ class Employee(models.Model):
 
 
 class Company(models.Model):
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, trim=False)
     motto = models.CharField(max_length=200, null=True, blank=True)
     ticker_name = models.CharField(max_length=10, null=True, blank=True)
     description = models.CharField(max_length=200, null=True, blank=True)

@@ -9,9 +9,9 @@ class Param:
     value: any
     type: type
 
-    def __init__(self, name=None, type=None, value=None):
+    def __init__(self, name=None, data_type=None, value=None):
         self.name = name
-        self.type = type
+        self.type = data_type
         self.value = value
 
 
@@ -95,7 +95,6 @@ class DataSource:
         else:
             sql += self.sql
         cur = connection.cursor()
-        print(sql, params)
         cur.execute(sql, params)
         self.fields = cur.cursor.description
         rows = cur.fetchall()

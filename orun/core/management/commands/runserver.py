@@ -4,6 +4,7 @@ import re
 import socket
 import sys
 from datetime import datetime
+import uvicorn
 
 from orun.conf import settings
 from orun.core.management.base import BaseCommand, CommandError
@@ -64,6 +65,14 @@ class Command(BaseCommand):
         return get_internal_wsgi_application()
 
     def handle(self, *args, **options):
+        from orun.core.handlers import asgi
+        class Server:
+            async def __call__(self, *args, **kwargs):
+                print(args, kwargs)
+
+        uvicorn.run(asgi.ASGIHandler, host='0.0.0.0', port=8000)
+
+    def _handle(self, *args, **options):
         # if not settings.DEBUG and not settings.ALLOWED_HOSTS:
         #     raise CommandError('You must set settings.ALLOWED_HOSTS if DEBUG is False.')
 

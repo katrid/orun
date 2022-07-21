@@ -7,7 +7,7 @@ class FixturesTest(TestCase):
     fixtures = {
         'fixtures': [
             'fixtures.author.csv', 'fixtures.author.tsv', 'data.xml', 'fixtures.book.tsv', 'fixtures.book.csv',
-            'metadata.sql',
+            'metadata.%(db_vendor)s.sql',
         ],
     }
 

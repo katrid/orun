@@ -46,6 +46,36 @@ def rpc(request, service, meth, params):
 
 @login_required
 @transaction.atomic
+def view_model(request: HttpRequest, service: str):
+    """
+    Return a rendered view object for a given model
+    :param request:
+    :param service:
+    :return:
+    """
+    cls = apps.models[service]
+    views_info = cls.admin_load_views()
+    return JsonResponse({
+        'type': 'ui.action.window',
+        'caption': cls._meta.verbose_name,
+        'model': service,
+        'viewModes': ['list', 'form', 'search'],
+        'viewsInfo': views_info['views'],
+        'fields': views_info['fields'],
+    })
+    return JsonResponse(views)
+    print('get view', views);
+    if request.method == 'GET':
+        res = service.get(request)
+        if isinstance(res, (dict, list, tuple)):
+            res = JsonResponse(res)
+        elif not isinstance(res, HttpResponse):
+            res = HttpResponse(res, content_type=service.content_type)
+        return res
+
+
+@login_required
+@transaction.atomic
 def view(request: HttpRequest, service: str):
     """
     Return a rendered view object
@@ -55,6 +85,7 @@ def view(request: HttpRequest, service: str):
     """
     cls = apps.services[service]
     service = cls()
+    print('get view', service, request.mehtod)
     if request.method == 'GET':
         res = service.get(request)
         if isinstance(res, (dict, list, tuple)):

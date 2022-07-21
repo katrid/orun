@@ -1,11 +1,31 @@
 import os
 import inspect
 from pathlib import Path
+from importlib import import_module
+from subprocess import call
 
 from orun.apps import apps
 from orun.core import serializers
 from orun.db import DEFAULT_DB_ALIAS, transaction
 from orun.core.management.base import BaseCommand, CommandError
+
+
+def _load_from_module(module):
+    from orun.contrib.contenttypes.models import Registrable
+    for attr in dir(module):
+        if attr.startswith('_'):
+            # cannot register protected members
+            continue
+        member = getattr(module, attr)
+        if inspect.ismodule(member):
+            if member.__name__.startswith(f'{module.__name__}.'):
+                _load_from_module(member)
+        if isinstance(member, type) and member.__module__ == module.__name__:
+            if getattr(member, '_admin_registrable', None):
+                if issubclass(member, Registrable):
+                    member.update_info()
+                else:
+                    member._admin_registrable.update_info()
 
 
 def load_fixture(schema, *filenames, **options):
@@ -14,17 +34,12 @@ def load_fixture(schema, *filenames, **options):
     else:
         addon = schema
     for filename in filenames:
-        if callable(filename):
-            filename = filename()
+        if filename.endswith('.admin'):
+            # fixture is module name
+            filename = import_module(filename)
         # load data from module registrable objects
         if inspect.ismodule(filename):
-            from orun.contrib.contenttypes.models import Registrable
-            for attr in dir(filename):
-                if attr.startswith('_'):
-                    continue
-                member = getattr(filename, attr)
-                if isinstance(member, type) and member.__module__ == filename.__name__ and issubclass(member, Registrable):
-                    member.update_info()
+            _load_from_module(filename)
         else:
             filename = os.path.join(addon.path, 'fixtures', filename)
             fixture, fmt = filename.rsplit('.', 1)

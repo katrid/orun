@@ -53,7 +53,7 @@ class Object(models.Model):
 
 class Property(models.Model):
     name = models.CharField(128, _('name'), null=False)
-    company = models.ForeignKey('res.company', null=False)
+    # company = models.ForeignKey('res.company', null=False)
     field = models.ForeignKey('content.field', on_delete=models.CASCADE, null=False)
 
     float_value = models.FloatField()
@@ -143,6 +143,12 @@ class Registrable:
                 can_update=not cls.can_update,
             )
         return instance
+
+    @classmethod
+    def get_id(cls):
+        """Return id from database"""
+        obj = apps['ir.object'].get_by_natural_key(cls.get_qualname())
+        return obj.content_object.pk
 
     @classmethod
     def get_qualname(cls):

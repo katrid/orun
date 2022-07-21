@@ -26,7 +26,6 @@ def create_contenttypes(app_models, verbosity=2, interactive=True, using=DEFAULT
     for schema, models in app_models:
         app_config = apps.app_configs[schema]
 
-        # TODO use bulk create instead
         for model in models:
             ct = get_contenttypes_and_models(model, using, ContentType)
 
