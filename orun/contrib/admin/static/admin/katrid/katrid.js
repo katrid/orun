@@ -2387,7 +2387,6 @@ var Katrid;
                 }
             }
             create(info) {
-                console.log(this.getViewType(), info);
                 this.action = info.action;
                 this._readonly = true;
                 let viewInfo = info.viewInfo;
@@ -2772,13 +2771,17 @@ var Katrid;
             async expandGroup(group) {
                 group.$expanded = true;
                 let idx = this.vm.groups.indexOf(group);
+                console.log(group);
                 // check if data is cached
                 let children = group.$children;
                 if (!children) {
                     // load from adapter api
+                    await this.datasource.expandGroup(idx, group);
                 }
-                let groups = this.vm.groups;
-                this.vm.groups = [...groups.slice(0, idx + 1), ...children, ...groups.slice(idx + 1)];
+                else {
+                    let groups = this.vm.groups;
+                    this.vm.groups = [...groups.slice(0, idx + 1), ...children, ...groups.slice(idx + 1)];
+                }
             }
             /**
              * Expands all groups
@@ -2814,7 +2817,6 @@ var Katrid;
                 group.$expanded = false;
             }
             async setSearchParams(params) {
-                console.log('set empty params', params);
                 let p = {};
                 if (this.action.info?.domain)
                     p = JSON.parse(this.action.info.domain);
@@ -4118,7 +4120,7 @@ var Katrid;
                     else {
                         paramValue = s;
                     }
-                    r.__str__ = s;
+                    r.$str = s;
                     r.$expanded = false;
                     r.$group = groupName;
                     let params = {};
@@ -6100,133 +6102,6 @@ var Katrid;
         Katrid.Data.Fields.registry.OneToManyField = OneToManyField;
     })(Data = Katrid.Data || (Katrid.Data = {}));
 })(Katrid || (Katrid = {}));
-var katrid;
-(function (katrid) {
-    var editor;
-    (function (editor_1) {
-        class BaseEditor {
-            constructor(container) {
-                this.container = container;
-                if (container)
-                    this.renderTo(container);
-            }
-            createEditor() {
-                let el = document.createElement('div');
-                el.className = 'block-text-editor';
-                this.element = el;
-                return el;
-            }
-            renderTo(container) {
-                let el = this.createEditor();
-                container.append(el);
-            }
-            addBlock(block) {
-                console.log('add a block');
-                block.renderTo(this);
-            }
-        }
-        class Editor extends BaseEditor {
-        }
-        editor_1.Editor = Editor;
-        class BaseBlock {
-            constructor(editor) {
-                this.editor = editor;
-                if (editor)
-                    editor.addBlock(this);
-            }
-            createElement() {
-                return;
-            }
-            createBlock() {
-                return;
-            }
-            createEvents(element) {
-                element.addEventListener('keydown', (event) => {
-                    if (!event.shiftKey && !event.ctrlKey && !event.altKey) {
-                        let el, parent;
-                        switch (event.code) {
-                            case 'ArrowDown':
-                            case 'ArrowRight':
-                                let selection = window.getSelection();
-                                el = selection.anchorNode;
-                                if (el.nextSibling || (selection.getRangeAt(0).endOffset < el.innerText?.length))
-                                    return;
-                                parent = el.parentElement;
-                                if (!parent.classList.contains('.block-editor'))
-                                    parent = parent.closest('.block-editor');
-                                let next = parent.nextSibling;
-                                if (next) {
-                                    parent.nextSibling.focus();
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                }
-                                break;
-                            case 'ArrowUp':
-                            case 'ArrowLeft':
-                                el = window.getSelection().anchorNode;
-                                if (el.previousSibling || (window.getSelection().getRangeAt(0).endOffset > 0))
-                                    return;
-                                parent = el.parentElement;
-                                if (!parent.classList.contains('.block-editor'))
-                                    parent = parent.closest('.block-editor');
-                                let previous = parent.previousSibling;
-                                if (previous) {
-                                    parent.previousSibling.focus();
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                }
-                                break;
-                        }
-                    }
-                });
-            }
-            renderTo(editor) {
-                let el = this.createBlock();
-                editor.element.append(el);
-            }
-        }
-        /** An alias to component */
-        BaseBlock.type = null;
-        class Paragraph extends BaseBlock {
-            createBlock() {
-                let block = document.createElement('p');
-                block.classList.add('block-editor', 'paragraph-block');
-                block.innerHTML = 'bla bla bla bla <b> bla bla bla</b> teste';
-                block.contentEditable = 'true';
-                block.spellcheck = false;
-                this.createEvents(block);
-                return block;
-            }
-        }
-        Paragraph.type = 'p';
-        editor_1.Paragraph = Paragraph;
-        class Heading extends BaseBlock {
-        }
-        Heading.type = 'h';
-        class Table extends BaseBlock {
-            createCell() {
-                const cell = document.createElement('td');
-                cell.classList.add('block-editor');
-                cell.contentEditable = 'true';
-                this.createEvents(cell);
-                return cell;
-            }
-            createBlock() {
-                let table = document.createElement('table');
-                table.classList.add('table', 'table-bordered');
-                let tbody = table.createTBody();
-                let newRow = document.createElement('tr');
-                tbody.append(newRow);
-                newRow.append(this.createCell());
-                newRow.append(this.createCell());
-                tbody.append(newRow);
-                return table;
-            }
-        }
-        Table.type = 'table';
-        editor_1.Table = Table;
-    })(editor = katrid.editor || (katrid.editor = {}));
-})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -8070,7 +7945,12 @@ var Katrid;
                 return comp;
             }
             update(vm) {
-                if (this._resultView)
+                if (this.controller.groups?.length) {
+                    // this.controller._groupLength = this.controller.groupLength;
+                    if (this._resultView)
+                        this._resultView.applyGroups(this.controller.groupBy(), this.controller.getParams());
+                }
+                else if (this._resultView)
                     this._resultView.setSearchParams(this.controller.getParams());
                 else
                     $(this).trigger('Katrid:updateSearch', this.controller.getParams());
@@ -8502,9 +8382,6 @@ var Katrid;
                 this._readonly = true;
                 this.rowSelector = true;
                 this.allowGrouping = true;
-                // async groupBy(data: any[]): Promise<any> {
-                //   this.vm.records = this.vm.groups;
-                // }
             }
             static createViewModeButton(container) {
                 let btn = document.createElement('button');
@@ -8712,6 +8589,9 @@ var Katrid;
                 div.append(table);
                 this.$columns = renderer.columns;
                 return div;
+            }
+            async groupBy(data) {
+                this.vm.records = this.vm.groups;
             }
         }
         TableView.viewType = 'list';
@@ -9093,7 +8973,10 @@ var Katrid;
                         this.vm.update();
                     }
                     groupBy() {
-                        return this.facetGrouping.values.map(obj => obj._ref.groupBy);
+                        let res = [];
+                        for (let g of this.groups)
+                            res = res.concat(g.items.filter(item => item['selected']).map(item => item['groupBy']));
+                        return res;
                     }
                 }
                 Search.SearchViewController = SearchViewController;
@@ -9102,7 +8985,6 @@ var Katrid;
                     mounted() {
                         this.$viewInfo = this.$parent.views?.search;
                         let search = this.search = this.$search = new SearchViewController(this);
-                        console.log('search mounted', search);
                         this.$parent.searchView = search;
                         this.facets = search.facets;
                         this.$parent.search = this.$search;
