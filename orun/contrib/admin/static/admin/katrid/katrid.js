@@ -209,14 +209,14 @@ var Katrid;
     (function (Actions) {
         class Homepage extends Actions.Action {
             get content() {
-                return this.config.content;
+                return this.info.content;
             }
             onHashChange(params) {
                 super.onHashChange(params);
                 let home = document.createElement('homepage-view');
-                console.log('action info', this.config.id);
-                home.actionId = this.config.id;
-                this.container.append(home);
+                console.log('action info', this.info.id);
+                home.actionId = this.info.id;
+                this.element.append(home);
                 let content = this.content;
                 if (content) {
                     if (typeof content === 'string')
@@ -228,36 +228,6 @@ var Katrid;
         }
         Homepage.actionType = 'ui.action.homepage';
         Actions.Homepage = Homepage;
-        class HomepageView {
-            constructor() {
-                this.panels = [];
-            }
-            renderTo(container) {
-                let homepage = document.createElement('homepage-view');
-                let div = document.createElement('div');
-                div.classList.add('homepage-toolbar');
-                // enterprise version
-                let btn = document.createElement('a');
-                btn.classList.add('btn', 'btn-edit', 'btn-outline-secondary');
-                btn.innerHTML = '<i class="fas fa-pen"></i>';
-                div.append(btn);
-                // btn.addEventListener('click', () => this.edit());
-                homepage.append(div);
-                this.element = homepage;
-                container.append(homepage);
-            }
-            addPanel(panel) {
-                this.panels.push(panel);
-                panel.renderTo(this.element);
-                return panel;
-            }
-            createPanel(text) {
-                let panel = new Katrid.Actions.Portlets.PortletGroup({ text, homepage: this });
-                this.panels.push(panel);
-                return panel;
-            }
-        }
-        Actions.HomepageView = HomepageView;
         class HomepageElement extends HTMLElement {
             constructor() {
                 super(...arguments);
@@ -1243,6 +1213,7 @@ var Katrid;
                     btnDiscard.addEventListener('click', () => this.back());
                     this.append(btnSave);
                     this.append(btnDiscard);
+                    new Portlets.PortletGroup({ homepage: this });
                 }
                 edit() {
                     throw Error('Editor already loaded');
@@ -1335,8 +1306,8 @@ var Katrid;
                     this.element.append(legend);
                     if (config?.homepage)
                         this.homepage = config.homepage;
-                    if (this.homepage.element)
-                        this.renderTo(this.homepage.element);
+                    if (this.homepage)
+                        this.renderTo(this.homepage);
                 }
                 addPortlet(portlet) {
                     this.portlets.push(portlet);
