@@ -5661,7 +5661,7 @@ var Katrid;
                 return this.toJSON(val);
             }
             formSpanTemplate() {
-                return `{{ ((record.${this.name} != null) && $filters.toFixed(record.${this.name}, {minimumFractionDigits: 2, maximunFractionDigits: ${this.decimalPlaces})) || '${this.emptyText}' }}`;
+                return `{{ ((record.${this.name} != null) && $filters.toFixed(record.${this.name}, {minimumFractionDigits: 2, maximunFractionDigits: ${this.decimalPlaces}})) || '${this.emptyText}' }}`;
             }
             getParamValue(value) {
                 if (typeof value === 'string') {
@@ -8630,7 +8630,6 @@ var Katrid;
                 cfg.minimumFractionDigits = config.minimumFractionDigits;
             if (config?.maximumFractionDigits)
                 cfg.maximumFractionDigits = config.maximumFractionDigits;
-            console.log(cfg);
             return getNumberFormat(cfg);
         },
         toFixed: (length) => getNumberFormat(length),
@@ -8669,7 +8668,6 @@ var Katrid;
             Katrid.i18n.formats = expandFormats(formats);
             if (!Katrid.i18n.formats.reShortDateFormat)
                 Katrid.i18n.formats.reShortDateFormat = /\d+[-/]\d+[-/]\d+/;
-            console.log('fmt', Katrid.i18n.formats.reShortDateFormat);
             if (plural) {
                 Katrid.i18n.pluralidx = function (n) {
                     if (plural instanceof Boolean) {
@@ -10462,7 +10460,6 @@ var Katrid;
                 }
                 if (typeof v === 'string')
                     v = parseFloat(v);
-                console.log('set val', v);
                 this.value = this._formatValue(v);
             }
         }
