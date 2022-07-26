@@ -67,15 +67,15 @@ class ModelActionPortlet(Portlet):
 
 
 class ModelWindowAction(ModelActionPortlet):
-    tag = 'portlet-model-window-action'
+    tag = 'ModelAction'
 
 
 class CreateNew(ModelWindowAction):
-    tag = 'portlet-create-new'
+    tag = 'ModelCreateNew'
 
 
 class GotoModel(ModelWindowAction):
-    tag = 'portlet-goto-model'
+    tag = 'GotoModel'
     view_type = 'list'
 
     @classmethod
@@ -86,7 +86,7 @@ class GotoModel(ModelWindowAction):
 
 
 class GotoReport(ModelActionPortlet):
-    tag = 'portlet-goto-report'
+    tag = 'ModelGotoReport'
 
 
 class PortletGroup:

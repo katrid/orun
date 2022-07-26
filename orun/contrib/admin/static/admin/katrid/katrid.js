@@ -213,10 +213,10 @@ var Katrid;
             }
             onHashChange(params) {
                 super.onHashChange(params);
-                let home = document.createElement('homepage-view');
+                let home = new HomepageView();
                 console.log('action info', this.info.id);
                 home.actionId = this.info.id;
-                this.element.append(home);
+                this.element.append(home.element);
                 let content = this.content;
                 if (content) {
                     if (typeof content === 'string')
@@ -228,17 +228,13 @@ var Katrid;
         }
         Homepage.actionType = 'ui.action.homepage';
         Actions.Homepage = Homepage;
-        class HomepageElement extends HTMLElement {
+        class HomepageView {
             constructor() {
-                super(...arguments);
                 this.panels = [];
-            }
-            connectedCallback() {
-                this.classList.add('homepage-view', 'col-12');
-                this.create();
+                this.createElement();
                 this.render();
             }
-            create() {
+            createElement() {
                 let div = document.createElement('div');
                 div.classList.add('homepage-toolbar');
                 let btn = document.createElement('a');
@@ -246,33 +242,36 @@ var Katrid;
                 btn.innerHTML = '<i class="fas fa-pen"></i>';
                 div.append(btn);
                 btn.addEventListener('click', () => this.edit());
-                this.append(div);
+                div.classList.add('homepage-view', 'col-12');
+                this.element = div;
             }
             load(data) {
                 this.panels = data.panels;
                 this.info = data;
             }
             edit() {
-                let editor = document.createElement('homepage-editor');
+                let editor = new Katrid.Actions.Portlets.HomepageEditor();
                 editor.actionId = this.actionId;
                 if (this.info)
                     editor.load(this.info);
-                this.parentElement.append(editor);
-                this.remove();
+                this.element.parentElement.append(editor.element);
+                this.element.remove();
             }
             render() {
+                console.log('panels', this.panels);
                 for (let panel of this.panels) {
-                    let el = this.createPanel();
-                    el.load(panel);
-                    this.append(el);
+                    let p = this.createPanel();
+                    console.log('panel', p.load);
+                    p.load(panel);
+                    this.element.append(p);
                 }
             }
             createPanel() {
                 return document.createElement('portlet-panel');
             }
         }
-        Actions.HomepageElement = HomepageElement;
-        Katrid.define('homepage-view', HomepageElement);
+        Actions.HomepageView = HomepageView;
+        // Katrid.define('homepage-view', HomepageElement);
         Katrid.Actions.registry[Homepage.actionType] = Homepage;
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
@@ -1196,13 +1195,17 @@ var Katrid;
     (function (Actions) {
         var Portlets;
         (function (Portlets) {
-            class HomepageEditor extends Katrid.Actions.HomepageElement {
+            class HomepageEditor extends Katrid.Actions.HomepageView {
                 createPanel() {
                     let el = super.createPanel();
                     el.editing = true;
                     return el;
                 }
-                create() {
+                createElement() {
+                    let div = document.createElement('div');
+                    div.classList.add('homepage-toolbar');
+                    div.classList.add('homepage-view', 'col-12');
+                    this.element = div;
                     let btnSave = document.createElement('button');
                     btnSave.classList.add('btn', 'btn-primary');
                     btnSave.innerText = Katrid.i18n.gettext('Save');
@@ -1211,17 +1214,14 @@ var Katrid;
                     btnDiscard.innerText = Katrid.i18n.gettext('Discard');
                     btnSave.addEventListener('click', () => this.save());
                     btnDiscard.addEventListener('click', () => this.back());
-                    this.append(btnSave);
-                    this.append(btnDiscard);
-                    new Portlets.PortletGroup({ homepage: this });
+                    this.element.append(btnSave);
+                    this.element.append(btnDiscard);
                 }
                 edit() {
                     throw Error('Editor already loaded');
                 }
                 dump() {
-                    let res = [];
-                    this.querySelectorAll('portlet-panel').forEach(el => res.push(el.dump()));
-                    return { panels: res };
+                    return { panels: Array.from(this.element.querySelectorAll('portlet-panel')).map(el => el.dump()) };
                 }
                 async save() {
                     // save user custom layout to the server
@@ -1251,7 +1251,6 @@ var Katrid;
                 }
             }
             Portlets.HomepageEditor = HomepageEditor;
-            Katrid.define('homepage-editor', HomepageEditor);
         })(Portlets = Actions.Portlets || (Actions.Portlets = {}));
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
@@ -1261,8 +1260,10 @@ var Katrid;
     (function (Actions) {
         var Portlets;
         (function (Portlets) {
-            let registry = {};
             class BasePortlet {
+                constructor() {
+                    this.editing = false;
+                }
                 render() {
                     this.wrapper = document.createElement('div');
                     this.wrapper.classList.add('portlet-wrapper');
@@ -1281,6 +1282,9 @@ var Katrid;
                     this.wrapper.append(this.element);
                 }
                 renderTo(panel) {
+                }
+                load(info) {
+                    this.header = info.header || info.name;
                 }
             }
             Portlets.BasePortlet = BasePortlet;
@@ -1382,25 +1386,25 @@ var Katrid;
                     this.info = info;
                 }
                 addPortlet(info) {
-                    let el;
                     if (this.editing) {
-                        el = document.createElement('portlet-editor');
+                        const el = document.createElement('portlet-editor');
                         el.load(info);
                         this.portlets.push(el.el);
                         this.append(el);
                         el.panel = this;
                         el.render();
+                        return el;
                     }
                     else {
-                        el = document.createElement(info.tag);
-                        el.load(info);
+                        const el = portletRegistry[info.tag];
+                        el.element.load(info);
                         this.portlets.push(el);
                         let div = document.createElement('div');
                         div.classList.add('portlet-wrapper', 'col-1');
                         div.append(el);
                         this.append(div);
+                        return el;
                     }
-                    return el;
                 }
                 addPortletClick(sender) {
                     let sel = sender.parentElement.querySelector('select');
@@ -1426,20 +1430,23 @@ var Katrid;
                 }
                 load(info) {
                     this.info = info;
-                    this.el = document.createElement(info.tag);
-                    this.el.editing = true;
-                    this.el.load(info);
-                    this.el.render();
+                    console.log('tag', info);
+                    this.portlet = (new Portlets.registry[info.tag]());
+                    this.portlet.editing = true;
+                    this.portlet.load(info);
+                    this.portlet.render();
                 }
                 render() {
-                    this.append(this.el);
-                    let div = document.createElement('div');
-                    div.classList.add('mirror');
-                    this.append(div);
-                    console.log('render');
-                    if (this.el.editing)
-                        this.addEventListener('click', () => this.removePortlet());
-                    // this.el.render();
+                    if (!this.el) {
+                        let div = document.createElement('div');
+                        div.classList.add('mirror');
+                        div.append(this.portlet.element);
+                        this.append(div);
+                        console.log('render');
+                        if (this.portlet.editing)
+                            this.addEventListener('click', () => this.removePortlet());
+                        this.el = div;
+                    }
                 }
                 removePortlet() {
                     let i = this.panel.portlets.indexOf(this.el);
@@ -1582,12 +1589,15 @@ var Katrid;
                 }
             }
             Portlets.GotoReport = GotoReport;
-            // Katrid.define('portlet-create-new', CreateNew);
-            // Katrid.define('portlet-panel', PortletPanel);
-            // Katrid.define('portlet-editor', PortletEditor);
+            Katrid.define('portlet-panel', PortletPanel);
+            Katrid.define('portlet-editor', PortletEditor);
+            Katrid.define('portlet-create-new', CreateNew);
             // Katrid.define('portlet-model-window-action', PortletModelWindowAction);
             // Katrid.define('portlet-goto-list', GotoList);
             // Katrid.define('portlet-goto-report', GotoReport);
+            Portlets.registry = {
+                ModelAction: ModelActionPortlet,
+            };
         })(Portlets = Actions.Portlets || (Actions.Portlets = {}));
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
@@ -10365,14 +10375,15 @@ var Katrid;
                 if (!this.value)
                     return;
                 let s;
+                let inputDec = parseInt(this.getAttribute('input-decimal') || '2');
                 if (fmt.endsWith('#')) {
-                    s = Katrid.intl.number({ minimumFractionDigits: 2 }).format(this.getValue());
+                    s = Katrid.intl.number({ minimumFractionDigits: inputDec }).format(this.getValue());
                 }
                 else if (fmt.endsWith('0')) {
-                    s = Katrid.intl.toFixed(2).format(this.getValue());
+                    s = Katrid.intl.toFixed(inputDec).format(this.getValue());
                 }
                 else
-                    s = Katrid.intl.number({ maximumFractionDigits: 2 }).format(this.getValue());
+                    s = Katrid.intl.number({ maximumFractionDigits: inputDec }).format(this.getValue());
                 if (s)
                     this.value = s;
             }

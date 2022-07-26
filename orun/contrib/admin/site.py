@@ -18,6 +18,7 @@ class AdminSite:
             self.actions[action_type_or_object.get_qualname()] = action_type_or_object
             return action_type_or_object
         if issubclass(action_type_or_object, portlets.Portlet):
+            action_type_or_object._admin_registrable = True
             self.portlets[action_type_or_object.get_qualname()] = action_type_or_object
             return action_type_or_object
 
