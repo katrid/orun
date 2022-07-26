@@ -5661,7 +5661,7 @@ var Katrid;
                 return this.toJSON(val);
             }
             formSpanTemplate() {
-                return `{{ ((record.${this.name} != null) && $filters.toFixed(record.${this.name}, ${this.decimalPlaces})) || '${this.emptyText}' }}`;
+                return `{{ ((record.${this.name} != null) && $filters.toFixed(record.${this.name}, {minimumFractionDigits: 2, maximunFractionDigits: ${this.decimalPlaces})) || '${this.emptyText}' }}`;
             }
             getParamValue(value) {
                 if (typeof value === 'string') {
@@ -5716,7 +5716,7 @@ var Katrid;
                 return control;
             }
             listSpanTemplate() {
-                return `<span class="grid-field-readonly">{{ $filters.toFixed(record.${this.name}, 2) }}</span>`;
+                return `<span class="grid-field-readonly">{{ $filters.toFixed(record.${this.name}, ${this.decimalPlaces}) }}</span>`;
             }
         }
         Data.DecimalField = DecimalField;
@@ -8604,7 +8604,11 @@ var Katrid;
 (function (Katrid) {
     let _intlCache = {};
     function getNumberFormat(config) {
-        let key = config.toString();
+        let key;
+        if (typeof config === 'object')
+            key = JSON.stringify(config);
+        else
+            key = config.toString();
         let intl = _intlCache[key];
         if (!intl) {
             if (typeof config === 'number')
@@ -8618,10 +8622,15 @@ var Katrid;
     Katrid.intl = {
         number(config) {
             let cfg = {};
-            if (typeof config === 'number')
-                cfg.minimumFractionDigits = config;
             if (!config)
                 cfg.maximumFractionDigits = 2;
+            else if (typeof config === 'number')
+                cfg.minimumFractionDigits = config;
+            else if (config.minimumFractionDigits)
+                cfg.minimumFractionDigits = config.minimumFractionDigits;
+            if (config?.maximumFractionDigits)
+                cfg.maximumFractionDigits = config.maximumFractionDigits;
+            console.log(cfg);
             return getNumberFormat(cfg);
         },
         toFixed: (length) => getNumberFormat(length),
@@ -10370,20 +10379,22 @@ var Katrid;
                     this._create();
                 }
             }
-            _format() {
+            _formatValue(val) {
                 let fmt = this.getAttribute('display-format') || '0.00';
-                if (!this.value)
-                    return;
                 let s;
                 let inputDec = parseInt(this.getAttribute('input-decimal') || '2');
-                if (fmt.endsWith('#')) {
-                    s = Katrid.intl.number({ minimumFractionDigits: inputDec }).format(this.getValue());
-                }
-                else if (fmt.endsWith('0')) {
-                    s = Katrid.intl.toFixed(inputDec).format(this.getValue());
-                }
+                if (fmt.endsWith('#'))
+                    s = Katrid.intl.number({ minimumFractionDigits: inputDec }).format(val);
+                else if (fmt.endsWith('0'))
+                    s = Katrid.intl.number({ minimumFractionDigits: 2, maximumFractionDigits: inputDec }).format(val);
                 else
-                    s = Katrid.intl.number({ maximumFractionDigits: inputDec }).format(this.getValue());
+                    s = Katrid.intl.number({ maximumFractionDigits: inputDec }).format(val);
+                return s;
+            }
+            _format() {
+                if (!this.value)
+                    return;
+                let s = this._formatValue(this.getValue());
                 if (s)
                     this.value = s;
             }
@@ -10449,17 +10460,10 @@ var Katrid;
                     this.value = '';
                     return;
                 }
-                let fmt = this.getAttribute('display-format') || '0.00';
-                let s;
-                if (fmt.endsWith('#')) {
-                    s = Katrid.intl.number({ minimumFractionDigits: 2 }).format(v);
-                }
-                else if (fmt.endsWith('0')) {
-                    s = Katrid.intl.toFixed(2).format(v);
-                }
-                else
-                    s = Katrid.intl.number({ maximumFractionDigits: 2 }).format(v);
-                this.value = s;
+                if (typeof v === 'string')
+                    v = parseFloat(v);
+                console.log('set val', v);
+                this.value = this._formatValue(v);
             }
         }
         Katrid.define('input-decimal', InputDecimal, { extends: 'input' });

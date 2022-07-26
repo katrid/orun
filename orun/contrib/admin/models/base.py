@@ -233,9 +233,10 @@ class AdminModel(models.Model, helper=True):
     def api_get_defaults(cls, context=None, *args, **kwargs):
         r = {}
         defaults = (context or {}).get('default', {})
-        for k in context:
-            if k.startswith('default_'):
-                defaults[k[8:]] = context[k]
+        if context is not None:
+            for k in context:
+                if k.startswith('default_'):
+                    defaults[k[8:]] = context[k]
         for f in cls._meta.fields:
             if f.name in defaults:
                 val = r[f.name] = defaults[f.name]
