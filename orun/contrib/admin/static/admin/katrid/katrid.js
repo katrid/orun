@@ -621,7 +621,7 @@ var Katrid;
                     Katrid.app.$location.search(search);
                 }
             }
-            async showView(mode) {
+            async showView(mode, params = null) {
                 // store the last searchable view
                 // console.log(this.params.viewType, this.viewType);
                 let oldView = this.view;
@@ -667,8 +667,13 @@ var Katrid;
                         oldView.active = false;
                     this.view.active = true;
                 }
-                if (mode === 'form')
-                    this.view.setState(Katrid.Data.DataSourceState.browsing);
+                if (mode === 'form') {
+                    const form = this.view;
+                    if (!params?.params?.id && !this.params?.id)
+                        form.insert();
+                    else
+                        form.setState(Katrid.Data.DataSourceState.browsing);
+                }
                 if (this.params?.view_type && (mode !== this.params.view_type)) {
                     history.pushState({ view_type: this.params.view_type }, document.title, this.makeUrl(mode));
                     this.params.view_type = mode;
@@ -2655,9 +2660,8 @@ var Katrid;
                 else {
                     this.record = record;
                     if (this.action) {
-                        let formView = await this.action.showView('form');
+                        let formView = await this.action.showView('form', { params: { id: record.id } });
                         formView.records = this.vm.records;
-                        // formView.record = record;
                         formView.recordIndex = index;
                     }
                 }
@@ -7457,7 +7461,6 @@ ${Katrid.i18n.gettext('Delete')}
                 this.datasource.record = null;
                 this.setState(DataSourceState.inserting);
                 return this.datasource.insert(true, defaultValues).then(() => setTimeout(() => {
-                    console.log('default values', defaultValues);
                     // put focus into the 1st field
                     this.focus();
                 }));
