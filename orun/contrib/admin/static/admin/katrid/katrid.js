@@ -5174,7 +5174,6 @@ var Katrid;
                 if (attrs[':class'])
                     section.setAttribute(':class', attrs[':class']);
                 if (attrs[':readonly']) {
-                    console.log('dyn ro', attrs[':readonly']);
                     section.setAttribute(':readonly', attrs[':readonly']);
                 }
                 else if (attrs.readonly)
@@ -5217,9 +5216,11 @@ var Katrid;
                     section = widget.afterRender(section);
                 return section;
             }
+            getTooltip(el) {
+                return new Katrid.ui.Tooltip(el, null);
+            }
             createTooltip(section) {
                 if (!Katrid.settings.ui.isMobile) {
-                    // section.setAttribute('v-ui-tooltip', '"teste"');
                     let title = '';
                     if (this.helpText)
                         title += '<br>' + this.helpText;
@@ -5230,6 +5231,7 @@ var Katrid;
                     if (this.model)
                         title += '<br>Model: ' + this.model;
                     section.setAttribute('data-title', title);
+                    section.setAttribute('v-ui-tooltip', `$fields.${this.name}`);
                     // disable ui-tooltip on mobile devices
                     // section.setAttribute('v-tooltip', function() { console.log('test')});
                     // section.addEventListener('mouseenter', () => console.log('mouse enter'));
@@ -11684,7 +11686,10 @@ var Katrid;
         (function (Widgets) {
             Katrid.directive('ui-tooltip', {
                 mounted(el, binding, vnode) {
-                    new Katrid.ui.Tooltip(el, null);
+                    const field = binding.value;
+                    if (field instanceof Katrid.Data.Field) {
+                        field.getTooltip(el);
+                    }
                 }
             });
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
