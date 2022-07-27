@@ -5223,7 +5223,7 @@ var Katrid;
                 if (!Katrid.settings.ui.isMobile) {
                     let title = '';
                     if (this.helpText)
-                        title += '<br>' + this.helpText;
+                        title = this.helpText;
                     title += '<br>Field: ' + this.name;
                     // title += `<br>Content: ' + record.${this.name} + '`;
                     if (this.widgetHelp)
