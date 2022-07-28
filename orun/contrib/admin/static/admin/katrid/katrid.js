@@ -10496,7 +10496,7 @@ var Katrid;
             emits: ['update:modelValue'],
             watch: {
                 modelValue: function (value) {
-                    if (!this.$changing)
+                    if (!this.$changing && this.$el)
                         this.$el.setValue(value);
                 }
             }
