@@ -10485,7 +10485,7 @@ var Katrid;
                     setTimeout(() => this.$changing = false);
                 });
                 if (vm.modelValue != null)
-                    this.$el.setValue(vm.modelValue);
+                    this.$inputDecimal.setValue(vm.modelValue);
             },
             emits: ['update:modelValue'],
             watch: {
@@ -10827,6 +10827,10 @@ var Katrid;
                 this.input.type = 'text';
                 this.input.addEventListener('input', () => this.onInput());
                 this.input.addEventListener('click', event => {
+                    if (window.getComputedStyle(this).display === 'none') {
+                        event.stopPropagation();
+                        return;
+                    }
                     this.input.select();
                     this.onClick();
                 });
@@ -11810,7 +11814,8 @@ var Katrid;
                 this.params = params;
                 this.choices = info.choices;
                 this.name = this.info.name;
-                this.field = this.params.info.fields && this.params.info.fields[this.name];
+                if (params?.info?.fields)
+                    this.field = this.params.info.fields[this.name];
                 this.label = this.info.label || this.params.info.caption;
                 this.static = this.info.param === 'static';
                 this.type = this.info.type || (this.field && this.field.type) || 'CharField';
@@ -11860,7 +11865,6 @@ var Katrid;
                 this.el = $(this.template());
                 this.el.data('param', this);
                 this.createControls();
-                console.log('render param', this.el[0]);
                 return container.append(this.el[0]);
             }
         }
@@ -11960,6 +11964,7 @@ var Katrid;
                 return params;
             }
             loadFromXml(xml) {
+                console.log('load from xml', xml);
                 let dataTypeDict = {
                     date: 'DateField',
                     datetime: 'DateTimeField',
@@ -11994,7 +11999,6 @@ var Katrid;
                     if (type in dataTypeDict)
                         type = dataTypeDict[type];
                     let choices = {};
-                    console.log(f);
                     for (let option of f.querySelectorAll('option')) {
                         choices[option.getAttribute('value')] = option.childNodes[0].textContent;
                     }
@@ -12018,6 +12022,7 @@ var Katrid;
                     });
                 }
                 let params = Array.from(xml.querySelectorAll('param')).map((p) => p.getAttribute('name'));
+                console.log(fields, params);
                 return this.load(fields, params);
             }
             saveDialog() {
@@ -12042,34 +12047,42 @@ var Katrid;
                     params = [];
                 this.fields = fields;
                 // Create params
-                for (let p of fields) {
-                    this.action.fields[p.name] = p;
-                    if (p.groupable)
-                        this.groupables.push(p);
-                    if (p.sortable)
-                        this.sortables.push(p);
-                    if (p.total)
-                        this.totals.push(p);
-                    if (!p.autoCreate)
-                        p.autoCreate = params.includes(p.name);
-                }
+                if (this.action.fields)
+                    for (let p of fields) {
+                        this.action.fields[p.name] = p;
+                        if (p.groupable)
+                            this.groupables.push(p);
+                        if (p.sortable)
+                            this.sortables.push(p);
+                        if (p.total)
+                            this.totals.push(p);
+                        if (!p.autoCreate)
+                            p.autoCreate = params.includes(p.name);
+                    }
             }
             loadParams() {
                 for (let p of this.fields) {
+                    console.log('field', p.autoCreate, this.fields);
                     if (p.autoCreate)
                         this.addParam(p.name);
                 }
             }
             addParam(paramName, value) {
-                console.log('add param', paramName, value);
                 let elParams = this.container.querySelector('#params-params');
                 for (let p of this.fields)
                     if (p.name === paramName) {
+                        console.log('add param', p);
                         let param = new Reports.Param(p, this);
                         this.params.push(param);
                         // param.render(elParams);
                         break;
                     }
+            }
+            createParams(container) {
+                for (let info of this.fields) {
+                    const p = new Reports.Param(info, this);
+                    this.params.push(p);
+                }
             }
             getValues() { }
             export(format) {
