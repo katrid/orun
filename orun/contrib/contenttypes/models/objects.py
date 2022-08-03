@@ -40,6 +40,7 @@ class Object(models.Model):
 
     @classmethod
     def get_object(cls, name):
+        print('get object', name)
         return cls.objects.get(name=name)
 
     @classmethod

@@ -12,7 +12,7 @@ class Index:
     suffix = 'idx'
     # The max length of the name of the index (restricted to 30 for
     # cross-database compatibility with Oracle)
-    max_name_length = 30
+    max_name_length = 63
 
     def __init__(
             self,

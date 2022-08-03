@@ -1374,7 +1374,7 @@ class BaseDatabaseSchemaEditor:
         }
         self.execute(sql)
 
-    def sync_model(self, model):
+    def sync_model(self, model: Model):
         from orun.apps import apps
         from orun.db import models
         print('sync model', model._meta.name)
@@ -1409,13 +1409,13 @@ class BaseDatabaseSchemaEditor:
 
         if model._meta.concrete:
             if model._meta.name == 'content.field':
+                # avoid to modify the content_field table
                 return
             old_fields = {f.name: f for f in apps['content.field'].objects.filter(model_name=model._meta.name)}
             new_fields = model._meta.local_concrete_fields
 
             # Get table structure from database
             fields = None
-
             for field in new_fields:
                 if field.name not in old_fields:
                     if not fields:
@@ -1426,6 +1426,28 @@ class BaseDatabaseSchemaEditor:
                 elif field.column:
                     # compare fields
                     self.sync_column(field, old_fields[field.name])
+
+            return
+            # sync db constraint
+            constraints = {c.name: c for c in apps['content.constraint'].objects.filter(content_type__name=model._meta.name)}
+            for new_const in model._meta.constraints:
+                if new_const.name in constraints:
+                    # compare the constraint
+                    pass
+                else:
+                    print('Create new constraint', new_const.name)
+
+            # sync db indexes
+            indexes = {c.name: c for c in apps['content.index'].objects.filter(content_type__name=model._meta.name)}
+            for new_index in model._meta.indexes:
+                if new_index.name in indexes:
+                    # compare the constraint
+                    pass
+                else:
+                    print('Create new index', new_index.name)
+                    new_index.create_sql(model, self)
+                    # register the new index
+                    content_type.register_index(new_index)
 
     def sync_column(self, new_field: Field, old_field):
         old_style = {
@@ -1469,7 +1491,7 @@ class BaseDatabaseSchemaEditor:
                 )
                 old_field.update(db_default=None)
             elif str(new_field.db_default) != old_field.db_default:
-                print('db default changed', new_field.column, new_field.db_default, old_field.db_default)
+                print('db default changed', new_field.model._meta.name, new_field.column, new_field.db_default, old_field.db_default)
                 self.execute(
                     self.sql_alter_column % {
                         'table': new_field.model._meta.db_table,

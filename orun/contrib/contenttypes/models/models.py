@@ -218,6 +218,9 @@ class ContentType(models.Model):
             **kwargs,
         )
 
+    def create_index(self, index: models.Index):
+        Index.objects.create()
+
 
 
 # class Domain(models.Model):
@@ -346,6 +349,13 @@ class Constraint(models.Model):
             'immediate': _('Immediate'),
         }
     )
+    object_type = models.ChoiceField(
+        (
+            ('user', _('User Model')),
+            ('base', _('Base Model')),
+        ), null=False, default='user', verbose_name=_('Object Type'),
+        readonly=True,
+    )
 
     class Meta:
         name = 'content.constraint'
@@ -360,6 +370,13 @@ class Index(models.Model):
     auto_created = models.BooleanField(default=False)
     fields = models.TextField()
     condition = models.TextField()
+    object_type = models.ChoiceField(
+        (
+            ('user', _('User Model')),
+            ('base', _('Base Model')),
+        ), null=False, default='user', verbose_name=_('Object Type'),
+        readonly=True,
+    )
 
     class Meta:
         name = 'content.index'

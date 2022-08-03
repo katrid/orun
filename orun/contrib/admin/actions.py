@@ -31,6 +31,9 @@ class WindowAction(Action):
 
     @classmethod
     def update_info(cls):
+        if cls.model not in apps.models:
+            print('model not found', cls.model)
+            return
         model = apps[cls.model]
         name = cls.name or model._meta.verbose_name_plural
         action_info = {
@@ -46,7 +49,7 @@ class WindowAction(Action):
 
 class ReportAction(Action):
     model: str = None
-    report_type = 'paginated'
+    report_type = 'banded'
     name: str = None
 
     @classmethod

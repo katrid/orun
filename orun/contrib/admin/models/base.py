@@ -229,6 +229,14 @@ class AdminModel(models.Model, helper=True):
     def api_copy(self):
         return copy.copy(self)
 
+    @classmethod
+    def admin_do_view_action(cls, request, action_name, target, **kwargs):
+        cls.admin_dispatch_view_action(request, action_name, target, **kwargs)
+
+    @classmethod
+    def admin_dispatch_view_action(cls, request, action_name, target, **kwargs):
+        pass
+
     @api.classmethod
     def api_get_defaults(cls, context=None, *args, **kwargs):
         r = {}

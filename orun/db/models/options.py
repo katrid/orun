@@ -1,5 +1,5 @@
 import copy
-from typing import Sequence, List, Optional, Dict, Union
+from typing import Sequence, List, Optional, Dict, Union, TYPE_CHECKING
 import inspect
 from collections import defaultdict
 from functools import partialmethod, partial, wraps
@@ -16,6 +16,9 @@ from orun.utils.functional import cached_property
 from orun.utils.text import camel_case_to_spaces, format_lazy
 from orun.utils.translation import override
 from orun.utils.module_loading import import_string
+from orun.db.models.indexes import Index
+from orun.db.models.constraints import BaseConstraint
+
 
 PROXY_PARENTS = object()
 
@@ -76,8 +79,8 @@ class Options:
     tablename: str = None
     name: str = None
     concrete = None
-    constraints: List = None
-    indexes: List = None
+    constraints: List[BaseConstraint] = None
+    indexes: List[Index] = None
     addon = None
     schema = None
     model = None

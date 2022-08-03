@@ -17,6 +17,7 @@ def create_contenttypes(app_models, verbosity=2, interactive=True, using=DEFAULT
     """
     Create content types for models in the given app.
     """
+    print('continue', app_models)
     try:
         ContentType = apps['content.type']
         Field = apps['content.field']

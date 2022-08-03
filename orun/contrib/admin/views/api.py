@@ -20,12 +20,12 @@ def rpc(request, service, meth, params):
         args = ()
         service = apps.services[service]
         meth = getattr(service, method)
-        if getattr(meth, 'exposed', None):
+        if getattr(meth, 'exposed', None) or (method == 'admin_do_view_action'):
             qs = kwargs
 
             args = params.get('args') or []
             kwargs = params.get('kwargs') or {}
-            if getattr(meth, 'pass_request', False):
+            if getattr(meth, 'pass_request', False) or (method == 'admin_do_view_action'):
                 # inspect if the method needs to receive de request arg
                 kwargs['request'] = request
             r = meth(*args, **kwargs)
