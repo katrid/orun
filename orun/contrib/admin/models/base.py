@@ -231,7 +231,7 @@ class AdminModel(models.Model, helper=True):
 
     @classmethod
     def admin_do_view_action(cls, request, action_name, target, **kwargs):
-        cls.admin_dispatch_view_action(request, action_name, target, **kwargs)
+        return cls.admin_dispatch_view_action(request, action_name, target, **kwargs)
 
     @classmethod
     def admin_dispatch_view_action(cls, request, action_name, target, **kwargs):

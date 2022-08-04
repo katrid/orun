@@ -11825,9 +11825,14 @@ var Katrid;
                 this.operations = this.getOperations();
                 this.exclude = this.info.exclude;
                 this.id = ++_counter;
-            }
-            defaultValue() {
-                return null;
+                this.defaultValue = info.defaultValue;
+                if (info.defaultValue)
+                    try {
+                        this.value1 = eval(info.defaultValue);
+                    }
+                    catch {
+                        console.error('Error evaluating default expression for param:', this.name);
+                    }
             }
             setOperation(op, focus) {
                 if (focus == null) {
@@ -11872,6 +11877,7 @@ var Katrid;
         Katrid.component('report-param-widget', {
             props: ['param'],
             render() {
+                console.log('render widget', this.param);
                 let widget = Params.Widgets[this.param.type](this.param);
                 return Vue.compile(widget)(this);
             },
@@ -11964,7 +11970,6 @@ var Katrid;
                 return params;
             }
             loadFromXml(xml) {
-                console.log('load from xml', xml);
                 let dataTypeDict = {
                     date: 'DateField',
                     datetime: 'DateTimeField',
@@ -11995,6 +12000,7 @@ var Katrid;
                     const required = f.getAttribute('required');
                     const autoCreate = f.getAttribute('autoCreate') || required || (param === 'static');
                     const operation = f.getAttribute('operation');
+                    const defaultValue = f.getAttribute('default');
                     let type = f.getAttribute('type') || $(f).data('type') || (fld && fld.type);
                     if (type in dataTypeDict)
                         type = dataTypeDict[type];
@@ -12018,11 +12024,11 @@ var Katrid;
                         modelChoices,
                         type,
                         autoCreate,
+                        defaultValue,
                         field: f,
                     });
                 }
                 let params = Array.from(xml.querySelectorAll('param')).map((p) => p.getAttribute('name'));
-                console.log(fields, params);
                 return this.load(fields, params);
             }
             saveDialog() {
@@ -12046,6 +12052,7 @@ var Katrid;
                 if (!params)
                     params = [];
                 this.fields = fields;
+                console.log('set fields', this.fields);
                 // Create params
                 if (this.action.fields)
                     for (let p of fields) {
@@ -12062,7 +12069,6 @@ var Katrid;
             }
             loadParams() {
                 for (let p of this.fields) {
-                    console.log('field', p.autoCreate, this.fields);
                     if (p.autoCreate)
                         this.addParam(p.name);
                 }
@@ -12071,7 +12077,6 @@ var Katrid;
                 let elParams = this.container.querySelector('#params-params');
                 for (let p of this.fields)
                     if (p.name === paramName) {
-                        console.log('add param', p);
                         let param = new Reports.Param(p, this);
                         this.params.push(param);
                         // param.render(elParams);
