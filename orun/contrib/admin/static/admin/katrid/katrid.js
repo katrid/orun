@@ -12052,7 +12052,6 @@ var Katrid;
                 if (!params)
                     params = [];
                 this.fields = fields;
-                console.log('set fields', this.fields);
                 // Create params
                 if (this.action.fields)
                     for (let p of fields) {
