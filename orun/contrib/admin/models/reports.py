@@ -1,4 +1,4 @@
-import sys
+import json
 import os
 import uuid
 from collections import defaultdict
@@ -11,8 +11,7 @@ from orun.db import models, connection
 from orun.reports.engines import get_engine, ConnectionProxy
 from orun.template import loader
 from orun.utils.translation import gettext_lazy as _
-from orun.http import HttpResponse
-from orun.utils.xml import etree
+from orun.utils.module_loading import import_string
 from .action import Action
 
 
@@ -32,8 +31,13 @@ class ReportAction(Action):
             model = apps[self.model]
 
         rep_type = None
-        if self.view and self.view.template_name:
-            rep_type = self.view.template_name.rsplit('.', 1)[1]
+        template_name: str = self.view and self.view.template_name
+        if not template_name and self.qualname:
+            rep_class = import_string(self.qualname)
+            if rep_class:
+                template_name = rep_class.template_name
+        if template_name:
+            rep_type = template_name.rsplit('.', 1)[1]
             engine = get_engine(REPORT_ENGINES[rep_type])
             if rep_type == 'jinja2':
                 templ = loader.get_template(self.view.template_name)
@@ -56,14 +60,20 @@ class ReportAction(Action):
                     print(params.tostring())
                     data['content'] = params.tostring()
             else:
-                if rep_type == 'xml':
-                    templ = loader.find_template(self.view.template_name)
+                if rep_type == 'xml' or rep_type == 'json':
+                    templ = loader.find_template(template_name)
                     with open(templ, 'r', encoding='utf-8') as f:
                         xml = f.read()
                 else:
                     xml = self.view._get_content({})
                 if isinstance(xml, str):
-                    xml = etree.fromstring(xml)
+                    if rep_type == 'json':
+                        xml = json.loads(xml)
+                        data['content'] = xml['report'].get('params') or '<params/>'
+                        data['action_type'] = 'ui.action.report'
+                        return data
+                    else:
+                        xml = etree.fromstring(xml)
                 # xml = self.view.get_xml(model)
                 if model:
                     data['fields'] = model.get_fields_info(xml=xml)
@@ -93,8 +103,12 @@ class ReportAction(Action):
         _params = defaultdict(list)
 
         rep_type = None
-        if self.view and self.view.template_name:
-            rep_type = self.view.template_name.rsplit('.', 1)[1]
+        template_name: str = self.view and self.view.template_name
+        if not template_name and self.qualname:
+            rep_class = import_string(self.qualname)
+            template_name = rep_class.template_name
+        if template_name:
+            rep_type = template_name.rsplit('.', 1)[1]
 
         if rep_type == 'pug':
             xml = self.view.to_string()
@@ -103,6 +117,10 @@ class ReportAction(Action):
             report_file = xml.attrib['file']
             with open(loader.get_template(report_file).template.filename, 'rb') as f:
                 xml = f.read()
+        elif rep_type == 'json':
+            templ = loader.find_template(template_name)
+            with open(templ, 'r', encoding='utf-8') as f:
+                xml = json.loads(f.read())
         else:
             xml = self.view.get_xml(model)
             report_file = xml.attrib['file']

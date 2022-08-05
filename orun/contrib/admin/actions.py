@@ -54,24 +54,27 @@ class ReportAction(Action):
 
     @classmethod
     def update_info(cls):
+        import orun.contrib.admin.models
         # view auto registration
         target_model = (cls.model and ContentType.objects.only('pk').get(name=cls.model)) or None
-        view_id = f'{cls.get_qualname()}.view'
-        view_info = {
-            'view_type': 'report',
-            'template_name': cls.template_name,
-            'name': view_id,
-            'model': target_model,
-        }
-        view = cls._register_object(apps['ui.view'], view_id, view_info)
+        # view_id = f'{cls.get_qualname()}.view'
+        # view_info = {
+        #     'view_type': 'report',
+        #     'template_name': cls.template_name,
+        #     'name': view_id,
+        #     'model': target_model,
+        # }
+        # view = cls._register_object(apps['ui.view'], view_id, view_info)
         report_info = {
             'report_type': cls.report_type,
             'name': cls.name or cls.__name__,
-            'view': view,
+            # 'view': view,
             'model': target_model,
             'qualname': cls.get_qualname(),
         }
-        return cls._register_object(apps['ui.action.report'], cls.get_qualname(), report_info)
+        return cls._register_object(
+            orun.contrib.admin.models.ReportAction, cls.get_qualname(), report_info
+        )
 
 
 class ViewAction(Action):

@@ -34,6 +34,7 @@ def load_fixture(schema, *filenames, **options):
     else:
         addon = schema
     for filename in filenames:
+        # TODO move to admin serializer
         if filename.endswith('.admin'):
             # fixture is module name
             filename = import_module(filename)
