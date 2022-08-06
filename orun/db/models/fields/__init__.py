@@ -1729,6 +1729,7 @@ class DecimalField(Field):
         if value == 0:
             return '0'
         return value
+        # TODO adapt decimal
         # return connection.ops.adapt_decimalfield_value(self.to_python(value), self.max_digits, self.decimal_places)
 
     def get_prep_value(self, value):

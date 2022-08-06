@@ -13794,8 +13794,13 @@ query-viewer {
   background-color: #ffffff;
   overflow: hidden;
 }
-query-viewer > .col-12 {
-  flex: 1 1 auto;
+query-viewer .query-view {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 100%;
+}
+query-viewer .query-view .table-responsive {
+  flex: 1 1 500px;
 }
 query-viewer #select-query {
   margin-bottom: 20px;

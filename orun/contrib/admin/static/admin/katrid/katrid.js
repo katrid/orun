@@ -2962,6 +2962,7 @@ var Katrid;
 (function (Katrid) {
     var BI;
     (function (BI) {
+        const SCROLL_PAGE_SIZE = 100;
         class _QueryView extends HTMLElement {
             get queryId() {
                 return this._queryId;
@@ -3060,6 +3061,10 @@ var Katrid;
         BI._QueryView = _QueryView;
         // Katrid.define('query-view', QueryView);
         class QueryView extends Katrid.Forms.RecordCollectionView {
+            constructor() {
+                super(...arguments);
+                this._loadedRows = 0;
+            }
             get queryId() {
                 return this._queryId;
             }
@@ -3088,31 +3093,19 @@ var Katrid;
                 // this.$scope.$apply();
             }
             async refreshQuery(query, params) {
+                this._loadedRows = 0;
                 $(this.container).empty();
                 let res = await Katrid.Services.Query.read({ id: query, details: true, params });
                 let fields = this.fields = res.fields;
-                // this.searchView.fields = this.fields = Katrid.Data.Fields.fromArray(res.fields);
                 this.fieldList = Object.values(this.fields);
-                // for (let f of res.fields)
-                // f.filter = this.getFilter(f);
-                let _toObject = (fields, values) => {
-                    let r = {}, i = 0;
-                    for (let f of fields) {
-                        r[f.name] = values[i];
-                        i++;
-                    }
-                    return r;
-                };
-                // this.$scope.records = res.data.map(row => _toObject(res.fields, row));
-                // this.$scope.$apply();
                 return res;
             }
-            async loadData(data) {
+            loadData(data) {
                 let table = this.table = document.createElement('table');
                 table.classList.add('table', 'table-hover');
-                let thead = table.createTHead();
-                let thr = thead.insertRow(0);
-                let tbody = table.createTBody();
+                const thead = table.createTHead();
+                const thr = thead.insertRow(0);
+                table.createTBody();
                 for (let f of this.fieldList) {
                     let th = document.createElement('th');
                     if (f.type)
@@ -3120,8 +3113,15 @@ var Katrid;
                     th.innerText = f.caption;
                     thr.append(th);
                 }
-                let c = 0;
-                for (let row of data) {
+                this.element.append(table);
+                table.addEventListener('contextmenu', evt => this.contextMenu(evt));
+                // this.searchView.render();
+            }
+            more(count) {
+                const tbody = this.table.tBodies.item(0);
+                count = Math.min(count, this.data.length - this._loadedRows);
+                for (let c = 0; c < count; c++) {
+                    let row = this.data[this._loadedRows + c];
                     let tr = document.createElement('tr');
                     let i = 0;
                     for (let col of row) {
@@ -3139,26 +3139,26 @@ var Katrid;
                         tr.append(td);
                         i++;
                     }
-                    c++;
                     tbody.append(tr);
-                    // TODO show loading message on table
-                    if (c === 1000) {
-                        c = 0;
-                        await katrid.sleep(500);
-                    }
                 }
-                this.element.append(table);
-                table.addEventListener('contextmenu', evt => this.contextMenu(evt));
-                // this.searchView.render();
+                this._loadedRows += count;
+                return count;
             }
             async ready() {
                 this.fieldList = Object.values(this.fields);
                 this.element = document.createElement('div');
                 this.element.classList.add('table-responsive');
+                this.element.addEventListener('scroll', event => this.tableScroll(event));
                 this.loadData(this.data);
+                this.more(SCROLL_PAGE_SIZE * 2);
+                while ((this.element.scrollHeight < this.element.clientHeight) && this.more(SCROLL_PAGE_SIZE)) { }
                 let searchView = new Katrid.Forms.SearchView({ fields: this.fields });
                 searchView.renderTo(this.container);
                 this.container.append(this.element);
+            }
+            tableScroll(evt) {
+                if (this.element.scrollHeight < (this.element.scrollTop + this.element.clientHeight + 100))
+                    this.more(SCROLL_PAGE_SIZE);
             }
             contextMenu(evt) {
                 evt.stopPropagation();
