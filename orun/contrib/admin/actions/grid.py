@@ -16,7 +16,7 @@ class Column:
     @classmethod
     def from_node(cls, node):
         print(node.attrib)
-        col = cls(name=node.attrib['name'], label=node.attrib.get('label'), total=node.attrib.get('total'))
+        col = cls(name=node.attrib['name'], label=node.attrib.get('caption'), total=node.attrib.get('total'))
         return col
 
     def __set_name__(self, owner, name):

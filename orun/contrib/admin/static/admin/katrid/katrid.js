@@ -3247,8 +3247,7 @@ var Katrid;
                 this.element.addEventListener('scroll', event => this.tableScroll(event));
                 this.loadData(this.data);
                 this.more(SCROLL_PAGE_SIZE * 2);
-                while ((this.element.scrollHeight < this.element.clientHeight) && this.more(SCROLL_PAGE_SIZE)) {
-                }
+                while ((this.element.scrollHeight < this.element.clientHeight) && this.more(SCROLL_PAGE_SIZE)) { }
                 if (this.searchViewVisible) {
                     let searchView = new Katrid.Forms.SearchView({ fields: this.fields });
                     searchView.renderTo(this.container);
@@ -3274,6 +3273,7 @@ var Katrid;
                 navigator.clipboard.writeText(Katrid.UI.Utils.toTsv(this.data));
             }
             async print() {
+                while ((this._loadedRows < this.data.length) && this.more(1000)) { }
                 const wnd = window.open('');
                 wnd.addEventListener('afterprint', () => {
                     wnd.close();
@@ -3367,7 +3367,8 @@ var Katrid;
                 let btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'btn btn-outline-secondary';
-                btn.innerText = Katrid.i18n.gettext('Print');
+                btn.title = Katrid.i18n.gettext('Print');
+                btn.innerHTML = '<i class="fas fa-print"></i>';
                 btn.addEventListener('click', () => this.print());
                 this.btnPrint = btn;
                 btn.style.display = 'none';
@@ -3399,7 +3400,7 @@ var Katrid;
                     qv.searchViewVisible = false;
                     qv.ready();
                     $(this.btnPrint).show();
-                    $(this.btnExport).show();
+                    // $(this.btnExport).show();
                 }
             }
             async print() {
