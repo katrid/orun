@@ -3518,8 +3518,6 @@ var Katrid;
                         else {
                             if (res.result) {
                                 let result = res.result;
-                                if (Array.isArray(result) && (result.length === 1))
-                                    result = result[0];
                                 let messages;
                                 if (result.messages)
                                     messages = result.messages;
@@ -4281,6 +4279,7 @@ var Katrid;
                     where = where.concat(parent.$params);
                 let res = await this.model.service.groupBy([group[index]], where);
                 const groupName = group[index];
+                console.log(res);
                 for (let r of res) {
                     let s = r[groupName];
                     let paramValue;
@@ -9029,7 +9028,7 @@ var Katrid;
                                 }
                                 else if (tag === 'GROUP') {
                                     obj = Search.SearchGroups.fromGroup({
-                                        view: this,
+                                        view: this.searchView,
                                         el: child,
                                     });
                                     this.groups.push(obj);
@@ -9948,14 +9947,14 @@ var Katrid;
                         return group;
                     }
                     addValue(item) {
-                        this.view.groupLength++;
+                        this.view.controller.groupLength++;
                         let newItem = new Search.SearchObject(item.toString(), item.value);
                         newItem._ref = item;
                         this.facet.values.push(newItem);
                         this._refresh();
                     }
                     removeValue(item) {
-                        this.view.groupLength--;
+                        this.view.controller.groupLength--;
                         for (let i of this.facet.values)
                             if (i._ref === item) {
                                 this.facet.values.splice(this.facet.values.indexOf(i), 1);
@@ -9965,9 +9964,8 @@ var Katrid;
                     }
                     _refresh() {
                         if (this.facet.values.length) {
-                            console.log('facets', this.view);
-                            if (this.view.facets.indexOf(this.facet) === -1)
-                                this.view.facets.push(this.facet);
+                            if (this.view.controller.facets.indexOf(this.facet) === -1)
+                                this.view.controller.facets.push(this.facet);
                         }
                         else if (this.view.controller.facets.indexOf(this.facet) > -1)
                             this.view.controller.facets.splice(this.view.controller.facets.indexOf(this.facet), 1);
