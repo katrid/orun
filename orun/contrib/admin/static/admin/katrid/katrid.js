@@ -9145,7 +9145,7 @@ var Katrid;
                     async update() {
                         if (this.groupLength !== this._groupLength) {
                             this._groupLength = this.groupLength;
-                            await this.view.resultView.applyGroups(this.groupBy(), this.getParams());
+                            await this.searchView.resultView.applyGroups(this.groupBy(), this.getParams());
                         }
                         else { }
                         // apply changes to window action
@@ -9965,8 +9965,9 @@ var Katrid;
                     }
                     _refresh() {
                         if (this.facet.values.length) {
-                            if (this.view.controller.facets.indexOf(this.facet) === -1)
-                                this.view.controller.facets.push(this.facet);
+                            console.log('facets', this.view);
+                            if (this.view.facets.indexOf(this.facet) === -1)
+                                this.view.facets.push(this.facet);
                         }
                         else if (this.view.controller.facets.indexOf(this.facet) > -1)
                             this.view.controller.facets.splice(this.view.controller.facets.indexOf(this.facet), 1);
