@@ -1890,7 +1890,7 @@ var Katrid;
                     this.debug(params);
                 }
                 for (let plugin of this.plugins) {
-                    if (plugin.hashChange(hash))
+                    if (plugin.hashChange(url))
                         break;
                 }
             }
@@ -1953,6 +1953,7 @@ var Katrid;
         let QueryEditorPlugin = class QueryEditorPlugin extends Katrid.Core.Plugin {
             hashChange(url) {
                 if (url.startsWith('#/query-viewer/')) {
+                    console.log('hash change');
                     this.execute();
                     return true;
                 }
@@ -1960,6 +1961,7 @@ var Katrid;
             async execute() {
                 let queryViewer = document.createElement('query-viewer');
                 queryViewer.className = 'content-container';
+                console.log(this.app.$search);
                 this.app.element.innerHTML = '';
                 this.app.element.append(queryViewer);
             }
@@ -2741,8 +2743,8 @@ var Katrid;
                 return groups;
             }
             async groupBy(data) {
-                // this.vm.records = this.vm.groups;
-                console.log(data);
+                this.vm.records = this.vm.groups;
+                // console.log(data);
             }
             async applyGroups(groups, params) {
                 let res = await this.datasource.groupBy(groups, params);
@@ -3336,6 +3338,7 @@ var Katrid;
                 sel.addEventListener('change', async () => {
                     $(this.container).empty();
                     this.query = new Katrid.Services.Query(sel.value);
+                    window.history.pushState('', '', '#/query-viewer/?id=' + sel.value.toString());
                     let res = await this.query.getMetadata();
                     this.metadata = res;
                     let fields = res.fields;
@@ -8114,7 +8117,8 @@ var Katrid;
                 return comp;
             }
             update(vm) {
-                if (this.controller.groups?.length) {
+                console.log('group', this.controller);
+                if (this.controller.groupLength) {
                     // this.controller._groupLength = this.controller.groupLength;
                     if (this._resultView)
                         this._resultView.applyGroups(this.controller.groupBy(), this.controller.getParams());
