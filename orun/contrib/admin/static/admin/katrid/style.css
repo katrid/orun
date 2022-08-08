@@ -13936,18 +13936,16 @@ pwa-menu .btn {
 @media print {
   @page {
     size: A4;
-    margin: 5mm 5mm 12mm 5mm;
-    padding: 0;
+    margin: 5mm;
   }
 }
 .report {
   font-family: Arial, Sans-Serif;
   font-size: 8pt;
-  margin: 0;
 }
 .report body {
   color: #000000;
-  margin: 0;
+  padding: 2mm;
 }
 .report body, .report table td, .report table th {
   font-size: 8pt;

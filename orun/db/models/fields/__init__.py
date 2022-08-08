@@ -2624,3 +2624,14 @@ class FieldInfo(dict):
 
     def __setattr__(self, key, value):
         self[key] = value
+
+
+datatype_map = {
+    str: 'StringField',
+    int: 'IntegerField',
+    datetime.date: 'DateField',
+    'date': 'DateField',
+    datetime.datetime: 'DataTimeField',
+    float: 'FloatField',
+    decimal.Decimal: 'DecimalField',
+}

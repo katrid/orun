@@ -192,3 +192,6 @@ class BaseDatabaseIntrospection:
         if they don't name constraints of a certain type (e.g. SQLite)
         """
         raise NotImplementedError('subclasses of BaseDatabaseIntrospection may require a get_constraints() method')
+
+    def get_cursor_description(self, cur):
+        desc = cur.description

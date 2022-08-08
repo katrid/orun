@@ -3063,6 +3063,7 @@ var Katrid;
         class QueryView extends Katrid.Forms.RecordCollectionView {
             constructor() {
                 super(...arguments);
+                this.searchViewVisible = true;
                 this._loadedRows = 0;
             }
             get queryId() {
@@ -3101,21 +3102,80 @@ var Katrid;
                 return res;
             }
             loadData(data) {
+                this._lastGroup = undefined;
                 let table = this.table = document.createElement('table');
                 table.classList.add('table', 'table-hover');
                 const thead = table.createTHead();
                 const thr = thead.insertRow(0);
                 table.createTBody();
-                for (let f of this.fieldList) {
+                for (let f of this.columns) {
                     let th = document.createElement('th');
-                    if (f.type)
+                    if (f.dataIndex > -1) {
+                        let field = this.fieldList[f.dataIndex];
+                        if (field.type)
+                            th.className = field.type;
+                        if (!f.label)
+                            f.label = field.caption;
+                    }
+                    else if (f.type)
                         th.className = f.type;
-                    th.innerText = f.caption;
+                    th.innerText = f.label;
                     thr.append(th);
                 }
                 this.element.append(table);
                 table.addEventListener('contextmenu', evt => this.contextMenu(evt));
                 // this.searchView.render();
+            }
+            evalTotal(col, values) {
+                let val = 0;
+                switch (col.total.toLowerCase()) {
+                    case 'sum':
+                        values.forEach(obj => val += parseFloat(obj[col.dataIndex]) || 0);
+                        return val;
+                    case 'avg':
+                        values.forEach(obj => val += parseFloat(obj[col.dataIndex]) || 0);
+                        return val;
+                }
+            }
+            addGroupHeader(grouper, record, data) {
+                const tbody = this.table.tBodies.item(0);
+                const tr = document.createElement('tr');
+                let th = document.createElement('th');
+                // find the first total column index
+                let colIndex = this.columns.length;
+                for (let col of this.columns)
+                    if (col.total) {
+                        colIndex = this.columns.indexOf(col);
+                        break;
+                    }
+                th.colSpan = colIndex;
+                if (grouper)
+                    th.innerText = grouper.toString();
+                else {
+                    th.innerText = '--';
+                    th.className = 'text-muted';
+                }
+                tr.append(th);
+                for (let i = colIndex; i < this.columns.length; i++) {
+                    let col = this.columns[i];
+                    th = document.createElement('th');
+                    if (col.total) {
+                        th.className = col.type;
+                        let val = this.evalTotal(col, data);
+                        th.innerText = Katrid.intl.number({ minimumFractionDigits: 2 }).format(val);
+                    }
+                    tr.append(th);
+                }
+                tbody.append(tr);
+            }
+            addGroupFooter() {
+                const tbody = this.table.tBodies.item(0);
+                const tr = document.createElement('tr');
+                let th = document.createElement('th');
+                th.colSpan = this.columns.length;
+                th.innerText = 'Total de registros: ' + this._lastGroupValues.length.toString();
+                tr.append(th);
+                tbody.append(tr);
             }
             more(count) {
                 const tbody = this.table.tBodies.item(0);
@@ -3124,36 +3184,75 @@ var Katrid;
                     let row = this.data[this._loadedRows + c];
                     let tr = document.createElement('tr');
                     let i = 0;
-                    for (let col of row) {
-                        let field = this.fieldList[i];
-                        let td = document.createElement('td');
-                        if (_.isNumber(col))
-                            col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
-                        else if (field.type === 'DateField')
-                            col = moment(col).format('DD/MM/YYYY');
-                        else if (field.type === 'DateTimeField')
-                            col = moment(col).format('DD/MM/YYYY HH:mm');
-                        if (field.type)
-                            td.className = field.type;
-                        td.innerText = col;
-                        tr.append(td);
+                    if (this.groupsIndex) {
+                        let gIndex = this.groupsIndex[0];
+                        let groupVal = row[gIndex];
+                        if (this._lastGroup != groupVal) {
+                            if (this._lastGroup !== undefined) {
+                                this.addGroupFooter();
+                            }
+                            this._lastGroupValues = this.data.filter(obj => obj[gIndex] == groupVal);
+                            this.addGroupHeader(groupVal, row, this._lastGroupValues);
+                            this._lastGroup = groupVal;
+                        }
+                    }
+                    for (let column of this.columns) {
+                        if (column.dataIndex > -1) {
+                            let field = this.fieldList[column.dataIndex];
+                            let col = row[column.dataIndex];
+                            let td = document.createElement('td');
+                            if (field.type === 'DecimalField')
+                                col = Katrid.intl.number({ minimumFractionDigits: 2 }).format(col);
+                            else if (_.isNumber(col))
+                                col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
+                            else if (field.type === 'DateField')
+                                col = moment(col).format('DD/MM/YYYY');
+                            else if (field.type === 'DateTimeField')
+                                col = moment(col).format('DD/MM/YYYY HH:mm');
+                            if (field.type)
+                                td.className = field.type;
+                            td.innerText = col;
+                            tr.append(td);
+                        }
                         i++;
                     }
                     tbody.append(tr);
                 }
                 this._loadedRows += count;
+                if (count && (this._loadedRows === this.data.length) && this.groupsIndex)
+                    this.addGroupFooter();
                 return count;
             }
             async ready() {
+                this.columns = null;
                 this.fieldList = Object.values(this.fields);
+                const fieldNames = Object.keys(this.fields);
+                if (this.metadata.template?.columns) {
+                    this.columns = this.metadata.template.columns.map(c => new Column(c));
+                    for (let col of this.columns)
+                        if (typeof col.name === 'string') {
+                            col.dataIndex = fieldNames.indexOf(col.name);
+                            if (!col.type)
+                                col.type = this.fieldList[col.dataIndex].type;
+                        }
+                }
+                else
+                    this.columns = this.fieldList.map((f, idx) => new Column({
+                        name: f.name, type: f.type, label: f.caption, dataIndex: idx
+                    }));
+                if (this.metadata?.groupBy)
+                    this.groupsIndex = this.metadata.groupBy.map(g => fieldNames.indexOf(g));
                 this.element = document.createElement('div');
                 this.element.classList.add('table-responsive');
                 this.element.addEventListener('scroll', event => this.tableScroll(event));
                 this.loadData(this.data);
                 this.more(SCROLL_PAGE_SIZE * 2);
-                while ((this.element.scrollHeight < this.element.clientHeight) && this.more(SCROLL_PAGE_SIZE)) { }
-                let searchView = new Katrid.Forms.SearchView({ fields: this.fields });
-                searchView.renderTo(this.container);
+                while ((this.element.scrollHeight < this.element.clientHeight) && this.more(SCROLL_PAGE_SIZE)) {
+                }
+                if (this.searchViewVisible) {
+                    let searchView = new Katrid.Forms.SearchView({ fields: this.fields });
+                    searchView.renderTo(this.container);
+                }
                 this.container.append(this.element);
             }
             tableScroll(evt) {
@@ -3172,11 +3271,36 @@ var Katrid;
                 menu.show(evt.pageX, evt.pageY);
             }
             copyToClipboard() {
-                navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
+                navigator.clipboard.writeText(Katrid.UI.Utils.toTsv(this.data));
+            }
+            async print() {
+                const wnd = window.open('');
+                wnd.addEventListener('afterprint', () => {
+                    wnd.close();
+                });
+                if (this.reportTemplate)
+                    wnd.document.write(this.reportTemplate);
+                wnd.document.querySelector('.document-content').innerHTML = this.table.outerHTML;
+                wnd.document.querySelector('h1').innerText = this.metadata.name;
+                wnd.document.write('<script>print()</script>');
+                wnd.document.close();
+            }
+            destroy() {
+                this.element.remove();
             }
         }
         QueryView.viewType = 'query';
         BI.QueryView = QueryView;
+        class Column {
+            constructor(info) {
+                this.name = info.name;
+                this.type = info.type;
+                this.label = info.label;
+                this.visible = info.visible ? info.visible != null : true;
+                this.dataIndex = info.dataIndex;
+                this.total = info.total;
+            }
+        }
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
 /// <reference path="../core/app.ts"/>
@@ -3186,7 +3310,7 @@ var Katrid;
     (function (BI) {
         class QueryViewer extends Katrid.WebComponent {
             create() {
-                this.innerHTML = `<div class="col-12"><h5>Visualizador de Consultas</h5><div class="toolbar"><select id="select-query" class="form-select"><option>SELECIONE A CONSULTA</option></select></div></div><div class="query-view col-12"></div>`;
+                this.innerHTML = `<div class="col-12"><h5>Visualizador de Consultas</h5><div class="toolbar"><select id="select-query" class="form-select"><option>SELECIONE A CONSULTA</option></select></div></div><div class="query-view row"></div>`;
                 this.load();
             }
             async load() {
@@ -3211,10 +3335,12 @@ var Katrid;
                 }
                 sel.addEventListener('change', async () => {
                     $(this.container).empty();
-                    let res = await Katrid.Services.Query.read({ id: sel.value, details: true, params: {} });
+                    this.query = new Katrid.Services.Query(sel.value);
+                    let res = await this.query.getMetadata();
+                    this.metadata = res;
                     let fields = res.fields;
+                    const params = res.params;
                     // this.searchView.fields = this.fields = Katrid.Data.Fields.fromArray(res.fields);
-                    let fieldList = Object.values(fields);
                     // for (let f of res.fields)
                     // f.filter = this.getFilter(f);
                     let _toObject = (fields, values) => {
@@ -3225,12 +3351,68 @@ var Katrid;
                         }
                         return r;
                     };
-                    let queryView = new BI.QueryView({ fields });
-                    queryView.data = res.data;
-                    // queryView.queryId = sel.value;
-                    queryView.container = this.container;
-                    queryView.ready();
+                    this.params = null;
+                    if (params) {
+                        this.createParamsPanel(params);
+                    }
+                    if (fields)
+                        this.createQueryView(fields, res.data).ready();
                 });
+            }
+            createParamsPanel(params) {
+                this.params = Object.values(params).map(p => new Katrid.Reports.Param(p));
+                Katrid.Reports.createParamsPanel(this.container, this.params);
+                const div = document.createElement('div');
+                div.className = 'col-12 text-end toolbar-action-buttons';
+                let btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-secondary';
+                btn.innerText = Katrid.i18n.gettext('Print');
+                btn.addEventListener('click', () => this.print());
+                this.btnPrint = btn;
+                btn.style.display = 'none';
+                div.append(btn);
+                btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-secondary';
+                btn.title = 'Export to Excel';
+                btn.innerHTML = '<i class="fas fa-download"></i>';
+                btn.addEventListener('click', () => this.exportToExcel());
+                this.btnExport = btn;
+                btn.style.display = 'none';
+                div.append(btn);
+                btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-secondary';
+                btn.innerText = Katrid.i18n.gettext('Apply');
+                div.append(btn);
+                btn.addEventListener('click', () => this.applyParams());
+                this.container.append(div);
+            }
+            async applyParams() {
+                if (this.queryView)
+                    this.queryView.destroy();
+                const params = this.params.map(p => p.dump());
+                const res = await this.query.execute({ params });
+                if (res.data && res.fields) {
+                    const qv = this.createQueryView(res.fields, res.data);
+                    qv.searchViewVisible = false;
+                    qv.ready();
+                    $(this.btnPrint).show();
+                    $(this.btnExport).show();
+                }
+            }
+            async print() {
+                this.queryView.reportTemplate = this.metadata?.template?.reportTemplate;
+                this.queryView.print();
+            }
+            createQueryView(fields, data) {
+                let queryView = new BI.QueryView({ fields });
+                queryView.metadata = this.metadata;
+                queryView.data = data;
+                queryView.container = this.container;
+                this.queryView = queryView;
+                return queryView;
             }
         }
         BI.QueryViewer = QueryViewer;
@@ -11792,7 +11974,7 @@ var Katrid;
                 if (param.operation === 'in') {
                     multiple = 'multiple';
                 }
-                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ir.action.report" model-choices="${param.info.modelChoices}" v-model="param.value1" ${multiple}></div>`;
+                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ui.action.report" model-choices="${param.info.modelChoices}" v-model="param.value1" ${multiple}></div>`;
             },
             SelectionField(param) {
                 // param.info.choices = param.info.field.data('choices');
@@ -11808,12 +11990,13 @@ var Katrid;
             }
         };
         Reports.Params = Params;
+        Params.Widgets.StringField = Params.Widgets.CharField;
         class Param {
             constructor(info, params) {
                 this.info = info;
-                this.params = params;
                 this.choices = info.choices;
                 this.name = this.info.name;
+                this.params = params;
                 if (params?.info?.fields)
                     this.field = this.params.info.fields[this.name];
                 this.label = this.info.label || this.params.info.caption;
@@ -11822,7 +12005,7 @@ var Katrid;
                 this.defaultOperation = this.info.operation || Params.DefaultOperations[this.type];
                 this.operation = this.defaultOperation;
                 // @operations = @info.operations or Params.TypeOperations[@type]
-                this.operations = this.getOperations();
+                // this.operations = this.getOperations();
                 this.exclude = this.info.exclude;
                 this.id = ++_counter;
                 this.defaultValue = info.defaultValue;
@@ -11852,7 +12035,8 @@ var Katrid;
                 return el.append(widget);
             }
             getOperations() {
-                return (Array.from(Params.TypeOperations[this.type]).map((op) => ({ id: op, text: Params.Labels[op] })));
+                if (Params.TypeOperations[this.type])
+                    return (Array.from(Params.TypeOperations[this.type]).map((op) => ({ id: op, text: Params.Labels[op] })));
             }
             operationTemplate() {
                 const opts = this.getOperations();
@@ -11872,12 +12056,49 @@ var Katrid;
                 this.createControls();
                 return container.append(this.el[0]);
             }
+            dump() {
+                return {
+                    name: this.name,
+                    op: this.operation,
+                    value1: this.value1,
+                    value2: this.value2,
+                    type: this.type,
+                };
+            }
         }
         Reports.Param = Param;
+        function createParamsPanel(container, params) {
+            const el = $(`<div class="params-params row">
+<div v-for="param in params" class="col-lg-6 form-group">
+          <div class="col-12">
+            <label class="control-label">{{ param.label }}</label>
+          </div>
+          <div class="col-4" v-if="param.operationsVisible">
+            <select v-model="param.operation" class="form-control" v-on:change="param.setOperation(param.operation)">
+              <option v-for="op in param.operations" :value="op.id">{{ op.text }}</option>
+            </select>
+          </div>
+          <div class="col param-widget">
+          <report-param-widget :param="param"/>
+</div>
+        </div>
+</div>`)[0];
+            const vm = Katrid.createVm({
+                data() {
+                    return {
+                        params
+                    };
+                }
+            });
+            vm.mount(el);
+            if (container)
+                container.append(el);
+            return vm;
+        }
+        Reports.createParamsPanel = createParamsPanel;
         Katrid.component('report-param-widget', {
             props: ['param'],
             render() {
-                console.log('render widget', this.param);
                 let widget = Params.Widgets[this.param.type](this.param);
                 return Vue.compile(widget)(this);
             },
@@ -12509,8 +12730,9 @@ var Katrid;
         Services.ModelService = ModelService;
         // Represents a server query
         class Query extends ModelService {
-            constructor() {
-                super('ir.query');
+            constructor(id) {
+                super('ui.action.query');
+                this.id = id;
             }
             static read(config) {
                 // read data from server
@@ -12532,6 +12754,12 @@ var Katrid;
             }
             static all() {
                 return (new Query()).rpc('list_all');
+            }
+            getMetadata() {
+                return this.rpc('get_metadata', [this.id]);
+            }
+            execute(config) {
+                return this.rpc('execute', [this.id], { params: config.params });
             }
             static executeSql(sql) {
                 return (new Query()).post('execute_sql', { args: [sql] });
@@ -13442,6 +13670,8 @@ var Katrid;
         class DataGridColumn {
             constructor(info) {
                 this.name = info.name;
+                this.type = info.type;
+                this.label = info.label;
             }
         }
         ui.DataGridColumn = DataGridColumn;
@@ -13574,6 +13804,21 @@ var Katrid;
                 return output.join('\n');
             }
             Utils.tableToText = tableToText;
+            function toTsv(data) {
+                const output = [];
+                for (let record of data) {
+                    let row = [];
+                    for (let [k, v] of Object.entries(record)) {
+                        if (v == null)
+                            row.push('');
+                        else
+                            row.push(v.toString());
+                    }
+                    output.push(row.join('\t'));
+                }
+                return output.join('\n');
+            }
+            Utils.toTsv = toTsv;
         })(Utils = UI.Utils || (UI.Utils = {}));
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));

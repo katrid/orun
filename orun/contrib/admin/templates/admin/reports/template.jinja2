@@ -1,0 +1,38 @@
+<html class="katrid-app report">
+<head>
+  <link href="/static/admin/assets/css/fontawesome.css" rel="stylesheet">
+  <link href="/static/admin/katrid/style.css" rel="stylesheet">
+  <title>Document</title>
+</head>
+<body>
+
+<div class="report-title">
+  <table>
+    <tr>
+      <td class="report-title-logo">
+        {% if company and company.image %}
+        <img src="{{ company.image.path }}">
+        {% endif %}
+      </td>
+      <td>
+        <h1>{{ report_title }}</h1>
+        <h5 class="company-header"></h5>
+      </td>
+      <td class="text-right">
+        <h4 class="report-params"></h4>
+      </td>
+    </tr>
+  </table>
+</div>
+
+
+<div class="row document-content">
+</div>
+
+<script>
+  window.onafterprint = () => {
+    window.close();
+  }
+</script>
+</body>
+</html>

@@ -3,8 +3,11 @@ import datetime
 from jinja2 import Template
 
 from orun import api
+from orun.http import HttpRequest
 from orun.db import models, connection
 from orun.utils.translation import gettext_lazy as _
+from orun.utils.module_loading import import_string
+from .action import Action
 
 
 class Category(models.Model):
@@ -25,7 +28,7 @@ class Query(models.Model):
     published = models.BooleanField(default=True)
 
     class Meta:
-        name = 'ir.query'
+        name = 'ui.action.query'
 
     def get_by_natural_key(self, category, name):
         return self.objects.filter({'category': category, 'name': name}).one()
@@ -142,3 +145,45 @@ class Query(models.Model):
         new_query.parent = old_query
         new_query.sql = old_query.sql
         new_query.category = old_query.category
+
+
+class QueryAction(Action):
+    category = models.ForeignKey(Category)
+    query_type = models.ChoiceField(
+        {
+            'base': 'System Query',
+            'user': 'User Query',
+        }, default='user',
+    )
+    sql = models.TextField()
+    params = models.TextField()
+    context = models.TextField()
+    domain = models.TextField()
+
+    class Meta:
+        name = 'ui.action.query'
+
+    @api.method(request=True)
+    def get_metadata(self, request: HttpRequest):
+        cls = import_string(self.qualname)
+        return cls.get_metadata(request)
+
+    @api.classmethod
+    def list_all(cls):
+        return {
+            'data': [
+                {
+                    'id': q.pk,
+                    'category': str(q.category),
+                    'name': q.name,
+                    'params': q.params,
+                }
+                for q in cls.objects.all()
+            ]
+        }
+
+    @api.method(request=True)
+    def execute(self, request: HttpRequest, params=None):
+        cls = import_string(self.qualname)
+        inst = cls(request, params)
+        return inst.execute()
