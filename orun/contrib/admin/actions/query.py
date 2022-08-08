@@ -196,6 +196,10 @@ class QueryAction(Action):
                 res = grid.Grid.from_class(cls.List).get_metadata()
                 res['reportTemplate'] = templ
                 return res
+        elif cls.list:
+            res = cls.list.get_metadata()
+            res['reportTemplate'] = templ
+            return res
         else:
             return {
                 'reportTemplate': templ,
@@ -204,7 +208,6 @@ class QueryAction(Action):
     @classmethod
     def prepare(cls):
         if cls.template_name:
-            from orun.reports.engines import get_engine
             if cls.template_name.endswith('.pug'):
                 from orun.template.backends.pug import Parser
                 templ = loader.find_template(cls.template_name)
@@ -220,7 +223,10 @@ class QueryAction(Action):
                         sql = lst.find('sql')
                         if sql:
                             cls.sql = sql.text
-
+                    if not cls.group_by:
+                        group = lst.find('group')
+                        if group:
+                            cls.group_by = [group.attrib['field']]
 
     @classmethod
     def get_metadata(cls, request: HttpRequest):
