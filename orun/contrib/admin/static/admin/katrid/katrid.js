@@ -3518,6 +3518,8 @@ var Katrid;
                         else {
                             if (res.result) {
                                 let result = res.result;
+                                if (Array.isArray(result) && (result.length === 1))
+                                    result = result[0];
                                 let messages;
                                 if (result.messages)
                                     messages = result.messages;
