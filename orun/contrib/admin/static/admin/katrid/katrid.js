@@ -4378,6 +4378,8 @@ var Katrid;
                             //   this.action.changeUrl('id', res[0]);
                             this._pendingChanges = false;
                             this.state = DataSourceState.browsing;
+                            if (Array.isArray(res) && (res.length === 1))
+                                res = res[0];
                             if (autoRefresh)
                                 return this.refreshRecord(res);
                             else
@@ -10392,8 +10394,8 @@ var Katrid;
                             else
                                 input.value = '';
                         }
-                        vm.$emit('update:modelValue', applyValue(this.value));
                     }
+                    vm.$emit('update:modelValue', applyValue(this.value));
                 });
                 this.$format = $format;
                 let applyValue = (value) => {
