@@ -4096,33 +4096,8 @@ var Katrid;
                     id = this._recordId;
                 return this.get({ id });
             }
-            _validateForm(elForm, form, errorMsgs) {
-                let elfield;
-                for (let errorType in form.$error)
-                    if (errorType === 'required')
-                        for (let child of Array.from(form.$error[errorType])) {
-                            if (child.$name.startsWith('grid-row-form'))
-                                elfield = this._validateForm(elForm.find('#' + child.$name), child, errorMsgs);
-                            else {
-                                elfield = elForm.find(`.form-field[name="${child.$name}"]`);
-                                elfield.addClass('ng-touched');
-                                // let scope = angular.element(elForm).scope();
-                                // const field = scope.view.fields[child.$name];
-                                errorMsgs.push(`<span>${field.caption}</span><ul><li>${Katrid.i18n.gettext('This field cannot be empty.')}</li></ul>`);
-                            }
-                        }
-                    else
-                        console.log(form.$error[errorType]);
-                return elfield;
-            }
-            async validate(raiseError = true) {
+            async validate(record, raiseError = true) {
                 return true;
-                let ret;
-                if (this.vm?.validate)
-                    ret = await this.vm.validate();
-                if (!ret)
-                    throw Error('Validation error');
-                return ret;
             }
             indexOf(obj) {
                 if (this._records)
@@ -4361,14 +4336,15 @@ var Katrid;
                 return data;
             }
             async save(autoRefresh = true) {
-                let valid = await this.validate();
-                console.log('validated');
-                this.record.$flush();
+                let valid = this.record.$flush(true);
+                if (valid !== true) {
+                    valid.showError();
+                    throw Error('Validation error');
+                }
                 // Save pending children
                 for (let child of this.children)
                     if (child.changing) {
                         child.flush();
-                        console.log('apply changes');
                     }
                 if (await this.validate()) {
                     const data = this.record.$serialize();
@@ -5091,6 +5067,11 @@ var Katrid;
                     this.$str = obj.$str;
             }
             $flush(validate = false) {
+                if (validate) {
+                    let valid = this.$validate();
+                    if (!valid.valid)
+                        return valid;
+                }
                 if (!this.$pending)
                     this.$pending = {};
                 if (!this.$modified)
@@ -5112,6 +5093,10 @@ var Katrid;
                     if (!this.$parent.$childrenData.includes(this))
                         this.$parent.$childrenData.push(this);
                 }
+                return true;
+            }
+            $validate() {
+                return new Katrid.Data.Validation(this).validate();
             }
             $destroy() {
                 // remove created records from pending list
@@ -5182,6 +5167,37 @@ var katrid;
         sql.exec = exec;
     })(sql = katrid.sql || (katrid.sql = {}));
 })(katrid || (katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Data;
+    (function (Data) {
+        class Validation {
+            constructor(record) {
+                this.record = record;
+                this.valid = true;
+                this.model = record.constructor['$model'];
+            }
+            validate() {
+                this.validations = [];
+                for (let f of Object.values(this.model.fields)) {
+                    let msgs = f.validate(this.record[f.name]);
+                    if (msgs.length) {
+                        this.validations.push({ field: f, msgs });
+                    }
+                }
+                this.valid = this.validations.length === 0;
+                return this;
+            }
+            showError() {
+                let templ = '';
+                for (let v of this.validations)
+                    templ += `<ul><li>${v.field.caption}<ul>${v.msgs.map(msg => `<li>${msg}</li>`).join('')}</ul></li></ul>`;
+                Katrid.Forms.Dialogs.Alerts.error(templ);
+            }
+        }
+        Data.Validation = Validation;
+    })(Data = Katrid.Data || (Katrid.Data = {}));
+})(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Data;
@@ -7659,8 +7675,8 @@ ${Katrid.i18n.gettext('Delete')}
                 // flush nested children
                 for (let child of this.nestedViews)
                     child.$flush();
+                let res = await this.datasource.save();
                 this.setState(DataSourceState.browsing);
-                return this.datasource.save();
             }
             discard() {
                 this.setState(DataSourceState.browsing);
