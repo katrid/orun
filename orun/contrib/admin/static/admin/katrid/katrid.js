@@ -5897,6 +5897,9 @@ var Katrid;
                 this.tag = 'input';
                 this.decimalPlaces = 0;
             }
+            formSpanTemplate() {
+                return `{{ record.${this.name} || '${this.emptyText}' }}`;
+            }
             formControl(fieldEl) {
                 let el = super.formControl(fieldEl);
                 el.setAttribute('type', 'number');

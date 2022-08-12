@@ -120,7 +120,7 @@ class QueryAction(Action):
         if values is None:
             values = {}
         _sql = ''
-        # template evaluation
+        # macro/template evaluation
         if sql and '-- if ' in sql:
             sql = Template(sql, '--', '!--').render(values)
         if connection.vendor == 'mssql':
