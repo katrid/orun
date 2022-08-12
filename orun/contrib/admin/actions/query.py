@@ -3,7 +3,7 @@ import re
 import datetime
 import decimal
 
-from orun.conf import settings
+from jinja2 import Template
 from orun.db import connection
 from orun.db.models.fields import datatype_map
 from orun.http import HttpRequest
@@ -44,6 +44,8 @@ class QueryAction(Action):
                     self._values[f'{k}2'] = p['value2']
                 elif op == 'between':
                     self._values[f'{k}2'] = None
+                elif op == 'in' and 'value1' in p:
+                    self._values[k] = ''.join([str(s) if isinstance(s, (int, float)) or (isinstance(s, str) and s.isnumeric()) else "'" + str(s).replace("'", "''") + "'" for s in p.get('value1') if s is not None])
 
     @classmethod
     def update_info(cls):
@@ -118,6 +120,9 @@ class QueryAction(Action):
         if values is None:
             values = {}
         _sql = ''
+        # template evaluation
+        if sql and '-- if ' in sql:
+            sql = Template(sql, '--', '!--').render(values)
         if connection.vendor == 'mssql':
             vars.append('SET DATEFORMAT ymd')
             for k, v in self._values.items():
@@ -161,8 +166,9 @@ class QueryAction(Action):
         sql = self.sql
         if params:
             # apply query search params
-            sql = self._apply_search(sql, where, values)
-        rows, cur = self._prepare(sql)
+            # sql = self._apply_search(sql, where, values)
+            pass
+        rows, cur = self._prepare(sql, params)
         desc = cur.cursor.description
         if with_description:
             fields = [
@@ -241,7 +247,7 @@ class QueryAction(Action):
         }
 
     def execute(self, **kwargs):
-        data, fields = self.read(with_description=True)
+        data, fields = self.read(with_description=True, where=self._values)
         return {
             'data': data,
             'fields': fields,

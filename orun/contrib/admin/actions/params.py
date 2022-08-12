@@ -32,18 +32,19 @@ class Params:
 
 
 class Param:
-    def __init__(self, name=None, data_type=None, required=False, label=None, model=None):
+    def __init__(self, name=None, data_type=None, required=False, label=None, model=None, operation=None):
         self.name = name
         self.data_type = data_type
         self.required = required
         self.label: str = label
         self.model = model
+        self.operation = operation
 
     @classmethod
     def from_node(cls, node):
         res = cls(
             node.attrib['name'], data_type=node.attrib.get('type'), label=node.attrib.get('caption'),
-            model=node.attrib.get('model-choices'),
+            model=node.attrib.get('model-choices'), operation=node.attrib.get('operation'),
         )
         return res
 
@@ -67,4 +68,5 @@ class Param:
             'required': self.required,
             'label': self.label,
             'modelChoices': self.model,
+            'operation': self.operation,
         }

@@ -7617,7 +7617,6 @@ ${Katrid.i18n.gettext('Delete')}
                     recordIndex: this._recordIndex,
                     recordCount: this.recordCount,
                 };
-                console.debug('record', this._record);
                 this._applyDataDefinition(data);
                 return data;
             }
@@ -7648,7 +7647,7 @@ ${Katrid.i18n.gettext('Delete')}
                 this.setRecordId(this.record.id);
             }
             async setRecordId(value) {
-                let res = await this._search({ id: value });
+                await this._search({ id: value });
                 if (this.action && value) {
                     let params = this.action.params;
                     let newParams = {};
@@ -7675,7 +7674,7 @@ ${Katrid.i18n.gettext('Delete')}
                 // flush nested children
                 for (let child of this.nestedViews)
                     child.$flush();
-                let res = await this.datasource.save();
+                await this.datasource.save();
                 this.setState(DataSourceState.browsing);
             }
             discard() {
@@ -12027,6 +12026,7 @@ var Katrid;
                 this.static = this.info.param === 'static';
                 this.type = this.info.type || (this.field && this.field.type) || 'CharField';
                 this.defaultOperation = this.info.operation || Params.DefaultOperations[this.type];
+                console.log('params', this.info);
                 this.operation = this.defaultOperation;
                 // @operations = @info.operations or Params.TypeOperations[@type]
                 // this.operations = this.getOperations();
