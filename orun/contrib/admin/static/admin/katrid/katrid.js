@@ -12758,7 +12758,7 @@ var Katrid;
         // Represents a server query
         class Query extends ModelService {
             constructor(id) {
-                super('ui.action.query');
+                super('ui.action.report');
                 this.id = id;
             }
             static read(config) {

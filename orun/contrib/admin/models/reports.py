@@ -1,3 +1,4 @@
+from typing import Optional
 import json
 import os
 import uuid
@@ -5,6 +6,7 @@ from collections import defaultdict
 from jinja2 import Environment
 
 from orun import api
+from orun.http import HttpRequest
 from orun.apps import apps
 from orun.conf import settings
 from orun.db import models, connection
@@ -15,10 +17,21 @@ from orun.utils.module_loading import import_string
 from .action import Action
 
 
+class ReportCategory(models.Model):
+    name = models.CharField(128, translate=True)
+
+    class Meta:
+        name = 'ui.action.report.category'
+
+
 class ReportAction(Action):
-    report_type = models.CharField(32, null=False, verbose_name=_('Report Type'))
-    model = models.CharField(128)
+    category = models.ForeignKey(ReportCategory)
+    owner_type = models.ChoiceField({'base': 'System Report', 'user': 'User Report'}, default='user')
+    report_type = models.CharField(32, null=False, verbose_name=_('Report Type'), default='document')
+    model: Optional[str] = models.CharField(128)
     view = models.ForeignKey('ui.view')
+    sql: Optional[str] = models.TextField()
+    template: Optional[str] = models.TextField()
 
     class Meta:
         name = 'ui.action.report'
@@ -206,6 +219,31 @@ class ReportAction(Action):
                     'where': {'pk': context['active_id']},
                 }
         return cls.export_report(action_id, fmt, params)
+
+    @api.method(request=True)
+    def get_metadata(self, request: HttpRequest):
+        cls = import_string(self.qualname)
+        return cls.get_metadata(request)
+
+    @api.classmethod
+    def list_all(cls):
+        return {
+            'data': [
+                {
+                    'id': q.pk,
+                    'category': str(q.category),
+                    'name': q.name + '(User Report)' if q.owner_type == 'user' else q.name,
+                    # 'params': q.params,
+                }
+                for q in cls.objects.filter(report_type='grid')
+            ]
+        }
+
+    @api.method(request=True)
+    def execute(self, request: HttpRequest, params=None):
+        cls = import_string(self.qualname)
+        inst = cls(request, params)
+        return inst.execute()
 
 
 class UserReport(models.Model):
