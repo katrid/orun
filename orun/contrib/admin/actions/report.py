@@ -7,6 +7,7 @@ import decimal
 from jinja2 import Template
 from orun.db import connection
 from orun.db.models.fields import datatype_map
+from orun.core.exceptions import ObjectDoesNotExist
 from orun.http import HttpRequest
 from orun.apps import apps
 from orun.template import loader
@@ -67,9 +68,15 @@ class ReportAction(Action):
         if cls.model and not name:
             model = apps.models[cls.model]
             name = cls.name or model._meta.verbose_name_plural
+        cat = cls.category
+        if cat:
+            try:
+                cat = orun.contrib.admin.models.ReportCategory.objects.get(name=cat)
+            except ObjectDoesNotExist:
+                cat = orun.contrib.admin.models.ReportCategory.objects.create(name=cat)
         action_info = {
             'usage': cls.usage,
-            # 'category': cls.category,
+            'category': cat,
             'description': cls.description,
             'name': name,
             'model': cls.model,
@@ -254,6 +261,7 @@ class ReportAction(Action):
             'fields': cls.fields,
             'groupBy': cls.group_by,
             'columns': cls.columns,
+            'orientation': cls.orientation.value,
             'template': cls._get_template_info(request),
         }
 
