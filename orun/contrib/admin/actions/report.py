@@ -22,6 +22,8 @@ class Orientation(Enum):
 
 
 class ReportAction(Action):
+    owner_type = 'base'
+    creator = None
     datatype_map = datatype_map
     name: str = None
     title: str = None
