@@ -1,4 +1,4 @@
-from typing import Type, Dict
+from typing import Type, Dict, Optional
 
 from orun.db.models.fields import datatype_map
 from orun.db.models.base import ModelBase
@@ -32,13 +32,14 @@ class Params:
 
 
 class Param:
-    def __init__(self, name=None, data_type=None, required=False, label=None, model=None, operation=None):
+    def __init__(self, name=None, data_type=None, required=False, label: Optional[str]=None, model=None, operation=None):
         self.name = name
         self.data_type = data_type
         self.required = required
-        self.label: str = label
+        self.label: Optional[str] = label
         self.model = model
         self.operation = operation
+        self.options = {}
 
     @classmethod
     def from_node(cls, node):
@@ -46,6 +47,9 @@ class Param:
             node.attrib['name'], data_type=node.attrib.get('type'), label=node.attrib.get('caption'),
             model=node.attrib.get('model-choices'), operation=node.attrib.get('operation'),
         )
+        for opt in node:
+            if opt.tag == 'option':
+                res.options[opt.attrib.get('value')] = opt.attrib.text
         return res
 
     def __set_name__(self, owner, name):

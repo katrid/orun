@@ -1,10 +1,10 @@
-from typing import Type
+from typing import Type, Optional
 
 
 class Column:
     def __init__(
             self, *args, name=None, v_align=None, h_align=None, label: str | None = None,
-            total: str | None = None, visible=True,
+            total: str | None = None, visible=True, cols: int = None, width: int = None,
     ):
         self.name: str = name
         self.label = label
@@ -12,6 +12,8 @@ class Column:
         self.h_align = h_align
         self.visible = visible
         self.total = total
+        self.cols = cols
+        self.width = width
 
     @classmethod
     def from_node(cls, node):

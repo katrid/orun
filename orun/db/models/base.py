@@ -1956,7 +1956,11 @@ class Model(metaclass=ModelBase):
                     for obj in v
                 ]
             else:
-                new_item[f.name] = f.value_to_json(v)
+                v = f.value_to_json(v)
+                if f.required and v is None and f.has_default():
+                    # set default value to required field
+                    v = f.get_default()
+                new_item[f.name] = v
         return new_item
 
     def __iter__(self):

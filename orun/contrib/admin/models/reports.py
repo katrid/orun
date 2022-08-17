@@ -232,7 +232,7 @@ class ReportAction(Action):
                 {
                     'id': q.pk,
                     'category': str(q.category),
-                    'name': q.name + '(User Report)' if q.owner_type == 'user' else q.name,
+                    'name': q.name + ' (User Report)' if q.owner_type == 'user' else q.name,
                     # 'params': q.params,
                 }
                 for q in cls.objects.filter(report_type='grid')
