@@ -11,7 +11,7 @@ from orun.db import connection
 
 
 class Deserializer(base.Deserializer):
-    def deserialize(self):
+    def deserialize(self, update=False):
         """
         Deserialize a stream or string of CSV data.
         """
@@ -40,7 +40,7 @@ class Deserializer(base.Deserializer):
             # mandatory fields for csv deserializer
             i = 0
             try:
-                for i, obj in enumerate(python.Deserializer(reader, model=model, fields=cols)):
+                for i, obj in enumerate(python.Deserializer(reader, model=model, fields=cols, force=True if update else False)):
                     obj.save(using=self.database)
             except Exception as e:
                 print('Error at line:', i)
