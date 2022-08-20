@@ -153,11 +153,11 @@ def Deserializer(object_list, **options):
                 pk = False
 
         # Ignore if pk is present and object already exists
-        if not pk or (Model.objects.using(db).filter(pk=d['pk']).first() is None):
+        if not pk or (Model.objects.using(db).filter(pk=d['pk']).first() is None) or options['force']:
             obj = Model()
             if 'id' in vals:
                 obj.id = vals['id']
-            yield Model._from_json(obj, vals, using=db, force_insert=True)
+            yield Model._from_json(obj, vals, using=db, force_insert=False if options['force'] else True)
 
 
 def _get_model(model_identifier):

@@ -1,3 +1,4 @@
+import argparse
 import os
 import inspect
 from pathlib import Path
@@ -48,7 +49,11 @@ def load_fixture(schema, *filenames, **options):
             d = deserializer(Path(filename), addon=addon, format=fmt, filename=filename, **options)
 
             with transaction.atomic(options['database']):
-                d.deserialize()
+                print(options)
+                if options.get('update_existing') is None or not options['update_existing']:
+                    d.deserialize()
+                else:
+                    d.deserialize(update=True)
             if d.postpone:
                 for op in d.postpone:
                     op()
@@ -69,6 +74,11 @@ class Command(BaseCommand):
         parser.add_argument(
             '-l', '--file-list',
             help='Specify a file containing a list of fixture files.',
+        )
+        parser.add_argument(
+            '-u', '--update-existing', action=argparse.BooleanOptionalAction,
+            default=False,
+            help='Force the update of the corresponding database rows.'
         )
 
     def handle(self, schema, *filenames, **options):
