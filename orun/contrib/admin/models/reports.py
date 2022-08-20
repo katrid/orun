@@ -30,7 +30,7 @@ class ReportAction(Action):
     owner_type = models.ChoiceField({'base': 'System Report', 'user': 'User Report'}, default='user')
     report_type = models.ChoiceField(
         {
-            'query': 'Query',
+            'query': 'User Query',
             'grid': 'Grid',
             'document': 'Document',
             'spreadsheet': 'Spreadsheet',
