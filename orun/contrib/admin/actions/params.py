@@ -49,7 +49,7 @@ class Param:
         )
         for opt in node:
             if opt.tag == 'option':
-                res.options[opt.attrib.get('value')] = opt.attrib.text
+                res.options[opt.attrib.get('value')] = opt.text
         return res
 
     def __set_name__(self, owner, name):
@@ -73,4 +73,5 @@ class Param:
             'label': self.label,
             'modelChoices': self.model,
             'operation': self.operation,
+            'options': self.options,
         }

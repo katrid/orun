@@ -12071,10 +12071,11 @@ var Katrid;
                 this.static = this.info.param === 'static';
                 this.type = this.info.type || (this.field && this.field.type) || 'CharField';
                 this.defaultOperation = this.info.operation || Params.DefaultOperations[this.type];
-                console.log('params', this.info);
                 this.operation = this.defaultOperation;
                 // @operations = @info.operations or Params.TypeOperations[@type]
                 // this.operations = this.getOperations();
+                if (info.options)
+                    this.choices = info.options;
                 this.exclude = this.info.exclude;
                 this.id = ++_counter;
                 this.defaultValue = info.defaultValue;
