@@ -3110,12 +3110,19 @@ var Katrid;
                 const thead = table.createTHead();
                 const thr = thead.insertRow(0);
                 table.createTBody();
+                let fixed = false;
                 for (let f of this.columns) {
                     let th = document.createElement('th');
                     if (f.dataIndex > -1) {
                         let field = this.fieldList[f.dataIndex];
                         if (field.type)
                             th.className = field.type;
+                        if (f.width) {
+                            th.style.width = f.width + 'px';
+                            fixed = true;
+                        }
+                        if (f.cols)
+                            th.classList.add('col-' + f.cols);
                         if (!f.label)
                             f.label = field.caption;
                     }
@@ -3125,6 +3132,8 @@ var Katrid;
                     thr.append(th);
                 }
                 this.element.append(table);
+                if (fixed)
+                    table.classList.add('table-fixed');
                 table.addEventListener('contextmenu', evt => this.contextMenu(evt));
                 // this.searchView.render();
             }
@@ -3134,9 +3143,15 @@ var Katrid;
                     case 'sum':
                         values.forEach(obj => val += parseFloat(obj[col.dataIndex]) || 0);
                         return val;
+                    case 'min':
+                        values.forEach(obj => val = Math.min(parseFloat(obj[col.dataIndex]) || 0, val));
+                        return val;
+                    case 'max':
+                        values.forEach(obj => val = Math.max(parseFloat(obj[col.dataIndex]) || 0, val));
+                        return val;
                     case 'avg':
                         values.forEach(obj => val += parseFloat(obj[col.dataIndex]) || 0);
-                        return val;
+                        return val / values.length;
                 }
             }
             addGroupHeader(grouper, record, data) {
@@ -3203,14 +3218,18 @@ var Katrid;
                             let field = this.fieldList[column.dataIndex];
                             let col = row[column.dataIndex];
                             let td = document.createElement('td');
-                            if (field.type === 'DecimalField')
-                                col = Katrid.intl.number({ minimumFractionDigits: 2 }).format(col);
-                            else if (_.isNumber(col))
-                                col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
-                            else if (field.type === 'DateField')
-                                col = moment(col).format('DD/MM/YYYY');
-                            else if (field.type === 'DateTimeField')
-                                col = moment(col).format('DD/MM/YYYY HH:mm');
+                            if (col == null)
+                                col = '--';
+                            else {
+                                if (field.type === 'DecimalField')
+                                    col = Katrid.intl.number({ minimumFractionDigits: 2 }).format(col);
+                                else if (_.isNumber(col))
+                                    col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
+                                else if (field.type === 'DateField')
+                                    col = moment(col).format('DD/MM/YYYY');
+                                else if (field.type === 'DateTimeField')
+                                    col = moment(col).format('DD/MM/YYYY HH:mm');
+                            }
                             if (field.type)
                                 td.className = field.type;
                             td.innerText = col;
@@ -3249,7 +3268,8 @@ var Katrid;
                 this.element.addEventListener('scroll', event => this.tableScroll(event));
                 this.loadData(this.data);
                 this.more(SCROLL_PAGE_SIZE * 2);
-                while ((this.element.scrollHeight < this.element.clientHeight) && this.more(SCROLL_PAGE_SIZE)) { }
+                while ((this.element.scrollHeight < this.element.clientHeight) && this.more(SCROLL_PAGE_SIZE)) {
+                }
                 if (this.searchViewVisible) {
                     let searchView = new Katrid.Forms.SearchView({ fields: this.fields });
                     searchView.renderTo(this.container);
@@ -3265,7 +3285,7 @@ var Katrid;
                 evt.preventDefault();
                 // create context menu
                 let menu = new Katrid.Forms.ContextMenu();
-                menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', () => this.copyToClipboard());
+                menu.add('<i class="fa fa-fw fa-copy"></i> ' + Katrid.i18n.gettext('Copy'), () => this.copyToClipboard());
                 // menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => this.filterByFieldContent(td, rec));
                 // menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteRow());
                 // menu.add('Arquivar', this.copyClick);
@@ -3274,15 +3294,25 @@ var Katrid;
             copyToClipboard() {
                 navigator.clipboard.writeText(Katrid.UI.Utils.toTsv(this.data));
             }
+            get orientation() {
+                if (this.metadata?.orientation == 2)
+                    return 'landscape';
+                return 'portrait';
+            }
             async print() {
-                while ((this._loadedRows < this.data.length) && this.more(1000)) { }
+                while ((this._loadedRows < this.data.length) && this.more(1000)) {
+                }
                 const wnd = window.open('');
                 wnd.addEventListener('afterprint', () => {
                     wnd.close();
                 });
                 if (this.reportTemplate)
                     wnd.document.write(this.reportTemplate);
+                const style = document.createElement('style');
+                style.innerHTML = `@page { size: A4 ${this.orientation} }`;
+                wnd.document.head.append(style);
                 wnd.document.querySelector('.document-content').innerHTML = this.table.outerHTML;
+                wnd.document.body.classList.add(this.orientation);
                 wnd.document.querySelector('h1').innerText = this.metadata.name;
                 wnd.document.write('<script>print()</script>');
                 wnd.document.close();
@@ -3301,6 +3331,8 @@ var Katrid;
                 this.visible = info.visible ? info.visible != null : true;
                 this.dataIndex = info.dataIndex;
                 this.total = info.total;
+                this.width = info.width;
+                this.cols = info.cols;
             }
         }
     })(BI = Katrid.BI || (Katrid.BI = {}));
@@ -3312,7 +3344,7 @@ var Katrid;
     (function (BI) {
         class QueryViewer extends Katrid.WebComponent {
             create() {
-                this.innerHTML = `<div class="col-12"><h5>Visualizador de Consultas</h5><div class="toolbar"><select id="select-query" class="form-select"><option>SELECIONE A CONSULTA</option></select></div></div><div class="query-view row"></div>`;
+                this.innerHTML = `<div class="col-12"><h5>Query Viewer</h5><div class="toolbar"><select id="select-query" class="form-select"><option>SELECIONE A CONSULTA</option></select></div></div><div class="query-view row"></div>`;
                 this.load();
             }
             async load() {
@@ -6672,6 +6704,16 @@ var Katrid;
                 return modal;
             }
             Dialogs.createModal = createModal;
+            function createDialog(title, content, buttons) {
+                const dlg = createModal(title, content, buttons);
+                const modal = new bootstrap.Modal(dlg);
+                dlg.addEventListener('hidden.bs.modal', evt => {
+                    dlg.remove();
+                    modal.dispose();
+                });
+                return modal;
+            }
+            Dialogs.createDialog = createDialog;
             function getButtonFromName(buttonName) {
                 let button = `<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">`;
                 switch (buttonName) {
@@ -13645,25 +13687,35 @@ var Katrid;
         ui.Calendar = Calendar;
     })(ui = Katrid.ui || (Katrid.ui = {}));
 })(Katrid || (Katrid = {}));
-Katrid.filter('date', function (value, fmt = 'MM/DD/YYYY') {
-    if (value) {
-        if (fmt == 'shortDate')
-            fmt = Katrid.i18n.formats.shortDateFormat;
-        else if (fmt == 'short')
-            fmt = Katrid.i18n.formats.shortDateTimeFormat;
-        return moment(value).format(fmt);
-    }
-});
+var katrid;
+(function (katrid) {
+    var filters;
+    (function (filters) {
+        function date(value, fmt = 'MM/DD/YYYY') {
+            if (value) {
+                if (fmt == 'shortDate')
+                    fmt = Katrid.i18n.formats.shortDateFormat;
+                else if (fmt == 'short')
+                    fmt = Katrid.i18n.formats.shortDateTimeFormat;
+                return moment(value).format(fmt);
+            }
+        }
+        filters.date = date;
+        function dateTimeHumanize(value) {
+            if (value) {
+                return moment(value).format('ddd, LLL') + ' (' + moment(value).fromNow() + ')';
+            }
+        }
+        filters.dateTimeHumanize = dateTimeHumanize;
+    })(filters = katrid.filters || (katrid.filters = {}));
+})(katrid || (katrid = {}));
+Katrid.filter('date', katrid.filters.date);
 Katrid.filter('dateHumanize', function (value) {
     if (value) {
         return moment(value).format('ddd, LL') + ' (' + moment(value).fromNow() + ')';
     }
 });
-Katrid.filter('dateTimeHumanize', function (value) {
-    if (value) {
-        return moment(value).format('ddd, LLL') + ' (' + moment(value).fromNow() + ')';
-    }
-});
+Katrid.filter('dateTimeHumanize', katrid.filters.dateTimeHumanize);
 Katrid.filter('number', function (value, digits) {
     if (value != null)
         return Katrid.intl.number(digits).format(value);

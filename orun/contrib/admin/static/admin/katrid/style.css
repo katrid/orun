@@ -13000,9 +13000,6 @@ table-field .table tbody tr {
   text-align: center;
   width: 1px;
 }
-.katrid-app .table td, .katrid-app .table th {
-  white-space: nowrap;
-}
 .katrid-app .table .group-header {
   cursor: pointer;
 }
@@ -13939,8 +13936,18 @@ pwa-menu .btn {
     margin: 5mm;
   }
 }
+.table-fixed {
+  table-layout: fixed;
+}
+
+.table th.DecimalField, .table th.DateTimeField {
+  width: 120px;
+}
+.table th.DateField, .table th.IntegerField {
+  width: 100px;
+}
+
 .report {
-  font-family: Arial, Sans-Serif;
   font-size: 8pt;
 }
 .report body {

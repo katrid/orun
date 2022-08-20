@@ -30,6 +30,9 @@ msgstr "Remover"
 msgid "Delete selection"
 msgstr "Excluir seleção"
 
+msgid "Copy"
+msgstr "Copiar"
+
 msgid "Edit"
 msgstr "Editar"
 

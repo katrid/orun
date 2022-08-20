@@ -17,7 +17,6 @@ class Column:
 
     @classmethod
     def from_node(cls, node):
-        print(node.attrib)
         col = cls(name=node.attrib['name'], label=node.attrib.get('caption'), total=node.attrib.get('total'))
         return col
 
@@ -34,6 +33,8 @@ class Column:
             'label': self.label,
             'visible': self.visible,
             'total': self.total,
+            'width': self.width,
+            'cols': self.cols,
         }
 
 

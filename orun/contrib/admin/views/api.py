@@ -30,7 +30,9 @@ def rpc(request, service, meth, params):
                 kwargs['request'] = request
             r = meth(*args, **kwargs)
 
-            if isinstance(r, HttpResponse):
+            if isinstance(r, list) and r and isinstance(r[0], HttpResponse):
+                return r[0]
+            elif isinstance(r, HttpResponse):
                 return r
 
             if isinstance(r, QuerySet):
