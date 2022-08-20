@@ -1,4 +1,5 @@
 from typing import Optional
+import warnings
 import json
 import os
 import uuid
@@ -27,7 +28,21 @@ class ReportCategory(models.Model):
 class ReportAction(Action):
     category = models.ForeignKey(ReportCategory)
     owner_type = models.ChoiceField({'base': 'System Report', 'user': 'User Report'}, default='user')
-    report_type = models.CharField(32, null=False, verbose_name=_('Report Type'), default='document')
+    report_type = models.ChoiceField(
+        {
+            'query': 'Query',
+            'grid': 'Grid',
+            'document': 'Document',
+            'spreadsheet': 'Spreadsheet',
+            'md': 'Markdown',
+            'rst': 'reStructuredText',
+            'js': 'Javascript',
+            'paginated': 'Paginated (deprecated)',
+            'banded': 'Banded',
+            'office': 'Office Template',
+            'jinja2': 'Jinja2 Template',
+        }, null=False, verbose_name=_('Report Type'), default='query'
+    )
     model: Optional[str] = models.CharField(128)
     view = models.ForeignKey('ui.view')
     sql: Optional[str] = models.TextField()
@@ -44,39 +59,46 @@ class ReportAction(Action):
             model = apps[self.model]
 
         rep_type = None
+        xml = None
         template_name: str = self.view and self.view.template_name
         if not template_name and self.qualname:
-            rep_class = import_string(self.qualname)
-            if rep_class:
-                template_name = rep_class.template_name
+            try:
+                rep_class = import_string(self.qualname)
+                if rep_class:
+                    template_name = rep_class.template_name
+            except:
+                warnings.warn('Report class not found ' + str(self.pk))
         if template_name:
             rep_type = template_name.rsplit('.', 1)[1]
-            engine = get_engine(REPORT_ENGINES[rep_type])
-            if rep_type == 'jinja2':
-                templ = loader.get_template(self.view.template_name)
-                params = templ.blocks.get('params')
-                if params:
-                    ctx = templ.new_context({})
-                    doc = ''.join(params(ctx))
-                    if not model:
-                        xml = etree.fromstring(doc)
-                        model_name = xml.attrib.get('model')
-                        if model_name:
-                            model = apps[model_name]
-                            data['fields'] = model.get_fields_info(xml)
-                    data['content'] = doc
+            if rep_type in REPORT_ENGINES:
+                engine = get_engine(REPORT_ENGINES[rep_type])
+                if rep_type == 'jinja2':
+                    templ = loader.get_template(self.view.template_name)
+                    params = templ.blocks.get('params')
+                    if params:
+                        ctx = templ.new_context({})
+                        doc = ''.join(params(ctx))
+                        if not model:
+                            xml = etree.fromstring(doc)
+                            model_name = xml.attrib.get('model')
+                            if model_name:
+                                model = apps[model_name]
+                                data['fields'] = model.get_fields_info(xml)
+                        data['content'] = doc
             elif rep_type == 'pug':
                 templ = loader.find_template(self.view.template_name)
-                with open(templ, 'r', encoding='utf-8') as f:
-                    params = engine.extract_params(f.read())
-                if params is not None:
-                    print(params.tostring())
-                    data['content'] = params.tostring()
-            else:
+                if templ:
+                    with open(templ, 'r', encoding='utf-8') as f:
+                        params = engine.extract_params(f.read())
+                    if params is not None:
+                        print(params.tostring())
+                        data['content'] = params.tostring()
+            elif xml is not None:
                 if rep_type == 'xml' or rep_type == 'json':
                     templ = loader.find_template(template_name)
-                    with open(templ, 'r', encoding='utf-8') as f:
-                        xml = f.read()
+                    if templ:
+                        with open(templ, 'r', encoding='utf-8') as f:
+                            xml = f.read()
                 else:
                     xml = self.view._get_content({})
                 if isinstance(xml, str):

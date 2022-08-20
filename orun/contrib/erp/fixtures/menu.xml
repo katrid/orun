@@ -11,6 +11,7 @@
         <menuitem id="menu.settings.ui.action.window" name="Window Actions" action="action.view.ui.action.window"/>
         <menuitem id="menu.settings.ui.action.view" name="View Actions" action="action.view.ui.action.view"/>
         <menuitem id="menu.settings.ui.action.client" name="Client Actions" action="action.view.ui.action.client"/>
+        <menuitem id="menu.settings.ui.action.report" name="Reports" action="action.view.ui.action.report"/>
       </menuitem>
       <menuitem id="menu.settings.ui.menu" name="Menu" action="action.view.ui.menu"/>
       <menuitem id="menu.settings.ui.view" name="Views" action="action.view.ui.view"/>
@@ -19,9 +20,8 @@
       <menuitem id="menu.settings.ir.models" name="Models" action="action.view.ir.model"/>
       <menuitem id="menu.settings.ir.fields" name="Fields" action="action.view.ir.field"/>
     </menuitem>
-    <menuitem id="menu.settings.queries" name="Queries">
-      <menuitem id="menu.settings.ir.query" name="User Queries" action="action.view.ir.query"/>
-      <menuitem id="menu.settings.ir.query.category" name="User Query Categories" action="action.view.ir.query.category"/>
-    </menuitem>
   </menuitem>
+  <delete id="menu.settings.ir.query"/>
+  <delete id="menu.settings.ir.query.category"/>
+  <delete id="menu.settings.queries"/>
 </data>
