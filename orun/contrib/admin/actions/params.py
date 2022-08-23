@@ -32,14 +32,14 @@ class Params:
 
 
 class Param:
-    def __init__(self, name=None, data_type=None, required=False, label: Optional[str]=None, model=None, operation=None):
+    def __init__(self, name=None, data_type=None, required=False, label: Optional[str]=None, model=None, operation=None, options: dict=None):
         self.name = name
         self.data_type = data_type
         self.required = required
         self.label: Optional[str] = label
         self.model = model
         self.operation = operation
-        self.options = {}
+        self.options = options
 
     @classmethod
     def from_node(cls, node):
