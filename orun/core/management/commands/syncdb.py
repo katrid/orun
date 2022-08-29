@@ -150,6 +150,8 @@ class Command(BaseCommand):
             self.stdout.write("  Creating tables...\n")
         post_model_list = {}
         with connection.schema_editor() as editor:
+            # if 'orun_table' not in tables:
+            #     editor.create_metadata_table()
             for app_name in manifest:
                 app = apps.app_configs[app_name]
                 if connection.features.schemas_allowed and app.db_schema and app.create_schema and app.db_schema not in schemas:
