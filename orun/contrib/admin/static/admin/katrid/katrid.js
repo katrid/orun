@@ -7692,16 +7692,19 @@ ${Katrid.i18n.gettext('Delete')}
                 this.setRecordId(this.record.id);
             }
             async setRecordId(value) {
-                await this._search({ id: value });
-                if (this.action && value) {
-                    let params = this.action.params;
-                    let newParams = {};
-                    Object.assign(newParams, params);
-                    newParams.id = value;
-                    let url = new URLSearchParams(newParams);
-                    let newUrl = '#/app/?' + url.toString();
-                    window.history.pushState('', '', newUrl);
-                }
+                setTimeout(() => {
+                    this._search({ id: value });
+                    if (this.action && value) {
+                        let params = this.action.params;
+                        let newParams = {};
+                        Object.assign(newParams, params);
+                        newParams.id = value;
+                        let url = new URLSearchParams(newParams);
+                        let newUrl = '#/app/?' + url.toString();
+                        setTimeout(() => this.refresh(), 1000);
+                        window.history.pushState('', '', newUrl);
+                    }
+                }, 100);
             }
             edit() {
                 this.setState(DataSourceState.editing);
