@@ -85,14 +85,14 @@ class ReportAction(Action):
                                 model = apps[model_name]
                                 data['fields'] = model.get_fields_info(xml)
                         data['content'] = doc
-            elif rep_type == 'pug':
-                templ = loader.find_template(self.view.template_name)
-                if templ:
-                    with open(templ, 'r', encoding='utf-8') as f:
-                        params = engine.extract_params(f.read())
-                    if params is not None:
-                        print(params.tostring())
-                        data['content'] = params.tostring()
+                elif rep_type == 'pug':
+                    templ = loader.find_template(self.view.template_name)
+                    if templ:
+                        with open(templ, 'r', encoding='utf-8') as f:
+                            params = engine.extract_params(f.read())
+                        if params is not None:
+                            print(params.tostring())
+                            data['content'] = params.tostring()
             elif xml is not None:
                 if rep_type == 'xml' or rep_type == 'json':
                     templ = loader.find_template(template_name)
