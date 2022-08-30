@@ -408,8 +408,8 @@ class BaseDatabaseSchemaEditor:
     def alter_db_table(self, model, old_db_table, new_db_table):
         """Rename the table a model points to."""
         if (old_db_table == new_db_table or
-            (self.connection.features.ignores_table_name_case and
-                old_db_table.lower() == new_db_table.lower())):
+                (self.connection.features.ignores_table_name_case and
+                 old_db_table.lower() == new_db_table.lower())):
             return
         self.execute(self.sql_rename_table % {
             "old_table": self.quote_name(old_db_table),
@@ -581,10 +581,10 @@ class BaseDatabaseSchemaEditor:
         # Drop incoming FK constraints if the field is a primary key or unique,
         # which might be a to_field target, and things are going to change.
         drop_foreign_keys = (
-            (
-                (old_field.primary_key and new_field.primary_key) or
-                (old_field.unique and new_field.unique)
-            ) and old_type != new_type
+                (
+                        (old_field.primary_key and new_field.primary_key) or
+                        (old_field.unique and new_field.unique)
+                ) and old_type != new_type
         )
         if drop_foreign_keys:
             # '_meta.related_field' also contains M2M reverse fields, these
@@ -660,11 +660,11 @@ class BaseDatabaseSchemaEditor:
         old_default = self.effective_default(old_field)
         new_default = self.effective_default(new_field)
         needs_database_default = (
-            old_field.null and
-            not new_field.null and
-            old_default != new_default and
-            new_default is not None and
-            not self.skip_default(new_field)
+                old_field.null and
+                not new_field.null and
+                old_default != new_default and
+                new_default is not None and
+                not self.skip_default(new_field)
         )
         if needs_database_default:
             actions.append(self._alter_column_default_sql(model, old_field, new_field))
@@ -675,8 +675,8 @@ class BaseDatabaseSchemaEditor:
                 null_actions.append(fragment)
         # Only if we have a default and there is a change from NULL to NOT NULL
         four_way_default_alteration = (
-            new_field.has_default() and
-            (old_field.null and not new_field.null)
+                new_field.has_default() and
+                (old_field.null and not new_field.null)
         )
         if actions or null_actions:
             if not four_way_default_alteration:
@@ -1026,15 +1026,14 @@ class BaseDatabaseSchemaEditor:
 
     def _unique_should_be_added(self, old_field, new_field):
         return (not old_field.unique and new_field.unique) or (
-            old_field.primary_key and not new_field.primary_key and new_field.unique
+                old_field.primary_key and not new_field.primary_key and new_field.unique
         )
 
-    def _rename_field_sql(self, table, old_field, new_field, new_type):
+    def _rename_field_sql(self, table, old_field: str, new_field: str):
         return self.sql_rename_column % {
             "table": self.quote_name(table),
-            "old_column": self.quote_name(old_field.column),
-            "new_column": self.quote_name(new_field.column),
-            "type": new_type,
+            "old_column": self.quote_name(old_field),
+            "new_column": self.quote_name(new_field),
         }
 
     def _create_fk_sql(self, model, field, suffix):
@@ -1068,12 +1067,12 @@ class BaseDatabaseSchemaEditor:
         return self._delete_constraint_sql(self.sql_delete_fk, model, name)
 
     def _unique_sql(
-        self, model, fields, name, condition=None, deferrable=None,
-        include=None, opclasses=None, expressions=None,
+            self, model, fields, name, condition=None, deferrable=None,
+            include=None, opclasses=None, expressions=None,
     ):
         if (
-            deferrable and
-            not self.connection.features.supports_deferrable_unique_constraints
+                deferrable and
+                not self.connection.features.supports_deferrable_unique_constraints
         ):
             return None
         if condition or include or opclasses or expressions:
@@ -1101,17 +1100,17 @@ class BaseDatabaseSchemaEditor:
         }
 
     def _create_unique_sql(
-        self, model, fields, name=None, condition=None, deferrable=None,
-        include=None, opclasses=None, expressions=None,
+            self, model, fields, name=None, condition=None, deferrable=None,
+            include=None, opclasses=None, expressions=None,
     ):
         if (
-            (
-                deferrable and
-                not self.connection.features.supports_deferrable_unique_constraints
-            ) or
-            (condition and not self.connection.features.supports_partial_indexes) or
-            (include and not self.connection.features.supports_covering_indexes) or
-            (expressions and not self.connection.features.supports_expression_indexes)
+                (
+                        deferrable and
+                        not self.connection.features.supports_deferrable_unique_constraints
+                ) or
+                (condition and not self.connection.features.supports_partial_indexes) or
+                (include and not self.connection.features.supports_covering_indexes) or
+                (expressions and not self.connection.features.supports_expression_indexes)
         ):
             return None
 
@@ -1259,7 +1258,8 @@ class BaseDatabaseSchemaEditor:
 
     def sync_table_structure(self, model):
         cursor = self.connection.cursor()
-        fields = self.connection.introspection.get_table_description(cursor, model._meta.db_schema, model._meta.tablename)
+        fields = self.connection.introspection.get_table_description(cursor, model._meta.db_schema,
+                                                                     model._meta.tablename)
 
         # compare existing fields
         existing_fields = []
@@ -1325,7 +1325,8 @@ class BaseDatabaseSchemaEditor:
                 # change data type
                 yes = self.yes_to_all
                 if not yes:
-                    answer = input(f'Do you confirm the modification of field {field.name} at model {field.model._meta.name} from {field_type} to {internal_type}? [y/N]')
+                    answer = input(
+                        f'Do you confirm the modification of field {field.name} at model {field.model._meta.name} from {field_type} to {internal_type}? [y/N]')
                     if answer == 'Y':
                         yes = self.yes_to_all = True
                 if yes:
@@ -1341,7 +1342,8 @@ class BaseDatabaseSchemaEditor:
                     # increase field size
                     self.change_field_size(field)
                     print('Resize char field', field)
-                elif isinstance(field, DecimalField) and (field.decimal_places != field_info.scale or field.max_digits != field_info.display_size):
+                elif isinstance(field, DecimalField) and (
+                        field.decimal_places != field_info.scale or field.max_digits != field_info.display_size):
                     self.change_field_size(field)
             elif field_info.null_ok != field.null and field.null:
                 # drop not null constraint
@@ -1375,14 +1377,17 @@ class BaseDatabaseSchemaEditor:
         self.execute(sql)
 
     def sync_model(self, model: Model):
-        from orun.apps import apps
-        from orun.db import models
-        print('sync model', model._meta.name)
-        try:
-            content_type = apps['content.type'].objects.get_by_natural_key(model._meta.name)
-        except models.ObjectDoesNotExist:
-            print('Content Type %s does not exists' % model._meta.name)
-            return
+        with self.connection.cursor() as cursor:
+            fields = {f.name: f for f in
+                      self.connection.introspection.get_table_description(cursor, model._meta.db_schema,
+                                                                          model._meta.tablename)}
+
+        for f in model._meta.local_concrete_fields:
+            if f.column in fields:
+                self.sync_column(fields[f.column], f)
+            else:
+                self.add_column(f)
+        return
 
         def create_field(field: Field, field_info: FieldInfo):
             # Check if field already exists on database
@@ -1420,7 +1425,9 @@ class BaseDatabaseSchemaEditor:
                 if field.name not in old_fields:
                     if not fields:
                         with self.connection.cursor() as cursor:
-                            fields = {f.name: f for f in self.connection.introspection.get_table_description(cursor, model._meta.db_schema, model._meta.tablename)}
+                            fields = {f.name: f for f in
+                                      self.connection.introspection.get_table_description(cursor, model._meta.db_schema,
+                                                                                          model._meta.tablename)}
                     # add new field
                     create_field(field, fields.get(field.column))
                 elif field.column:
@@ -1428,77 +1435,92 @@ class BaseDatabaseSchemaEditor:
                     self.sync_column(field, old_fields[field.name])
 
             return
-            # sync db constraint
-            constraints = {c.name: c for c in apps['content.constraint'].objects.filter(content_type__name=model._meta.name)}
-            for new_const in model._meta.constraints:
-                if new_const.name in constraints:
-                    # compare the constraint
-                    pass
-                else:
-                    print('Create new constraint', new_const.name)
 
-            # sync db indexes
-            indexes = {c.name: c for c in apps['content.index'].objects.filter(content_type__name=model._meta.name)}
-            for new_index in model._meta.indexes:
-                if new_index.name in indexes:
-                    # compare the constraint
-                    pass
-                else:
-                    print('Create new index', new_index.name)
-                    new_index.create_sql(model, self)
-                    # register the new index
-                    content_type.register_index(new_index)
-
-    def sync_column(self, new_field: Field, old_field):
+    def sync_column(self, old_field: FieldInfo, new_field: Field):
         old_style = {
-            'int': 'IntegerField',
-            'bigint': 'BigIntegerField',
-            'str': 'CharField',
-            'bytes': 'BinaryField',
-            'text': 'TextField',
-            'date': 'DateField',
-            'datetime': 'DateTimeField',
-            'time': 'TimeField',
-            'bool': 'BooleanField',
+            'BigAutoField': 'BigIntegerField',
+            'AutoField': 'AutoField',
+            'PositiveSmallIntegerField': 'SmallIntegerField',
+            'PositiveIntegerField': 'IntegerField',
         }
-        new_type = new_field.get_data_type()
-        old_type = old_field.data_type
-        if new_type != old_style.get(old_type, old_type):
-            print('Field %s type must be modified' % new_field.name, new_type, old_type, old_style.get(old_type, old_type))
-        elif new_field.max_length != old_field.max_length:
+        if new_field.many_to_one or new_field.one_to_one:
+            target_field = new_field.target_field
+            while target_field.one_to_one and not target_field.many_to_one:
+                target_field = target_field.target_field
+            new_type = target_field.get_internal_type()
+        else:
+            new_type = new_field.get_internal_type()
+        old_type = self.connection.introspection.data_types_reverse[old_field.type_code]
+        if old_style.get(new_type, new_type) != old_type and not (new_type == 'TextField' and old_type == 'CharField'):
+            print(f'Change field "{old_field.name}" from type {old_type} to {new_type}')
+            self.alter_field_type(new_field, old_field)
+        elif new_field.max_length and old_field.internal_size != new_field.max_length:
             pass
-        elif isinstance(new_field, DecimalField):
-            if new_field.max_digits != old_field.max_digits or new_field.decimal_places != old_field.decimal_places:
-                print('DecimalField %s type must be modified (%s, %s)' % (new_field.name, new_field.max_digits, old_field.max_length), new_type, old_type)
+        elif new_type == 'DecimalField':
+            # check decimal field
+            if old_field.precision != new_field.max_digits or old_field.scale != new_field.decimal_places:
+                # print('DecimalField %s type must be modified (%s, %s)' % (old_field.name, old_field.precision, new_field.max_digits), new_type, old_type)
                 # TODO bug fix postgresql view recreation
-                print(
-                    self.sql_alter_column % {
-                        'table': new_field.model._meta.db_table,
-                        'changes': self.sql_alter_column_type % {'column': self.quote_name(new_field.column), 'type': new_field.db_type(self.connection)}
+                if False:
+                    print(
+                        self.sql_alter_column % {
+                            'table': new_field.model._meta.db_table,
+                            'changes': self.sql_alter_column_type % {'column': self.quote_name(new_field.name),
+                                                                     'type': new_field.db_type(self.connection)}
+                        }
+                    )
+        if (old_field.default is not None or new_field.db_default is not NOT_PROVIDED) and not new_field.primary_key:
+            if new_field.db_default is NOT_PROVIDED and old_field.default is not None:
+                # drop default
+                self.alter_column_default(new_field, old_field)
+            elif not self.compare_default(new_field.db_default, old_field.default):
+                # set new default
+                try:
+                    self.alter_column_default(new_field, old_field)
+                except Exception as e:
+                    print(e)
+
+    def compare_default(self, new_default, old_default):
+        if old_default is None and new_default is not NOT_PROVIDED:
+            return False
+        if new_default is True and old_default not in ['true', '1', 1, True, '((1))']:
+            return False
+        if new_default is False and old_default not in ['false', '0', 0, False, '((0))']:
+            return False
+        return True
+
+    def alter_field_type(self, new_field, old_field):
+        # rename the old field
+        new_name = f'__old_{new_field.column}_1'
+        print(f'Rename {new_field.model._meta.name}->"{old_field.name}" to "{new_name}"; Create new field "{new_field.name}"')
+        self.execute(self._rename_field_sql(new_field.model._meta.db_table, old_field.name, new_name))
+        self.add_column(new_field)
+        # try to copy the old col value to new value
+        try:
+            self.execute(f'UPDATE {new_field.model._meta.db_table} SET {self.quote_name(old_field.name)} = {self.quote_name(new_name)}')
+        except Exception as e:
+            print(e)
+        else:
+            print(f'Data copied from "{new_field.column}" to "{old_field.name}"!')
+
+    def alter_column_default(self, new_field, old_field):
+        if new_field.db_default is NOT_PROVIDED:
+            self.execute(
+                self.sql_alter_column % {
+                    'table': new_field.model._meta.db_table,
+                    'changes': self.sql_alter_column_no_default % {'column': self.quote_name(old_field.name)}
+                }
+            )
+        else:
+            self.execute(
+                self.sql_alter_column % {
+                    'table': new_field.model._meta.db_table,
+                    'changes': self.sql_alter_column_default % {
+                        'column': self.quote_name(old_field.name),
+                        'default': self.prepare_default(new_field.db_default),
                     }
-                )
-        if new_type != old_type:
-            old_field.update(data_type=new_type)
-        if new_field.db_default != old_field.db_default and not new_field.primary_key:
-            if new_field.db_default is NOT_PROVIDED and old_field.db_default is None:
-                return
-            if new_field.db_default is NOT_PROVIDED or new_field.db_default is None:
-                self.execute(
-                    self.sql_alter_column % {
-                        'table': new_field.model._meta.db_table,
-                        'changes': self.sql_alter_column_no_default % {'column': self.quote_name(new_field.column)}
-                    }
-                )
-                old_field.update(db_default=None)
-            elif str(new_field.db_default) != old_field.db_default:
-                print('db default changed', new_field.model._meta.name, new_field.column, new_field.db_default, old_field.db_default)
-                self.execute(
-                    self.sql_alter_column % {
-                        'table': new_field.model._meta.db_table,
-                        'changes': self.sql_alter_column_default % {'column': self.quote_name(new_field.column), 'default': self.effective_default(new_field)}
-                    }
-                )
-                old_field.update(db_default=new_field.db_default)
+                }
+            )
 
     def sync_model_ddl(self, model: Model):
         """Synchronize DDL model objects"""
