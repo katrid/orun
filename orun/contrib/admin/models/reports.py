@@ -93,39 +93,39 @@ class ReportAction(Action):
                         if params is not None:
                             print(params.tostring())
                             data['content'] = params.tostring()
-            elif xml is not None:
-                if rep_type == 'xml' or rep_type == 'json':
-                    templ = loader.find_template(template_name)
-                    if templ:
-                        with open(templ, 'r', encoding='utf-8') as f:
-                            xml = f.read()
-                else:
-                    xml = self.view._get_content({})
-                if isinstance(xml, str):
-                    if rep_type == 'json':
-                        xml = json.loads(xml)
-                        data['content'] = xml['report'].get('params') or '<params/>'
-                        data['action_type'] = 'ui.action.report'
-                        return data
+                elif xml is None:
+                    if rep_type == 'xml' or rep_type == 'json':
+                        templ = loader.find_template(template_name)
+                        if templ:
+                            with open(templ, 'r', encoding='utf-8') as f:
+                                xml = f.read()
                     else:
-                        xml = etree.fromstring(xml)
-                # xml = self.view.get_xml(model)
-                if model:
-                    data['fields'] = model.get_fields_info(xml=xml)
-                params = xml.find('params')
-                if params is not None:
-                    if xml.tag == 'report' and 'model' in xml.attrib:
-                        params.attrib['model'] = xml.attrib['model']
-                        if not model:
-                            model = apps[xml.attrib['model']]
-                            data['fields'] = model.get_fields_info(params)
+                        xml = self.view._get_content({})
+                    if isinstance(xml, str):
+                        if rep_type == 'json':
+                            xml = json.loads(xml)
+                            data['content'] = xml['report'].get('params') or '<params/>'
+                            data['action_type'] = 'ui.action.report'
+                            return data
+                        else:
+                            xml = etree.fromstring(xml)
+                    # xml = self.view.get_xml(model)
+                    if model:
+                        data['fields'] = model.get_fields_info(xml=xml)
+                    params = xml.find('params')
+                    if params is not None:
+                        if xml.tag == 'report' and 'model' in xml.attrib:
+                            params.attrib['model'] = xml.attrib['model']
+                            if not model:
+                                model = apps[xml.attrib['model']]
+                                data['fields'] = model.get_fields_info(params)
 
-                        # model = app[model]
-                        # for field in params:
-                        #     if field.tag == 'field' and 'name' in field.attrib:
-                        #         fld = model._meta.fields[field.attrib['name']]
-                    xml = params
-                    data['content'] = etree.tostring(xml, encoding='utf-8').decode('utf-8')
+                            # model = app[model]
+                            # for field in params:
+                            #     if field.tag == 'field' and 'name' in field.attrib:
+                            #         fld = model._meta.fields[field.attrib['name']]
+                        xml = params
+                        data['content'] = etree.tostring(xml, encoding='utf-8').decode('utf-8')
         if 'content' not in data:
             data['content'] = '<params/>'
         return data
