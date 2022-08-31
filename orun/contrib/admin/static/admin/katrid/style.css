@@ -11115,6 +11115,7 @@ app-header.navbar .navbar-search i.fa-search {
   color: #fff;
 }
 app-header.navbar .navbar-tools {
+  max-width: 500px;
   flex: 0 1 auto;
 }
 app-header.navbar #navbar-search {
@@ -13836,6 +13837,10 @@ query-view .table-responsive {
 
 .grid-toolbar {
   margin-bottom: 5px;
+}
+
+.form-field-section[readonly] .grid-toolbar .btn-action-add, .form-field-section[readonly] .grid-toolbar .btn-action-delete {
+  display: none;
 }
 
 .data-heading .toolbar .btn {

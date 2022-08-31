@@ -950,6 +950,8 @@ var Katrid;
             // }
             addFilter(field, value) {
                 let f = this.view.fields[field];
+                if ((f instanceof Katrid.Data.DateTimeField) && (typeof value === 'string'))
+                    value = moment(value);
                 this.searchView.controller.addCustomFilter(f, [value]);
             }
             static async fromModel(model) {
@@ -2267,6 +2269,8 @@ var Katrid;
                                 Object.assign(component.methods, def.methods);
                             if (def.ready || def.created || def.data)
                                 this._readyEventListeners.push(def);
+                            if (def.beforeMount)
+                                def.beforeMount.call(this, el);
                         }
                     }
                 }
@@ -5693,21 +5697,25 @@ var Katrid;
                     let format = Katrid.i18n.formats.shortDateFormat;
                     let re = Katrid.i18n.formats.reShortDateFormat;
                     if (value.includes('..'))
-                        return value.split('..').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format('YYYY-MM-DD'));
+                        return value.split('..').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format(moment.HTML5_FMT.DATE));
                     if (value.includes(';'))
-                        return value.split(';').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format('YYYY-MM-DD'));
+                        return value.split(';').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format(moment.HTML5_FMT.DATE));
                     // return iso date
                     if (re.test(value))
-                        return moment(value, Katrid.i18n.formats.shortDateFormat).format('YYYY-MM-DD');
-                    return moment(katrid.utils.autoCompleteDate(value, format)).format('YYYY-MM-DD');
+                        return moment(value, Katrid.i18n.formats.shortDateFormat).format(moment.HTML5_FMT.DATE);
+                    return moment(katrid.utils.autoCompleteDate(value, format)).format(moment.HTML5_FMT.DATE);
                 }
-                return super.getParamValue(value);
+                else if (value instanceof moment)
+                    return value.format(moment.HTML5_FMT.DATE);
+                return value;
             }
             format(value) {
                 if (Katrid.isString(value))
                     return moment(value).format(Katrid.i18n.gettext('yyyy-mm-dd').toUpperCase());
                 else if (value instanceof Date)
                     return moment(value).format(Katrid.i18n.gettext('yyyy-mm-dd').toUpperCase());
+                else if (value instanceof moment)
+                    return value.format(Katrid.i18n.gettext('yyyy-mm-dd').toUpperCase());
                 return '';
             }
             formControl(fieldEl) {
@@ -9555,6 +9563,7 @@ var Katrid;
                     getParamValue(value) {
                         let r = {};
                         let name = this.name;
+                        console.log('get param value', value);
                         if (_.isArray(value)) {
                             r[name + this.lookup] = value[0];
                         }
