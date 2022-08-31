@@ -102,7 +102,6 @@
     },
     methods: {
       async login(username, password, next) {
-        console.log('login', username, password, next);
         let res = await Katrid.Services.post('/web/login/', {username, password, next});
         if (res.ok) {
           this.messages = [{type: 'success', message: res.message}];

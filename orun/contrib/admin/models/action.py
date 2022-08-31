@@ -201,7 +201,7 @@ class ServerAction(Action):
     code = models.TextField(label=_('Python Code'))
     actions = models.ManyToManyField('self')
     target_model = models.ForeignKey('content.type')
-    target_field = models.ForeignKey('content.field')
+    # target_field = models.ForeignKey('content.field')
     lines = models.OneToManyField('ui.action.server.line')
 
     class Meta:
@@ -210,7 +210,7 @@ class ServerAction(Action):
 
 class ServerActionLine(models.Model):
     server_action = models.ForeignKey(ServerAction, null=False, on_delete=models.CASCADE)
-    field = models.ForeignKey('content.field')
+    # field = models.ForeignKey('content.field')
     value = models.TextField()
     type = models.SelectionField(
         (

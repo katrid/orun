@@ -11115,7 +11115,7 @@ app-header.navbar .navbar-search i.fa-search {
   color: #fff;
 }
 app-header.navbar .navbar-tools {
-  flex: 0 1 500px;
+  flex: 0 1 auto;
 }
 app-header.navbar #navbar-search {
   display: inline;

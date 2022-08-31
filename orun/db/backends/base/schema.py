@@ -1451,7 +1451,7 @@ class BaseDatabaseSchemaEditor:
         else:
             new_type = new_field.get_internal_type()
         old_type = self.connection.introspection.data_types_reverse[old_field.type_code]
-        if old_style.get(new_type, new_type) != old_type and not (new_type == 'TextField' and old_type == 'CharField'):
+        if old_style.get(new_type, new_type) != old_type and not (new_type == 'TextField' and old_type == 'CharField') and not (new_type == 'IntegerField' and old_type == 'SmallIntegerField') and not (new_type == 'SmallIntegerField' and old_type == 'IntegerField'):
             print(f'Change field "{old_field.name}" from type {old_type} to {new_type}')
             self.alter_field_type(new_field, old_field)
         elif new_field.max_length and old_field.internal_size != new_field.max_length:
