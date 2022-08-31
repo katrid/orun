@@ -452,7 +452,6 @@ var Katrid;
                     this.viewMode = this.config.info.viewMode;
                 else
                     this.viewMode = 'list';
-                console.log('model', config.model);
                 if (config.model instanceof Katrid.Data.Model) {
                     this.model = config.model;
                     this.modelName = config.model.name;
@@ -5699,7 +5698,6 @@ var Katrid;
                     // return iso date
                     if (re.test(value))
                         return moment(value, Katrid.i18n.formats.shortDateFormat).format(moment.HTML5_FMT.DATE);
-                    console.log('get param value', value, format, katrid.utils.autoCompleteDate(value, format));
                     return moment(katrid.utils.autoCompleteDate(value, format)).format(moment.HTML5_FMT.DATE);
                 }
                 else if (value instanceof moment)
@@ -8188,7 +8186,6 @@ var Katrid;
                 return comp;
             }
             update(vm) {
-                console.log('group', this.controller);
                 if (this.controller.groupLength) {
                     // this.controller._groupLength = this.controller.groupLength;
                     if (this._resultView)
@@ -9486,6 +9483,7 @@ var Katrid;
                         this.indent = true;
                     }
                     select() {
+                        console.log('select field', this.field, this.value);
                         this.field.selectItem(this.value);
                     }
                 }
@@ -9584,6 +9582,8 @@ var Katrid;
                         if (this.options?.allowSelect !== false) {
                             // prepare value
                             if (this.field) {
+                                if (this.field instanceof Katrid.Data.DateTimeField)
+                                    this.lookup = '__date';
                                 this._value = this.field.getParamValue(this.value);
                                 let fmt;
                                 if (Array.isArray(this._value)) {
