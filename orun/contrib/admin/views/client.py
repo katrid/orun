@@ -47,7 +47,7 @@ def report(request, path):
     return serve(request, path, document_root=settings.REPORT_PATH)
 
 
-def login(request: HttpRequest, **kwargs):
+def login(request: HttpRequest, template_name='/admin/login.jinja2', **kwargs):
     if request.method == 'POST':
         if request.is_json():
             data = request.json
@@ -80,7 +80,7 @@ def login(request: HttpRequest, **kwargs):
         'i18n_js_catalog': javascript_catalog(request, packages=apps.addons.keys()),
         'settings': settings,
     }
-    return render(request, 'admin/login.jinja2', context, using=request.COOKIES.get('db'))
+    return render(request, template_name, context, using=request.COOKIES.get('db'))
 
 
 @login_required
