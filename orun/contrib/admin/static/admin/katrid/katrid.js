@@ -5699,6 +5699,7 @@ var Katrid;
                     // return iso date
                     if (re.test(value))
                         return moment(value, Katrid.i18n.formats.shortDateFormat).format(moment.HTML5_FMT.DATE);
+                    console.log('get param value', value, format, katrid.utils.autoCompleteDate(value, format));
                     return moment(katrid.utils.autoCompleteDate(value, format)).format(moment.HTML5_FMT.DATE);
                 }
                 else if (value instanceof moment)
