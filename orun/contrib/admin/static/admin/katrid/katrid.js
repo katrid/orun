@@ -5681,10 +5681,6 @@ var Katrid;
             formSpanTemplate() {
                 return `{{ $filters.date(record.${this.name}, 'shortDate') || '${this.emptyText}' }}`;
             }
-            create() {
-                super.create();
-                // this.widget = 'date';
-            }
             toJSON(val) {
                 return val;
             }
@@ -9563,7 +9559,6 @@ var Katrid;
                     getParamValue(value) {
                         let r = {};
                         let name = this.name;
-                        console.log('get param value', value);
                         if (_.isArray(value)) {
                             r[name + this.lookup] = value[0];
                         }
@@ -9656,6 +9651,9 @@ var Katrid;
                         super(view, field.name, field.caption, null, group);
                         this.field = field;
                         this.condition = condition;
+                        if (((field instanceof Katrid.Data.DateField) || (field instanceof Katrid.Data.DateTimeField)) && Array.isArray(value))
+                            value = value.map(val => typeof val === 'string' ? moment(val) : val);
+                        console.log('new value', value);
                         this._value = value;
                         this._selected = true;
                     }
@@ -9673,7 +9671,10 @@ var Katrid;
                     }
                     get value() {
                         let r = {};
-                        let fname = this.field.name + Search.conditionSuffix[this.condition];
+                        let fname = this.field.name;
+                        if ((this.field instanceof Katrid.Data.DateTimeField) && !['isnull', '!isnull'].includes(this.condition))
+                            fname = fname + '__date';
+                        fname += Search.conditionSuffix[this.condition];
                         if (this.condition === '..')
                             r[fname] = this._value.map(v => this.field.getParamValue(v));
                         else if ((this.condition === '=') || (this.condition === '!='))
