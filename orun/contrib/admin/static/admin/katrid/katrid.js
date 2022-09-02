@@ -452,7 +452,6 @@ var Katrid;
                     this.viewMode = this.config.info.viewMode;
                 else
                     this.viewMode = 'list';
-                console.log('model', config.model);
                 if (config.model instanceof Katrid.Data.Model) {
                     this.model = config.model;
                     this.modelName = config.model.name;
@@ -950,6 +949,8 @@ var Katrid;
             // }
             addFilter(field, value) {
                 let f = this.view.fields[field];
+                if ((f instanceof Katrid.Data.DateTimeField) && (typeof value === 'string'))
+                    value = moment(value);
                 this.searchView.controller.addCustomFilter(f, [value]);
             }
             static async fromModel(model) {
@@ -2267,6 +2268,8 @@ var Katrid;
                                 Object.assign(component.methods, def.methods);
                             if (def.ready || def.created || def.data)
                                 this._readyEventListeners.push(def);
+                            if (def.beforeMount)
+                                def.beforeMount.call(this, el);
                         }
                     }
                 }
@@ -5677,10 +5680,6 @@ var Katrid;
             formSpanTemplate() {
                 return `{{ $filters.date(record.${this.name}, 'shortDate') || '${this.emptyText}' }}`;
             }
-            create() {
-                super.create();
-                // this.widget = 'date';
-            }
             toJSON(val) {
                 return val;
             }
@@ -5693,21 +5692,25 @@ var Katrid;
                     let format = Katrid.i18n.formats.shortDateFormat;
                     let re = Katrid.i18n.formats.reShortDateFormat;
                     if (value.includes('..'))
-                        return value.split('..').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format('YYYY-MM-DD'));
+                        return value.split('..').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format(moment.HTML5_FMT.DATE));
                     if (value.includes(';'))
-                        return value.split(';').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format('YYYY-MM-DD'));
+                        return value.split(';').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format(moment.HTML5_FMT.DATE));
                     // return iso date
                     if (re.test(value))
-                        return moment(value, Katrid.i18n.formats.shortDateFormat).format('YYYY-MM-DD');
-                    return moment(katrid.utils.autoCompleteDate(value, format)).format('YYYY-MM-DD');
+                        return moment(value, Katrid.i18n.formats.shortDateFormat).format(moment.HTML5_FMT.DATE);
+                    return moment(katrid.utils.autoCompleteDate(value, format)).format(moment.HTML5_FMT.DATE);
                 }
-                return super.getParamValue(value);
+                else if (value instanceof moment)
+                    return value.format(moment.HTML5_FMT.DATE);
+                return value;
             }
             format(value) {
                 if (Katrid.isString(value))
                     return moment(value).format(Katrid.i18n.gettext('yyyy-mm-dd').toUpperCase());
                 else if (value instanceof Date)
                     return moment(value).format(Katrid.i18n.gettext('yyyy-mm-dd').toUpperCase());
+                else if (value instanceof moment)
+                    return value.format(Katrid.i18n.gettext('yyyy-mm-dd').toUpperCase());
                 return '';
             }
             formControl(fieldEl) {
@@ -8183,7 +8186,6 @@ var Katrid;
                 return comp;
             }
             update(vm) {
-                console.log('group', this.controller);
                 if (this.controller.groupLength) {
                     // this.controller._groupLength = this.controller.groupLength;
                     if (this._resultView)
@@ -9481,6 +9483,7 @@ var Katrid;
                         this.indent = true;
                     }
                     select() {
+                        console.log('select field', this.field, this.value);
                         this.field.selectItem(this.value);
                     }
                 }
@@ -9579,6 +9582,8 @@ var Katrid;
                         if (this.options?.allowSelect !== false) {
                             // prepare value
                             if (this.field) {
+                                if (this.field instanceof Katrid.Data.DateTimeField)
+                                    this.lookup = '__date';
                                 this._value = this.field.getParamValue(this.value);
                                 let fmt;
                                 if (Array.isArray(this._value)) {
@@ -9647,6 +9652,9 @@ var Katrid;
                         super(view, field.name, field.caption, null, group);
                         this.field = field;
                         this.condition = condition;
+                        if (((field instanceof Katrid.Data.DateField) || (field instanceof Katrid.Data.DateTimeField)) && Array.isArray(value))
+                            value = value.map(val => typeof val === 'string' ? moment(val) : val);
+                        console.log('new value', value);
                         this._value = value;
                         this._selected = true;
                     }
@@ -9664,7 +9672,10 @@ var Katrid;
                     }
                     get value() {
                         let r = {};
-                        let fname = this.field.name + Search.conditionSuffix[this.condition];
+                        let fname = this.field.name;
+                        if ((this.field instanceof Katrid.Data.DateTimeField) && !['isnull', '!isnull'].includes(this.condition))
+                            fname = fname + '__date';
+                        fname += Search.conditionSuffix[this.condition];
                         if (this.condition === '..')
                             r[fname] = this._value.map(v => this.field.getParamValue(v));
                         else if ((this.condition === '=') || (this.condition === '!='))

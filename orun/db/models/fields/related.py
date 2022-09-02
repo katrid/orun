@@ -1018,6 +1018,7 @@ def create_many_to_many_intermediary_model(field, klass):
         'auto_created': klass,
         'addon': klass._meta.addon,
         'db_tablespace': klass._meta.db_tablespace,
+        'db_table': field.db_table,
         'unique_together': (from_, to),
         'verbose_name': _('%(from)s-%(to)s relationship') % {'from': from_, 'to': to},
         'verbose_name_plural': _('%(from)s-%(to)s relationships') % {'from': from_, 'to': to},
