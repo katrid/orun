@@ -13839,10 +13839,6 @@ query-view .table-responsive {
   margin-bottom: 5px;
 }
 
-.form-field-section[readonly] .grid-toolbar .btn-action-add, .form-field-section[readonly] .grid-toolbar .btn-action-delete {
-  display: none;
-}
-
 .data-heading .toolbar .btn {
   margin-top: 8px;
 }

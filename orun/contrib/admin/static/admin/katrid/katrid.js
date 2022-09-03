@@ -9108,6 +9108,11 @@ var Katrid;
                                     this.searchFields.push(obj);
                                     continue;
                                 }
+                                else if (tag === 'STRINGFIELD') {
+                                    obj = Search.SearchField.fromField(this.searchView, child);
+                                    this.searchFields.push(obj);
+                                    continue;
+                                }
                                 if (obj)
                                     this.addItem(obj);
                             }
@@ -9512,6 +9517,8 @@ var Katrid;
                                 this.pattern = /^[\d.\s\-:\/;]+$/;
                             this.expandable = false;
                         }
+                        if (el && el.hasAttribute('search-pattern'))
+                            this.pattern = new RegExp(el.getAttribute('search-pattern'));
                     }
                     get expanded() {
                         return this._expanded;
@@ -9563,6 +9570,10 @@ var Katrid;
                         }
                         else if (value instanceof SearchObject) {
                             return value.value;
+                        }
+                        else if (name.includes('__')) {
+                            // field self includes a lookup
+                            r[name] = value;
                         }
                         else {
                             r[name + this.field.defaultSearchLookup] = value;
@@ -9624,6 +9635,11 @@ var Katrid;
                     }
                     static fromField(view, el) {
                         let field = view.fields[el.getAttribute('name')];
+                        if (!field && (el.tagName === 'STRINGFIELD')) {
+                            // custom field
+                            const name = el.getAttribute('name');
+                            field = new Katrid.Data.StringField({ name, caption: el.getAttribute('caption') });
+                        }
                         return new SearchField(view, field.name, el, field);
                     }
                     get template() {
