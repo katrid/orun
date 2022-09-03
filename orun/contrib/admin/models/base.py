@@ -17,7 +17,7 @@ from orun.db.models.signals import (
     before_insert, before_update, before_delete,
     after_insert, after_update, after_delete,
 )
-from orun.http import HttpResponse
+from orun.http import HttpRequest, HttpResponse
 from orun.db.models.aggregates import Count
 from orun.utils.encoding import force_str
 
@@ -26,7 +26,7 @@ PAGE_SIZE = 10
 
 class AdminModel(models.Model, helper=True):
     @api.classmethod
-    def api_search(cls, request: HttpResponse, fields=None, count=None, page=None, limit=None, format=None, **kwargs):
+    def api_search(cls, request: HttpRequest, fields=None, count=None, page=None, limit=None, format=None, **kwargs):
         qs = cls._api_search(request, fields=fields, **kwargs)
         if count:
             count = qs.count()
@@ -47,7 +47,7 @@ class AdminModel(models.Model, helper=True):
         }
 
     @classmethod
-    def _api_search(cls, request, where=None, fields=None, params=None, join=None, **kwargs):
+    def _api_search(cls, request: HttpRequest, where=None, fields=None, params=None, join=None, **kwargs):
         # self.check_permission('read')
         qs = cls.objects.all()
         domain = kwargs.get('domain')
@@ -128,7 +128,7 @@ class AdminModel(models.Model, helper=True):
 
     @api.classmethod
     def api_search_by_name(
-            cls, name=None, count=None, page=None, label_from_instance=None, name_fields=None, *args, exact=False,
+            cls, request: HttpRequest, name=None, count=None, page=None, label_from_instance=None, name_fields=None, *args, exact=False,
             **kwargs
     ):
         fmt = kwargs.get('format')
@@ -151,7 +151,7 @@ class AdminModel(models.Model, helper=True):
                 q &= Q(**where)
         if q is not None:
             kwargs = {'where': q}
-        qs = cls._api_search(*args, **kwargs)
+        qs = cls._api_search(request, *args, **kwargs)
         limit = kwargs.get('limit') or 20
         if count:
             count = qs.count()
@@ -263,14 +263,14 @@ class AdminModel(models.Model, helper=True):
         return r or None
 
     @api.classmethod
-    def api_group_by(cls, grouping: List[str], params):
+    def api_group_by(cls, request: HttpRequest, grouping: List[str], params):
         where = params
         field_name = grouping[0]
         field = cls._meta.fields[field_name]
         if field.group_choices:
             qs = field.get_group_choices(cls, where)
         else:
-            qs = cls._api_search(where)
+            qs = cls._api_search(request, where)
             qs = qs.values(field.name).annotate(pk__count=Count('pk')).order_by(field.name)
         res = []
         if field.many_to_one:
@@ -307,9 +307,9 @@ class AdminModel(models.Model, helper=True):
         return list(qs)
 
     @api.classmethod
-    def api_delete(self, ids):
+    def api_delete(self, request: HttpRequest, ids):
         # self.check_permission('delete')
-        ids = [v for v in self._api_search({'pk__in': ids}).only('pk')]
+        ids = [v for v in self._api_search(request, {'pk__in': ids}).only('pk')]
         r = []
         if not ids:
             raise ObjectDoesNotExist()
@@ -331,11 +331,11 @@ class AdminModel(models.Model, helper=True):
         return self.objects.create(**data)._api_format_choice()
 
     @api.classmethod
-    def api_get(cls, id, fields=None):
+    def api_get(cls, request: HttpRequest, id, fields=None):
         if id:
             if fields and 'record_name' not in fields:
                 fields.append('record_name')
-            obj = cls._api_search(fields=fields).get(pk=id)
+            obj = cls._api_search(request, fields=fields).get(pk=id)
             return {'data': obj.to_dict(fields=fields)}
         return {'error': 'the record ID must be specified'}
 
@@ -546,7 +546,7 @@ class AdminModel(models.Model, helper=True):
         cls.objects.bulk_update(objs, [cls._meta.sequence_field])
 
     @api.classmethod
-    def api_export(cls, where=None, format='xlsx', fields=None):
+    def api_export(cls, request: HttpRequest, where=None, format='xlsx', fields=None):
 
         def serialize(field, value):
             if value is not None:
@@ -556,7 +556,7 @@ class AdminModel(models.Model, helper=True):
 
         if fields is None:
             fields = [f.name for f in cls._meta.list_fields]
-        qs = cls._api_search(where=where, fields=fields)
+        qs = cls._api_search(request, where=where, fields=fields)
         if format == 'xlsx':
             import xlsxwriter
             buf = io.BytesIO()
