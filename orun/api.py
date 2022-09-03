@@ -35,7 +35,9 @@ class RecordProxy:
         return self.__instance__.__call__(self.env, *args, **kwargs)
 
 
-def _register_method(fn, meth_name, pass_request=False):
+def _register_method(fn, meth_name, pass_request=None):
+    if pass_request is None and 'request' in fn.__annotations__:
+        pass_request = True
     fn.exposed = True
     fn.pass_request = pass_request
     fn = builtins.classmethod(fn)
@@ -45,7 +47,7 @@ def _register_method(fn, meth_name, pass_request=False):
     return fn
 
 
-def classmethod(name_or_fn):
+def classmethod(name_or_fn=None):
     if callable(name_or_fn):
         name_or_fn.pass_request = None
         return _register_method(name_or_fn, name_or_fn.__name__)

@@ -351,6 +351,8 @@ class Options:
         attrs.pop('__qualname__', None)
         for k, v in attrs.items():
             if attr := getattr(model, k, None):
+                if inspect.ismethod(attr):
+                    attr = attr.__func__
                 setattr(class_helper, k, attr)
                 if inspect.isfunction(v):
                     v = method_helper(v, class_helper)
