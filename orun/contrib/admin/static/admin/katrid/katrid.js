@@ -2572,7 +2572,27 @@ var Katrid;
                 comp.methods.setViewMode = async function (mode) {
                     return await me.action.showView(mode);
                 };
-                comp.methods.formButtonClick = function () {
+                comp.methods.formButtonClick = async function (args) {
+                    const config = { action_name: args.method, target: args.params.id };
+                    let res = await me.model.service.doViewAction(config);
+                    if (res.location)
+                        window.location.href = res.location;
+                };
+                comp.methods.callAdminViewAction = async function (args) {
+                    let input;
+                    if (args.prompt) {
+                        input = prompt(args.prompt);
+                        if (!input)
+                            return;
+                    }
+                    if (!args.confirm || (args.confirm && confirm(args.confirm))) {
+                        const config = { action: args.action, ids: args.ids };
+                        if (input)
+                            config.prompt = input;
+                        let res = await me.model.service.callAdminViewAction(config);
+                        if (res.location)
+                            window.location.href = res.location;
+                    }
                 };
                 comp.methods.insert = async function () {
                     let view = await this.setViewMode('form');
@@ -2610,6 +2630,9 @@ var Katrid;
                 Forms.compileButtons(template);
                 if (header)
                     template.removeChild(header);
+                let actions = template.querySelector(':scope > actions');
+                if (actions)
+                    template.removeChild(actions);
                 let templ = this.renderTemplate(template);
                 if (this.dialog)
                     return this.createDialog(templ, this.dialogButtons);
@@ -2619,6 +2642,8 @@ var Katrid;
                 viewContent.classList.add('action-view-content', 'content-scroll');
                 if (this.toolbarVisible)
                     actionView.append(this.createToolbar());
+                if (actions)
+                    actionView.append(actions);
                 // merge header
                 let newHeader = document.createElement('div');
                 newHeader.className = 'content-container-heading';
@@ -2884,7 +2909,7 @@ var Katrid;
                 let btnActions = document.createElement('div');
                 btnActions.classList.add('btn-group');
                 btnActions.innerHTML = `<div class="dropdown">
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" v-show="selectionLength"
+        <button name="actions" type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown" v-show="selectionLength"
                 aria-haspopup="true">
           ${Katrid.i18n.gettext('Action')} <span class="caret"></span>
         </button>
@@ -6506,7 +6531,7 @@ var Katrid;
         Forms.CustomTag = CustomTag;
         class ActionsTag extends CustomTag {
             prepare(elements) {
-                let atts = this.view.element.querySelector('.btn-toolbar');
+                let atts = this.view.element.querySelector('.toolbar-action-buttons');
                 for (let actions of elements.values()) {
                     if (!this.view.toolbarVisible) {
                         actions.remove();
@@ -6559,8 +6584,17 @@ var Katrid;
                 this.assign(action, el);
                 if (el.hasAttribute('data-action'))
                     el.setAttribute('v-on:click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
-                else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name')))
+                else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name'))) {
                     el.setAttribute('v-on:click', `formButtonClick({params: {id: record.id}, method: '${el.getAttribute('name')}'})`);
+                }
+                else if ((el.getAttribute('type') === 'view-action') && (el.hasAttribute('name'))) {
+                    let attrs = '';
+                    if (el.hasAttribute('confirm-dialog'))
+                        attrs = `, confirm: \`${el.getAttribute('confirm-dialog').replaceAll('`', '\\``')}\``;
+                    if (el.hasAttribute('prompt-dialog'))
+                        attrs = `, prompt: \`${el.getAttribute('prompt-dialog').replaceAll('`', '\\``')}\``;
+                    el.setAttribute('v-on:click', `callAdminViewAction({ids: [record.id], action: '${el.getAttribute('name')}'${attrs}})`);
+                }
                 if (action.hasAttribute('name'))
                     el.setAttribute('name', action.getAttribute('name'));
                 if (action.hasAttribute('id'))
@@ -7806,11 +7840,6 @@ ${Katrid.i18n.gettext('Delete')}
                     deleteSelection() {
                         me.deleteSelection(this.selection);
                         this.next();
-                    },
-                    async formButtonClick(args) {
-                        let res = await me.model.service.doViewAction({ action_name: args.method, target: args.params.id });
-                        if (res.location)
-                            window.location.href = res.location;
                     },
                     refresh() {
                         me.refresh();
@@ -9572,7 +9601,7 @@ var Katrid;
                             return value.value;
                         }
                         else if (name.includes('__')) {
-                            // field self includes a lookup
+                            // field self includes a  lookup
                             r[name] = value;
                         }
                         else {
@@ -12774,7 +12803,11 @@ var Katrid;
                 return this.post('api_get_field_choice', { args: [config.field, config.term], kwargs }, null, config.config);
             }
             doViewAction(data) {
+                // deprecated
                 return this.post('admin_do_view_action', { kwargs: data });
+            }
+            callAdminViewAction(data) {
+                return this.post('admin_call_view_action', { kwargs: data });
             }
             write(data, params) {
                 return new Promise((resolve, reject) => {

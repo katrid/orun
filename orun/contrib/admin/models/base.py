@@ -449,7 +449,7 @@ class AdminModel(models.Model, helper=True):
             return r
 
     @classmethod
-    def _admin_get_view_info(cls, view_type, view=None, toolbar=False):
+    def _admin_get_view_info(cls, request, view_type, view=None, toolbar=False):
         View = apps['ui.view']
         model = apps['content.type']
 
@@ -465,7 +465,7 @@ class AdminModel(models.Model, helper=True):
                 'fields': cls.admin_get_fields_info(view_type=view_type, xml=xml_content)
             }
         else:
-            content = cls._admin_get_default_view(view_type=view_type)
+            content = cls._admin_get_default_view(request, view_type=view_type)
             r = {
                 'template': content,
                 'fields': cls.admin_get_fields_info(view_type=view_type, xml=content),
@@ -481,11 +481,11 @@ class AdminModel(models.Model, helper=True):
         return r
 
     @api.classmethod
-    def admin_get_view_info(cls, view_type, view=None, toolbar=False):
-        return cls._admin_get_view_info(view_type, view, toolbar)
+    def admin_get_view_info(cls, request: HttpRequest, view_type, view=None, toolbar=False):
+        return cls._admin_get_view_info(request, view_type, view, toolbar)
 
     @api.classmethod
-    def admin_load_views(cls, views=None, toolbar=False, **kwargs):
+    def admin_load_views(cls, request: HttpRequest, views=None, toolbar=False, **kwargs):
         if views is None and 'action' in kwargs:
             Action = apps['ui.action.window']
             action = Action.objects.get(pk=kwargs.get('action'))
@@ -498,7 +498,7 @@ class AdminModel(models.Model, helper=True):
         return {
             'fields': cls.admin_get_fields_info(),
             'views': {
-                mode: cls.admin_get_view_info(view_type=mode, view=v, toolbar=toolbar)
+                mode: cls.admin_get_view_info(request, view_type=mode, view=v, toolbar=toolbar)
                 for mode, v in views.items()
             }
         }
@@ -517,9 +517,9 @@ class AdminModel(models.Model, helper=True):
         )
 
     @classmethod
-    def _admin_get_default_view(cls, view_type):
+    def _admin_get_default_view(cls, request, view_type):
         template = cls._admin_select_template(view_type)
-        templ = template.render(context=dict(opts=cls._meta, _=gettext))
+        templ = template.render(context=dict(opts=cls._meta, _=gettext, request=request))
         xml = ui.etree.fromstring(templ)
         ui.resolve_refs(xml)
         templ = ui.etree.tostring(xml, encoding='utf-8')
