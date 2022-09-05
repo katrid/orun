@@ -13936,7 +13936,8 @@ var Katrid;
             }
             destroy() {
                 this.app.element.removeEventListener('katrid.actionChange', this._actionChanged);
-                this.element.remove();
+                this.container.remove();
+                instance = null;
             }
             createElement() {
                 if (!this.element)
@@ -13954,8 +13955,11 @@ var Katrid;
             }
         }
         UI.HelpCenter = HelpCenter;
+        let instance;
         function helpCenter() {
-            return new HelpCenter();
+            if (!instance)
+                instance = new HelpCenter();
+            return instance;
         }
         UI.helpCenter = helpCenter;
     })(UI = Katrid.UI || (Katrid.UI = {}));
