@@ -30,7 +30,7 @@ def index(request: HttpRequest, template_name='/admin/index.jinja2', **context):
 def search_menu(request: HttpRequest):
     from orun.contrib.admin.models import Menu
     term = request.json.get('term')
-    items = Menu.admin_search_menu(term)
+    items = Menu.admin_search_menu(request, term)
     return JsonResponse({'items': items})
 
 

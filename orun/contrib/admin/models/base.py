@@ -174,11 +174,11 @@ class AdminModel(models.Model, helper=True):
         }
 
     @api.classmethod
-    def api_get_field_choice(cls, field: str, q, **kwargs):
-        return cls.api_get_field_choices(field, q, exact=True, limit=1)
+    def api_get_field_choice(cls, request: HttpRequest, field: str, q, **kwargs):
+        return cls.api_get_field_choices(request, field, q, exact=True, limit=1)
 
     @api.classmethod
-    def api_get_field_choices(cls, field: str, q=None, count=False, ids=None, page=None, exact=False, limit=None,
+    def api_get_field_choices(cls, request: HttpRequest, field: str, q=None, count=False, ids=None, page=None, exact=False, limit=None,
                               **kwargs):
         fmt = kwargs.get('format', 'str')
         field = cls._meta.fields[field]
@@ -213,6 +213,7 @@ class AdminModel(models.Model, helper=True):
                 field.label_from_instance or kwargs.get('name_fields')
             )
             return related_model.api_search_by_name(
+                request,
                 label_from_instance=label_from_instance, exact=exact, format=fmt,
                 **search_params
             )
