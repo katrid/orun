@@ -39,7 +39,7 @@ class Param:
         self.label: Optional[str] = label
         self.model = model
         self.operation = operation
-        self.options = options
+        self.options = options or {}
 
     @classmethod
     def from_node(cls, node):
