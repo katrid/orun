@@ -329,3 +329,6 @@ msgstr "Ontem"
 
 msgid "Today"
 msgstr "Hoje"
+
+msgid "Technical information"
+msgstr "Informações técnicas"

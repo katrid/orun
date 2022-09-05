@@ -14042,12 +14042,14 @@ pwa-menu .btn {
   width: 400px;
   padding: 10px;
   position: relative;
+  background-color: white;
 }
 .help-center .help-center-content {
   position: absolute;
   top: 0;
   bottom: 0;
   overflow: auto;
+  width: 400px;
 }
 
 /*# sourceMappingURL=style.css.map */
