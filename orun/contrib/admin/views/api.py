@@ -25,10 +25,11 @@ def rpc(request, service, meth, params):
 
             args = params.get('args') or []
             kwargs = params.get('kwargs') or {}
-            if getattr(meth, 'pass_request', False) or (method == 'admin_do_view_action'):
+            if getattr(meth, 'pass_request', False):
                 # inspect if the method needs to receive de request arg
-                kwargs['request'] = request
-            r = meth(*args, **kwargs)
+                r = meth(request, *args, **kwargs)
+            else:
+                r = meth(*args, **kwargs)
 
             if isinstance(r, list) and r and isinstance(r[0], HttpResponse):
                 return r[0]

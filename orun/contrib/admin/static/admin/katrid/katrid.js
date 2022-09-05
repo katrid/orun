@@ -183,6 +183,18 @@ var Katrid;
                 console.log('click', click);
                 return a;
             }
+            generateHelp(help) {
+                if (this.config.caption) {
+                    const h3 = document.createElement('h3');
+                    h3.innerText = this.config.caption;
+                    help.element.append(h3);
+                }
+                if (this.config.usage) {
+                    const p = document.createElement('p');
+                    p.innerHTML = this.config.usage;
+                    help.element.append(p);
+                }
+            }
         }
         Action._context = {};
         Actions.Action = Action;
@@ -677,6 +689,8 @@ var Katrid;
                     history.pushState({ view_type: this.params.view_type }, document.title, this.makeUrl(mode));
                     this.params.view_type = mode;
                 }
+                if (this.app)
+                    this.app.element.dispatchEvent(new CustomEvent('katrid.actionChange'));
                 return this.view;
             }
             async render() {
@@ -993,6 +1007,20 @@ var Katrid;
             }
             get index() {
                 return this.actionManager.actions.indexOf(this);
+            }
+            generateHelp(help) {
+                super.generateHelp(help);
+                if (this.modelName) {
+                    const h6 = document.createElement('h5');
+                    h6.innerText = Katrid.i18n.gettext('Technical information');
+                    const p = document.createElement('pre');
+                    p.innerText = 'Model name: ' + this.modelName;
+                    help.element.append(h6);
+                    help.element.append(p);
+                }
+                if (this.view?.fields) {
+                    this.view.generateHelp(help);
+                }
             }
         }
         WindowAction.actionType = 'ui.action.window';
@@ -1780,9 +1808,9 @@ var Katrid;
             </a>
           </li>
           <li class="nav-item d-none d-sm-block">
-            <a class="nav-link" href="javascript:void(0);" data-action="fullScreen" title="Full Screen"
-               onclick="Katrid.UI.toggleFullScreen()">
-              <i class="fa fa-arrows-alt"></i>
+            <a class="nav-link" href="javascript:void(0);" data-action="helpCenter" title="Help Center"
+               onclick="Katrid.UI.helpCenter()">
+              <i class="fa fa-question"></i>
             </a>
           </li>
           <li class="nav-item user-menu dropdown">
@@ -1894,6 +1922,7 @@ var Katrid;
                     if (plugin.hashChange(url))
                         break;
                 }
+                this.element.dispatchEvent(new CustomEvent('katrid.actionChange'));
             }
             async debug(info) {
                 let res = await Katrid.Services.Service.$post('/webide/file/debug/', info);
@@ -2385,7 +2414,10 @@ var Katrid;
                     this.model = info.model;
                 else if (info.name || info.action?.modelName) {
                     console.warn('Please specify a model instance instead of name');
-                    this.model = new Katrid.Data.Model({ name: info.name || info.action.modelName, fields: info.fields || viewInfo?.fields });
+                    this.model = new Katrid.Data.Model({
+                        name: info.name || info.action.modelName,
+                        fields: info.fields || viewInfo?.fields
+                    });
                     if (info.action?.model)
                         this.model.allFields = info.action.model.fields;
                 }
@@ -2491,7 +2523,12 @@ var Katrid;
             _search(options) {
                 if (options.id)
                     return this.datasource.get({ id: options.id, timeout: options.timeout });
-                return this.datasource.search({ where: options.where, page: options.page, limit: options.limit, fields: Array.from(Object.keys(this.fields)) });
+                return this.datasource.search({
+                    where: options.where,
+                    page: options.page,
+                    limit: options.limit,
+                    fields: Array.from(Object.keys(this.fields))
+                });
             }
             _mergeHeader(parent, header) {
                 for (let child of Array.from(header.children)) {
@@ -2521,7 +2558,7 @@ var Katrid;
                 this.datasource.vm = vm;
             }
             async doViewAction(action, target) {
-                return this._evalResponseAction(await this.model.service.doViewAction({ action_name: action, target }));
+                return this._evalResponseAction(await this.model.service.callAdminViewAction({ action: action, ids: [target] }));
             }
             async _evalResponseAction(res) {
                 if (res?.open) {
@@ -2572,7 +2609,27 @@ var Katrid;
                 comp.methods.setViewMode = async function (mode) {
                     return await me.action.showView(mode);
                 };
-                comp.methods.formButtonClick = function () {
+                comp.methods.formButtonClick = async function (args) {
+                    const config = { action_name: args.method, target: args.params.id };
+                    let res = await me.model.service.doViewAction(config);
+                    if (res.location)
+                        window.location.href = res.location;
+                };
+                comp.methods.callAdminViewAction = async function (args) {
+                    let input;
+                    if (args.prompt) {
+                        input = prompt(args.prompt);
+                        if (!input)
+                            return;
+                    }
+                    if (!args.confirm || (args.confirm && confirm(args.confirm))) {
+                        const config = { action: args.action, ids: args.ids };
+                        if (input)
+                            config.prompt = input;
+                        let res = await me.model.service.callAdminViewAction(config);
+                        if (res.location)
+                            window.location.href = res.location;
+                    }
                 };
                 comp.methods.insert = async function () {
                     let view = await this.setViewMode('form');
@@ -2610,6 +2667,9 @@ var Katrid;
                 Forms.compileButtons(template);
                 if (header)
                     template.removeChild(header);
+                let actions = template.querySelector(':scope > actions');
+                if (actions)
+                    template.removeChild(actions);
                 let templ = this.renderTemplate(template);
                 if (this.dialog)
                     return this.createDialog(templ, this.dialogButtons);
@@ -2619,6 +2679,8 @@ var Katrid;
                 viewContent.classList.add('action-view-content', 'content-scroll');
                 if (this.toolbarVisible)
                     actionView.append(this.createToolbar());
+                if (actions)
+                    actionView.append(actions);
                 // merge header
                 let newHeader = document.createElement('div');
                 newHeader.className = 'content-container-heading';
@@ -2645,6 +2707,27 @@ var Katrid;
                 let el = document.createElement('div');
                 el.className = 'toolbar';
                 return el;
+            }
+            generateHelp(help) {
+                if (this.fields) {
+                    for (let f of Object.values(this.fields))
+                        if (f.visible) {
+                            let h4 = document.createElement('h4');
+                            h4.innerText = f.caption;
+                            help.element.append(h4);
+                            if (f.helpText) {
+                                let p = document.createElement('p');
+                                p.innerHTML = f.helpText;
+                                help.element.append(p);
+                                if (f.widgetHelp) {
+                                    p = document.createElement('p');
+                                    p.className = 'text-muted';
+                                    p.innerHTML = f.widgetHelp;
+                                    help.element.append(p);
+                                }
+                            }
+                        }
+                }
             }
         }
         Forms.ModelView = ModelView;
@@ -2884,7 +2967,7 @@ var Katrid;
                 let btnActions = document.createElement('div');
                 btnActions.classList.add('btn-group');
                 btnActions.innerHTML = `<div class="dropdown">
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" v-show="selectionLength"
+        <button name="actions" type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown" v-show="selectionLength"
                 aria-haspopup="true">
           ${Katrid.i18n.gettext('Action')} <span class="caret"></span>
         </button>
@@ -6506,7 +6589,7 @@ var Katrid;
         Forms.CustomTag = CustomTag;
         class ActionsTag extends CustomTag {
             prepare(elements) {
-                let atts = this.view.element.querySelector('.btn-toolbar');
+                let atts = this.view.element.querySelector('.toolbar-action-buttons');
                 for (let actions of elements.values()) {
                     if (!this.view.toolbarVisible) {
                         actions.remove();
@@ -6559,8 +6642,17 @@ var Katrid;
                 this.assign(action, el);
                 if (el.hasAttribute('data-action'))
                     el.setAttribute('v-on:click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
-                else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name')))
+                else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name'))) {
                     el.setAttribute('v-on:click', `formButtonClick({params: {id: record.id}, method: '${el.getAttribute('name')}'})`);
+                }
+                else if ((el.getAttribute('type') === 'view-action') && (el.hasAttribute('name'))) {
+                    let attrs = '';
+                    if (el.hasAttribute('confirm-dialog'))
+                        attrs = `, confirm: \`${el.getAttribute('confirm-dialog').replaceAll('`', '\\``')}\``;
+                    if (el.hasAttribute('prompt-dialog'))
+                        attrs = `, prompt: \`${el.getAttribute('prompt-dialog').replaceAll('`', '\\``')}\``;
+                    el.setAttribute('v-on:click', `callAdminViewAction({ids: [record.id], action: '${el.getAttribute('name')}'${attrs}})`);
+                }
                 if (action.hasAttribute('name'))
                     el.setAttribute('name', action.getAttribute('name'));
                 if (action.hasAttribute('id'))
@@ -7568,7 +7660,7 @@ var Katrid;
         <div class="row">
         <action-navbar></action-navbar>
           <div class="col-sm-6 breadcrumb-nav"></div>
-          <p class="help-block">${this.action.config.usage || ''}&nbsp;</p>
+          <!--p class="help-block">${this.action.config.usage || ''}&nbsp;</p-->
         </div>
         <div class="toolbar row">
           <div class="col-sm-6 toolbar-action-buttons"></div>
@@ -7806,11 +7898,6 @@ ${Katrid.i18n.gettext('Delete')}
                     deleteSelection() {
                         me.deleteSelection(this.selection);
                         this.next();
-                    },
-                    async formButtonClick(args) {
-                        let res = await me.model.service.doViewAction({ action_name: args.method, target: args.params.id });
-                        if (res.location)
-                            window.location.href = res.location;
                     },
                     refresh() {
                         me.refresh();
@@ -9108,6 +9195,11 @@ var Katrid;
                                     this.searchFields.push(obj);
                                     continue;
                                 }
+                                else if (tag === 'STRINGFIELD') {
+                                    obj = Search.SearchField.fromField(this.searchView, child);
+                                    this.searchFields.push(obj);
+                                    continue;
+                                }
                                 if (obj)
                                     this.addItem(obj);
                             }
@@ -9512,6 +9604,8 @@ var Katrid;
                                 this.pattern = /^[\d.\s\-:\/;]+$/;
                             this.expandable = false;
                         }
+                        if (el && el.hasAttribute('search-pattern'))
+                            this.pattern = new RegExp(el.getAttribute('search-pattern'));
                     }
                     get expanded() {
                         return this._expanded;
@@ -9563,6 +9657,10 @@ var Katrid;
                         }
                         else if (value instanceof SearchObject) {
                             return value.value;
+                        }
+                        else if (name.includes('__')) {
+                            // field self includes a  lookup
+                            r[name] = value;
                         }
                         else {
                             r[name + this.field.defaultSearchLookup] = value;
@@ -9624,6 +9722,11 @@ var Katrid;
                     }
                     static fromField(view, el) {
                         let field = view.fields[el.getAttribute('name')];
+                        if (!field && (el.tagName === 'STRINGFIELD')) {
+                            // custom field
+                            const name = el.getAttribute('name');
+                            field = new Katrid.Data.StringField({ name, caption: el.getAttribute('caption') });
+                        }
                         return new SearchField(view, field.name, el, field);
                     }
                     get template() {
@@ -12758,7 +12861,11 @@ var Katrid;
                 return this.post('api_get_field_choice', { args: [config.field, config.term], kwargs }, null, config.config);
             }
             doViewAction(data) {
+                // deprecated
                 return this.post('admin_do_view_action', { kwargs: data });
+            }
+            callAdminViewAction(data) {
+                return this.post('admin_call_view_action', { kwargs: data });
             }
             write(data, params) {
                 return new Promise((resolve, reject) => {
@@ -13798,6 +13905,61 @@ var katrid;
         ui.helpProvider = new HelpProvider();
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var UI;
+    (function (UI) {
+        class HelpCenter {
+            constructor(app) {
+                this.app = app;
+                if (!app)
+                    this.app = Katrid.webApp;
+                this._actionChanged = () => this.actionChanged();
+                this.app.element.addEventListener('katrid.actionChange', this._actionChanged);
+                this.container = document.createElement('div');
+                this.container.className = 'help-center';
+                this.app.element.parentElement.append(this.container);
+                this.actionChanged(0);
+            }
+            clear() {
+                if (this.element)
+                    this.element.innerHTML = Katrid.i18n.gettext('Loading...');
+            }
+            actionChanged(timeout = 1000) {
+                this.clear();
+                if (this._timeout)
+                    clearTimeout(this._timeout);
+                this._timeout = setTimeout(() => {
+                    this.createElement();
+                    this.collectHelp();
+                }, timeout);
+            }
+            destroy() {
+                this.app.element.removeEventListener('katrid.actionChange', this._actionChanged);
+                this.element.remove();
+            }
+            createElement() {
+                if (!this.element)
+                    this.element = document.createElement('div');
+                this.element.className = 'help-center-content';
+                const div = this.element;
+                div.innerHTML = `<table class="table"><tr><td><h2>Help Center</h2></td><td style="text-align: right"><button title="${Katrid.i18n.gettext('Close')}" class="btn-close"></button></td></tr></table>`;
+                div.querySelector('.btn-close').addEventListener('click', () => this.destroy());
+                this.container.append(div);
+            }
+            collectHelp() {
+                if (this.app.actionManager.action) {
+                    this.app.actionManager.action.generateHelp(this);
+                }
+            }
+        }
+        UI.HelpCenter = HelpCenter;
+        function helpCenter() {
+            return new HelpCenter();
+        }
+        UI.helpCenter = helpCenter;
+    })(UI = Katrid.UI || (Katrid.UI = {}));
+})(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
     var ui;

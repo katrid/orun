@@ -5,6 +5,7 @@ from orun.apps import apps
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 from orun.utils.module_loading import import_string
+from orun.http import HttpRequest
 
 from orun.contrib.contenttypes.models import ContentType, ref
 #from ..fields import GenericForeignKey
@@ -43,13 +44,13 @@ class Action(models.Model):
         return apps[self.action_type].objects.get(pk=self.pk)
 
     @api.classmethod
-    def load(cls, name_or_id, context=None):
+    def load(cls, request: HttpRequest, name_or_id, context=None):
         try:
             name_or_id = int(name_or_id)
         except ValueError:
             if isinstance(name_or_id, str):
                 name_or_id = ref(name_or_id)
-        info = cls.get(name_or_id).get_action()._get_info(context)
+        info = cls.get(name_or_id).get_action()._get_info(request, context)
         info['type'] = info.pop('action_type')
         return info
 
@@ -65,7 +66,7 @@ class Action(models.Model):
             r[action.binding_type].append(action)
         return r
 
-    def _get_info(self, context):
+    def _get_info(self, request, context):
         return self.to_dict(exclude=['groups'])
 
 
@@ -118,8 +119,8 @@ class WindowAction(Action):
             model = model._meta.name
         return cls.objects.filter(model=model).first()
 
-    def _get_info(self, context):
-        info = super()._get_info(context)
+    def _get_info(self, request, context):
+        info = super()._get_info(request, context)
         # Send action information as katrid.js protocol
         modes = info['viewModes'] = info.pop('view_mode').split(',')
         # info['viewMode'] = info.pop('view_type')
@@ -132,12 +133,12 @@ class WindowAction(Action):
         # check if there's a specified view
         if view_id:
             views_info[self.view.view_type] = model._admin_get_view_info(
-                view_type=self.view_type, view=view_id, toolbar=True
+                request, view_type=self.view_type, view=view_id, toolbar=True
             )
         views_info.update({
-            k: model._admin_get_view_info(view_type=k, view=None, toolbar=True) for k in modes if k not in views_info
+            k: model._admin_get_view_info(request, view_type=k, view=None, toolbar=True) for k in modes if k not in views_info
         })
-        info['viewsInfo']['search'] = model._admin_get_view_info(view_type='search')
+        info['viewsInfo']['search'] = model._admin_get_view_info(request, view_type='search')
         return info
 
 
@@ -158,9 +159,9 @@ class ViewAction(Action):
     class Meta:
         name = 'ui.action.view'
 
-    def _get_info(self, context):
+    def _get_info(self, request, context):
         from orun.contrib.admin.models.ui import View
-        res = super()._get_info(context)
+        res = super()._get_info(request, context)
         # it's a system class
         if self.qualname:
             admin_class = import_string(self.qualname)

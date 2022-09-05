@@ -12590,6 +12590,19 @@ nav#header .nav-item .dropdown-menu {
   border-radius: 0;
 }
 
+.btn-primary {
+  color: #fff;
+}
+.btn-primary:active {
+  background-color: #68678e !important;
+  border-color: #5f5e97 !important;
+}
+.btn-primary:hover {
+  color: #fff;
+  background-color: #68678e;
+  border-color: #5f5e97;
+}
+
 .radio-button {
   margin: 0;
 }
@@ -13839,10 +13852,6 @@ query-view .table-responsive {
   margin-bottom: 5px;
 }
 
-.form-field-section[readonly] .grid-toolbar .btn-action-add, .form-field-section[readonly] .grid-toolbar .btn-action-delete {
-  display: none;
-}
-
 .data-heading .toolbar .btn {
   margin-top: 8px;
 }
@@ -14027,6 +14036,20 @@ pwa-menu .btn {
 }
 .block-text-editor .paragraph-block.block-editor:empty:after {
   content: "﻿";
+}
+
+.help-center {
+  width: 400px;
+  padding: 10px;
+  position: relative;
+  background-color: white;
+}
+.help-center .help-center-content {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  overflow: auto;
+  width: 400px;
 }
 
 /*# sourceMappingURL=style.css.map */
