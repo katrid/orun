@@ -10,7 +10,7 @@ from orun.db import connection, router
 from orun.db.backends import utils
 from orun.db.models import Q
 from orun.db.models.constants import LOOKUP_SEP
-from orun.db.models.deletion import CASCADE, SET_DEFAULT, SET_NULL, PROTECT
+from orun.db.models.deletion import CASCADE, SET_DEFAULT, SET_NULL, DB_PROTECT
 from orun.db.models.query_utils import PathInfo
 from orun.db.models.utils import make_model_name
 from orun.utils.functional import cached_property
@@ -700,7 +700,7 @@ class ForeignKey(ForeignObject):
     }
     description = _("Foreign Key (type determined by related field)")
 
-    def __init__(self, to, on_delete=PROTECT, *, related_name=None, related_query_name=None,
+    def __init__(self, to, on_delete=DB_PROTECT, *, related_name=None, related_query_name=None,
                  limit_choices_to=None, parent_link=False, to_field=None, name_fields=None,
                  label_from_instance=None, check_company=False, db_constraint=True, **kwargs):
         try:
@@ -1661,7 +1661,7 @@ class OneToManyField(RelatedField):
                 elif action == 'UPDATE':
                     rel_model.api_write(values)
             elif action == 'DESTROY':
-                rel_model.api_delete([v['id']])
+                rel_model.api_delete(None, [v['id']])
         if res:
             setattr(instance, self.name, res)
 
