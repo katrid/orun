@@ -41,6 +41,10 @@ def PROTECT(collector, field, sub_objs, using):
     )
 
 
+def DB_PROTECT(collector, field, sub_objs, using):
+    pass
+
+
 def RESTRICT(collector, field, sub_objs, using):
     collector.add_restricted_objects(field, sub_objs)
     collector.add_dependency(field.remote_field.model, field.model)
