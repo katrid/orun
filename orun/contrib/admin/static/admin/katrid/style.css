@@ -12590,6 +12590,19 @@ nav#header .nav-item .dropdown-menu {
   border-radius: 0;
 }
 
+.btn-primary {
+  color: #fff;
+}
+.btn-primary:active {
+  background-color: #68678e !important;
+  border-color: #5f5e97 !important;
+}
+.btn-primary:hover {
+  color: #fff;
+  background-color: #68678e;
+  border-color: #5f5e97;
+}
+
 .radio-button {
   margin: 0;
 }
@@ -14023,6 +14036,18 @@ pwa-menu .btn {
 }
 .block-text-editor .paragraph-block.block-editor:empty:after {
   content: "﻿";
+}
+
+.help-center {
+  width: 400px;
+  padding: 10px;
+  position: relative;
+}
+.help-center .help-center-content {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  overflow: auto;
 }
 
 /*# sourceMappingURL=style.css.map */

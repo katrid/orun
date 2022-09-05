@@ -183,6 +183,18 @@ var Katrid;
                 console.log('click', click);
                 return a;
             }
+            generateHelp(help) {
+                if (this.config.caption) {
+                    const h3 = document.createElement('h3');
+                    h3.innerText = this.config.caption;
+                    help.element.append(h3);
+                }
+                if (this.config.usage) {
+                    const p = document.createElement('p');
+                    p.innerHTML = this.config.usage;
+                    help.element.append(p);
+                }
+            }
         }
         Action._context = {};
         Actions.Action = Action;
@@ -677,6 +689,8 @@ var Katrid;
                     history.pushState({ view_type: this.params.view_type }, document.title, this.makeUrl(mode));
                     this.params.view_type = mode;
                 }
+                if (this.app)
+                    this.app.element.dispatchEvent(new CustomEvent('katrid.actionChange'));
                 return this.view;
             }
             async render() {
@@ -993,6 +1007,20 @@ var Katrid;
             }
             get index() {
                 return this.actionManager.actions.indexOf(this);
+            }
+            generateHelp(help) {
+                super.generateHelp(help);
+                if (this.modelName) {
+                    const h6 = document.createElement('h5');
+                    h6.innerText = Katrid.i18n.gettext('Technical information');
+                    const p = document.createElement('pre');
+                    p.innerText = 'Model name: ' + this.modelName;
+                    help.element.append(h6);
+                    help.element.append(p);
+                }
+                if (this.view?.fields) {
+                    this.view.generateHelp(help);
+                }
             }
         }
         WindowAction.actionType = 'ui.action.window';
@@ -1780,9 +1808,9 @@ var Katrid;
             </a>
           </li>
           <li class="nav-item d-none d-sm-block">
-            <a class="nav-link" href="javascript:void(0);" data-action="fullScreen" title="Full Screen"
-               onclick="Katrid.UI.toggleFullScreen()">
-              <i class="fa fa-arrows-alt"></i>
+            <a class="nav-link" href="javascript:void(0);" data-action="helpCenter" title="Help Center"
+               onclick="Katrid.UI.helpCenter()">
+              <i class="fa fa-question"></i>
             </a>
           </li>
           <li class="nav-item user-menu dropdown">
@@ -1894,6 +1922,7 @@ var Katrid;
                     if (plugin.hashChange(url))
                         break;
                 }
+                this.element.dispatchEvent(new CustomEvent('katrid.actionChange'));
             }
             async debug(info) {
                 let res = await Katrid.Services.Service.$post('/webide/file/debug/', info);
@@ -2385,7 +2414,10 @@ var Katrid;
                     this.model = info.model;
                 else if (info.name || info.action?.modelName) {
                     console.warn('Please specify a model instance instead of name');
-                    this.model = new Katrid.Data.Model({ name: info.name || info.action.modelName, fields: info.fields || viewInfo?.fields });
+                    this.model = new Katrid.Data.Model({
+                        name: info.name || info.action.modelName,
+                        fields: info.fields || viewInfo?.fields
+                    });
                     if (info.action?.model)
                         this.model.allFields = info.action.model.fields;
                 }
@@ -2491,7 +2523,12 @@ var Katrid;
             _search(options) {
                 if (options.id)
                     return this.datasource.get({ id: options.id, timeout: options.timeout });
-                return this.datasource.search({ where: options.where, page: options.page, limit: options.limit, fields: Array.from(Object.keys(this.fields)) });
+                return this.datasource.search({
+                    where: options.where,
+                    page: options.page,
+                    limit: options.limit,
+                    fields: Array.from(Object.keys(this.fields))
+                });
             }
             _mergeHeader(parent, header) {
                 for (let child of Array.from(header.children)) {
@@ -2521,7 +2558,7 @@ var Katrid;
                 this.datasource.vm = vm;
             }
             async doViewAction(action, target) {
-                return this._evalResponseAction(await this.model.service.doViewAction({ action_name: action, target }));
+                return this._evalResponseAction(await this.model.service.callAdminViewAction({ action: action, ids: [target] }));
             }
             async _evalResponseAction(res) {
                 if (res?.open) {
@@ -2670,6 +2707,27 @@ var Katrid;
                 let el = document.createElement('div');
                 el.className = 'toolbar';
                 return el;
+            }
+            generateHelp(help) {
+                if (this.fields) {
+                    for (let f of Object.values(this.fields))
+                        if (f.visible) {
+                            let h4 = document.createElement('h4');
+                            h4.innerText = f.caption;
+                            help.element.append(h4);
+                            if (f.helpText) {
+                                let p = document.createElement('p');
+                                p.innerHTML = f.helpText;
+                                help.element.append(p);
+                                if (f.widgetHelp) {
+                                    p = document.createElement('p');
+                                    p.className = 'text-muted';
+                                    p.innerHTML = f.widgetHelp;
+                                    help.element.append(p);
+                                }
+                            }
+                        }
+                }
             }
         }
         Forms.ModelView = ModelView;
@@ -7602,7 +7660,7 @@ var Katrid;
         <div class="row">
         <action-navbar></action-navbar>
           <div class="col-sm-6 breadcrumb-nav"></div>
-          <p class="help-block">${this.action.config.usage || ''}&nbsp;</p>
+          <!--p class="help-block">${this.action.config.usage || ''}&nbsp;</p-->
         </div>
         <div class="toolbar row">
           <div class="col-sm-6 toolbar-action-buttons"></div>
@@ -13847,6 +13905,61 @@ var katrid;
         ui.helpProvider = new HelpProvider();
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var UI;
+    (function (UI) {
+        class HelpCenter {
+            constructor(app) {
+                this.app = app;
+                if (!app)
+                    this.app = Katrid.webApp;
+                this._actionChanged = () => this.actionChanged();
+                this.app.element.addEventListener('katrid.actionChange', this._actionChanged);
+                this.container = document.createElement('div');
+                this.container.className = 'help-center';
+                this.app.element.parentElement.append(this.container);
+                this.actionChanged(0);
+            }
+            clear() {
+                if (this.element)
+                    this.element.innerHTML = Katrid.i18n.gettext('Loading...');
+            }
+            actionChanged(timeout = 1000) {
+                this.clear();
+                if (this._timeout)
+                    clearTimeout(this._timeout);
+                this._timeout = setTimeout(() => {
+                    this.createElement();
+                    this.collectHelp();
+                }, timeout);
+            }
+            destroy() {
+                this.app.element.removeEventListener('katrid.actionChange', this._actionChanged);
+                this.element.remove();
+            }
+            createElement() {
+                if (!this.element)
+                    this.element = document.createElement('div');
+                this.element.className = 'help-center-content';
+                const div = this.element;
+                div.innerHTML = `<table class="table"><tr><td><h2>Help Center</h2></td><td style="text-align: right"><button title="${Katrid.i18n.gettext('Close')}" class="btn-close"></button></td></tr></table>`;
+                div.querySelector('.btn-close').addEventListener('click', () => this.destroy());
+                this.container.append(div);
+            }
+            collectHelp() {
+                if (this.app.actionManager.action) {
+                    this.app.actionManager.action.generateHelp(this);
+                }
+            }
+        }
+        UI.HelpCenter = HelpCenter;
+        function helpCenter() {
+            return new HelpCenter();
+        }
+        UI.helpCenter = helpCenter;
+    })(UI = Katrid.UI || (Katrid.UI = {}));
+})(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
     var ui;
