@@ -308,9 +308,9 @@ class AdminModel(models.Model, helper=True):
         return list(qs)
 
     @api.classmethod
-    def api_delete(self, request: HttpRequest, ids):
+    def api_delete(cls, request: HttpRequest, ids):
         # self.check_permission('delete')
-        ids = [v for v in self._api_search(request, {'pk__in': ids}).only('pk')]
+        ids = [v for v in cls._api_search(request, {'pk__in': ids}).only('pk')]
         r = []
         if not ids:
             raise ObjectDoesNotExist()
