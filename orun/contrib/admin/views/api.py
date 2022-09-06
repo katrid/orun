@@ -20,7 +20,7 @@ def rpc(request, service, meth, params):
         args = ()
         service = apps.services[service]
         meth = getattr(service, method)
-        if getattr(meth, 'exposed', None) or (method == 'admin_do_view_action'):
+        if getattr(meth, 'exposed', None):
             qs = kwargs
 
             args = params.get('args') or []
