@@ -64,7 +64,7 @@ def method(*args, select=None, each=None, request=None):
         def wrapped(self, request, *args, **kwargs):
             if 'id' in kwargs and not args:
                 args = kwargs.pop('id')
-            if args:
+            if request:
                 if isinstance(request, HttpRequest):
                     arg = args[0]
                     args = (request, *args[1:])
