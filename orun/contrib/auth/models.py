@@ -333,6 +333,7 @@ class AbstractUser(PermissionsMixin, AbstractBaseUser):
     objects = UserManager()
 
     USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = []
 
     class Meta:
         abstract = True
