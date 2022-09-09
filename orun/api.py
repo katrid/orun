@@ -61,16 +61,12 @@ def method(*args, select=None, each=None, request=None):
         meth_name = meth_name or fn.__name__
 
         @wraps(fn)
-        def wrapped(self, request, *args, **kwargs):
+        def wrapped(self, *args, **kwargs):
             if 'id' in kwargs and not args:
                 args = kwargs.pop('id')
             if request:
-                if isinstance(request, HttpRequest):
-                    arg = args[0]
-                    args = (request, *args[1:])
-                else:
-                    arg = request
-                    args = args[1:]
+                arg = args[0]
+                args = args[1:]
                 objs = None
                 # simulate orm
                 if inspect.isclass(self):
