@@ -27,7 +27,7 @@ PAGE_SIZE = 10
 class AdminModel(models.Model, helper=True):
     @api.classmethod
     def api_search(cls, request: HttpRequest, fields=None, count=None, page=None, limit=None, format=None, **kwargs):
-        qs = cls._api_search(request, fields=fields, **kwargs)
+        qs = cls._api_search(fields=fields, **kwargs)
         if count:
             count = qs.count()
         if limit is None:
