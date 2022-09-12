@@ -389,16 +389,16 @@ class AdminModel(models.Model, helper=True):
         }
 
     @api.classmethod
-    def admin_get_formview_action(self, id=None):
+    def admin_get_formview_action(cls, request: HttpRequest, id=None):
         return {
             'type': 'ui.action.window',
-            'model': self._meta.name,
+            'model': cls._meta.name,
             'object_id': id,
             'viewModes': ['form'],
             'viewMode': 'form',
             'target': 'current',
             'viewsInfo': {
-                'form': self._admin_get_view_info('form')
+                'form': cls._admin_get_view_info(request, 'form')
             },
             'context': {},
         }
