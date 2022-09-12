@@ -213,6 +213,7 @@ class AdminModel(models.Model, helper=True):
                 field.label_from_instance or kwargs.get('name_fields')
             )
             return related_model.api_search_by_name(
+                request,
                 label_from_instance=label_from_instance, exact=exact, format=fmt,
                 **search_params
             )
