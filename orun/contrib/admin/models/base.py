@@ -47,7 +47,7 @@ class AdminModel(models.Model, helper=True):
         }
 
     @classmethod
-    def _api_search(cls, request: HttpRequest, where=None, fields=None, params=None, join=None, **kwargs):
+    def _api_search(cls, where=None, fields=None, params=None, join=None, **kwargs):
         # self.check_permission('read')
         qs = cls.objects.all()
         domain = kwargs.get('domain')
@@ -128,7 +128,7 @@ class AdminModel(models.Model, helper=True):
 
     @api.classmethod
     def api_search_by_name(
-            cls, request: HttpRequest, name=None, count=None, page=None, label_from_instance=None, name_fields=None, *args, exact=False,
+            cls, name=None, count=None, page=None, label_from_instance=None, name_fields=None, *args, exact=False,
             **kwargs
     ):
         fmt = kwargs.get('format')
@@ -151,7 +151,7 @@ class AdminModel(models.Model, helper=True):
                 q &= Q(**where)
         if q is not None:
             kwargs = {'where': q}
-        qs = cls._api_search(request, *args, **kwargs)
+        qs = cls._api_search(*args, **kwargs)
         limit = kwargs.get('limit') or 20
         if count:
             count = qs.count()
