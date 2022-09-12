@@ -242,10 +242,10 @@ class ReportAction(Action):
                 }
         return cls.export_report(action_id, fmt, params)
 
-    @api.method(request=True)
-    def get_metadata(self, request: HttpRequest):
-        cls = import_string(self.qualname)
-        return cls.get_metadata(request)
+    @api.classmethod
+    def get_metadata(cls, request: HttpRequest, id):
+        klass = import_string(cls.objects.only('qualname').get(pk=id).qualname)
+        return klass.get_metadata(request)
 
     @api.classmethod
     def list_all(cls):
