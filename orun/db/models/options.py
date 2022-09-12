@@ -1062,4 +1062,6 @@ def classmethod_helper(fn, class_helper):
         return fn.__func__(cls, class_helper, *args, **kwargs)
     if getattr(fn, 'exposed', None):
         wrapped.exposed = fn.exposed
+    if getattr(fn, 'pass_request', None):
+        wrapped.pass_request = fn.pass_request
     return classmethod(wrapped)
