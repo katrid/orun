@@ -261,10 +261,10 @@ class ReportAction(Action):
             ]
         }
 
-    @api.method(request=True)
-    def execute(self, request: HttpRequest, params=None):
-        cls = import_string(self.qualname)
-        inst = cls(request, params)
+    @api.classmethod
+    def execute(cls, request: HttpRequest, id, params=None):
+        report = import_string(cls.objects.only('qualname').get(pk=id).qualname)
+        inst = report(request, params)
         return inst.execute()
 
 
