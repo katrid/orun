@@ -11789,7 +11789,6 @@ var Katrid;
                     this.$view.discard();
                     for (let rec of this.records) {
                         if (rec.$state === Katrid.Data.RecordState.created) {
-                            console.debug('remove');
                             this.records.splice(this.modelValue.indexOf(rec), 1);
                         }
                         if (rec.$$discard)
@@ -13017,8 +13016,9 @@ var katrid;
             document.querySelector(selector).click();
         }
         test.click = click;
-        function modelActionTour(...args) {
+        function modelActionTour(args) {
             const tour = new Tour();
+            console.log('args', args);
             return tour.modelActionTour(args);
         }
         test.modelActionTour = modelActionTour;
