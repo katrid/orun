@@ -14539,10 +14539,10 @@ var Katrid;
         UI.TreeView = TreeView;
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var UI;
-    (function (UI) {
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
         /** Show a search dialog for a given model */
         async function search(config) {
             if (config.multiple == null)
@@ -14551,9 +14551,9 @@ var Katrid;
             dlg.ready();
             return dlg.showDialog();
         }
-        UI.search = search;
-    })(UI = Katrid.UI || (Katrid.UI = {}));
-})(Katrid || (Katrid = {}));
+        ui.search = search;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     function isString(obj) {
