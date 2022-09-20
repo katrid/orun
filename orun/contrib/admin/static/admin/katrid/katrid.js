@@ -587,9 +587,9 @@ var Katrid;
                     event.stopPropagation();
                 if (!data)
                     data = {};
-                else if (_.isArray(data))
+                else if (Array.isArray(data))
                     data = { args: data };
-                else if (!_.isObject(data))
+                else if (!Katrid.isObject(data))
                     data = { args: [data] };
                 this.model.service.rpc(method, data.args, data.kwargs);
             }
@@ -3114,7 +3114,7 @@ var Katrid;
                     for (let col of row) {
                         let field = fields[i];
                         let td = document.createElement('td');
-                        if (_.isNumber(col))
+                        if (Katrid.isNumber(col))
                             col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
                         else if (field.type === 'DateField')
                             col = moment(col).format('DD/MM/YYYY');
@@ -3309,7 +3309,7 @@ var Katrid;
                             else {
                                 if (field.type === 'DecimalField')
                                     col = Katrid.intl.number({ minimumFractionDigits: 2 }).format(col);
-                                else if (_.isNumber(col))
+                                else if (Katrid.isNumber(col))
                                     col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
                                 else if (field.type === 'DateField')
                                     col = moment(col).format('DD/MM/YYYY');
@@ -3899,7 +3899,7 @@ var Katrid;
                         let col;
                         if (f.name) {
                             col = row[f.name];
-                            if (_.isNumber(col))
+                            if (Katrid.isNumber(col))
                                 col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
                             else if (f.type === 'DateField')
                                 col = moment(col).format('DD/MM/YYYY');
@@ -4432,7 +4432,7 @@ var Katrid;
             }
             applyModifiedData(form, element, record) {
                 const data = this.getModifiedData(form, element, record);
-                const _id = _.hash(record);
+                const _id = Katrid.hash(record);
                 if (data) {
                     let ds = this.modifiedData;
                     if ((ds == null)) {
@@ -4960,9 +4960,9 @@ var Katrid;
                 this.record.$discard();
             }
             encodeObject(obj) {
-                if (_.isArray(obj))
+                if (Array.isArray(obj))
                     return obj.map((v) => this.encodeObject(v));
-                else if (_.isObject(obj)) {
+                else if (Katrid.isObject(obj)) {
                     let r = {};
                     for (let [k, v] of Object.entries(obj))
                         if (!k.startsWith('$'))
@@ -5877,8 +5877,8 @@ var Katrid;
             }
             getFilterConditions() {
                 let ret = [
-                    { name: '%', label: _.gettext('Contains'), },
-                    { name: '!%', label: _.gettext('Not contains') },
+                    { name: '%', label: Katrid.i18n.gettext('Contains'), },
+                    { name: '!%', label: Katrid.i18n.gettext('Not contains') },
                 ];
                 return ret.concat(super.getFilterConditions());
             }
@@ -6167,9 +6167,9 @@ var Katrid;
                 return 'view.param.ForeignKey';
             }
             getParamValue(value) {
-                if (_.isArray(value))
+                if (Array.isArray(value))
                     return value[0];
-                else if (_.isObject(value))
+                else if (Katrid.isObject(value))
                     return value.id;
                 return value;
             }
@@ -6265,9 +6265,9 @@ var Katrid;
                 this.tag = 'field-tags';
             }
             toJSON(val) {
-                if (_.isArray(val))
+                if (Array.isArray(val))
                     return val.map(obj => obj.id);
-                else if (_.isString(val))
+                else if (Katrid.isString(val))
                     val = val.split(',');
                 return val;
             }
@@ -9643,7 +9643,7 @@ var Katrid;
                     getParamValue(value) {
                         let r = {};
                         let name = this.name;
-                        if (_.isArray(value)) {
+                        if (Array.isArray(value)) {
                             r[name + this.lookup] = value[0];
                         }
                         else if (value instanceof SearchObject) {
@@ -9787,7 +9787,7 @@ var Katrid;
                         this.searchView = searchView;
                         container.innerHTML = `<button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" type="button"
                 aria-expanded="false">
-          <span class="fa fa-filter fa-fw"></span> ${_.gettext('Filters')} <span class="caret"></span>
+          <span class="fa fa-filter fa-fw"></span> ${Katrid.i18n.gettext('Filters')} <span class="caret"></span>
         </button>
 
     <div class="dropdown-menu search-view-filter-menu">
@@ -9808,12 +9808,12 @@ var Katrid;
         </div>
         <a class="dropdown-item dropdown-search-item" v-on:click.stop="expanded=!expanded">
           <i :class="{ 'fa-caret-right': !expanded, 'fa-caret-down': expanded }" class="fa expandable"></i>
-          ${_.gettext('Add Custom Filter')}
+          ${Katrid.i18n.gettext('Add Custom Filter')}
         </a>
 
         <div v-if="expanded" v-on:click.stop.prevent="">
           <div v-show="tempFilter.length" class="margin-bottom-8">
-            <a href="#" v-on:click.prevent="" class="dropdown-item" v-for="filter in tempFilter" title="${_.gettext('Remove item')}">
+            <a href="#" v-on:click.prevent="" class="dropdown-item" v-for="filter in tempFilter" title="${Katrid.i18n.gettext('Remove item')}">
             {{ filter.toString() }}
             </a>
           </div>
@@ -9837,11 +9837,11 @@ var Katrid;
             </div>
             <div class="form-group">
               <button class="btn btn-primary" type="button" v-on:click="applyFilter(field, condition, searchValue)" v-show="conditionName">
-                ${_.gettext('Apply')}
+                ${Katrid.i18n.gettext('Apply')}
               </button>
               <button class="btn btn-outline-secondary" type="button"
                       v-on:click="addCondition(field, condition, searchValue);fieldName='';" v-show="conditionName">
-                ${_.gettext('Add a condition')}
+                ${Katrid.i18n.gettext('Add a condition')}
               </button>
             </div>
           </div>
@@ -9909,7 +9909,7 @@ var Katrid;
                 class GroupFilterHelper {
                     constructor(searchView, container) {
                         container.innerHTML = `<button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" type="button">
-          <span class="fa fa-bars fa-fw"></span> ${_.gettext('Group By')} <span class="caret"></span>
+          <span class="fa fa-bars fa-fw"></span> ${Katrid.i18n.gettext('Group By')} <span class="caret"></span>
         </button>
         <div class="dropdown-menu search-view-groups-menu">
           <div>
@@ -9925,7 +9925,7 @@ var Katrid;
           <a class="dropdown-item dropdown-search-item" v-on:click.stop="expanded=!expanded">
             <i :class="{ 'fa-caret-right': !expanded, 'fa-caret-down': expanded }"
                class="fa expandable"></i>
-            ${_.gettext('Add Custom Group')}
+            ${Katrid.i18n.gettext('Add Custom Group')}
           </a>
 
           <div v-if="expanded" v-on:click.stop.prevent="">
@@ -9938,7 +9938,7 @@ var Katrid;
               </div>
               <div class="form-group">
                 <button class="btn btn-primary" type="button" v-on:click="addCustomGroup(fields[fieldName]);fieldName='';">
-                  ${_.gettext('Apply')}
+                  ${Katrid.i18n.gettext('Apply')}
                 </button>
               </div>
             </div>
@@ -12899,7 +12899,7 @@ var Katrid;
                         // display alert
                         if (res?.error && (typeof res.error === 'string'))
                             Katrid.Forms.Dialogs.Alerts.error(res.error);
-                        else if (res.messages && _.isObject(res.messages)) {
+                        else if (res.messages && Katrid.isObject(res.messages)) {
                             for (let msg of Object.values(res.messages))
                                 if (typeof msg === 'string')
                                     Katrid.Forms.Dialogs.Alerts.error(msg);
@@ -12923,7 +12923,7 @@ var Katrid;
             static read(config) {
                 // read data from server
                 let details, id, params, filter;
-                if (_.isObject(config)) {
+                if (Katrid.isObject(config)) {
                     details = config.details;
                     params = config.params;
                     filter = config.filter;
@@ -13993,7 +13993,7 @@ var Katrid;
                         let service = new Katrid.Services.ModelService(serviceName);
                         service.rpc(method)
                             .then((res) => {
-                            if (_.isString(res))
+                            if (Katrid.isString(res))
                                 res = JSON.parse(res);
                             Plotly.plot(this, JSON.parse(res), layout, { responsive: true });
                         });
@@ -14265,7 +14265,7 @@ var Katrid;
                     this._exp.classList.add('fa', 'fa-fw');
                     a.appendChild(this._exp);
                     // icon element
-                    if (_.isString(item.icon)) {
+                    if (Katrid.isString(item.icon)) {
                         this._iconElement = document.createElement('span');
                         this._iconElement.classList.add('icon', 'fa', 'fa-fw');
                         this._iconElement.classList.add(item.icon);
