@@ -1,10 +1,37 @@
 import json
 from contextlib import contextmanager
-from orun.test import modify_settings
-from orun.test.selenium import SeleniumTestCase
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
+
+from orun.test import modify_settings
+from orun.test.selenium import SeleniumTestCase
 from orun.utils.deprecation import MiddlewareMixin
+from orun.apps import apps
+from orun.db import models
+
+
+class ApiTestCaseMixin:
+    def _api_prep_values(self, model: str, data: dict):
+        cls = apps.models[model]
+        values = {}
+        for k, v in data.items():
+            field = cls._meta.fields[k]
+            if isinstance(field, models.ForeignKey) and isinstance(v, str):
+                v = self.client.rpc(
+                    field.model._meta.name, 'api_get_field_choices', {'kwargs': {'field': field.name, 'name': v}}
+                ).json()['result']['items'][0]['id']
+            elif isinstance(field, models.OneToManyField):
+                v = [
+                    {'action': 'CREATE', 'values': self._api_prep_values(field.remote_field.model._meta.name, o)}
+                    for o in v
+                ]
+            values[k] = v
+        return values
+
+    def api_write(self, model: str, data: dict):
+        cls = apps.models[model]
+        values = self._api_prep_values(model, data)
+        return cls.api_write(values)
 
 
 class CSPMiddleware(MiddlewareMixin):

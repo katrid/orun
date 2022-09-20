@@ -92,3 +92,4 @@ js/dist
 js/node_modules
 tests/db.sqlite3
 /db.sqlite3
+orun/contrib/admin/static/*.ts

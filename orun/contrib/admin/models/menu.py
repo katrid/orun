@@ -1,5 +1,6 @@
 from collections import defaultdict
 from orun.db import models
+from orun.http import HttpRequest
 from orun.utils.translation import gettext
 
 
@@ -82,5 +83,5 @@ class Menu(models.Model):
         return MENU_SEP.join(objs)
 
     @classmethod
-    def admin_search_menu(cls, term: str):
+    def admin_search_menu(cls, request: HttpRequest, term: str):
         pass
