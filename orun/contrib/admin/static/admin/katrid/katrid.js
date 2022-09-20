@@ -12799,7 +12799,7 @@ var Katrid;
                 return this.post('api_search', { kwargs: params }, data, config, context);
             }
             delete(id) {
-                if (!_.isArray(id))
+                if (!Array.isArray(id))
                     id = [id];
                 return this.post('api_delete', { kwargs: { ids: id } });
             }
