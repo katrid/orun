@@ -5979,7 +5979,10 @@ var Katrid;
                 this.tag = 'input-decimal';
             }
             setValue(record, value) {
-                record[this.name] = parseFloat(value);
+                if (value == null)
+                    record[this.name] = null;
+                else
+                    record[this.name] = parseFloat(value);
             }
             toJSON(val) {
                 if (val && Katrid.isString(val))
