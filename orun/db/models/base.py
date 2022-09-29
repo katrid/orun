@@ -24,6 +24,7 @@ from orun.db.models.deletion import CASCADE, Collector
 from orun.db.models.fields.related import (
     ForeignObjectRel, OneToOneField, lazy_related_operation, resolve_relation,
 )
+from orun.db.models.fields import CharField
 from orun.db.models.manager import Manager
 from orun.db.models.options import Options
 from orun.db.models.query import Q
@@ -1944,7 +1945,7 @@ class Model(metaclass=ModelBase):
             if not f.name:
                 continue
             v = getattr(self, f.name)
-            if self._meta.name_field == f.name:
+            if self._meta.name_field == f.name and isinstance(f, CharField):
                 new_item[f.name] = gettext('%s (copy)') % v
             elif f.one_to_many:
                 new_item[f.name] = [
