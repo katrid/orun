@@ -3478,6 +3478,10 @@ var Katrid;
                     }
                     if (fields)
                         this.createQueryView(fields, res.data).ready();
+                    else if (res.type === 'query') {
+                        const data = await this.query.execute({});
+                        this.createQueryView(data.fields, data.data).ready();
+                    }
                 });
             }
             createParamsPanel(params) {
@@ -3528,7 +3532,7 @@ var Katrid;
                 this.queryView.reportTemplate = this.metadata?.template?.reportTemplate;
                 this.queryView.print();
             }
-            createQueryView(fields, data) {
+            createQueryView(fields, data, reportType = 'grid') {
                 let queryView = new BI.QueryView({ fields });
                 queryView.metadata = this.metadata;
                 queryView.data = data;
