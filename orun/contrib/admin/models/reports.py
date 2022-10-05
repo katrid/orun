@@ -1,10 +1,13 @@
 from typing import Optional
+import datetime
+from decimal import Decimal
 import warnings
 import json
 import os
 import uuid
 from collections import defaultdict
-from jinja2 import Environment
+
+from jinja2 import Template, Environment
 
 from orun import api
 from orun.http import HttpRequest
@@ -244,8 +247,20 @@ class ReportAction(Action):
 
     @api.classmethod
     def get_metadata(cls, request: HttpRequest, id):
-        klass = import_string(cls.objects.only('qualname').get(pk=id).qualname)
-        return klass.get_metadata(request)
+        report = cls.objects.only('qualname', 'report_type').get(pk=id)
+        if report.qualname:
+            klass = import_string(cls.objects.only('qualname').get(pk=id).qualname)
+            return klass.get_metadata(request)
+        elif report.report_type == 'query':
+            return report.get_query_info()
+
+    def get_query_info(self):
+        return {
+            'name': self.name,
+            'params': None,
+            'template': None,
+            'type': 'query',
+        }
 
     @api.classmethod
     def list_all(cls):
@@ -253,19 +268,61 @@ class ReportAction(Action):
             'data': [
                 {
                     'id': q.pk,
-                    'category': str(q.category),
+                    'category': str(q.category) if q.category else 'Uncategorized',
                     'name': q.name + ' (User Report)' if q.owner_type == 'user' else q.name,
                     # 'params': q.params,
                 }
-                for q in cls.objects.filter(report_type='grid')
+                for q in cls.objects.filter(report_type__in=('grid', 'query'))
             ]
         }
 
     @api.classmethod
     def execute(cls, request: HttpRequest, id, params=None):
-        report = import_string(cls.objects.only('qualname').get(pk=id).qualname)
-        inst = report(request, params)
-        return inst.execute()
+        report = cls.objects.only('qualname', 'report_type').get(pk=id)
+        if report.qualname:
+            klass = import_string(report.qualname)
+            inst = klass(request, params)
+            return inst.execute()
+        elif report.report_type == 'query':
+            return report._read(True)
+
+    def _read(self, with_description=False, fields=None, **kwargs):
+        q = self
+        params = {}
+
+        if 'filter' in kwargs:
+            params.update(kwargs['filter'])
+        sql = Template(q.sql).render(**params)
+        values = []
+        if 'params' in kwargs:
+            # apply query search params
+            pass
+        if (fields):
+            sql = 'SELECT top 100 %s FROM (%s) as __q' % (', '.join(fields))
+
+        cur = connection.cursor()
+        cur.execute(sql, values)
+        desc = cur.cursor.description
+        datatype_map = {
+            datetime.date: 'DateField',
+            datetime.datetime: 'DateTimeField',
+            str: 'CharField',
+            Decimal: 'DecimalField',
+            float: 'FloatField',
+            int: 'IntegerField',
+        }
+        if with_description:
+            fields = [
+                {'name': f[0], 'type': datatype_map.get(f[1], 'CharField'), 'size': f[2]}
+                for f in desc
+            ]
+        else:
+            fields = [f[0] for f in desc]
+
+        return {
+            'fields': fields,
+            'data': [[float(col) if isinstance(col, Decimal) else col for col in row] for row in cur.fetchall()],
+        }
 
 
 class UserReport(models.Model):
