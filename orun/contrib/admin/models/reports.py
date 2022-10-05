@@ -286,6 +286,12 @@ class ReportAction(Action):
         elif report.report_type == 'query':
             return report._read(True)
 
+    @api.classmethod
+    def read(cls, id, with_description=False, as_dict=False, fields=None, **kwargs):
+        # TODO replace query
+        from .query import Query
+        return Query.read(id, with_description=with_description, as_dict=as_dict, fields=fields, **kwargs)
+
     def _read(self, with_description=False, fields=None, **kwargs):
         q = self
         params = {}

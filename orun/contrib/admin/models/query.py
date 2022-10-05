@@ -28,7 +28,7 @@ class Query(models.Model):
     published = models.BooleanField(default=True)
 
     class Meta:
-        name = 'ui.action.query'
+        name = 'ir.query'
 
     def get_by_natural_key(self, category, name):
         return self.objects.filter({'category': category, 'name': name}).one()
