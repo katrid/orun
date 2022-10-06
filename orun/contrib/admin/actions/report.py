@@ -144,7 +144,7 @@ class ReportAction(Action):
         if connection.vendor == 'mssql':
             vars.append('SET DATEFORMAT ymd')
             for k, v in self._values.items():
-                vars.append(f'declare @{k} {self._get_sqltype(v)}')
+                vars.append(f'declare @{k} varchar(max)')
                 params.append(values.get(k, v))
                 select.append(f'@{k} = ?')
             if vars:
