@@ -139,8 +139,8 @@ class ReportAction(Action):
             values = {}
         _sql = ''
         # macro/template evaluation
-        if sql and '-- if ' in sql:
-            sql = Template(sql, '--', '!--').render(values)
+        if sql and '--% if ' in sql:
+            sql = Template(sql, '--%', '%--').render(values)
         if connection.vendor == 'mssql':
             vars.append('SET DATEFORMAT ymd')
             for k, v in self._values.items():
