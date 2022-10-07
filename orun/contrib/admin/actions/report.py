@@ -139,8 +139,8 @@ class ReportAction(Action):
             values = {}
         _sql = ''
         # macro/template evaluation
-        if sql and '--% if ' in sql:
-            sql = Template(sql, '--%', '%--').render(values)
+        if sql and '/*%' in sql:
+            sql = Template(sql, '/*%', '%*/').render(values)
         if connection.vendor == 'mssql':
             vars.append('SET DATEFORMAT ymd')
             for k, v in self._values.items():
@@ -157,11 +157,10 @@ class ReportAction(Action):
         else:
             _sql += sql
 
-        print(params)
         cur = connection.cursor()
         cur.execute(_sql, params)
         self.fields = cur.cursor.description
-        rows = cur.fetchall()
+        rows = [tuple(row) for row in cur.fetchall()]
         return rows, cur
 
     def _apply_search(self, sql, params, values):
@@ -190,7 +189,7 @@ class ReportAction(Action):
         desc = cur.cursor.description
         if with_description:
             fields = [
-                {'name': f[0], 'type': connection.introspection.get_field_type(f[1], f), 'size': f[2]}
+                {'name': f[0], 'type': connection.introspection.get_field_type(f[1], f) if f[1] in connection.introspection.data_types_reverse else f[1].__name__, 'size': f[2]}
                 for f in desc
             ]
         else:
