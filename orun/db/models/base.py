@@ -1952,7 +1952,7 @@ class Model(metaclass=ModelBase):
             if self._meta.name_field == f.name:
                 if isinstance(f, CharField):
                     new_item[f.name] = gettext('%s (copy)') % v
-            elif f.one_to_many:
+            elif f.one_to_many and v is not None:
                 new_item[f.name] = [
                     {
                         'action': 'CREATE',
