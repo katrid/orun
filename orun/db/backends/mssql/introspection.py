@@ -19,6 +19,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         pyodbc.SQL_CHAR: 'CharField',
         pyodbc.SQL_VARCHAR: 'CharField',
         pyodbc.SQL_WCHAR: 'CharField',
+        pyodbc.SQL_WVARCHAR: 'CharField',
         pyodbc.SQL_TYPE_DATE: 'DateField',
         pyodbc.SQL_TYPE_TIME: 'TimeField',
         pyodbc.SQL_SS_TIME2: 'TimeField',

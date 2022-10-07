@@ -1945,8 +1945,9 @@ class Model(metaclass=ModelBase):
             if not f.name:
                 continue
             v = getattr(self, f.name)
-            if self._meta.name_field == f.name and isinstance(f, CharField):
-                new_item[f.name] = gettext('%s (copy)') % v
+            if self._meta.name_field == f.name:
+                if isinstance(f, CharField):
+                    new_item[f.name] = gettext('%s (copy)') % v
             elif f.one_to_many:
                 new_item[f.name] = [
                     {
@@ -1957,10 +1958,10 @@ class Model(metaclass=ModelBase):
                     for obj in v
                 ]
             else:
-                v = f.value_to_json(v)
                 if f.required and v is None and f.has_default():
                     # set default value to required field
                     v = f.get_default()
+                v = f.value_to_json(v)
                 new_item[f.name] = v
         return new_item
 
