@@ -145,8 +145,9 @@ class ReportAction(Action):
             vars.append('SET DATEFORMAT ymd')
             for k, v in self._values.items():
                 vars.append(f'declare @{k} varchar(max)')
-                params.append(values.get(k, v))
-                select.append(f'@{k} = ?')
+                if not isinstance(v, list):
+                    params.append(values.get(k, v))
+                    select.append(f'@{k} = ?')
             if vars:
                 _sql = '\n'.join(vars)
                 _sql += f'''\nselect {",".join(select)}\n'''
