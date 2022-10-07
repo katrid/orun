@@ -7844,11 +7844,10 @@ ${Katrid.i18n.gettext('Delete')}
                 this.datasource.get({ id: this.record.id });
             }
             async copy() {
-                let res = await this.model.service.copy(this.record.id);
-                this.setState(DataSourceState.inserting);
+                const res = await this.model.service.copy(this.record.id);
+                await this.insert();
                 this.datasource.record = this.model.newRecord(null, this.datasource);
                 this.datasource.setValues(res);
-                // await this.datasource.copy(this.record.id);
             }
             createComponent() {
                 let comp = super.createComponent();
