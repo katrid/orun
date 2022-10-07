@@ -1941,18 +1941,14 @@ class Model(metaclass=ModelBase):
 
     def __copy__(self):
         new_item = {}
-        copyable = self._meta.copyable_fields
-        for f in self._meta.fields:
+        for f in self._meta.copyable_fields:
             if not f.name:
                 continue
-            if f in copyable:
-                v = getattr(self, f.name)
-            else:
-                v = None
+            v = getattr(self, f.name)
             if self._meta.name_field == f.name:
                 if isinstance(f, CharField):
                     new_item[f.name] = gettext('%s (copy)') % v
-            elif f.one_to_many and v is not None:
+            elif f.one_to_many:
                 new_item[f.name] = [
                     {
                         'action': 'CREATE',
