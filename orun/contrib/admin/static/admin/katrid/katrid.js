@@ -3114,12 +3114,14 @@ var Katrid;
                     for (let col of row) {
                         let field = fields[i];
                         let td = document.createElement('td');
-                        if (Katrid.isNumber(col))
+                        if (Katrid.isNumber(col) || (field.type === 'DecimalField'))
                             col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
                         else if (field.type === 'DateField')
                             col = moment(col).format('DD/MM/YYYY');
                         else if (field.type === 'DateTimeField')
                             col = moment(col).format('DD/MM/YYYY HH:mm');
+                        else if (field.type === 'Float')
+                            col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
                         td.innerText = col;
                         tr.append(td);
                         i++;
@@ -5384,10 +5386,10 @@ var Katrid;
                     this.filter = info.domain;
                 if (info.filter)
                     this.filter = info.filter;
-                if (info.ngMaxLength)
-                    this.ngMaxLength = info.ngMaxLength;
-                if (info.ngMinLength)
-                    this.ngMinLength = info.ngMinLength;
+                if (info.vMaxLength)
+                    this.vMaxLength = info.vMaxLength;
+                if (info.vMinLength)
+                    this.vMinLength = info.vMinLength;
                 if ('widget' in info)
                     this.widget = info.widget;
                 if ('nolabel' in info)
@@ -5436,10 +5438,10 @@ var Katrid;
                     input.setAttribute('required', 'required');
                 if (this.maxLength)
                     input.maxLength = this.maxLength;
-                if (this.ngMaxLength)
-                    input.setAttribute(':maxlength', this.ngMaxLength);
-                if (this.ngMinLength)
-                    input.setAttribute(':minlength', this.ngMinLength);
+                if (this.vMaxLength)
+                    input.setAttribute(':maxlength', this.vMaxLength);
+                if (this.vMinLength)
+                    input.setAttribute(':minlength', this.vMinLength);
                 if (this.attrs.nolabel === 'placeholder')
                     input.placeholder = this.caption;
                 if (this.attrs.ngFieldChange || this.ngChange)
@@ -5474,6 +5476,10 @@ var Katrid;
                     }
                 return res;
             }
+            renderTo(fieldEl, view) {
+                if (view.getViewType() === 'form')
+                    this.formCreate(fieldEl);
+            }
             formCreate(fieldEl) {
                 let attrs = this.attrs = this.getFieldAttributes(fieldEl);
                 let widget;
@@ -5505,7 +5511,7 @@ var Katrid;
                 if (attrs[':class'])
                     section.setAttribute(':class', attrs[':class']);
                 if (attrs[':readonly']) {
-                    section.setAttribute(':readonly', attrs[':readonly']);
+                    section.setAttribute(':readonly', attrs[':redonly']);
                 }
                 else if (attrs.readonly)
                     section.setAttribute('readonly', 'readonly');
