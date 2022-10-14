@@ -161,7 +161,7 @@ class ReportAction(Action):
         cur = connection.cursor()
         cur.execute(_sql, params)
         self.fields = cur.cursor.description
-        rows = [tuple(row) for row in cur.fetchall()]
+        rows = [[float(col) if isinstance(col, decimal.Decimal) else col for col in row] for row in cur.fetchall()]
         return rows, cur
 
     def _apply_search(self, sql, params, values):
@@ -195,7 +195,6 @@ class ReportAction(Action):
             ]
         else:
             fields = [f[0] for f in desc]
-
         return rows, fields
 
     @classmethod
