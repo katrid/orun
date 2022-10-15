@@ -675,3 +675,6 @@ class BaseDatabaseWrapper:
         if alias is None:
             alias = self.alias
         return type(self)(settings_dict, alias)
+
+    def call(proc_name: str, args=None):
+        pass
