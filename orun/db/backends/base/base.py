@@ -677,4 +677,4 @@ class BaseDatabaseWrapper:
         return type(self)(settings_dict, alias)
 
     def call(self, proc_name: str, args=None):
-        pass
+        raise NotImplementedError()
