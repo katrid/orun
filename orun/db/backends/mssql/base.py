@@ -172,6 +172,14 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         else:
             return True
 
+    def call(self, proc_name: str, args = None):
+        with self.cursor() as cur:
+            stmt = f'EXEC {proc_name}'
+            if args:
+                stmt += ' ' + ','.join(['?' for arg in args])
+            cur.execute(stmt, args)
+            return cur
+
 
 class CursorWrapper(orun.db.backends.utils.CursorWrapper):
     def execute(self, sql, params=None):
@@ -188,14 +196,6 @@ class CursorWrapper(orun.db.backends.utils.CursorWrapper):
 
     def close(self):
         pass
-
-    def call(self, proc_name: str, args = None):
-        with self.cursor() as cur:
-            stmt = f'EXEC {proc_name}'
-            if args:
-                stmt += ' ' + ','.join(['?' for arg in args])
-            cur.execute(stmt, args)
-            return cur
 
 
 class CursorDebugWrapper(CursorWrapper):
