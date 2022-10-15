@@ -231,3 +231,11 @@ class CursorDebugWrapper(CursorWrapper):
                 extra={'duration': duration, 'sql': sql, 'params': param_list}
             )
 
+    def call(self, proc_name: str, args = None):
+        with self.cursor() as cur:
+            stmt = f'EXEC {proc_name}'
+            if args:
+                stmt += ' ' + ','.join(['?' for arg in args])
+            cur.execute(stmt, args)
+            return cur
+
