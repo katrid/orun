@@ -281,3 +281,12 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     def pg_version(self):
         with self.temporary_connection():
             return self.connection.server_version
+
+    def call(self, proc_name: str, args=None):
+        with self.cursor() as cur:
+            stmt = f'CALL {proc_name}('
+            if args:
+                stmt += ','.join(['%s' for arg in args])
+            stmt += ')'
+            cur.execute(stmt, args)
+            return cur
