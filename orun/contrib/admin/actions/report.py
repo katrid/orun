@@ -56,7 +56,7 @@ class ReportAction(Action):
                 elif op == 'between':
                     self._values[f'{k}2'] = None
                 elif op == 'in' and 'value1' in p:
-                    self._values[k] = ''.join([str(s) if isinstance(s, (int, float)) or (isinstance(s, str) and s.isnumeric()) else "'" + str(s).replace("'", "''") + "'" for s in p.get('value1') if s is not None])
+                    self._values[k] = ','.join([str(s) if isinstance(s, (int, float)) or (isinstance(s, str) and s.isnumeric()) else "'" + str(s).replace("'", "''") + "'" for s in p.get('value1') if s is not None])
 
     @classmethod
     def update_info(cls):
