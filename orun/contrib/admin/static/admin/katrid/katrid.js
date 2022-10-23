@@ -3088,14 +3088,6 @@ var Katrid;
                 this.fieldList = Object.values(this.fields);
                 // for (let f of res.fields)
                 // f.filter = this.getFilter(f);
-                let _toObject = (fields, values) => {
-                    let r = {}, i = 0;
-                    for (let f of fields) {
-                        r[f.name] = values[i];
-                        i++;
-                    }
-                    return r;
-                };
                 // this.$scope.records = res.data.map(row => _toObject(res.fields, row));
                 // this.$scope.$apply();
                 let table = this.table = document.createElement('table');
@@ -5511,7 +5503,7 @@ var Katrid;
                 if (attrs[':class'])
                     section.setAttribute(':class', attrs[':class']);
                 if (attrs[':readonly']) {
-                    section.setAttribute(':readonly', attrs[':redonly']);
+                    section.setAttribute(':readonly', attrs[':readonly']);
                 }
                 else if (attrs.readonly)
                     section.setAttribute('readonly', 'readonly');
@@ -6576,7 +6568,7 @@ var Katrid;
                 this.view = view;
                 let elements = template.querySelectorAll(this.selector());
                 if (elements.length)
-                    this.prepare(elements);
+                    this.prepare(elements, template);
             }
             static render(view, template) {
                 for (let [selector, customTag] of Object.entries(customTagRegistry)) {
@@ -6591,7 +6583,7 @@ var Katrid;
             selector() {
                 return;
             }
-            prepare(elements) {
+            prepare(elements, template) {
             }
             assign(source, dest) {
                 dest.innerHTML = source.innerHTML;
@@ -6601,8 +6593,9 @@ var Katrid;
         }
         Forms.CustomTag = CustomTag;
         class ActionsTag extends CustomTag {
-            prepare(elements) {
-                let atts = this.view.element.querySelector('.toolbar-action-buttons');
+            prepare(elements, template) {
+                let atts = template.querySelector('.toolbar-action-buttons');
+                console.log(atts);
                 for (let actions of elements.values()) {
                     if (!this.view.toolbarVisible) {
                         actions.remove();
@@ -6612,7 +6605,8 @@ var Katrid;
                     let name = actions.getAttribute('name');
                     let btn;
                     if (name)
-                        btn = atts.querySelector(`.btn-actions[name=${name}]`);
+                        btn = template.querySelector(`.btn-actions[name=${name}]`);
+                    console.log('button found', template.innerHTML);
                     let dropdownMenu;
                     if (btn) {
                         // dropdown already is default
@@ -6621,14 +6615,17 @@ var Katrid;
                     else {
                         actionsButton = document.createElement('div');
                         actionsButton.classList.add('btn-group');
-                        actionsButton.innerHTML = '<div class="dropdown"><button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"></button><div class="dropdown-menu custom-actions"></div></div>';
+                        actionsButton.innerHTML = '<div class="dropdown"><button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown"></button><div class="dropdown-menu custom-actions"></div></div>';
                         // add the left html content
                         btn = actionsButton.querySelector('button');
+                        if (name)
+                            btn.setAttribute('name', name);
                         let caption = actions.getAttribute('caption');
                         if (caption)
                             btn.innerHTML = caption + ' ';
                         // add the new dropdown
                         atts.append(actionsButton);
+                        console.log('button append', actionsButton);
                     }
                     dropdownMenu = actionsButton.querySelector('.dropdown-menu');
                     // conditional display for each type of view
