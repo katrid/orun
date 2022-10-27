@@ -272,7 +272,8 @@ class ReportAction(Action):
                     'name': q.name + ' (User Report)' if q.owner_type == 'user' else q.name,
                     # 'params': q.params,
                 }
-                for q in cls.objects.filter(report_type__in=('grid', 'query'))
+                # todo check permission
+                for q in cls.objects.all()
             ]
         }
 
