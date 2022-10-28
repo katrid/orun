@@ -6200,7 +6200,7 @@ var Katrid;
                 control.classList.add('input-dropdown', 'form-field');
                 if (this.filter)
                     control.setAttribute('filter', this.filter);
-                if (fieldEl.hasAttribute(':filter'))
+                if (fieldEl?.hasAttribute(':filter'))
                     this.vFilter = fieldEl.getAttribute(':filter');
                 let input = document.createElement('input');
                 input.type = 'text';
