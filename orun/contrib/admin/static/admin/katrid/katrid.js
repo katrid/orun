@@ -3951,6 +3951,62 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    var BI;
+    (function (BI) {
+        class ReportPreview {
+            loadReport(report) {
+                for (let p of report.pages) {
+                    let page = document.createElement('page');
+                    page.className = 'report-page';
+                    page.setAttribute('size', 'A4');
+                    for (let b of p.bands) {
+                        let band = document.createElement('div');
+                        band.className = 'report-band';
+                        page.append(band);
+                        for (let obj of b.objects) {
+                            if (obj.tag === 'text')
+                                band.append(this.loadText(obj));
+                            else if (obj.tag === 'image')
+                                band.append(this.loadImage(obj));
+                            else
+                                throw Error('tag not found');
+                        }
+                    }
+                }
+            }
+            loadBand(data) {
+                let el = document.createElement('div');
+                el.className = 'report-element report-band';
+                el.style.left = data.left + 'px';
+                el.style.top = data.top + 'px';
+                el.style.width = data.width + 'px';
+                el.style.height = data.height + 'px';
+            }
+            loadText(data) {
+                let el = document.createElement('span');
+                el.className = 'report-element report-text';
+                el.innerHTML = data.text;
+                el.style.left = data.left + 'px';
+                el.style.top = data.top + 'px';
+                el.style.width = data.width + 'px';
+                el.style.height = data.height + 'px';
+                return el;
+            }
+            loadImage(data) {
+                let el = document.createElement('img');
+                el.className = 'report-element report-image';
+                el.style.left = data.left + 'px';
+                el.style.top = data.top + 'px';
+                el.style.width = data.width + 'px';
+                el.style.height = data.height + 'px';
+                return el;
+            }
+        }
+        BI.ReportPreview = ReportPreview;
+    })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
     var Components;
     (function (Components) {
         class Component {
@@ -4304,7 +4360,7 @@ var Katrid;
                     where: params,
                     fields,
                     domain,
-                    limit: this.pageLimit,
+                    limit: options.limit || this.pageLimit,
                 };
                 return new Promise((resolve, reject) => {
                     let controller = new AbortController();
@@ -5656,7 +5712,7 @@ var Katrid;
                     value = null;
                 let msgs = [];
                 if (this.required && (value == null))
-                    msgs.push(Katrid.i18n.gettext('The field cannot be empty.'));
+                    msgs.push(Katrid.i18n.gettext('This field cannot be empty.'));
                 return msgs;
             }
             /** Validate a given value for a bound field */
@@ -5664,7 +5720,7 @@ var Katrid;
                 let msgs = [];
                 // required validation
                 if (boundField.required && (!value && value !== false && value !== 0))
-                    msgs.push(Katrid.i18n.gettext('The field cannot be empty.'));
+                    msgs.push(Katrid.i18n.gettext('This field cannot be empty.'));
                 return msgs;
             }
             get defaultCondition() {
@@ -6126,7 +6182,7 @@ var Katrid;
         class ForeignKey extends Data.Field {
             constructor() {
                 super(...arguments);
-                this.tag = 'field-autocomplete';
+                this.tag = 'field-foreignkey';
             }
             formControl(fieldEl) {
                 let control = document.createElement(this.tag);
@@ -6143,7 +6199,9 @@ var Katrid;
                     control.setAttribute('placeholder', this.caption);
                 control.classList.add('input-dropdown', 'form-field');
                 if (this.filter)
-                    control.setAttribute(':filter', this.filter);
+                    control.setAttribute('filter', this.filter);
+                if (fieldEl.hasAttribute(':filter'))
+                    this.vFilter = fieldEl.getAttribute(':filter');
                 let input = document.createElement('input');
                 input.type = 'text';
                 input.className = 'form-field';
@@ -6595,7 +6653,6 @@ var Katrid;
         class ActionsTag extends CustomTag {
             prepare(elements, template) {
                 let atts = template.querySelector('.toolbar-action-buttons');
-                console.log(atts);
                 for (let actions of elements.values()) {
                     if (!this.view.toolbarVisible) {
                         actions.remove();
@@ -6606,7 +6663,6 @@ var Katrid;
                     let btn;
                     if (name)
                         btn = template.querySelector(`.btn-actions[name=${name}]`);
-                    console.log('button found', template.innerHTML);
                     let dropdownMenu;
                     if (btn) {
                         // dropdown already is default
@@ -6625,7 +6681,6 @@ var Katrid;
                             btn.innerHTML = caption + ' ';
                         // add the new dropdown
                         atts.append(actionsButton);
-                        console.log('button append', actionsButton);
                     }
                     dropdownMenu = actionsButton.querySelector('.dropdown-menu');
                     // conditional display for each type of view
@@ -11136,7 +11191,18 @@ var Katrid;
             }
         }
         UI.DropdownMenu = DropdownMenu;
-        class BaseAutoComplete extends Katrid.WebComponent {
+        class BaseInputWidget {
+            constructor(options) {
+                this.el = options.el;
+                if (this.el)
+                    this._create(this.el);
+            }
+            _create(el) {
+                // to be implemented here
+            }
+        }
+        UI.BaseInputWidget = BaseInputWidget;
+        class BaseAutoComplete extends BaseInputWidget {
             constructor() {
                 super(...arguments);
                 this.menu = null;
@@ -11147,47 +11213,47 @@ var Katrid;
                 this._tags = [];
                 this._facets = [];
             }
-            create() {
-                this.classList.add('input-autocomplete', 'input-dropdown');
+            _create(el) {
+                el.classList.add('input-autocomplete', 'input-dropdown');
                 let append = '';
                 let prepend = '';
-                let name = this.getAttribute('name');
-                let model = this.getAttribute('data-model');
-                if (this.hasAttribute('allow-open')) {
+                let name = el.getAttribute('name');
+                let model = el.getAttribute('data-model');
+                if (el.hasAttribute('allow-open')) {
                     // show only when filled
                     append = `<span class="fa fa-fw fa-folder-open autocomplete-open" title="${Katrid.i18n.gettext('Open this object')}" v-on:click="openObject('${model}', record.${name}.id)"></span>`;
                     // allow open object
                     this.allowOpen = true;
                 }
-                this.classList.add('form-control');
+                el.classList.add('form-control');
                 if (this.multiple) {
                     prepend = `<div class="input-dropdown">`;
                     append = '</div>' + append;
-                    this.classList.add('multiple');
+                    el.classList.add('multiple');
                 }
-                let input = this.querySelector('input');
+                let input = el.querySelector('input');
                 if (input) {
                     if (prepend)
-                        this.insertBefore(Katrid.html(prepend), input);
-                    this.append(Katrid.html('<span class="caret"></span>'));
+                        el.insertBefore(Katrid.html(prepend), input);
+                    el.append(Katrid.html('<span class="caret"></span>'));
                     if (append)
-                        this.append(Katrid.html(append));
+                        el.append(Katrid.html(append));
                 }
                 else {
-                    this.innerHTML = `${prepend}<input class="form-field" autocomplete="nope" spellcheck="false"> <span class="caret"></span>${append}`;
-                    input = this.querySelector('input');
+                    el.innerHTML = `${prepend}<input class="form-field" autocomplete="nope" spellcheck="false"> <span class="caret"></span>${append}`;
+                    input = el.querySelector('input');
                 }
                 this.input = input;
-                this.addEventListener('click', evt => {
+                el.addEventListener('click', evt => {
                     this.input.focus();
                     this.showMenu();
                 });
-                let caret = this.querySelector('.caret');
-                caret.addEventListener('click', evt => this.click());
+                let caret = el.querySelector('.caret');
+                caret.addEventListener('click', evt => el.click());
                 this.input.type = 'text';
                 this.input.addEventListener('input', () => this.onInput());
                 this.input.addEventListener('click', event => {
-                    if (window.getComputedStyle(this).display === 'none') {
+                    if (window.getComputedStyle(el).display === 'none') {
                         event.stopPropagation();
                         return;
                     }
@@ -11196,13 +11262,13 @@ var Katrid;
                 });
                 this.input.addEventListener('blur', () => this.onFocusout());
                 this.input.addEventListener('keydown', (event) => this.onKeyDown(event));
-                if (this.hasAttribute('placeholder'))
-                    this.input.placeholder = this.getAttribute('placeholder');
+                if (el.hasAttribute('placeholder'))
+                    this.input.placeholder = el.getAttribute('placeholder');
                 if (this.$selectedItem)
                     this.selectedItem = this.$selectedItem;
             }
             _addTag(tag) {
-                if (this.querySelector(`[data-id="${tag.id}"]`))
+                if (this.el.querySelector(`[data-id="${tag.id}"]`))
                     return false;
                 let facet = $(`<div class="facet-view badge badge-dark">
         <span class="facet-value">${tag.text}</span>
@@ -11212,7 +11278,7 @@ var Katrid;
                 facet.setAttribute('data-id', tag.id);
                 this._tags.push(tag);
                 this._facets.push(facet);
-                this.insertBefore(facet, this.input.parentElement);
+                this.el.insertBefore(facet, this.input.parentElement);
                 return true;
             }
             addTag(tag) {
@@ -11224,7 +11290,7 @@ var Katrid;
             }
             removeTag(tag) {
                 this._tags.splice(this._tags.indexOf(tag), 1);
-                let facet = this.querySelector(`[data-id="${tag.id}"]`);
+                let facet = this.el.querySelector(`[data-id="${tag.id}"]`);
                 if (facet) {
                     this._facets.splice(this._facets.indexOf(facet), 1);
                     facet.remove();
@@ -11246,7 +11312,7 @@ var Katrid;
                         tags,
                     }
                 });
-                this.dispatchEvent(event);
+                this.el.dispatchEvent(event);
                 return event;
             }
             onInput() {
@@ -11278,7 +11344,7 @@ var Katrid;
                 //     resolve(res);
                 //   });
                 // }
-                this.menu = new DropdownMenu(this, { source: this._source });
+                this.menu = new DropdownMenu(this, { source: this._source, target: this.el });
             }
             invalidateValue() {
                 this.selectedItem = this.$selectedItem;
@@ -11347,7 +11413,7 @@ var Katrid;
                         dropdownItem: el,
                     }
                 });
-                this.dispatchEvent(event);
+                this.el.dispatchEvent(event);
                 return event;
             }
             setValue(item, el) {
@@ -11371,12 +11437,12 @@ var Katrid;
                 if (value) {
                     this.input.value = value.text;
                     if (this.allowOpen)
-                        this.classList.add('allow-open');
+                        this.el.classList.add('allow-open');
                 }
                 else {
                     this.input.value = '';
                     if (this.allowOpen)
-                        this.classList.remove('allow-open');
+                        this.el.classList.remove('allow-open');
                 }
             }
             get selectedValue() {
@@ -11386,9 +11452,9 @@ var Katrid;
         }
         UI.BaseAutoComplete = BaseAutoComplete;
         class InputAutoComplete extends BaseAutoComplete {
-            create() {
-                super.create();
-                let model = this.getAttribute('data-model');
+            _create(el) {
+                super._create(el);
+                let model = el.getAttribute('data-model');
                 if (model) {
                     let svc = new Katrid.Services.ModelService(model);
                     this.setSource(async (query) => {
@@ -11437,24 +11503,38 @@ var Katrid;
                     this.allowCreateNew = true;
                     this.filter = null;
                 }
+                /**
+                 * Bind the element with a Katrid.Data.Field, filter and the "source" of items
+                 * @param options
+                 */
                 bind(options) {
                     let field = options.field;
                     let model = options.model;
                     // super.create();
-                    this.allowCreateNew = this.getAttribute('allow-create') !== 'false';
-                    this.allowAdvancedSearch = this.getAttribute('allow-search') !== 'false';
-                    let name = this.getAttribute('name');
+                    this.allowCreateNew = this.el.getAttribute('allow-create') !== 'false';
+                    this.allowAdvancedSearch = this.el.getAttribute('allow-search') !== 'false';
+                    let name = this.el.getAttribute('name');
                     this.field = field;
-                    this.actionView = this.closest('action-view');
+                    this.actionView = this.el.closest('action-view');
+                    const vm = options.vm;
                     if (field?.choices)
                         this.setSource(field.choices);
                     else {
                         this.setSource(async (query) => {
                             // evaluate domain attribute
                             let domain = this.filter || this.field.filter;
-                            // todo replace angularjs by vuejs
                             if (domain && (typeof domain === 'string'))
-                                console.log('field', domain);
+                                domain = JSON.parse(domain);
+                            if (this.field.vFilter) {
+                                const newDomain = eval(`(function($parent, ${Object.keys(vm)}) {return ${this.field.vFilter}})`).call(vm, vm.$parent, ...Object.values(vm));
+                                if (newDomain) {
+                                    if (domain)
+                                        domain = Object.assign({}, domain);
+                                    else
+                                        domain = Object.assign({}, domain);
+                                    domain = Object.assign(domain, newDomain);
+                                }
+                            }
                             let format = 'html';
                             let data = {
                                 args: [query.term],
@@ -11463,7 +11543,7 @@ var Katrid;
                                     page: query.page,
                                     filter: domain,
                                     format,
-                                    name_fields: this.getAttribute('name-fields')?.split(",") || null
+                                    name_fields: this.el.getAttribute('name-fields')?.split(",") || null
                                 }
                             };
                             if (model) {
@@ -11502,7 +11582,6 @@ var Katrid;
                                             let res = await dlg.dialogPromise;
                                             if (res?.id) {
                                                 let v = await this.field.getLabelById(model.service, res.id);
-                                                console.log('v', v);
                                                 if (v?.items)
                                                     this.setValue(v.items[0]);
                                             }
@@ -11521,38 +11600,37 @@ var Katrid;
                 }
             }
             Controls.InputForeignKeyElement = InputForeignKeyElement;
-            Katrid.define('input-foreignkey', InputForeignKeyElement);
-            Katrid.component('field-autocomplete', {
+            Katrid.component('field-foreignkey', {
                 props: ['modelValue'],
-                template: '<input-foreignkey class="input-autocomplete"><slot/></input-foreignkey>',
+                template: '<div class="input-autocomplete"><slot/></div>',
                 mounted() {
+                    let el = this.$el;
+                    let ac = new InputForeignKeyElement({ el });
+                    this.$el._autocomplete = ac;
                     this.$field = this.$parent.$fields[this.$attrs.name];
-                    this.$el.bind({ field: this.$field, view: this.$parent.$view, model: this.$parent.$view.model });
+                    ac.bind({ vm: this.$parent, field: this.$field, view: this.$parent.$view, model: this.$parent.$view.model });
                     this.$el.addEventListener('selectItem', (evt) => {
                         this.$emit('update:modelValue', evt.detail.item);
                     });
                     if (this.modelValue)
-                        this.$el.selectedItem = this.modelValue;
+                        ac.selectedItem = this.modelValue;
                 },
                 watch: {
                     modelValue: function (value) {
-                        if (value !== this.$el.selectedItem)
-                            this.$el.selectedItem = value;
+                        if (value !== this.$el._autocomplete.selectedItem)
+                            this.$el._autocomplete.selectedItem = value;
                     }
                 }
             });
             Katrid.component('input-tags', {
                 props: ['modelValue'],
-                template: '<input-foreignkey class="input-autocomplete"><slot/></input-foreignkey>',
+                template: '<div class="input-autocomplete"><slot/></div>',
                 mounted(el) {
                     this.$field = this.$parent.view.fields[this.$attrs.name];
-                    console.log(el);
                     this.$el.multiple = true;
                     this.$el.create(this.$field);
                     this.$el.addEventListener('change', (evt) => {
-                        console.log('on change', evt.detail.tags);
                         this.$emit('update:modelValue', evt.detail.tags);
-                        console.log('on change 2', evt.detail.tags);
                     });
                 },
                 watch: {

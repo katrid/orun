@@ -13031,7 +13031,7 @@ table-field .table tbody tr {
 .katrid-app input.form-field:required,
 .katrid-app select.form-field:required,
 .katrid-app .input-dropdown.form-field[required] input.form-control,
-.katrid-app input-foreignkey.form-control[required],
+.katrid-app .input-foreignkey.form-control[required],
 .katrid-app textarea.form-control[required] {
   background-color: #f4f5ff;
 }
@@ -13955,6 +13955,10 @@ pwa-menu .btn {
     margin: 5mm;
   }
 }
+page[size=A4] {
+  size: A4;
+}
+
 .table-fixed {
   table-layout: fixed;
 }
