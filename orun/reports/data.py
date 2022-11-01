@@ -1,11 +1,12 @@
-import reptile.engine
 from orun.data.datasource import DataSource, Param
+import reptile.data.base
 
 
-class Query(DataSource, reptile.engine.DataSource):
+class Query(DataSource, reptile.data.base.DataSource):
     def __init__(self, name=None, sql=None):
-        reptile.engine.DataSource.__init__(self, name)
+        reptile.data.base.DataSource.__init__(self)
         DataSource.__init__(self, sql=sql)
+        self.name = name
 
     def load(self, structure: dict):
         self.name = structure['name']
