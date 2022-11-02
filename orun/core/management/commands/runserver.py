@@ -69,8 +69,10 @@ class Command(BaseCommand):
         class Server:
             async def __call__(self, *args, **kwargs):
                 print(args, kwargs)
-
-        uvicorn.run(asgi.ASGIHandler, host='0.0.0.0', port=8000)
+        addrport = options.get('addrport', '127.0.0.1:8000')
+        addr, port = addrport.split(':')
+        
+        uvicorn.run(asgi.ASGIHandler, host=addr, port=int(port))
 
     def _handle(self, *args, **options):
         # if not settings.DEBUG and not settings.ALLOWED_HOSTS:
