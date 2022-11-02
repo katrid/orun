@@ -3671,8 +3671,8 @@ var Katrid;
                                 });
                                 if (result) {
                                     // open a document
-                                    if (result.open)
-                                        window.open(result.open);
+                                    if (result.$open)
+                                        window.open(result.$open);
                                     // download a file
                                     if (result.download) {
                                         let a = document.createElement('a');
