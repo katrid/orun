@@ -69,7 +69,9 @@ class Command(BaseCommand):
         class Server:
             async def __call__(self, *args, **kwargs):
                 print(args, kwargs)
-        addrport = options.get('addrport', '127.0.0.1:8000')
+        addrport = options.get('addrport')
+        if addrport is None:
+            addrport = '127.0.0.1:8000'
         addr, port = addrport.split(':')
         
         uvicorn.run(asgi.ASGIHandler, host=addr, port=int(port))

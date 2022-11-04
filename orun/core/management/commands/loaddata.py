@@ -49,7 +49,6 @@ def load_fixture(schema, *filenames, **options):
             d = deserializer(Path(filename), addon=addon, format=fmt, filename=filename, **options)
 
             with transaction.atomic(options['database']):
-                print(options)
                 if options.get('update_existing') is None or not options['update_existing']:
                     d.deserialize()
                 else:
