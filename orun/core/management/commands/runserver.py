@@ -66,9 +66,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from orun.core.handlers import asgi
-        class Server:
-            async def __call__(self, *args, **kwargs):
-                print(args, kwargs)
         addrport = options.get('addrport')
         if addrport is None:
             addrport = '127.0.0.1:8000'
