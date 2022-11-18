@@ -11408,7 +11408,6 @@ var Katrid;
                     return this.setValue(item);
             }
             _setValue(item, el) {
-                console.log('set value', item);
                 let event = new CustomEvent('selectItem', {
                     detail: {
                         item,
@@ -11475,7 +11474,6 @@ var Katrid;
                 let el = this.$el;
                 let ac = new InputAutoComplete({ el });
                 this.$el._autocomplete = ac;
-                this.$el.create();
                 if (this.items)
                     this.$el.setSource(this.items);
                 this.$el.addEventListener('selectItem', (evt) => {
