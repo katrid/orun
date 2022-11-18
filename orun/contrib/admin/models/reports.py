@@ -188,7 +188,7 @@ class ReportAction(Action):
             out_file = '/web/reports/' + os.path.basename(rep)
             print('outfile', out_file)
             return {
-                'open': out_file,
+                '$open': out_file,
                 'name': self.name,
             }
 
