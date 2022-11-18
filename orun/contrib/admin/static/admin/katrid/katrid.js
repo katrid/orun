@@ -3671,8 +3671,8 @@ var Katrid;
                                 });
                                 if (result) {
                                     // open a document
-                                    if (result.$open)
-                                        window.open(result.$open);
+                                    if (result.$open || result.open)
+                                        window.open(result.$open || result.open);
                                     // download a file
                                     if (result.download) {
                                         let a = document.createElement('a');
@@ -6394,6 +6394,7 @@ var Katrid;
                 this.views = res.views;
                 this.fields = res.fields;
                 // find rel field
+                console.log('find rel field', this.info.field);
                 Object.values(res.views).forEach((viewInfo) => {
                     let relField = viewInfo.info.fields[this.info.field];
                     // hide the rel field
@@ -11407,6 +11408,7 @@ var Katrid;
                     return this.setValue(item);
             }
             _setValue(item, el) {
+                console.log('set value', item);
                 let event = new CustomEvent('selectItem', {
                     detail: {
                         item,
@@ -11466,15 +11468,18 @@ var Katrid;
                 }
             }
         }
-        Katrid.define('input-autocomplete', InputAutoComplete);
         Katrid.component('input-autocomplete', {
             props: ['modelValue', 'items'],
             template: '<input-autocomplete/>',
             mounted() {
+                let el = this.$el;
+                let ac = new InputAutoComplete({ el });
+                this.$el._autocomplete = ac;
                 this.$el.create();
                 if (this.items)
                     this.$el.setSource(this.items);
                 this.$el.addEventListener('selectItem', (evt) => {
+                    console.log('sel item', evt.detail);
                     this.$emit('update:modelValue', evt.detail.item);
                 });
                 if (this.modelValue)
@@ -11482,8 +11487,8 @@ var Katrid;
             },
             watch: {
                 modelValue: function (value) {
-                    if (value !== this.$el.selectedItem)
-                        this.$el.selectedItem = value;
+                    if (value !== this.$el._autocomplete.selectedItem)
+                        this.$el._autocomplete.selectedItem = value;
                 }
             }
         });
@@ -13214,6 +13219,10 @@ var katrid;
                         continue;
                     let el = container.querySelector(`.form-field-section[name="${field}"]`);
                     // OneToManyField has a different approach
+                    if (!el) {
+                        console.log('Field not found', field, container);
+                        continue;
+                    }
                     if (el.classList.contains('OneToManyField')) {
                         if (Array.isArray(v)) {
                             for (let row of v) {
@@ -13238,6 +13247,7 @@ var katrid;
                     let btn = await this.waitFor('.btn-action-create');
                     btn.click();
                     await katrid.sleep(500);
+                    await this.waitFor('.btn-action-save');
                     await this._setFields(step, document.body);
                     if (op === 'create')
                         document.querySelector('.btn-action-save').click();
