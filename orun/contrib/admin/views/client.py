@@ -59,6 +59,11 @@ def login(request: HttpRequest, template_name='/admin/login.jinja2', **kwargs):
         # check if db exists
         u = auth.authenticate(username=username, password=password)
         if u and u.is_authenticated:
+            if not u.active:
+                return JsonResponse({
+                    'error': True,
+                    'message': gettext('Login is inactive.'),
+                })
             auth.login(request, u)
             if request.is_json():
                 return JsonResponse({
