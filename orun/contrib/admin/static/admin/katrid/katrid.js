@@ -4867,21 +4867,10 @@ var Katrid;
                 record.$flush();
                 // this.setValues(rec, record);
                 this.vm.records.push(record);
+                console.log('add record');
                 this.records.push(record);
                 // this.parent.record[this.field.name].push(rec);
                 return;
-                if (!(scope.modelValue))
-                    scope.$parent.record[this.field.name] = [];
-                scope.modelValue.push(record);
-                this._record = record;
-                this.setValues(rec);
-                this._record = null;
-                // for (let [k, v] of Object.entries(rec))
-                //   record[k] = v;
-                // this.parent.record.$record.addChild(record.$record);
-                // if (!this.parent.record[this.field.name])
-                //   this.parent.record[this.field.name] = [];
-                // this.parent.record[this.field.name].push(record);
             }
             async expandGroup(index, row) {
                 let params = {};
@@ -8138,6 +8127,7 @@ ${Katrid.i18n.gettext('Delete')}
             }
             $discard() {
                 if (this.record.$state === Katrid.Data.RecordState.created) {
+                    this.record.$discard();
                     if (this.records && this._recordIndex) {
                         this.datasource.record = this.records[this._recordIndex];
                         // this.refresh();
@@ -10675,9 +10665,10 @@ var Katrid;
         }
         Katrid.component('input-time', {
             props: ['modelValue'],
-            template: '<input input-mask="99:99" class="form-control" type="text">',
+            template: '<input class="form-control" type="text">',
             mounted() {
                 let el = this.$el;
+                let im = new Katrid.UI.InputMask(el, { mask: "99:99" });
                 el.addEventListener('blur', () => {
                     if (el.value.length === 2)
                         el.value += ':';
@@ -11854,7 +11845,7 @@ var Katrid;
                         // cancel edition
                         let tr = control.closest('tr');
                         let formId = tr.getAttribute('data-form-id');
-                        this.$view.discard();
+                        this.$discard();
                     }
                     else if ((event.key === 'Enter') && !event.shiftKey && !event.altKey) {
                         let formId = control.closest('tr').getAttribute('data-form-id');
@@ -11910,7 +11901,7 @@ var Katrid;
                                     backdrop: 'static',
                                     buttons: [
                                         { text: Katrid.i18n.gettext('Save'), click: 'saveAndClose()' },
-                                        { text: Katrid.i18n.gettext('Discard'), dismiss: 'modal' },
+                                        { text: Katrid.i18n.gettext('Discard'), click: 'discardAndClose()' },
                                     ],
                                 },
                             });
