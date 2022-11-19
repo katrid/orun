@@ -11477,7 +11477,6 @@ var Katrid;
                 if (this.items)
                     this.$el.setSource(this.items);
                 this.$el.addEventListener('selectItem', (evt) => {
-                    console.log('sel item', evt.detail);
                     this.$emit('update:modelValue', evt.detail.item);
                 });
                 if (this.modelValue)
