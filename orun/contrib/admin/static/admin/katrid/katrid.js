@@ -11475,12 +11475,12 @@ var Katrid;
                 let ac = new InputAutoComplete({ el });
                 this.$el._autocomplete = ac;
                 if (this.items)
-                    this.$el.setSource(this.items);
+                    ac.setSource(this.items);
                 this.$el.addEventListener('selectItem', (evt) => {
                     this.$emit('update:modelValue', evt.detail.item);
                 });
                 if (this.modelValue)
-                    this.$el.selectedItem = this.modelValue;
+                    ac.selectedItem = this.modelValue;
             },
             watch: {
                 modelValue: function (value) {
