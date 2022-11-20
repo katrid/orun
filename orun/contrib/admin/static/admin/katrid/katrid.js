@@ -10674,6 +10674,7 @@ var Katrid;
                         el.value += ':';
                     if (el.value.length === 3)
                         el.value += '00';
+                    this.$emit('update:modelValue', el.value);
                 });
                 el.addEventListener('change', () => {
                     this.$emit('update:modelValue', el.value);
