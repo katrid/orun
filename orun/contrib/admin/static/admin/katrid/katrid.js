@@ -8015,6 +8015,7 @@ ${Katrid.i18n.gettext('Delete')}
                 else
                     this.state = DataSourceState.browsing;
                 this.dialogPromise = new Promise(async (resolve, reject) => {
+                    console.log('modal', options);
                     this._modal = new bootstrap.Modal(el, options);
                     el.addEventListener('hidden.bs.modal', () => {
                         resolve(this.$result);
@@ -11810,6 +11811,7 @@ var Katrid;
                                 parentVm: this.$parent,
                                 master: this.$parent.$view.datasource,
                                 options: {
+                                    keyboard: false,
                                     backdrop: 'static',
                                     buttons,
                                 },
@@ -11901,6 +11903,7 @@ var Katrid;
                                 parentVm: this.$parent,
                                 master: this.$parent.$view.datasource,
                                 options: {
+                                    keyboard: false,
                                     backdrop: 'static',
                                     buttons: [
                                         { text: Katrid.i18n.gettext('Save'), click: 'saveAndClose()' },
