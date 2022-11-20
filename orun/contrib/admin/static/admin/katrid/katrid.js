@@ -8128,6 +8128,7 @@ ${Katrid.i18n.gettext('Delete')}
             $discard() {
                 if (this.record.$state === Katrid.Data.RecordState.created) {
                     this.record.$discard();
+                    this.datasource.state = DataSourceState.browsing;
                     if (this.records && this._recordIndex) {
                         this.datasource.record = this.records[this._recordIndex];
                         // this.refresh();
@@ -10674,7 +10675,8 @@ var Katrid;
                         el.value += ':';
                     if (el.value.length === 3)
                         el.value += '00';
-                    this.$emit('update:modelValue', el.value);
+                    if (el.value)
+                        this.$emit('update:modelValue', el.value);
                 });
                 el.addEventListener('change', () => {
                     this.$emit('update:modelValue', el.value);
