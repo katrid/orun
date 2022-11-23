@@ -42,6 +42,41 @@ var Katrid;
     }
     Katrid.html = html;
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var mobile;
+    (function (mobile) {
+        mobile.isAndroid = window['Android'] !== undefined;
+        mobile.isIOS = window['iOS'] !== undefined;
+        mobile.isApp = mobile.isAndroid || mobile.isIOS;
+        function writeStringToFile(key, value) {
+            __katridMobileHost.writeStringToFile(key, value);
+        }
+        mobile.writeStringToFile = writeStringToFile;
+        function readStringFromFile(key) {
+            return __katridMobileHost.readStringFromFile(key);
+        }
+        mobile.readStringFromFile = readStringFromFile;
+    })(mobile = katrid.mobile || (katrid.mobile = {}));
+})(katrid || (katrid = {}));
+(function (katrid) {
+    class localStorage {
+        static setItem(key, value) {
+            if (katrid.mobile.isApp)
+                // save to android
+                katrid.mobile.writeStringToFile(key, value);
+            else
+                // save to browser
+                window.localStorage.setItem(key, value);
+        }
+        static getItem(key) {
+            if (katrid.mobile.isApp)
+                return katrid.mobile.readStringFromFile(key);
+            return window.localStorage.getItem(key);
+        }
+    }
+    katrid.localStorage = localStorage;
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Actions;
