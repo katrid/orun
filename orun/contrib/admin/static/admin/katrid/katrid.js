@@ -46,8 +46,8 @@ var katrid;
 (function (katrid) {
     var mobile;
     (function (mobile) {
-        mobile.isAndroid = window['Android'] !== undefined;
-        mobile.isIOS = window['iOS'] !== undefined;
+        mobile.isAndroid = window['__katridMobileHost'] !== undefined;
+        mobile.isIOS = window['__katridMobileHost'] !== undefined;
         mobile.isApp = mobile.isAndroid || mobile.isIOS;
         function writeStringToFile(key, value) {
             __katridMobileHost.writeStringToFile(key, value);
@@ -11085,8 +11085,12 @@ var Katrid;
                 return this.el.classList.contains('show');
             }
             loadItems(items) {
-                for (let item of items)
-                    this.addItem(item);
+                if (items.length) {
+                    for (let item of items)
+                        this.addItem(item);
+                    // pre select the 1st one
+                    this.move(1);
+                }
             }
             clearItems() {
                 this.items = [];
