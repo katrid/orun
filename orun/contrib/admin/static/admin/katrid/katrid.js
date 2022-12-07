@@ -3556,6 +3556,14 @@ var Katrid;
                     $(this.btnPrint).show();
                     // $(this.btnExport).show();
                 }
+                else if (res.filename && res.content) {
+                    // create a download file
+                    const a = document.createElement('a');
+                    const blob = new Blob([res.content], { type: 'text/json' });
+                    a.href = URL.createObjectURL(blob);
+                    a.download = res.filename;
+                    a.click();
+                }
             }
             async print() {
                 this.queryView.reportTemplate = this.metadata?.template?.reportTemplate;

@@ -283,7 +283,11 @@ class ReportAction(Action):
         if report.qualname:
             klass = import_string(report.qualname)
             inst = klass(request, params)
-            return inst.execute()
+            kwparams = {}
+            if params:
+                for p in params:
+                    kwparams[p['name']] = p['value1']
+            return inst.execute(**kwparams)
         elif report.report_type == 'query':
             return report._read(True)
 
