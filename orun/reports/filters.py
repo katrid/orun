@@ -5,9 +5,8 @@ import markupsafe
 import datetime
 import decimal
 import itertools
-from jinja2.filters import groupby
 from jinja2 import contextfunction, Undefined
-import reptile.engine
+from reptile.bands.widgets import Text
 
 from orun.utils import formats
 
@@ -17,7 +16,7 @@ def localize(context, value, fmt=None):
     if value is None or value == '' or isinstance(value, Undefined):
         return ''
     this = context.parent.get('this')
-    if value and isinstance(this, reptile.engine.Text):
+    if value and isinstance(this, Text):
         if disp := this.display_format:
             if isinstance(value, (decimal.Decimal, float)) and disp.kind == 'Numeric':
                 if disp.format == '.2f':

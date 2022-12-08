@@ -3563,6 +3563,7 @@ var Katrid;
                     a.href = URL.createObjectURL(blob);
                     a.download = res.filename;
                     a.click();
+                    a.remove();
                 }
             }
             async print() {

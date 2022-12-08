@@ -40,7 +40,7 @@ class Deserializer(base.Deserializer):
             # mandatory fields for csv deserializer
             i = 0
             try:
-                for i, obj in enumerate(python.Deserializer(reader, model=model, fields=cols, force=True if update else False)):
+                for i, obj in enumerate(python.Deserializer(reader, model=model, fields=cols, force=update)):
                     obj.save(using=self.database)
             except Exception as e:
                 print('Error at line:', i)
