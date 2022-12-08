@@ -286,10 +286,11 @@ class ReportAction(Action):
             kwparams = {}
             if params:
                 for p in params:
-                    val = p['value1']
-                    if p['type'] == 'DateField':
-                        val = datetime.datetime.strptime(val, '%Y-%m-%d')
-                    kwparams[p['name']] = val
+                    if 'value1' in p:
+                        val = p['value1']
+                        if p['type'] == 'DateField':
+                            val = datetime.datetime.strptime(val, '%Y-%m-%d')
+                        kwparams[p['name']] = val
             return inst.execute(**kwparams)
         elif report.report_type == 'query':
             return report._read(True)
