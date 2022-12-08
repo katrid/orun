@@ -4,7 +4,7 @@ import pathlib
 import posixpath
 import jinja2
 from lxml import etree
-import reptile.engine
+import reptile
 from reptile.html import HtmlReport, Grid, GridColumn
 from reptile.chrome import print_to_pdf
 
@@ -38,8 +38,8 @@ def url_to_path(path):
 
 
 env.env.globals['static_path'] = url_to_path
-reptile.engine.report_env.finalize = orun.reports.filters.localize
-reptile.engine.report_env.create_datasource = create_datasource
+reptile.EnvironmentSettings.env.finalize = orun.reports.filters.localize
+reptile.EnvironmentSettings.env.create_datasource = create_datasource
 
 
 class HtmlEngine:
