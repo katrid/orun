@@ -89,7 +89,7 @@ class HtmlEngine:
             f.write(html)
         self.to_pdf(
             html_file, output_file,
-            report_footer=reptile.engine.report_env.from_string(self.report_footer).render(company=company),
+            report_footer=reptile.EnvironmentSettings.env.from_string(self.report_footer).render(company=company),
         )
         return output_file
 

@@ -1,7 +1,9 @@
 import re
 import decimal
 import datetime
+
 from orun.db import connection
+from jinja2 import Template
 
 
 class Param:
@@ -94,6 +96,8 @@ class DataSource:
             params = {k: self._params[k].value for k, v in self.params.items()}
         else:
             sql += self.sql
+        if '/*%' in sql:
+            sql = Template(sql, '/*%', '%*/').render(values)
         cur = connection.cursor()
         cur.execute(sql, params)
         self.fields = cur.cursor.description
