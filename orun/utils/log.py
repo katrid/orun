@@ -1,3 +1,6 @@
+import os
+import datetime
+import inspect
 import logging
 import logging.config  # needed when logging_config doesn't start with logging.config
 from copy import copy
@@ -228,3 +231,40 @@ def log_response(message, *args, response=None, request=None, logger=request_log
         exc_info=exc_info,
     )
     response._has_been_logged = True
+
+
+def _get_log_filename(model_or_instance):
+    s = os.path.join(settings.HOME_DIR, 'orun', model_or_instance._meta.name)
+    if not os.path.isdir(s):
+        os.makedirs(s)
+    if inspect.isclass(model_or_instance):
+        return s
+    return os.path.join(s, str(model_or_instance.pk) + '.log')
+
+
+def log_file_to_dir(model_or_instance, data: bytes | str, prefix, filename=None):
+    path = os.path.dirname(_get_log_filename(model_or_instance))
+    if not inspect.isclass(model_or_instance):
+        path = os.path.join(os.path.dirname(_get_log_filename(model_or_instance)), str(model_or_instance.pk))
+    if filename is None:
+        filename = os.path.join(path, f"{prefix}-{datetime.datetime.now().strftime('%y%m%d-%H%M%S-%f')}.xml")
+    else:
+        filename = os.path.join(path, filename)
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    with open(filename, 'wb') as f:
+        f.write(data)
+    return filename
+
+
+def get_model_logger(model_or_instance, level=logging.INFO):
+    _logger = logging.getLogger('model.activity.' + model_or_instance._meta.name)
+    _logger.handlers = []
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler = logging.FileHandler(_get_log_filename(model_or_instance))
+    handler.setFormatter(formatter)
+    _logger.setLevel(level)
+    _logger.addHandler(handler)
+    return _logger
