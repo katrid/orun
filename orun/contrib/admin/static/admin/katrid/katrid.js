@@ -10665,7 +10665,7 @@ var Katrid;
                     if (format === 'L')
                         this.$lastValue = moment(value, $format).format('YYYY-MM-DD');
                     else
-                        this.$lastValue = moment(value, $format).toISOString();
+                        this.$lastValue = moment(value, $format).format('YYYY-MM-DDTHH:mm:ss');
                     if (this.$lastValue === 'Invalid date')
                         this.$lastValue = null;
                     vm.$emit('change', this.$lastValue);
