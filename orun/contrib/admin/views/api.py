@@ -23,8 +23,8 @@ def _get_log_file(svc: str):
 
 
 IGNORED_METHODS = [
-    # 'api_search', 'api_get', 'api_get_field_choices', 'api_group_by', 'api_copy', 'api_get_field_choice',
-    # 'api_on_field_change', 'admin_get_formview_action', 'load',
+    'api_search', 'api_get', 'api_get_field_choices', 'api_group_by', 'api_copy', 'api_get_field_choice',
+    'api_on_field_change', 'admin_get_formview_action', 'load',
 ]
 
 @login_required
