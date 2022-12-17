@@ -11,6 +11,9 @@ from reptile.bands.widgets import Text
 from orun.utils import formats
 
 
+_FMT_FLOAT = re.compile(r'\.(\d+)f')
+
+
 @pass_context
 def localize(context, value, fmt=None):
     if value is None or value == '' or isinstance(value, Undefined):
@@ -18,10 +21,10 @@ def localize(context, value, fmt=None):
     this = context.parent.get('this')
     if value and isinstance(this, Text):
         if disp := this.display_format:
-            if isinstance(value, (decimal.Decimal, float)) and disp.kind == 'Numeric':
-                if disp.format == '.2f':
-                    return formats.number_format(value, 2, force_grouping=True)
-            if isinstance(value, (datetime.date, datetime.datetime)) and disp.kind == 'DateTime':
+            if isinstance(value, (decimal.Decimal, float, int)) and disp.kind == 'Numeric':
+                if dec_places := _FMT_FLOAT.findall(disp.format):
+                    return formats.number_format(value, int(dec_places[0]), force_grouping=True)
+            elif isinstance(value, (datetime.date, datetime.datetime)) and disp.kind == 'DateTime':
                 return value.strftime(disp.format)
 
     if fmt is not None:
