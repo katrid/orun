@@ -5,13 +5,13 @@ import markupsafe
 import datetime
 import decimal
 import itertools
-from jinja2 import contextfunction, Undefined
+from jinja2 import pass_context, Undefined
 from reptile.bands.widgets import Text
 
 from orun.utils import formats
 
 
-@contextfunction
+@pass_context
 def localize(context, value, fmt=None):
     if value is None or value == '' or isinstance(value, Undefined):
         return ''
