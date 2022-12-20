@@ -149,3 +149,9 @@ def public_query(request, id=None):
             return JsonResponse({'result': Query.read(id)})
     return HttpResponseForbidden('Permission denied!')
 
+
+def admin_report_api(request: HttpRequest, qualname: str):
+    from orun.contrib.admin.models.reports import ReportAction
+    rep = ReportAction.objects.only('pk').filter(qualname=qualname)
+    params = request.json
+    return JsonResponse(rep(request, params))

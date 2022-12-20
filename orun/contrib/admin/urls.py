@@ -20,6 +20,7 @@ urlpatterns = [
     path('web/action/<str:service>/view/', views.api.view_model),
     # path('web/test/', views.test.qunit),
 
+    # admin rpc
     path('api/rpc/<service>/<meth>/', views.api.rpc),
     path('api/view/<service>/', views.api.view),
     path('api/dashboard/<int:service>/', views.dashboard.index),
@@ -28,4 +29,7 @@ urlpatterns = [
     path('api/field/choices/<service>/<field>/', views.api.choices),
     path('api/app/settings/', views.api.app_settings),
     path('api/public/query/<int:id>/', views.api.public_query),
+
+    # admin api
+    path('admin/api/report/<str:qualname>/', views.api.admin_report_api),
 ]

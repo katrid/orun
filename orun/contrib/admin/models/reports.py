@@ -284,16 +284,24 @@ class ReportAction(Action):
             klass = import_string(report.qualname)
             inst = klass(request, params)
             kwparams = {}
-            if params:
+            if isinstance(params, list):
                 for p in params:
                     if 'value1' in p:
                         val = p['value1']
                         if p['type'] == 'DateField':
                             val = datetime.datetime.strptime(val, '%Y-%m-%d')
                         kwparams[p['name']] = val
+            elif isinstance(params, dict):
+                kwparams = params
             return inst.execute(**kwparams)
         elif report.report_type == 'query':
             return report._read(True)
+
+    def __call__(self, request: HttpRequest, params: dict = None):
+        if self.qualname:
+            klass = import_string(self.qualname)
+            inst = klass(request, params)
+            return inst.execute(**params)
 
     @api.classmethod
     def read(cls, id, with_description=False, as_dict=False, fields=None, **kwargs):

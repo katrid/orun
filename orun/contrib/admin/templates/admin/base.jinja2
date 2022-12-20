@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html {% block html_attrs %}{% endblock %} class="katrid-app">
+<html {% block html_attrs %}{% endblock %} class="{% block html_class %}katrid-app{% endblock %}">
 <head>
   <title>{% block page_title %}{{ settings.ADMIN_SITE_TITLE }}{% endblock %}</title>
   <meta charset="UTF-8">

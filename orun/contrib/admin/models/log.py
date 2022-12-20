@@ -17,26 +17,25 @@ class LogEntry(models.Model):
         name = 'ui.admin.log'
 
 
-class UserActionCounter(models.Model):
+class UserMenuCounter(models.Model):
     """
-    Ranking the number of times that an action is accessed by user on Admin UI
+    Rank the number of times that an action is accessed by user on Admin UI
     """
-    user = models.ForeignKey('auth.user', null=False, db_index=True)
-    action = models.ForeignKey('ui.action', null=False, on_delete=models.DB_CASCADE)
+    user = models.ForeignKey('auth.user', null=False, db_index=True, on_delete=models.DB_CASCADE)
+    menu = models.ForeignKey('ui.menu', null=False, on_delete=models.DB_CASCADE)
     counter = models.PositiveIntegerField(default=0)
 
     class Meta:
         log_changes = False
-        name = 'ui.admin.user.action.counter'
+        name = 'ui.admin.user.menu.counter'
 
     @classmethod
-    def log(cls, user, action):
+    def hit(cls, user, action):
         """
-        Log a new entry to user latest action access
+        Log a new entry to user to the action
         :param user:
         :param action:
         :return:
         """
         counter = cls.objects.get_or_create(user=user, action=action)
-        counter.counter += 1
-        counter.save()
+        counter.update(counter=counter.counter + 1)
