@@ -8,7 +8,7 @@ from orun.core.exceptions import MethodNotFound
 from orun.db import models, transaction
 from orun.contrib.auth.decorators import login_required
 from orun.apps import apps
-from orun.http import HttpResponse, JsonResponse, HttpResponseForbidden, HttpRequest
+from orun.http import HttpResponse, JsonResponse, HttpResponseForbidden, HttpRequest, Http404
 
 
 def _get_log_filename(svc: str):
@@ -152,6 +152,8 @@ def public_query(request, id=None):
 
 def admin_report_api(request: HttpRequest, qualname: str):
     from orun.contrib.admin.models.reports import ReportAction
-    rep = ReportAction.objects.only('pk').filter(qualname=qualname)
-    params = request.json
-    return JsonResponse(rep(request, params))
+    rep = ReportAction.objects.only('pk').filter(qualname=qualname).first()
+    if rep:
+        params = request.json
+        return JsonResponse(rep(request, params))
+    raise Http404('Report not found')
