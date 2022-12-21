@@ -47,16 +47,17 @@ class ReportAction(Action):
         self.params: list = params
         self._values = {}
         if params:
-            for p in params:
-                k = p['name']
-                op = p['op']
-                self._values[f'{k}1'] = self._values[k] = p.get('value1')
-                if 'value2' in p:
-                    self._values[f'{k}2'] = p['value2']
-                elif op == 'between':
-                    self._values[f'{k}2'] = None
-                elif op == 'in' and 'value1' in p:
-                    self._values[k] = ','.join([str(s) if isinstance(s, (int, float)) or (isinstance(s, str) and s.isnumeric()) else "'" + str(s).replace("'", "''") + "'" for s in p.get('value1') if s is not None])
+            if isinstance(params, list):
+                for p in params:
+                    k = p['name']
+                    op = p['op']
+                    self._values[f'{k}1'] = self._values[k] = p.get('value1')
+                    if 'value2' in p:
+                        self._values[f'{k}2'] = p['value2']
+                    elif op == 'between':
+                        self._values[f'{k}2'] = None
+                    elif op == 'in' and 'value1' in p:
+                        self._values[k] = ','.join([str(s) if isinstance(s, (int, float)) or (isinstance(s, str) and s.isnumeric()) else "'" + str(s).replace("'", "''") + "'" for s in p.get('value1') if s is not None])
 
     @classmethod
     def update_info(cls):
