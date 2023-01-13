@@ -82,13 +82,13 @@ class DataSource:
             values = {}
         sql = ''
         if connection.vendor == 'mssql':
-            vars.append('SET DATEFORMAT ymd')
+            sql = 'SET DATEFORMAT ymd\n'
             for k, v in self.params.items():
                 vars.append(f'declare @{k} {self._get_sqltype(v)}')
                 params.append(values.get(k, self._params[k].value))
                 select.append(f'@{k} = ?')
-            if vars:
-                sql = '\n'.join(vars)
+            if select:
+                sql += '\n'.join(vars)
                 sql += f'''\nselect {",".join(select)}\n'''
             sql += self.sql.replace(':', '@')
         elif connection.vendor == 'postgresql':

@@ -1,5 +1,6 @@
 import os
 import datetime
+from functools import wraps
 
 from orun import api
 from orun.db.models import QuerySet
@@ -9,6 +10,7 @@ from orun.db import models, transaction
 from orun.contrib.auth.decorators import login_required
 from orun.apps import apps
 from orun.http import HttpResponse, JsonResponse, HttpResponseForbidden, HttpRequest, Http404
+from .rpc import jsonrpc
 
 
 def _get_log_filename(svc: str):
@@ -27,9 +29,10 @@ IGNORED_METHODS = [
     'api_on_field_change', 'admin_get_formview_action', 'load',
 ]
 
+
 @login_required
 @transaction.atomic
-@api.jsonrpc
+@jsonrpc
 def rpc(request, service, meth, params):
     data = request.json
     method = data.get('method', meth)
@@ -116,7 +119,6 @@ def view(request: HttpRequest, service: str):
     """
     cls = apps.services[service]
     service = cls()
-    print('get view', service, request.mehtod)
     if request.method == 'GET':
         res = service.get(request)
         if isinstance(res, (dict, list, tuple)):

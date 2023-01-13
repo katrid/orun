@@ -1670,6 +1670,59 @@ var Katrid;
         })(Portlets = Actions.Portlets || (Actions.Portlets = {}));
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var admin;
+    (function (admin) {
+        class Messages {
+            static message(info) {
+                switch (info.type) {
+                    case 'info':
+                        Katrid.Forms.Dialogs.Alerts.info(info.message);
+                        break;
+                    case 'warning':
+                    case 'warn':
+                        Katrid.Forms.Dialogs.Alerts.warning(info.message);
+                        break;
+                    case 'sucess':
+                    case 'ok':
+                        Katrid.Forms.Dialogs.Alerts.success(info.message);
+                        break;
+                    case 'error':
+                    case 'danger':
+                        Katrid.Forms.Dialogs.Alerts.error(info.message);
+                        break;
+                }
+            }
+        }
+        admin.Messages = Messages;
+    })(admin = katrid.admin || (katrid.admin = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var admin;
+    (function (admin) {
+        /**
+         * Consume the response messages
+         */
+        class ResponseMessagesProcessor {
+            constructor(response) {
+                this.response = response;
+            }
+            process(content) {
+                // display messages from server-side
+                const msgs = content['katrid.admin.ResponseMessagesProcessor'];
+                if (Array.isArray(msgs)) {
+                    for (let msg of msgs)
+                        katrid.admin.Messages.message(msg);
+                }
+            }
+        }
+        admin.ResponseMessagesProcessor = ResponseMessagesProcessor;
+        admin.requestMiddleware = [];
+        admin.responseMiddleware = [ResponseMessagesProcessor];
+    })(admin = katrid.admin || (katrid.admin = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var BI;
@@ -3676,6 +3729,9 @@ var Katrid;
                             reject(res.error);
                         }
                         else {
+                            // response processors
+                            for (let processor of katrid.admin.responseMiddleware)
+                                (new processor(response)).process(res);
                             if (res.result) {
                                 let result = res.result;
                                 if (Array.isArray(result) && (result.length === 1))

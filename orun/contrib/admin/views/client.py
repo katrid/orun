@@ -8,7 +8,6 @@ from orun.contrib.auth.decorators import login_required
 from orun.contrib import auth
 from orun.apps import apps
 from orun.views.static import serve
-import time
 
 View = apps['ui.view']
 
