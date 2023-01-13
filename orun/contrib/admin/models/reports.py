@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Iterable
 import datetime
 from decimal import Decimal
 import warnings
@@ -6,8 +6,9 @@ import json
 import os
 import uuid
 from collections import defaultdict
+import mimetypes
 
-from jinja2 import Template, Environment
+from jinja2 import Template, Environment, pass_context
 
 from orun import api
 from orun.http import HttpRequest
@@ -326,14 +327,6 @@ class ReportAction(Action):
         cur = connection.cursor()
         cur.execute(sql, values)
         desc = cur.cursor.description
-        datatype_map = {
-            datetime.date: 'DateField',
-            datetime.datetime: 'DateTimeField',
-            str: 'CharField',
-            Decimal: 'DecimalField',
-            float: 'FloatField',
-            int: 'IntegerField',
-        }
         if with_description:
             fields = [
                 {'name': f[0], 'type': datatype_map.get(f[1], 'CharField'), 'size': f[2]}
@@ -346,6 +339,56 @@ class ReportAction(Action):
             'fields': fields,
             'data': [[float(col) if isinstance(col, Decimal) else col for col in row] for row in cur.fetchall()],
         }
+
+    @api.classmethod
+    def preview(cls, request: HttpRequest, content: str):
+        if request.user.is_superuser:
+            from reptile.bands import Report
+            from reptile.exports.pdf import PDF
+            from orun.reports.data import default_connection
+            rep = Report(json.loads(content), default_connection=default_connection)
+            doc = rep.prepare()
+            fname = uuid.uuid4().hex + '.pdf'
+            filename = os.path.join(settings.REPORT_PATH, fname)
+            PDF(doc).export(filename)
+            out_file = '/web/reports/' + os.path.basename(filename)
+            return {
+                '$open': out_file,
+                'name': 'Preview',
+            }
+
+    @api.classmethod
+    def exec_sql(cls, request: HttpRequest, sql: str, params: dict):
+        """
+        Execute a sql query statement directly on database
+        :param request:
+        :param sql:
+        :param params:
+        :return:
+        """
+        if request.user.is_superuser:
+            cur = connection.cursor()
+            cur.execute(sql)
+            return {
+                'fields': [
+                    {
+                        'name': f[0],
+                        'dataType': datatype_map.get(f[1], 'str')
+                    }
+                    for f in cur.description
+                ],
+                'data': [list(r) for r in cur.fetchall()],
+            }
+
+
+datatype_map = {
+    datetime.date: 'DateField',
+    datetime.datetime: 'DateTimeField',
+    str: 'CharField',
+    Decimal: 'DecimalField',
+    float: 'FloatField',
+    int: 'IntegerField',
+}
 
 
 class UserReport(models.Model):
@@ -395,6 +438,7 @@ def create_report_environment():
 
 # report_env = create_report_environment()
 
+import reptile
 
 REPORT_ENGINES = {
     'rep': 'orun.reports.engines.reptile.ReptileEngine',
@@ -402,3 +446,67 @@ REPORT_ENGINES = {
 
 if hasattr(settings, 'REPORT_ENGINES'):
     REPORT_ENGINES.update(settings.REPORT_ENGINES)
+
+
+def Sum(data: Iterable, member: str = None):
+    if member is None:
+        return sum(data)
+    else:
+        return sum(data.values(member))
+
+
+report_env = reptile.EnvironmentSettings.env
+report_env.globals['str'] = str
+report_env.globals['sum'] = Sum
+# env.globals['total'] = total
+# env.globals['avg'] = avg
+report_env.globals['count'] = len
+# report_env.globals['MIN'] = min
+# report_env.globals['MAX'] = max
+
+
+def COUNT(obj):
+    return obj.get_count()
+
+
+def SUM(expr, band=None, flag=None):
+    return sum(expr)
+
+def MAX(expr, band=None, flag=None):
+    return max(expr)
+
+def MIN(expr, band=None, flag=None):
+    return min(expr)
+
+def AVG(expr, band=None, flag=None):
+    return sum(expr) / len(expr)
+
+
+def avg(values):
+    return sum(values) / len(values)
+
+
+@pass_context
+def total(context, op, field=None):
+    if isinstance(op, str) and field is None:
+        field = op
+        op = sum
+    records = context.parent['records']
+    if records:
+        rec = records[0]
+        if isinstance(rec, dict):
+            fn = lambda rec: rec[field] or 0
+        else:
+            fn = lambda rec: getattr(rec, field) or 0
+        return op(list(map(fn, records)))
+    return 0
+
+
+report_env.globals['COUNT'] = COUNT
+report_env.globals['SUM'] = SUM
+report_env.globals['AVG'] = AVG
+report_env.globals['MAX'] = MAX
+report_env.globals['MIN'] = MIN
+report_env.globals['avg'] = avg
+report_env.globals['total'] = total
+
