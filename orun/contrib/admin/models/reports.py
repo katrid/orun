@@ -345,15 +345,15 @@ class ReportAction(Action):
         if request.user.is_superuser:
             params_values = {}
             if params:
-                params_fmt = params.get('format')
-                if params_fmt == 'yaml':
-                    import yaml
-                    from yaml import CLoader
-                    params_values = yaml.load(params['values'], Loader=CLoader)
+                params_values = params['values']
             from reptile.bands import Report
+            from orun.contrib.erp.models import Company
             from reptile.exports.pdf import PDF
             from orun.reports.data import default_connection
             rep = Report(json.loads(content), default_connection=default_connection)
+            company = Company.objects.filter(active=True).first()
+            if company:
+                params_values['company_logo'] = company.image.read()
             rep.variables = params_values
             doc = rep.prepare()
             fname = uuid.uuid4().hex + '.pdf'
