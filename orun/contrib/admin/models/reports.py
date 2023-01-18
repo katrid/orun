@@ -341,12 +341,20 @@ class ReportAction(Action):
         }
 
     @api.classmethod
-    def preview(cls, request: HttpRequest, content: str):
+    def preview(cls, request: HttpRequest, content: str, params: dict = None):
         if request.user.is_superuser:
+            params_values = {}
+            if params:
+                params_fmt = params.get('format')
+                if params_fmt == 'yaml':
+                    import yaml
+                    from yaml import CLoader
+                    params_values = yaml.load(params['values'], Loader=CLoader)
             from reptile.bands import Report
             from reptile.exports.pdf import PDF
             from orun.reports.data import default_connection
             rep = Report(json.loads(content), default_connection=default_connection)
+            rep.variables = params_values
             doc = rep.prepare()
             fname = uuid.uuid4().hex + '.pdf'
             filename = os.path.join(settings.REPORT_PATH, fname)
