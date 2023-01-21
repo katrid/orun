@@ -72,6 +72,8 @@ class ReptileEngine:
                     where[k] = v
                 elif v and param['type'] == 'DateField':
                     where[k] = datetime.datetime.strptime(v, '%Y-%m-%d').date()
+        # format params
+        where['DISPLAY_PARAMS'] = kwargs['params'].get('displayParams')
         company = kwargs['company']
         vars = {}
         if company:

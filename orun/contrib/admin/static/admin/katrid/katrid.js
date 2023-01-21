@@ -12524,7 +12524,9 @@ var Katrid;
                     data: [],
                     file: container.find('#id-report-file').val()
                 };
-                for (let p of Array.from(this.params)) {
+                let info = [];
+                for (let p of this.params) {
+                    let paramInfo = {};
                     let val1, val2;
                     val1 = p.value1;
                     val2 = p.value2;
@@ -12534,6 +12536,10 @@ var Katrid;
                         val2 = null;
                     if (val1 === null)
                         continue;
+                    if (val1 && val2)
+                        info.push(`${p.label}: [${val1}, ${val2}]`);
+                    else if (val1)
+                        info.push(`${p.label}: ${val1}`);
                     params.data.push({
                         name: p.name,
                         op: p.operation,
@@ -12542,6 +12548,8 @@ var Katrid;
                         type: p.type
                     });
                 }
+                // TODO: optional display params
+                params.displayParams = info.join('\n');
                 let fields = container.find('#report-id-fields').val();
                 params['fields'] = fields;
                 let totals = container.find('#report-id-totals').val();
@@ -12677,6 +12685,7 @@ var Katrid;
                     format = localStorage.katridReportViewer || 'pdf';
                 const params = this.getUserParams();
                 const svc = new Katrid.Services.ModelService('ui.action.report');
+                console.log(params);
                 svc.post('export_report', { args: [this.info.id], kwargs: { format, params } });
                 return false;
             }
