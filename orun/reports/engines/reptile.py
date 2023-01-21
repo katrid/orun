@@ -1,15 +1,23 @@
 import os
 import json
 import datetime
-from lxml import etree
+import mimetypes
 
+from lxml import etree
 from jinja2 import Template
 from reptile.bands import Report
+import reptile
 
 from orun.reports.data import default_connection
 from orun.apps import apps
+import orun.reports.filters
 # from reptile.exports import pdf
 # from orun import app
+
+
+mimetypes.init()
+
+reptile.EnvironmentSettings.env.finalize = orun.reports.filters.localize
 
 
 class ReptileEngine:
