@@ -2,6 +2,23 @@ import reptile.data
 from orun.data.datasource import DataSource, Param
 
 
+class ReportConnection:
+    """
+    Default report db connection
+    """
+
+    def datasource_factory(self, **kwargs):
+        """
+        Create a datasource instance compatible with reptile engine
+        :param kwargs:
+        :return:
+        """
+        return Query(**kwargs)
+
+
+default_connection = ReportConnection()
+
+
 class Query(DataSource, reptile.data.DataSource):
     def __init__(self, name=None, sql=None):
         reptile.data.DataSource.__init__(self)

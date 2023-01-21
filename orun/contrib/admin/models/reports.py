@@ -163,7 +163,11 @@ class ReportAction(Action):
         else:
             xml = self.view.get_xml(model)
             report_file = xml.attrib['file']
-            if rep_type == 'xml':
+            if report_file.endswith('.json'):
+                # new style report
+                with open(loader.find_template(report_file)) as f:
+                    xml = f.read()
+            elif rep_type == 'xml':
                 with open(loader.get_template(report_file).template.filename, 'rb') as f:
                     xml = f.read()
             rep_type = report_file.rsplit('.', 1)[1]
