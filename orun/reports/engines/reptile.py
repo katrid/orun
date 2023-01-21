@@ -78,7 +78,10 @@ class ReptileEngine:
 
         company = Company.objects.filter(active=True).first()
         if company:
-            where['company_logo'] = company.image.read()
+            try:
+                where['company_logo'] = company.image.read()
+            except:
+                where['company_logo'] = None
 
         data = {
             'format': fmt,
