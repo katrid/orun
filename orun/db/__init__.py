@@ -10,7 +10,7 @@ __all__ = [
     'connection', 'connections', 'router', 'DatabaseError', 'IntegrityError',
     'InternalError', 'ProgrammingError', 'DataError', 'NotSupportedError',
     'Error', 'InterfaceError', 'OperationalError', 'DEFAULT_DB_ALIAS',
-    'ORUN_VERSION_PICKLE_KEY',
+    'ORUN_VERSION_PICKLE_KEY', 'execute',
 ]
 
 connections = ConnectionHandler()
@@ -41,6 +41,10 @@ class DefaultConnectionProxy:
 connection = DefaultConnectionProxy()
 
 
+def execute(sqlstmt: str, params=None):
+    return connections[DEFAULT_DB_ALIAS].execute(sqlstmt, params)
+
+
 # Register an event to reset saved queries when a Orun request is started.
 def reset_queries(**kwargs):
     for conn in connections.all():
@@ -53,6 +57,9 @@ signals.request_started.connect(reset_queries)
 # Register an event to reset transaction state and close connections past
 # their lifetime.
 def close_old_connections(**kwargs):
+    import orun.messages
+    # clear messages framework
+    orun.messages.get()
     for conn in connections.all():
         conn.close_if_unusable_or_obsolete()
 

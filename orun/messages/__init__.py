@@ -15,6 +15,7 @@ def _add_message(level: str, message: str):
 
 def get():
     msgs = getattr(_MESSAGES, 'messages', None)
+    _MESSAGES.messages = None
     return msgs
 
 
