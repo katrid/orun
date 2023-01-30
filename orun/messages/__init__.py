@@ -8,7 +8,7 @@ _MESSAGES = local()
 
 def _add_message(level: str, message: str):
     # msg = _MESSAGES.get([])
-    msgs = getattr(_MESSAGES, 'messages', [])
+    msgs = getattr(_MESSAGES, 'messages', None) or []
     msgs.append({'type': level, 'message': message})
     _MESSAGES.messages = msgs
 
