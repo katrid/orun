@@ -93,7 +93,7 @@ class DataSource:
             sql += self.sql.replace(':', '@')
         elif connection.vendor == 'postgresql':
             sql = re.sub(r':(\w+)', r'%(\1)s', self.sql, )
-            params = {k: self._params[k].value for k, v in self.params.items()}
+            params = {k: self._params[k].value if not isinstance(self._params[k].value, bytes) else None for k, v in self.params.items()}
         else:
             sql += self.sql
         if '/*%' in sql:
