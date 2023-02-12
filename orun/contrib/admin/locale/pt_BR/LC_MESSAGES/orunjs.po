@@ -33,6 +33,9 @@ msgstr "Excluir seleção"
 msgid "Copy"
 msgstr "Copiar"
 
+msgid "Copy with formatting"
+msgstr "Copiar com formatação"
+
 msgid "Edit"
 msgstr "Editar"
 

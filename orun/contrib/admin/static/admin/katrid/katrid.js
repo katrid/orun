@@ -3196,7 +3196,7 @@ var Katrid;
                         let td = document.createElement('td');
                         if (Katrid.isNumber(col) || (field.type === 'DecimalField'))
                             col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
-                        else if (field.type === 'DateField')
+                        else if ((field.type === 'DateField') || (field.type === 'date'))
                             col = moment(col).format('DD/MM/YYYY');
                         else if (field.type === 'DateTimeField')
                             col = moment(col).format('DD/MM/YYYY HH:mm');
@@ -3226,6 +3226,9 @@ var Katrid;
             }
             copyToClipboard() {
                 navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
+            }
+            export() {
+                console.log('export table');
             }
         }
         BI._QueryView = _QueryView;
@@ -3393,9 +3396,9 @@ var Katrid;
                                     col = Katrid.intl.number({ minimumFractionDigits: 2 }).format(col);
                                 else if (Katrid.isNumber(col))
                                     col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
-                                else if (field.type === 'DateField')
+                                else if ((field.type === 'DateField') || (field.type === 'date'))
                                     col = moment(col).format('DD/MM/YYYY');
-                                else if (field.type === 'DateTimeField')
+                                else if ((field.type === 'DateTimeField') || (field.type === 'datetime'))
                                     col = moment(col).format('DD/MM/YYYY HH:mm');
                             }
                             if (field.type)
@@ -3454,13 +3457,21 @@ var Katrid;
                 // create context menu
                 let menu = new Katrid.Forms.ContextMenu();
                 menu.add('<i class="fa fa-fw fa-copy"></i> ' + Katrid.i18n.gettext('Copy'), () => this.copyToClipboard());
+                menu.add('<i class="fa fa-fw fa-copy"></i> ' + Katrid.i18n.gettext('Copy with formatting'), () => this.copyToClipboard(true));
+                menu.add('<i class="fa fa-fw fa-download"></i> ' + Katrid.i18n.gettext('Export'), () => this.export());
                 // menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => this.filterByFieldContent(td, rec));
                 // menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteRow());
                 // menu.add('Arquivar', this.copyClick);
                 menu.show(evt.pageX, evt.pageY);
             }
-            copyToClipboard() {
-                navigator.clipboard.writeText(Katrid.UI.Utils.toTsv(this.data));
+            copyToClipboard(formatting = false) {
+                if (formatting)
+                    navigator.clipboard.writeText(Katrid.UI.Utils.toTsv(this.data));
+                else
+                    navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
+            }
+            export() {
+                Katrid.UI.Utils.textToDownload(Katrid.UI.Utils.tableToText(this.table), `${this._queryId}.tsv`);
             }
             get orientation() {
                 if (this.metadata?.orientation == 2)
@@ -14269,6 +14280,22 @@ var Katrid;
                 return output.join('\n');
             }
             Utils.toTsv = toTsv;
+            function textToDownload(s, filename) {
+                const blob = new Blob([s], { type: 'text/csv' });
+                const el = document.createElement('a');
+                try {
+                    el.href = URL.createObjectURL(blob);
+                    if (!filename)
+                        filename = 'document.csv';
+                    el.download = filename;
+                    document.body.appendChild(el);
+                    el.click();
+                }
+                finally {
+                    document.body.removeChild(el);
+                }
+            }
+            Utils.textToDownload = textToDownload;
         })(Utils = UI.Utils || (UI.Utils = {}));
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
@@ -14325,6 +14352,17 @@ var Katrid;
         UI.showMessage = showMessage;
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class Toolbar {
+            constructor(config) {
+            }
+        }
+        ui.Toolbar = Toolbar;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var ui;
