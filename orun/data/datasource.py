@@ -86,10 +86,10 @@ class DataSource:
         if connection.vendor == 'mssql':
             sql = 'SET DATEFORMAT ymd\n'
             for k, v in self.params.items():
-                if isinstance(v, bytes):
+                if v.type is bytes:
                     continue
                 vars.append(f'declare @{k} {self._get_sqltype(v)}')
-                params.append(values.get(k, v if not isinstance(v, bytes) else None))
+                params.append(values.get(k, None if v.type is bytes else v.value))
                 select.append(f'@{k} = ?')
             if select:
                 sql += '\n'.join(vars)
@@ -97,7 +97,7 @@ class DataSource:
             sql += self.sql.replace(':', '@')
         elif connection.vendor == 'postgresql':
             sql = re.sub(r':(\w+)', r'%(\1)s', self.sql, )
-            params = {k: self._params[k].value for k, v in self.params.items() if not isinstance(v, bytes)}
+            params = {k: self._params[k].value for k, v in self.params.items() if not isinstance(v.type, bytes)}
         else:
             sql += self.sql
         if '/*%' in sql:
