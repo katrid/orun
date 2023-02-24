@@ -3139,100 +3139,6 @@ var Katrid;
     var BI;
     (function (BI) {
         const SCROLL_PAGE_SIZE = 100;
-        class _QueryView extends HTMLElement {
-            get queryId() {
-                return this._queryId;
-            }
-            set queryId(value) {
-                this._queryId = value;
-                if (value) {
-                    this.queryChange(value);
-                }
-            }
-            async queryChange(query) {
-                $(this).empty();
-                // this.searchView = <SearchViewElement>document.createElement('search-view');
-                // this.searchView.addEventListener('searchUpdate', () => {
-                //   this.refresh(query, this.searchView.getParams());
-                // })
-                // this.append(this.searchView);
-                this.container = document.createElement('div');
-                this.container.classList.add('table-responsive');
-                this.append(this.container);
-                let res = await this.refresh(query);
-                // render the result on table
-                // transform result to list of objects
-                // this.action.search = this.getSearchView(query);
-                // this.$scope.action.views.search = this.$scope.action.search;
-                // this.renderSearch();
-                // this.renderTable(res);
-                // this.$scope.$apply();
-            }
-            async refresh(query, params) {
-                $(this.container).empty();
-                let res = await Katrid.Services.Query.read({ id: query, details: true, params });
-                let fields = this.fields = res.fields;
-                // this.searchView.fields = this.fields = Katrid.Data.Fields.fromArray(res.fields);
-                this.fieldList = Object.values(this.fields);
-                // for (let f of res.fields)
-                // f.filter = this.getFilter(f);
-                // this.$scope.records = res.data.map(row => _toObject(res.fields, row));
-                // this.$scope.$apply();
-                let table = this.table = document.createElement('table');
-                table.classList.add('table');
-                let thead = table.createTHead();
-                let thr = thead.insertRow(0);
-                let tbody = table.createTBody();
-                for (let f of this.fieldList) {
-                    let th = document.createElement('th');
-                    th.innerText = f.caption;
-                    thr.append(th);
-                }
-                for (let row of res.data) {
-                    let tr = document.createElement('tr');
-                    let i = 0;
-                    for (let col of row) {
-                        let field = fields[i];
-                        let td = document.createElement('td');
-                        if (Katrid.isNumber(col) || (field.type === 'DecimalField'))
-                            col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
-                        else if ((field.type === 'DateField') || (field.type === 'date'))
-                            col = moment(col).format('DD/MM/YYYY');
-                        else if (field.type === 'DateTimeField')
-                            col = moment(col).format('DD/MM/YYYY HH:mm');
-                        else if (field.type === 'Float')
-                            col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
-                        td.innerText = col;
-                        tr.append(td);
-                        i++;
-                    }
-                    tbody.append(tr);
-                }
-                this.container.append(table);
-                table.addEventListener('contextmenu', evt => this.contextMenu(evt));
-                // this.searchView.render();
-                return res;
-            }
-            contextMenu(evt) {
-                evt.stopPropagation();
-                evt.preventDefault();
-                // create context menu
-                let menu = new ContextMenu();
-                menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => this.copyToClipboard());
-                // menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => this.filterByFieldContent(td, rec));
-                // menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteRow());
-                // menu.add('Arquivar', this.copyClick);
-                menu.show(evt.pageX, evt.pageY);
-            }
-            copyToClipboard() {
-                navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
-            }
-            export() {
-                console.log('export table');
-            }
-        }
-        BI._QueryView = _QueryView;
-        // Katrid.define('query-view', QueryView);
         class QueryView extends Katrid.Forms.RecordCollectionView {
             constructor() {
                 super(...arguments);
@@ -3951,7 +3857,7 @@ var Katrid;
             set queryCommand(value) {
                 this._queryCommand = value;
                 this.waiting = true;
-                Katrid.Services.post('/bi/studio/query/', { query: value, withDescription: true, asDict: true })
+                Katrid.Services.post('/bi/query/', { query: value, withDescription: true, asDict: true })
                     .then(res => this._refresh(res))
                     .finally(() => this.waiting = false);
             }
