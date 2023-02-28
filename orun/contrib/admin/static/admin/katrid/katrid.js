@@ -13849,12 +13849,14 @@ var Katrid;
                 header.append(nav);
                 this.element.append(header);
                 // render days of week
+                const daysow = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
                 for (let i = 0; i < 7; i++) {
                     let el = document.createElement('div');
                     el.classList.add('dow');
-                    let od = new Date();
-                    od.setDate(date.getDate() - (6 - i));
-                    el.innerText = moment(od).format('ddd');
+                    // let od = new Date();
+                    // od.setDate(date.getDate() - (6 - i));
+                    // el.innerText = moment(od).format('ddd');
+                    el.innerText = daysow[i];
                     calendar.append(el);
                 }
                 // render days
