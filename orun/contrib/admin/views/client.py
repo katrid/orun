@@ -26,6 +26,13 @@ def index(request: HttpRequest, template_name='/admin/index.jinja2', **context):
     return render(request, template_name, context)
 
 
+def is_logged_in(request: HttpRequest):
+    try:
+        return JsonResponse({'result': request.user.is_authenticated})
+    except:
+        return JsonResponse({'result': False})
+
+
 def search_menu(request: HttpRequest):
     from orun.contrib.admin.models import Menu
     term = request.json.get('term')
