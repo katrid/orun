@@ -8,7 +8,7 @@ urlpatterns = [
     path('web/', views.client.index),
     path('web/login/', views.client.login, name='login'),
     path('web/logout/', views.client.logout),
-    path('web/login/logged/', views.client.is_logged_in, name='logged'),
+    path('web/login/authenticated/', views.client.is_authenticated, name='logged'),
     path('web/js/templates/', views.client.js_templates),
     path('web/content/<int:content_id>/', views.client.content),
     path('web/content/upload/', views.client.upload_attachment),

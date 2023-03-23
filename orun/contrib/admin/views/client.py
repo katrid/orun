@@ -26,7 +26,7 @@ def index(request: HttpRequest, template_name='/admin/index.jinja2', **context):
     return render(request, template_name, context)
 
 
-def is_logged_in(request: HttpRequest):
+def is_authenticated(request: HttpRequest):
     try:
         return JsonResponse({'result': request.user.is_authenticated})
     except:
