@@ -76,6 +76,48 @@ var katrid;
         }
     }
     katrid.localStorage = localStorage;
+    /**
+     * Local key/value storage (using IndexedDB)
+     */
+    const LOCAL_DATA_KEY = '_LOCAL_DATA';
+    class localData {
+        constructor(dbName, version) {
+            this.dbName = dbName;
+            this.version = version;
+        }
+        open() {
+            let req;
+            req = indexedDB.open(this.dbName, this.version);
+            req.onupgradeneeded = (evt) => {
+                const db = evt.target.result;
+                const objectStore = db.createObjectStore(LOCAL_DATA_KEY, { keyPath: "key" });
+            };
+            return new Promise((resolve) => {
+                req.onsuccess = (evt) => {
+                    this.db = evt.target.result;
+                    resolve(this.db);
+                };
+            });
+        }
+        setItem(key, value) {
+            return new Promise((resolve) => {
+                let objStore = this.db
+                    .transaction([LOCAL_DATA_KEY], "readwrite")
+                    .objectStore(LOCAL_DATA_KEY);
+                objStore.put({ key, value }).onsuccess = evt => resolve(true);
+            });
+        }
+        getItem(key) {
+            return new Promise((resolve) => {
+                this.db
+                    .transaction(LOCAL_DATA_KEY)
+                    .objectStore(LOCAL_DATA_KEY)
+                    .get(key)
+                    .onsuccess = evt => resolve(evt.target.result?.value);
+            });
+        }
+    }
+    katrid.localData = localData;
 })(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -13171,8 +13213,13 @@ var katrid;
             }
         }
         class Tour {
-            constructor() {
+            constructor(parent) {
+                this.parent = parent;
                 this.navigationInterval = 1000;
+            }
+            async textClick(text) {
+                if (this.parent)
+                    $(parent).find(`:contains("${text}")`)[0].click();
             }
             async set(field, value) {
                 let el;
