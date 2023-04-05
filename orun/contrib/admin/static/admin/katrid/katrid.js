@@ -6584,6 +6584,24 @@ var katrid;
                     req.onerror = evt => reject(tx.error);
                 });
             }
+            delete(key) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.name], 'readwrite');
+                    const store = tx.objectStore(this.name);
+                    const req = store.delete(key);
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(tx.error);
+                });
+            }
+            clear() {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.name], 'readwrite');
+                    const store = tx.objectStore(this.name);
+                    const req = store.clear();
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(tx.error);
+                });
+            }
             get(key) {
                 return new Promise((resolve, reject) => {
                     const tx = this.db.transaction([this.name], 'readonly');
