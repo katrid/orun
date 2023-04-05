@@ -6527,6 +6527,89 @@ var Katrid;
         Katrid.Data.Fields.registry.OneToManyField = OneToManyField;
     })(Data = Katrid.Data || (Katrid.Data = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var db;
+    (function (db_1) {
+        class ClientDatabase {
+            constructor(config) {
+                this.config = config;
+                this.name = config.name;
+                this.version = config.version;
+                this.tables = config.tables;
+            }
+            table(tableName) {
+                return new ClientTable({ name: tableName, db: this });
+            }
+            open() {
+                return new Promise((resolve, reject) => {
+                    let req = indexedDB.open(this.name, this.version);
+                    req.onerror = reject;
+                    req.onsuccess = () => {
+                        this.db = req.result;
+                        resolve(this.db);
+                    };
+                    if (this.config.onupgradeneeded)
+                        req.onupgradeneeded = this.config.onupgradeneeded;
+                    else
+                        req.onupgradeneeded = evt => {
+                            console.log('upgrade neeed');
+                            const db = evt.target.result;
+                            if (this.tables) {
+                                for (let t of this.tables.filter(s => !db.objectStoreNames.contains(s)))
+                                    if (typeof t === 'string')
+                                        db.createObjectStore(t, { keyPath: 'id' });
+                                    else
+                                        db.createObjectStore(t.name, t.options);
+                            }
+                        };
+                });
+            }
+            transaction(tables, mode = 'readwrite') {
+                return this.db.transaction(tables, mode);
+            }
+        }
+        db_1.ClientDatabase = ClientDatabase;
+        class ClientTable {
+            constructor(config) {
+                this.db = config.db;
+                this.name = config.name;
+            }
+            all(query) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.name], 'readonly');
+                    const store = tx.objectStore(this.name);
+                    const req = store.getAll(query);
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(tx.error);
+                });
+            }
+            get(key) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.name], 'readonly');
+                    const store = tx.objectStore(this.name);
+                    const req = store.get(key);
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(tx.error);
+                });
+            }
+            put(item, key) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.name], 'readwrite');
+                    const store = tx.objectStore(this.name);
+                    let req;
+                    if (key != null)
+                        req = store.put(item);
+                    else
+                        req = store.put(item, key);
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(tx.error);
+                });
+            }
+        }
+        db_1.ClientTable = ClientTable;
+    })(db = katrid.db || (katrid.db = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
