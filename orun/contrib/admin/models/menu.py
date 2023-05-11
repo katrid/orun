@@ -1,6 +1,11 @@
 from collections import defaultdict
+from operator import or_
+
+from orun import SUPERUSER
+from orun.apps import apps
 from orun.db import models
 from orun.http import HttpRequest
+import orun.contrib.auth.models
 from orun.utils.translation import gettext
 
 
@@ -8,11 +13,11 @@ MENU_SEP = '/'
 
 
 class Menu(models.Model):
-    name = models.CharField(null=False, translate=True, full_text_search=True)
+    name = models.CharField(null=False, translate=True)
     sequence = models.IntegerField(default=99)
     parent = models.ForeignKey('self', related_name='children')
     action = models.ForeignKey('ui.action')
-    groups = models.ManyToManyField('auth.group')
+    groups = models.ManyToManyField('auth.group', through='ui.menu.groups.rel')
     icon = models.CharField()
     css_class = models.TextField()
 
@@ -44,20 +49,10 @@ class Menu(models.Model):
             ]
 
         qs = cls.objects.all()
-        # if cls.env.user_id == SUPERUSER or cls.env.user.is_superuser:
-        if True: # todo replace by permisson control
+        if cls._env.user_id == SUPERUSER or cls._env.user.is_superuser:
             items = qs
         else:
-            Group = cls.env['auth.group']
-            UserGroups = cls.env['auth.user.groups.rel']
-            MenuGroups = cls.env['ui.menu.groups.rel']
-            q = MenuGroups.objects.join(Group).join(UserGroups)
-            q = q.filter(
-                UserGroups.c.from_auth_user_id == cls.env.user_id, MenuGroups.c.from_ui_menu_id == cls.c.pk
-            )
-            items = qs.filter(
-                or_(~MenuGroups.objects.filter(MenuGroups.c.from_ui_menu_id == cls.c.pk).exists(), q.exists())
-            ).all()
+            items = qs.filter(groups__users__pk=cls._env.user_id)
         for item in items:
             visible_items[item.parent_id].append(item)
 
@@ -85,3 +80,15 @@ class Menu(models.Model):
     @classmethod
     def admin_search_menu(cls, request: HttpRequest, term: str):
         pass
+
+
+class Group(orun.contrib.auth.models.Group, helper=True):
+    menus = models.ManyToManyField(Menu, through='ui.menu.groups.rel')
+
+
+class MenuGroup(models.Model):
+    menu = models.ForeignKey(Menu, null=False)
+    group = models.ForeignKey('auth.group', null=False)
+
+    class Meta:
+        name = 'ui.menu.groups.rel'

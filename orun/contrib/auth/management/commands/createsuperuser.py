@@ -54,6 +54,8 @@ class Command(BaseCommand):
                 '--%s' % field,
                 help='Specifies the %s for the superuser.' % field,
             )
+        parser.add_argument('--password', help='Specifies the password for the superuser.')
+        parser.add_argument('--email', help='Specifies the email for the superuser.')
 
     def execute(self, *args, **options):
         self.stdin = options.get('stdin', sys.stdin)  # Used for testing
@@ -61,9 +63,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         username = options[self.UserModel.USERNAME_FIELD]
+        password = options['password']
+        email = options['email']
         database = options['database']
         user_data = {}
-        verbose_field_name = self.username_field.verbose_name
+        verbose_field_name = self.username_field.label
         try:
             self.UserModel._meta.get_field(PASSWORD_FIELD)
         except exceptions.FieldDoesNotExist:
@@ -76,9 +80,6 @@ class Command(BaseCommand):
                 # Same as user_data but with foreign keys as fake model
                 # instances instead of raw IDs.
                 fake_user_data = {}
-                if hasattr(self.stdin, 'isatty') and not self.stdin.isatty():
-                    raise NotRunningInTTYException
-                default_username = get_default_username()
                 if username:
                     error_msg = self._validate_username(username, verbose_field_name, database)
                     if error_msg:
@@ -88,8 +89,9 @@ class Command(BaseCommand):
                     raise CommandError('%s cannot be blank.' % capfirst(verbose_field_name))
                 # Prompt for username.
                 while username is None:
-                    message = self._get_input_message(self.username_field, default_username)
-                    username = self.get_input_data(self.username_field, message, default_username)
+                    username = input('Username:')
+                    # message = self._get_input_message(self.username_field, default_username)
+                    # username = self.get_input_data(self.username_field, message, default_username)
                     if username:
                         error_msg = self._validate_username(username, verbose_field_name, database)
                         if error_msg:
@@ -116,7 +118,7 @@ class Command(BaseCommand):
                             fake_user_data[field_name] = field.remote_field.model(input_value)
 
                 # Prompt for a password if the model has one.
-                while PASSWORD_FIELD in user_data and user_data[PASSWORD_FIELD] is None:
+                while PASSWORD_FIELD in user_data and user_data[PASSWORD_FIELD] is None and password is None:
                     password = getpass.getpass()
                     password2 = getpass.getpass('Password (again): ')
                     if password != password2:
@@ -151,7 +153,8 @@ class Command(BaseCommand):
                         user_data[field_name] = field.clean(options[field_name], None)
                     else:
                         raise CommandError('You must use --%s with --noinput.' % field_name)
-
+            user_data['email'] = email
+            user_data['name'] = username
             self.UserModel._default_manager.db_manager(database).create_superuser(**user_data)
             if options['verbosity'] >= 1:
                 self.stdout.write("Superuser created successfully.")

@@ -13920,6 +13920,10 @@ query-view .table-responsive {
   padding: 4px;
 }
 
+.readonly .input-tags .badge {
+  color: #212529;
+}
+
 pwa-form {
   border-radius: 8px;
   padding-bottom: 20px;

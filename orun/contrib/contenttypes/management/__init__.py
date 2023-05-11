@@ -1,6 +1,5 @@
 from orun.apps import apps as global_apps
 from orun.db import DEFAULT_DB_ALIAS, router, transaction
-from orun.db.utils import IntegrityError
 
 
 def get_contenttypes_and_models(model, using, ContentType):
@@ -17,12 +16,7 @@ def create_contenttypes(app_models, verbosity=2, interactive=True, using=DEFAULT
     """
     Create content types for models in the given app.
     """
-    print('continue', app_models)
-    try:
-        ContentType = apps['content.type']
-        Field = apps['content.field']
-    except LookupError:
-        return
+    from orun.contrib.contenttypes.models import ContentType
     created_models = []
     for schema, models in app_models:
         app_config = apps.app_configs[schema]
@@ -34,17 +28,8 @@ def create_contenttypes(app_models, verbosity=2, interactive=True, using=DEFAULT
                 continue
 
             ct = ContentType.objects.using(using).create(
-                schema=model._meta.schema,
                 name=model._meta.name,
-                verbose_name=model._meta.verbose_name,
-                verbose_name_plural=model._meta.verbose_name_plural,
-                object_name=model._meta.object_name,
-                object_type='base',
             )
             created_models.append(ct)
             if verbosity >= 2:
                 print("Adding content type '%s | %s'" % (app_config.schema, model._meta.name))
-    for model in created_models:
-        ct = get_contenttypes_and_models(model, using, ContentType)
-        for f in model._meta.fields:
-            ct.create_field(f)

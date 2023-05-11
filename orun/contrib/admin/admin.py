@@ -39,3 +39,14 @@ class MenuItem(Registrable):
         return self._register_menu_item(self._cls, self.qualname)
 
 
+def register_groups(**groups):
+    from orun.contrib.auth.models import Group
+
+    for k, v in groups.items():
+        values = {'name': k}
+        if isinstance(v, str):
+            values['description'] = v
+        elif isinstance(v, dict):
+            values.update(v)
+        Group.objects.create(**values)
+

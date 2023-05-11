@@ -51,6 +51,7 @@ class ReportAction(Action):
     view = models.ForeignKey('ui.view')
     sql: Optional[str] = models.TextField()
     template: Optional[str] = models.TextField()
+    # published = models.ChoiceField({'private': 'Private', 'public': 'Public'})
 
     class Meta:
         name = 'ui.action.report'
@@ -95,7 +96,6 @@ class ReportAction(Action):
                         with open(templ, 'r', encoding='utf-8') as f:
                             params = engine.extract_params(f.read())
                         if params is not None:
-                            print(params.tostring())
                             data['content'] = params.tostring()
                 elif xml is None:
                     if rep_type == 'xml' or rep_type == 'json':

@@ -25,3 +25,19 @@ class AdminConfig(AppConfig):
         # post_sync.connect(admin_auto_register)
         # checks.register(check_generic_foreign_keys, checks.Tags.models)
         # checks.register(check_model_name_lengths, checks.Tags.models)
+
+    def register_object(self, name: str, obj):
+        from orun.contrib.contenttypes.models import Object
+        return Object.objects.register_object(name, self.schema, obj)
+
+    def register_group(self, obj_name, group_name):
+        from orun.contrib.contenttypes.models import Object
+        from orun.contrib.auth.models import Group
+        if (obj := Object.objects.filter(name=obj_name).first()) is None:
+            return self.register_object(obj_name, Group.objects.create(name=group_name))
+        return obj
+
+    def load_fixtures(self, **options):
+        super().load_fixtures(**options)
+        self.register_group('group_admin', 'System Administrator')
+        self.register_group('group_manager', 'Manager')

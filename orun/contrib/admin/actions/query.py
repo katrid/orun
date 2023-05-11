@@ -139,7 +139,6 @@ class QueryAction(Action):
         else:
             _sql += sql
 
-        print(params)
         cur = connection.cursor()
         cur.execute(_sql, params)
         self.fields = cur.cursor.description

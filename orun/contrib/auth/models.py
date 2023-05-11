@@ -1,5 +1,6 @@
 from orun.apps import apps
 from orun.contrib import auth
+from orun.conf import settings
 from orun.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from orun.core.exceptions import PermissionDenied
 from orun.core.mail import send_mail
@@ -117,6 +118,8 @@ class Group(models.Model):
         Permission,
         verbose_name=_('permissions'),
     )
+
+    users = models.ManyToManyField(settings.AUTH_USER_MODEL, through='auth.user.groups.rel')
 
     objects = GroupManager()
 
@@ -416,3 +419,11 @@ class AnonymousUser:
 
     def get_username(self):
         return self.username
+
+
+class UserGroups(models.Model):
+    group = models.ForeignKey(Group, null=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=False)
+
+    class Meta:
+        name = 'auth.user.group.rel'

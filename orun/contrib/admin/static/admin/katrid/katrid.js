@@ -1056,7 +1056,6 @@ var Katrid;
                 if ((this.viewMode === 'form') && this.canBackToSearch && (index === 0)) {
                     let li = document.createElement('li');
                     li.classList.add('breadcrumb-item');
-                    console.log('create back link', super.getDisplayText());
                     li.append(this.createBackItemLink(super.getDisplayText(), true, `back(${index}, 'list')`));
                     ol.append(li);
                 }
@@ -1128,6 +1127,7 @@ var Katrid;
     }
     Katrid.WebComponent = WebComponent;
 })(Katrid || (Katrid = {}));
+var kjs = katrid;
 /// <reference path="../core/components.ts"/>
 var Katrid;
 (function (Katrid) {
@@ -2280,6 +2280,8 @@ var Katrid;
             create(info) {
                 if (info?.template instanceof HTMLTemplateElement)
                     this.template = info.template;
+                else if (info?.template instanceof HTMLElement)
+                    this.html = info.template.outerHTML;
                 else if (typeof info?.template === 'string')
                     this.html = info.template;
                 else if (typeof info?.info?.template === 'string')
@@ -2307,7 +2309,7 @@ var Katrid;
                 if (this.parentVm)
                     computed = {
                         parent() {
-                            console.log('get parrent', me.parentVm);
+                            return {};
                             return me.parentVm;
                         }
                     };
@@ -6373,7 +6375,7 @@ var Katrid;
         class ManyToManyField extends Data.ForeignKey {
             constructor() {
                 super(...arguments);
-                this.tag = 'field-tags';
+                this.tag = 'input-tags';
             }
             toJSON(val) {
                 if (Array.isArray(val))
@@ -6430,7 +6432,7 @@ var Katrid;
                 // render component
                 let preLoadedViews = {};
                 // detect pre loaded views
-                let template = this.fieldEl.querySelector('template');
+                let template = this.fieldEl?.querySelector('template');
                 if (template)
                     for (let child of template.content.children)
                         preLoadedViews[child.tagName.toLowerCase()] = child.cloneNode(true);
@@ -6442,7 +6444,6 @@ var Katrid;
                 this.views = res.views;
                 this.fields = res.fields;
                 // find rel field
-                console.log('find rel field', this.info.field);
                 Object.values(res.views).forEach((viewInfo) => {
                     let relField = viewInfo.info.fields[this.info.field];
                     // hide the rel field
@@ -6460,8 +6461,10 @@ var Katrid;
                 }
             }
             setElement(el) {
-                if (el && el.hasAttribute('allow-paste'))
+                if (el.hasAttribute('allow-paste'))
                     this.pasteAllowed = true;
+                if (el.hasAttribute('view-mode'))
+                    this.viewMode = el.getAttribute('view-mode');
             }
             setValue(record, value, datasource) {
                 if (!datasource)
@@ -6489,7 +6492,9 @@ var Katrid;
                 return '';
             }
             formControl() {
-                let grid = document.createElement('onetomany-field');
+                let tag = 'onetomany-field';
+                // todo replace by field-onetomany
+                let grid = document.createElement(tag);
                 grid.setAttribute('name', this.name);
                 grid.setAttribute('v-model', 'record.' + this.name);
                 if (this.attrs['v-on:change'])
@@ -6501,7 +6506,10 @@ var Katrid;
             getView(mode = 'list') {
                 if (this.views) {
                     let info = this.views[mode];
-                    let view = new Katrid.Forms.Views.registry[mode]({ name: this.model, viewInfo: info, template: info.info.template });
+                    let template = info.content || info.info.template;
+                    let view = new Katrid.Forms.Views.registry[mode]({
+                        name: this.model, viewInfo: info, template,
+                    });
                     view.model.allFields = this.fields;
                     return view;
                 }
@@ -7661,6 +7669,10 @@ var Katrid;
                 };
                 return comp;
             }
+            insert() {
+                let rec = this.model.newRecord(null, this.datasource);
+                this.vm.records.unshift(rec);
+            }
         }
         CardView.viewType = 'card';
         Forms.CardView = CardView;
@@ -8175,7 +8187,6 @@ ${Katrid.i18n.gettext('Delete')}
                 else
                     this.state = DataSourceState.browsing;
                 this.dialogPromise = new Promise(async (resolve, reject) => {
-                    console.log('modal', options);
                     this._modal = new bootstrap.Modal(el, options);
                     el.addEventListener('hidden.bs.modal', () => {
                         resolve(this.$result);
@@ -11430,7 +11441,7 @@ var Katrid;
             _addTag(tag) {
                 if (this.el.querySelector(`[data-id="${tag.id}"]`))
                     return false;
-                let facet = $(`<div class="facet-view badge badge-dark">
+                let facet = $(`<div class="facet-view badge bg-secondary">
         <span class="facet-value">${tag.text}</span>
         <span class="fas fa-times facet-remove"></span>
         </div>`)[0];
@@ -11438,12 +11449,10 @@ var Katrid;
                 facet.setAttribute('data-id', tag.id);
                 this._tags.push(tag);
                 this._facets.push(facet);
-                this.el.insertBefore(facet, this.input.parentElement);
+                this.el.insertBefore(facet, this.input);
                 return true;
             }
             addTag(tag) {
-                for (let t of this._tags)
-                    console.log('add tag', t);
                 this._addTag(tag);
                 this._setValues(this._tags);
                 this.hideMenu();
@@ -11467,7 +11476,7 @@ var Katrid;
                     this._addTag(tag);
             }
             _setValues(tags) {
-                let event = new CustomEvent('change', {
+                let event = new CustomEvent('onChange', {
                     detail: {
                         tags,
                     }
@@ -11786,19 +11795,24 @@ var Katrid;
             Katrid.component('input-tags', {
                 props: ['modelValue'],
                 template: '<div class="input-autocomplete"><slot/></div>',
-                mounted(el) {
-                    this.$field = this.$parent.view.fields[this.$attrs.name];
-                    this.$el.multiple = true;
-                    this.$el.create(this.$field);
-                    this.$el.addEventListener('change', (evt) => {
+                mounted() {
+                    let el = this.$el;
+                    let ac = new InputForeignKeyElement({ el });
+                    ac.multiple = true;
+                    this.$el._autocomplete = ac;
+                    this.$field = this.$parent.$fields[this.$attrs.name];
+                    ac.bind({ vm: this.$parent, field: this.$field, view: this.$parent.$view, model: this.$parent.$view.model });
+                    this.$el.addEventListener('onChange', (evt) => {
+                        console.log('select item', evt.detail);
                         this.$emit('update:modelValue', evt.detail.tags);
                     });
+                    if (this.modelValue) {
+                        ac.selectedItem = this.modelValue;
+                    }
                 },
                 watch: {
                     modelValue: function (value) {
-                        if (Array.isArray(value))
-                            value = value.map(val => val);
-                        this.$el.tags = value;
+                        this.$el._autocomplete.tags = value;
                     }
                 }
             });
@@ -11900,7 +11914,7 @@ var Katrid;
             beforeCreate() {
                 let field = this.$parent.$fields[this.$attrs.name];
                 this.$field = field;
-                this.$view = field.getView('list');
+                this.$view = field.getView(field.viewMode);
                 this.$fields = this.$view.fields;
                 this.$view.datasource.vm = this;
                 this.$view.datasource.field = this.$field;
@@ -12022,7 +12036,8 @@ var Katrid;
                     }
                 },
                 $flush() {
-                    this.$view.save();
+                    if (this.$field.editor === 'inline')
+                        this.$view.save();
                 },
                 $discard() {
                     this.$view.discard();
@@ -12143,6 +12158,71 @@ var Katrid;
             },
             directives: Katrid.directivesRegistry,
         });
+        Katrid.component('field-onetomany', {
+            template: '<div></div>',
+            mounted() {
+                let field = this.$parent.$view.fields[this.$attrs.name];
+                console.debug('el', field);
+                let widget = new OneToManyGrid(field);
+                widget.appendTo(this.$el);
+                this.$el.$widget = widget;
+            },
+            watch: {
+                modelValue(val) {
+                    if (val) {
+                        console.debug('field val', val);
+                    }
+                }
+            }
+        });
+        class OneToManyGrid {
+            constructor(field) {
+                this.field = field;
+                this.editing = false;
+            }
+            newRecord() {
+                // create a new record
+                if (this.editing)
+                    return;
+                try {
+                    if (this.field.editor === 'inline') {
+                        this.view.insert();
+                    }
+                    else if (this.field.editor === 'dialog') {
+                        // show form as dialog
+                        console.debug('form template', this.field.getView('form'));
+                    }
+                }
+                finally { }
+            }
+            render(template) {
+                let header = document.createElement('div');
+                header.className = 'content-container-heading';
+                let toolbar = document.createElement('div');
+                toolbar.classList.add('grid-toolbar');
+                toolbar.innerHTML = `
+  <button class="btn btn-sm btn-outline-secondary btn-action-add" type="button" v-show="$parent.changing && !readonly">${Katrid.i18n.gettext('Add')}</button>
+  <button class="btn btn-sm btn-outline-secondary btn-action-delete" type="button" v-on:click="deleteSelection()" v-show="$parent.changing && !readonly && selectionLength">${Katrid.i18n.gettext('Delete')}</button>
+  `;
+                toolbar.querySelector('.btn-action-add').addEventListener('click', () => this.newRecord());
+                header.append(toolbar);
+                let table = document.createElement('div');
+                table.className = 'table-responsive';
+                table.append(template);
+                let fieldSection = document.createElement('div');
+                fieldSection.className = 'onetomany-grid';
+                fieldSection.append(header);
+                fieldSection.append(table);
+                return fieldSection;
+            }
+            appendTo(el) {
+                console.debug('o2m field', this.field.viewMode);
+                let view = this.field.getView(this.field.viewMode);
+                let widgetEl = this.render(view.renderTemplate(view.domTemplate()));
+                this.view = view;
+                el.append(widgetEl);
+            }
+        }
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -14842,6 +14922,47 @@ var katrid;
         ui.search = search;
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class BaseView {
+            constructor(config) {
+            }
+            $render(vm) {
+            }
+        }
+        ui.BaseView = BaseView;
+        class ModelView extends BaseView {
+            constructor(config) {
+                super(config);
+            }
+        }
+        ui.ModelView = ModelView;
+        class RecordCollectionView extends BaseView {
+        }
+        ui.RecordCollectionView = RecordCollectionView;
+        class TableView extends RecordCollectionView {
+            createTableRow() {
+            }
+        }
+        ui.TableView = TableView;
+        class CardGroupPanel {
+            addItem(item) {
+            }
+        }
+        class CardView extends RecordCollectionView {
+            quickCreateItem() {
+            }
+            createCardItem() {
+            }
+            createCardGroup() {
+            }
+        }
+        ui.CardView = CardView;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var kui = katrid.ui;
 var Katrid;
 (function (Katrid) {
     function isString(obj) {

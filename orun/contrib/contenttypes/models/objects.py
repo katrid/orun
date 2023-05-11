@@ -18,6 +18,13 @@ class ObjectManager(models.Manager):
     def get_by_object_id(self, model, object_id):
         return self.filter(name=model, object_id=object_id).first()
 
+    def register_object(self, name: str, schema: str, obj):
+        from .models import ContentType
+        return self.create(
+            name=name, model=ContentType.objects.get_for_model(type(obj)), model_name=obj._meta.name, object_id=obj.pk,
+            schema=schema,
+        )
+
 
 class Object(models.Model):
     name = models.CharField(label=_('Object Name'), null=False)
@@ -40,7 +47,6 @@ class Object(models.Model):
 
     @classmethod
     def get_object(cls, name):
-        print('get object', name)
         return cls.objects.get(name=name)
 
     @classmethod
@@ -50,37 +56,6 @@ class Object(models.Model):
     @classmethod
     def get_ref(cls, ref_id: str):
         return cls.objects.get(name=ref_id).object_id
-
-
-class Property(models.Model):
-    name = models.CharField(128, _('name'), null=False)
-    # company = models.ForeignKey('res.company', null=False)
-    field = models.ForeignKey('content.field', on_delete=models.CASCADE, null=False)
-
-    float_value = models.FloatField()
-    int_value = models.BigIntegerField()
-    text_value = models.TextField()
-    binary_value = models.BinaryField()
-    ref_value = models.CharField(1024)
-    datetime_value = models.DateTimeField()
-
-    prop_type = models.CharField(
-        (
-            ('char', 'Char'),
-            ('float', 'Float'),
-            ('boolean', 'Boolean'),
-            ('integer', 'Integer'),
-            ('text', 'Text'),
-            ('binary', 'Binary'),
-            ('foreignkey', 'Foreign Key'),
-            ('date', 'Date'),
-            ('datetime', 'Date Time'),
-            ('choices', 'Choices'),
-        ), null=False, default='foreignkey',
-    )
-
-    class Meta:
-        name = 'content.property'
 
 
 class Association(models.Model):

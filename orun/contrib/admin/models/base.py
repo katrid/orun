@@ -460,7 +460,7 @@ class AdminModel(models.Model, helper=True):
             view = View.objects.get(pk=view)
 
         if view:
-            xml_content = view.get_xml(cls, {'request': cls.env.request, 'opts': model._meta})
+            xml_content = view.get_xml(cls, {'request': cls._env.request, 'opts': model._meta})
             r = {
                 'template': etree.tostring(xml_content, encoding='utf-8').decode('utf-8'),
                 'fields': cls.admin_get_fields_info(view_type=view_type, xml=xml_content)

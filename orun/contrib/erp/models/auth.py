@@ -58,6 +58,16 @@ class User(AbstractUser, Partner):
     user_company = models.ForeignKey('res.company')
     # groups = models.ManyToManyField(Group, verbose_name=_('Groups'))
     companies = models.ManyToManyField('res.company', verbose_name=_('Companies'))
+    groups = models.ManyToManyField(
+        'auth.group',
+        verbose_name=_('groups'),
+        help_text=_(
+            'The groups this user belongs to. A user will get all permissions '
+            'granted to each of their groups.'
+        ),
+        related_name="user_set",
+        related_query_name="user",
+    )
 
     class Meta:
         schema = 'auth'

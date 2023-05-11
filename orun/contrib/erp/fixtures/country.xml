@@ -6,7 +6,7 @@
     <field name="currency" ref="USD"/>
   </object>
   <object id="br" model="res.country" no-update="1">
-    <field name="name">Brazil</field>
+    <field name="name">Brasil</field>
     <field name="code">br</field>
     <field name="currency" ref="BRL"/>
   </object>
