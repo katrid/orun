@@ -11,9 +11,7 @@ class LazyEnvironment:
         return getattr(getattr(self._registry._local_ctx, 'env', self._root_env), item, None)
 
     def __call__(self, **kwargs):
-        ctx = self._context.copy()
-        ctx.update(kwargs)
-        return Environment(self._registry, **ctx)
+        return self._root_env(**kwargs)
 
 
 class Environment:

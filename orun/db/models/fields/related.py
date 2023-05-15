@@ -1579,7 +1579,7 @@ class ManyToManyField(RelatedField):
         return [] if obj.pk is None else list(getattr(obj, self.attname).all())
 
     def save_form_data(self, instance, data):
-        getattr(instance, self.attname).set(data)
+        getattr(instance, self.attname or self.name).set(data)
 
     def db_check(self, connection):
         return None
@@ -1593,9 +1593,7 @@ class ManyToManyField(RelatedField):
         return {"type": None, "check": None}
 
     def value_to_json(self, value):
-        return
-        for obj in value.all():
-            yield obj._api_format_choice()
+        return list(obj._api_format_choice() for obj in value.all())
 
     def get_data_type(self) -> str:
         return 'manytomany'

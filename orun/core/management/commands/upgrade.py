@@ -37,13 +37,15 @@ class Command(BaseCommand):
         else:
             addons = schema or apps.addons.values()
         for app_config in addons:
-            data = getattr(app_config, 'fixtures', None)
-            if data:
-                for filename in data:
-                    self._load_file(app_config, filename, **options)
-            if 'with_demo' in options:
-                demo = getattr(app_config, 'demo', None)
-                if demo:
-                    for filename in demo:
-                        filename = os.path.join(app_config.path, 'fixtures', filename)
-                        self._load_file(app_config, filename, **options)
+            app_config.load_fixtures(**options)
+
+            # data = getattr(app_config, 'fixtures', None)
+            # if data:
+            #     for filename in data:
+            #         self._load_file(app_config, filename, **options)
+            # if 'with_demo' in options:
+            #     demo = getattr(app_config, 'demo', None)
+            #     if demo:
+            #         for filename in demo:
+            #             filename = os.path.join(app_config.path, 'fixtures', filename)
+            #             self._load_file(app_config, filename, **options)

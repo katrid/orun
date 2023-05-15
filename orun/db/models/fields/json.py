@@ -8,13 +8,11 @@ from orun.db.models.lookups import PostgresOperatorLookup, Transform
 from orun.utils.translation import gettext_lazy as _
 
 from . import Field
-from .mixins import CheckFieldDefaultMixin
 
 __all__ = ['JSONField']
 
 
-class JSONField(CheckFieldDefaultMixin, Field):
-    empty_strings_allowed = False
+class JSONField(Field):
     description = _('A JSON object')
     default_error_messages = {
         'invalid': _('Value must be valid JSON.'),
@@ -119,6 +117,15 @@ class JSONField(CheckFieldDefaultMixin, Field):
             'decoder': self.decoder,
             **kwargs,
         })
+
+
+class StructField(JSONField):
+    """
+    Complex field structure
+    """
+    def __init__(self, structure, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.structure = structure
 
 
 def compile_json_path(key_transforms, include_root=True):

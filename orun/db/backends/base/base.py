@@ -678,3 +678,7 @@ class BaseDatabaseWrapper:
 
     def call(self, proc_name: str, args=None):
         raise NotImplementedError()
+
+    def execute(self, sql: str, params=None):
+        from orun.db._sql import ExecuteSQL
+        return ExecuteSQL(self, sql).using(params).execute()

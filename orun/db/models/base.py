@@ -419,7 +419,7 @@ class ModelState:
 
 
 class Model(metaclass=ModelBase):
-    env = apps.env
+    _env = apps.env
     objects: Manager
     _meta: Options
 

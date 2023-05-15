@@ -39,7 +39,7 @@ __all__ = [
     'FloatField', 'GenericIPAddressField', 'IPAddressField', 'IntegerField',
     'NOT_PROVIDED', 'NullBooleanField', 'PositiveIntegerField', 'PositiveBigIntegerField',
     'PositiveSmallIntegerField', 'SlugField', 'SmallIntegerField', 'TextField',
-    'TimeField', 'URLField', 'UUIDField', 'ChoiceField', 'SelectionField',
+    'TimeField', 'URLField', 'UUIDField', 'ChoiceField', 'SelectionField', 'StringField',
     'XmlField', 'HtmlField', 'PasswordField',
     'NotNullIntegerField',
 ]
@@ -1253,6 +1253,10 @@ class CharField(Field):
             else:
                 value = str(value)
         return value
+
+
+class StringField(CharField):
+    pass
 
 
 class CommaSeparatedIntegerField(CharField):

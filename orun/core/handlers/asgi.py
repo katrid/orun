@@ -162,18 +162,21 @@ class ASGIHandler(base.BaseHandler):
         await sync_to_async(signals.request_started.send, thread_sensitive=True)(sender=self.__class__, scope=scope)
         # Get the request and check for basic issues.
         request, error_response = self.create_request(scope, body_file)
-        if request is None:
-            await self.send_response(error_response, send)
-            return
-        # Get the response, using the async mode of BaseHandler.
-        response = await self.get_response_async(request)
-        response._handler_class = self.__class__
-        # Increase chunk size on file responses (ASGI servers handles low-level
-        # chunking).
-        if isinstance(response, FileResponse):
-            response.block_size = self.chunk_size
-        # Send the response.
-        await self.send_response(response, send)
+
+        from orun.apps import apps
+        with apps.env(request=request):
+            if request is None:
+                await self.send_response(error_response, send)
+                return
+            # Get the response, using the async mode of BaseHandler.
+            response = await self.get_response_async(request)
+            response._handler_class = self.__class__
+            # Increase chunk size on file responses (ASGI servers handles low-level
+            # chunking).
+            if isinstance(response, FileResponse):
+                response.block_size = self.chunk_size
+            # Send the response.
+            await self.send_response(response, send)
 
     async def read_body(self, receive):
         """Reads a HTTP body from an ASGI connection."""

@@ -5,6 +5,7 @@ import glob
 from typing import List
 
 from orun.core.signals import Signal
+from orun.conf import settings
 from orun.utils.module_loading import import_string, module_has_submodule
 from orun.core.exceptions import ImproperlyConfigured
 
@@ -248,6 +249,19 @@ class AppConfig:
                         yield f.read()
             with open(os.path.join(self.path, templ), 'rb') as f:
                 yield f.read()
+
+    def _load_file(self, filename: str, **options):
+        from orun.utils.translation import activate
+        from orun.core.management.commands.loaddata import load_fixture
+        activate(settings.LANGUAGE_CODE)
+        print('    ', filename)
+        load_fixture(self, filename, **options)
+
+    def load_fixtures(self, **options):
+        if self.fixtures:
+            print('\nLoading Fixtures: ', self.schema)
+            for filename in self.fixtures:
+                self._load_file(filename, **options)
 
 
 app_config_ready = Signal()

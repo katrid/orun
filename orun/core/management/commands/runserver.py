@@ -64,16 +64,19 @@ class Command(BaseCommand):
         """Return the default WSGI handler for the runner."""
         return get_internal_wsgi_application()
 
-    def handle(self, *args, **options):
+    def _handle(self, *args, **options):
         from orun.core.handlers import asgi
         addrport = options.get('addrport')
         if addrport is None:
             addrport = '127.0.0.1:8000'
+        elif ':' not in addrport:
+            addrport = '127.0.0.1:' + addrport
         addr, port = addrport.split(':')
         
+        # uvicorn.run(asgi.ASGIHandler, host=addr, port=int(port))
         uvicorn.run(asgi.ASGIHandler, host=addr, port=int(port))
 
-    def _handle(self, *args, **options):
+    def handle(self, *args, **options):
         # if not settings.DEBUG and not settings.ALLOWED_HOSTS:
         #     raise CommandError('You must set settings.ALLOWED_HOSTS if DEBUG is False.')
 
@@ -106,7 +109,8 @@ class Command(BaseCommand):
 
     def run(self, **options):
         """Run the server, using the autoreloader if needed."""
-        use_reloader = options['use_reloader']
+        # use_reloader = options['use_reloader']
+        use_reloader = False
 
         if use_reloader:
             autoreload.run_with_reloader(self.inner_run, **options)
