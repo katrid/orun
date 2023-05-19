@@ -1,5 +1,8 @@
 from . import client
 from . import api
-from . import reports
+try:
+    from . import reports
+except ModuleNotFoundError:
+    pass
 from . import dashboard
 from . import portlets
