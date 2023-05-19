@@ -15,11 +15,15 @@ from orun.http import HttpRequest
 from orun.apps import apps
 from orun.conf import settings
 from orun.db import models, connection
-from orun.reports.engines import get_engine, ConnectionProxy
 from orun.template import loader
 from orun.utils.translation import gettext_lazy as _
 from orun.utils.module_loading import import_string
 from .action import Action
+try:
+    from orun.reports.engines import get_engine, ConnectionProxy
+    import reptile
+except:
+    pass
 
 
 class ReportCategory(models.Model):
@@ -450,8 +454,6 @@ def create_report_environment():
 
 # report_env = create_report_environment()
 
-import reptile
-
 REPORT_ENGINES = {
     'rep': 'orun.reports.engines.reptile.ReptileEngine',
 }
@@ -465,16 +467,6 @@ def Sum(data: Iterable, member: str = None):
         return sum(data)
     else:
         return sum(data.values(member))
-
-
-report_env = reptile.EnvironmentSettings.env
-report_env.globals['str'] = str
-report_env.globals['sum'] = Sum
-# env.globals['total'] = total
-# env.globals['avg'] = avg
-report_env.globals['count'] = len
-# report_env.globals['MIN'] = min
-# report_env.globals['MAX'] = max
 
 
 def COUNT(obj):
@@ -514,11 +506,21 @@ def total(context, op, field=None):
     return 0
 
 
-report_env.globals['COUNT'] = COUNT
-report_env.globals['SUM'] = SUM
-report_env.globals['AVG'] = AVG
-report_env.globals['MAX'] = MAX
-report_env.globals['MIN'] = MIN
-report_env.globals['avg'] = avg
-report_env.globals['total'] = total
-
+try:
+    report_env = reptile.EnvironmentSettings.env
+    report_env.globals['str'] = str
+    report_env.globals['sum'] = Sum
+    # env.globals['total'] = total
+    # env.globals['avg'] = avg
+    report_env.globals['count'] = len
+    # report_env.globals['MIN'] = min
+    # report_env.globals['MAX'] = max
+    report_env.globals['COUNT'] = COUNT
+    report_env.globals['SUM'] = SUM
+    report_env.globals['AVG'] = AVG
+    report_env.globals['MAX'] = MAX
+    report_env.globals['MIN'] = MIN
+    report_env.globals['avg'] = avg
+    report_env.globals['total'] = total
+except:
+    pass

@@ -11,8 +11,11 @@ class Command(BaseCommand):
 
     def create(self, db):
         self.stdout.write('Creating database "%s"' % db)
-        no_conn = connection._nodb_connection
-        schema = no_conn.schema_editor()
+        if connection.vendor == 'sqlite':
+            schema = connection.schema_editor()
+        else:
+            no_conn = connection._nodb_connection
+            schema = no_conn.schema_editor()
         schema.create_database(db)
         connection.schema_editor().post_create_database()
         self.stdout.write('Database "%s" has been created succesfully' % db)

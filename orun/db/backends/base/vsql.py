@@ -8,6 +8,7 @@ class Compiler(ast._Unparser):
     """
     Virtual SQL Compiler
     """
+
     def __init__(self, connection):
         super().__init__()
         self.connection = connection

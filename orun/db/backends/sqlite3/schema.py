@@ -429,3 +429,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         }
         self.execute(sql)
         self.execute('UPDATE %s SET %s = %s' % (field.model._meta.db_table, field.column, old_column))
+
+    def create_database(self, db: str):
+        with self.connection.cursor() as cur:
+            cur.execute('''select 1''')
