@@ -1,0 +1,1535 @@
+label.checkbox, label.radio {
+  margin-bottom: 4px;
+  padding-left: 25px;
+  color: #404040;
+  cursor: pointer;
+  font-size: 13px;
+  position: relative;
+  font-weight: 400;
+  box-sizing: content-box;
+  min-height: 26px;
+  margin-top: 4px;
+}
+
+label.checkbox.checkbox-inline {
+  margin-top: 0;
+}
+
+label.checkbox input[type=checkbox],
+label.radio input[type=radio] {
+  position: absolute;
+  left: -9999px;
+}
+
+label.checkbox > i {
+  border-color: #BDBDBD;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: content-box;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 17px;
+  height: 17px;
+  outline: 0;
+  border-width: 1px;
+  border-style: solid;
+  background: #FFF;
+  line-height: 25px;
+  color: #404040;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+label.radio > i {
+  border-color: #BDBDBD;
+  border-radius: 50%;
+  margin: 0;
+  padding: 0;
+  box-sizing: content-box;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 17px;
+  height: 17px;
+  outline: 0;
+  border-width: 1px;
+  border-style: solid;
+  background: #FFF;
+  line-height: 25px;
+  color: #404040;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+label.checkbox > input:checked + i,
+label.checkbox > input:focus + i,
+label.checkbox:hover > input + i,
+label.radio > input:checked + i,
+label.radio > input:focus + i,
+label.radio:hover > input + i {
+  border-color: #7876ac;
+}
+
+label.checkbox > input:checked + i:after,
+label.radio > input:checked + i:after {
+  opacity: 1;
+}
+
+label.checkbox > input + i:after,
+label.radio > input + i:after {
+  opacity: 0;
+}
+
+label.checkbox > i:after {
+  position: absolute;
+  color: #7876ac;
+  content: "\f00c";
+  top: -3px;
+  left: 1px;
+  width: 15px;
+  height: 15px;
+  text-align: center;
+}
+
+label.radio > i:after {
+  position: absolute;
+  background-color: #7876ac;
+  content: " ";
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  width: 11px;
+  height: 11px;
+}
+
+.radio.radio-inline + .radio-inline {
+  margin-top: 3px;
+}
+
+.table .action-checkbox, .table .action-checkbox-column {
+  vertical-align: middle;
+  width: 30px;
+}
+
+.table .action-checkbox > .checkbox, .table .action-checkbox-column > .checkbox,
+.table.table-bordered .action-checkbox-column, .table.table-bordered .action-checkbox > .checkbox {
+  min-height: 20px !important;
+  min-width: 18px !important;
+  height: 20px !important;
+  width: 18px !important;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-left: 0;
+}
+
+.table.table-bordered .action-checkbox-column, .table.table-bordered .action-checkbox-column {
+  padding-left: 8px;
+  padding-right: 6px;
+}
+
+.BooleanField .form-field-readonly {
+  text-transform: uppercase;
+}
+
+.data-heading {
+  font-weight: 400;
+  border: none;
+  margin-bottom: 0;
+}
+
+.data-heading h4, .data-heading ol.breadcrumb {
+  padding: 0;
+  margin: 0;
+}
+
+.data-heading .help-block {
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.data-heading .star {
+  font-size: large;
+  color: silver;
+}
+
+.data-panel fieldset {
+  margin-top: 0;
+  padding-bottom: 0;
+}
+
+.data-panel .image-box {
+  margin: 0 0 8px 0;
+  height: 100px;
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  vertical-align: middle;
+  text-align: center;
+  position: relative;
+}
+.data-panel .image-box img {
+  max-height: 100%;
+  max-width: 100%;
+}
+
+.data-panel .image-box .image-box-buttons {
+  visibility: hidden;
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+}
+
+.data-form.changing .image-box:hover .image-box-buttons {
+  visibility: visible;
+}
+
+fieldset legend {
+  font-size: 15px;
+  font-weight: bold;
+  color: #7a79aa;
+  padding-top: 8px;
+}
+
+.katrid-app .content-container-heading {
+  border-bottom: 1px solid #dddddd;
+  min-height: 32px;
+}
+.katrid-app .content-container-heading > .btn {
+  margin: 3px 0 3px 12px;
+}
+.katrid-app .content-container-heading:empty {
+  display: none;
+}
+
+.data-panel h1 {
+  padding-bottom: 16px;
+}
+
+.panel-body.no-padding > .dataTables_wrapper .dataTables_length,
+.panel-body.no-padding > .dataTables_wrapper .dataTables_info,
+.panel-body.no-padding > .dataTables_wrapper .dataTables_filter {
+  margin: 10px 15px 9px 15px;
+}
+
+.panel-body.no-padding > .dataTables_wrapper .dataTables_filter label input {
+  margin-left: 6px;
+}
+
+.search-area .search-view {
+  background: #ffffff;
+  padding: 2px 25px 3px 4px;
+  border: 1px solid #cccccc;
+  border-radius: 0.375rem;
+  display: -ms-flexbox;
+  display: -moz-box;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-flow: row wrap;
+  flex-flow: row wrap;
+  -webkit-align-items: flex-end;
+  align-items: flex-end;
+  position: relative;
+  margin-bottom: 10px;
+}
+.search-area .search-view .search-view-more {
+  font-size: 16px;
+  cursor: pointer;
+  position: absolute;
+  top: 4px;
+  right: 7px;
+  left: auto;
+  bottom: auto;
+}
+.search-area .search-view .search-view-input {
+  border: none;
+  padding: 0 0 0 4px;
+  width: 100px;
+  min-height: 22px;
+  -ms-flex: 1 0 auto;
+  -webkit-box-flex: 1;
+  -webkit-flex: 1 0 auto;
+  flex: 1 0 auto;
+  outline: none;
+  display: block;
+}
+.search-area .facet-view {
+  border: 1px solid #777777;
+  background: #e9e9f1;
+  display: -ms-flexbox;
+  display: -moz-box;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  position: relative;
+  margin: 1px 3px 0 0;
+  -ms-flex: 0 0 auto;
+  -webkit-box-flex: 0;
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  max-width: 100%;
+}
+.search-area .facet-view .facet-values-separator {
+  font-style: italic;
+}
+.search-area .facet-view .facet-label {
+  background-color: #777777;
+  -ms-flex: 0 0 auto;
+  -webkit-box-flex: 0;
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+  padding: 0 3px;
+  color: white;
+  display: -ms-flexbox;
+  display: -moz-box;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+}
+.search-area .facet-view .facet-value {
+  padding: 0 18px 0 6px;
+}
+.search-area .facet-view .facet-remove {
+  cursor: pointer;
+  color: #777777;
+  -ms-flex: 0 0 auto;
+  -webkit-box-flex: 0;
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  display: -ms-flexbox;
+  display: -moz-box;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-justify-content: center;
+  justify-content: center;
+  -webkit-align-items: center;
+  align-items: center;
+  position: absolute;
+  top: 0;
+  left: auto;
+  bottom: 0;
+  right: 0;
+  width: 18px;
+}
+.search-area .facet-view .facet-remove:hover {
+  color: #555555;
+}
+.search-area .search-view-menu li {
+  position: relative;
+}
+.search-area .search-view-menu li .indent {
+  padding-left: 40px;
+}
+.search-area .search-view-menu li .expandable {
+  position: absolute;
+  top: auto;
+  left: 6px;
+  bottom: auto;
+  right: auto;
+  padding: 3px 5px;
+}
+.search-area .search-view-menu li .expanded {
+  position: absolute;
+  top: auto;
+  left: 6px;
+  bottom: auto;
+  right: auto;
+  padding: 3px;
+}
+
+.comments {
+  background-color: #ffffff;
+  padding: 5px 16px 20px 15px;
+}
+.comments h3 {
+  font-size: 16px;
+  text-align: center;
+}
+
+.table thead {
+  background-color: #f8f9fa;
+}
+
+.box-shadow {
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.05);
+}
+
+.box-fullscreen {
+  display: block;
+  z-index: 9999;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  overflow: auto;
+}
+
+.maximize-button {
+  position: absolute;
+  right: 10px;
+  top: 4px;
+  color: #3c3c3c;
+  cursor: pointer;
+}
+
+.dropdown-search-item .expandable {
+  position: absolute;
+  top: auto;
+  left: 6px;
+  bottom: auto;
+  right: auto;
+  padding: 3px 5px;
+}
+
+.radio-button {
+  margin: 0;
+}
+.radio-button.radio-inline {
+  display: inline-block;
+}
+.radio-button input[type=radio] {
+  display: none;
+}
+.radio-button input[type=radio]:checked + label:before {
+  border-color: rgb(51, 122, 183);
+  animation: ripple 0.2s linear forwards;
+}
+.radio-button input[type=radio]:checked + label:after {
+  transform: scale(1);
+}
+.radio-button label {
+  display: inline-block;
+  min-height: 20px;
+  position: relative;
+  padding: 0 30px;
+  margin-bottom: 0;
+  cursor: pointer;
+  vertical-align: bottom;
+}
+.radio-button label:before, .radio-button label:after {
+  position: absolute;
+  content: "";
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  transition-property: transform, border-color;
+}
+.radio-button label:before {
+  left: 0;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.54);
+}
+.radio-button label:after {
+  top: 5px;
+  left: 5px;
+  width: 10px;
+  height: 10px;
+  transform: scale(0);
+  background: rgb(51, 122, 183);
+}
+
+.katrid-app .RadioField .form-label {
+  display: block;
+}
+
+.list-view .table td {
+  cursor: default;
+}
+
+.k-table {
+  background-color: #ffffff;
+  font-size: 10pt;
+  font-family: "Liberation Sans", "Open Sans", SansSerif, Arial;
+}
+.k-table td, .k-table th {
+  position: relative;
+  border: 1px solid #d9d9d9;
+  cursor: default;
+  padding: 3px;
+  white-space: nowrap;
+  max-width: 100px;
+  overflow-x: hidden;
+}
+.k-table td.selected:not(:focus), .k-table th.selected:not(:focus) {
+  background-color: #e0ecff;
+}
+.k-table td:focus, .k-table th:focus {
+  outline: 1px solid #282828;
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+}
+.k-table td .inplace-editor {
+  border: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  outline: none;
+  padding: 1px 1px 1px 4px;
+}
+.k-table th {
+  background-color: #e3e3e3;
+  text-align: center;
+  border: 1px solid #acacac;
+  padding: 1px 8px;
+}
+.k-table th .col-sizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+}
+.k-table th .col-sizer:hover {
+  background-color: #799ac9;
+}
+.k-table .report-band {
+  font-weight: bold;
+  background-color: #e5e0da;
+  color: #939393;
+}
+.k-table .report-band td {
+  padding-left: 20px;
+}
+.k-table .col-header-band {
+  font-weight: bold;
+  background-color: #fff9f3;
+  color: #939393;
+}
+.k-table .col-header-band td {
+  padding-left: 20px;
+}
+
+.table-sm thead tr th {
+  padding: 2px 4px 4px 4px;
+}
+.table-sm tbody tr {
+  border-collapse: collapse;
+}
+.table-sm tbody tr.modified {
+  background-color: #fff8e0;
+}
+.table-sm tbody tr.modified td {
+  font-style: italic;
+}
+.table-sm tbody tr th, .table-sm tbody tr td {
+  padding: 4px 4px 2px 4px;
+  border: none;
+}
+.table-sm tbody tr[selected=true] {
+  background-color: #d7e6fc;
+}
+.table-sm tbody tr:hover {
+  background-color: #bdd7fd;
+  z-index: 1;
+}
+
+td.table-loading {
+  padding: 10px;
+  background-color: #FFFFFF;
+}
+
+list-view .table {
+  user-select: none;
+}
+
+table-field .table tbody tr {
+  cursor: pointer;
+}
+
+.katrid-app {
+  height: 100%;
+}
+.katrid-app body {
+  height: 100%;
+}
+.katrid-app .form-field-readonly.bool-text,
+.katrid-app table tbody tr td.bool-text {
+  text-transform: capitalize;
+}
+.katrid-app .btn {
+  padding: 0.2rem 0.75rem;
+}
+.katrid-app .card-view .card-item {
+  position: relative;
+  min-width: 150px;
+  max-width: 400px;
+  margin: 4px 4px 4px 0;
+  padding: 8px;
+  background-color: #fff;
+  flex: 1 0 300px;
+}
+.katrid-app .card-view .card-item .card-image {
+  text-align: center;
+  float: left;
+  width: 64px;
+}
+.katrid-app .card-view .card-item .card-image img {
+  max-height: 64px;
+  max-width: 64px;
+}
+.katrid-app .card-view .card-item .card-details {
+  width: 100%;
+  padding-left: 72px;
+}
+.katrid-app .card-view .card-item .card-details ul {
+  list-style: none;
+  padding: 0;
+}
+.katrid-app .card-view .card-item:before, .katrid-app .card-view .card-item:after {
+  width: 0;
+  height: 0;
+  content: " ";
+  display: table;
+}
+.katrid-app .card-view .card-item.card-link {
+  cursor: pointer;
+}
+.katrid-app .card-view .card-item.card-ghost {
+  height: 0;
+  min-height: 0 !important;
+  visibility: hidden;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 0;
+}
+.katrid-app .text-overflow {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+}
+.katrid-app .data-panel tr.group-header {
+  background-image: linear-gradient(to bottom, #fdfdfd, #e5e5e5);
+  font-weight: 600;
+}
+.katrid-app .data-panel tr.group-header td {
+  border-left: none;
+  border-right: none;
+  background-color: transparent;
+}
+.katrid-app section.form-group {
+  padding-bottom: 8px;
+  margin-bottom: 0;
+}
+.katrid-app .modal-body form section.form-group {
+  padding-bottom: 4px;
+  margin-bottom: 0;
+}
+.katrid-app #loading-msg {
+  display: none;
+  position: fixed;
+  border-radius: 2px;
+  top: 0;
+  right: 50%;
+  opacity: 0.9;
+  color: #2a2a2a;
+  text-align: center;
+  padding: 4px 12px;
+  z-index: 9999;
+  background-color: #f7f7f7;
+  -webkit-box-shadow: 2px 4px 9px -1px rgba(0, 0, 0, 0.75);
+  -moz-box-shadow: 2px 4px 9px -1px rgba(0, 0, 0, 0.75);
+  box-shadow: 2px 4px 9px -1px rgba(0, 0, 0, 0.75);
+}
+.katrid-app .btn-voice-command.active {
+  color: red !important;
+}
+.katrid-app td.DecimalField, .katrid-app th.DecimalField, .katrid-app td.FloatField, .katrid-app th.FloatField, .katrid-app td.IntegerField, .katrid-app th.IntegerField,
+.katrid-app section.IntegerField .form-field-readonly, .katrid-app section.IntegerField input.form-control,
+.katrid-app section.DecimalField .form-field-readonly, .katrid-app section.DecimalField input.form-control,
+.katrid-app section.FloatField .form-field-readonly, .katrid-app section.FloatField input.form-control {
+  text-align: right;
+}
+.katrid-app .page-badge-ref {
+  position: absolute;
+  right: 50px;
+  top: 20px;
+}
+.katrid-app .tab-pane {
+  padding-top: 10px;
+}
+.katrid-app .tab-pane.row.active {
+  display: flex;
+}
+.katrid-app .nav-tabs {
+  border-bottom: 1px solid #ddd;
+}
+.katrid-app section div.checkbox {
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+.katrid-app .checkbox-menu li label {
+  display: block;
+  padding: 3px 10px;
+  clear: both;
+  font-weight: normal;
+  line-height: 1.42857143;
+  color: #333;
+  white-space: nowrap;
+  margin: 0;
+  transition: background-color 0.4s ease;
+}
+.katrid-app .checkbox-menu li input {
+  margin: 0px 5px;
+  top: 2px;
+  position: relative;
+}
+.katrid-app .checkbox-menu li.active label {
+  background-color: #cbcbff;
+  font-weight: bold;
+}
+.katrid-app .checkbox-menu li label:hover,
+.katrid-app .checkbox-menu li label:focus {
+  background-color: #f5f5f5;
+}
+.katrid-app .checkbox-menu li.active label:hover,
+.katrid-app .checkbox-menu li.active label:focus {
+  background-color: #b8b8ff;
+}
+.katrid-app .pagination-area {
+  display: inline-block;
+  margin: 6px 6px 0 0;
+}
+.katrid-app .form-label {
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.katrid-app .form-field-readonly {
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  min-height: 26px;
+  border-bottom: 1px solid #e4e4e4;
+}
+.katrid-app .multiple-tags {
+  width: 100%;
+}
+.katrid-app .tabset {
+  width: 100%;
+  margin-top: 10px;
+}
+.katrid-app .table > tbody > tr > td.list-column-delete,
+.katrid-app .table > thead > tr > th.list-column-delete {
+  padding: 5px 10px 0 10px;
+  text-align: center;
+  width: 1px;
+}
+.katrid-app .table .group-header {
+  cursor: pointer;
+}
+.katrid-app .table-success > td {
+  background-color: #e5f5e9;
+}
+.katrid-app .table-danger > td {
+  background-color: #f9cad4;
+}
+.katrid-app label.checkbox {
+  margin: 0;
+}
+.katrid-app input.form-field:required,
+.katrid-app select.form-field:required,
+.katrid-app .input-dropdown.form-field[required] input.form-control,
+.katrid-app .input-foreignkey.form-control[required],
+.katrid-app textarea.form-control[required] {
+  background-color: #f4f5ff;
+}
+.katrid-app input.form-field.v-dirty,
+.katrid-app select.form-field.v-dirty {
+  background-color: #fcfbf3;
+}
+.katrid-app input[type=text].form-field.v-touched.v-invalid,
+.katrid-app select.form-field.v-touched.v-invalid {
+  border-color: #c64b49;
+  background-color: #fff5f5;
+}
+.katrid-app .ui-menu-item > .ui-menu-item-wrapper {
+  padding: 2px 4px;
+}
+.katrid-app ul.ui-autocomplete {
+  z-index: 99999;
+}
+.katrid-app .list-view .form-control {
+  padding: 0;
+  border-radius: 0;
+  height: 24px;
+  width: 100%;
+  border: none;
+}
+.katrid-app textarea.form-control {
+  height: 52px;
+}
+.katrid-app select.form-control:not([size]):not([multiple]) {
+  height: calc(1.2em + 0.6rem + 2px);
+}
+.katrid-app label.prepend-icon {
+  margin-bottom: 0;
+}
+.katrid-app .image-box.image-field {
+  width: 100px;
+}
+.katrid-app .image-box.image-field input[type=file] {
+  display: none;
+}
+.katrid-app .data-panel.browsing .image-box:hover .image-box-buttons {
+  visibility: hidden;
+}
+.katrid-app .data-panel.editing .image-box:hover .image-box-buttons {
+  visibility: visible;
+}
+.katrid-app .data-heading h2 {
+  margin-top: 0;
+  font-size: 1.3em;
+  font-weight: 500;
+}
+.katrid-app grid[readonly] .grid-editor-control {
+  display: none;
+}
+.katrid-app table.grid.inline-editor .form-data-changing td {
+  padding: 0;
+}
+.katrid-app table.grid.inline-editor .form-data-changing section[readonly] .grid-toolbar {
+  display: none;
+}
+.katrid-app table.grid.inline-editor .form-data-changing section[readonly] .grid-field-readonly {
+  min-height: 26px;
+  display: block;
+  border: 1px solid #e6e6e6;
+  background-color: #f5f5f5;
+  padding: 3px 5px 0 3px;
+  font-weight: normal;
+  border-radius: 0.375rem;
+}
+.katrid-app table.grid.inline-editor .form-data-changing section[readonly] .form-field, .katrid-app table.grid.inline-editor .form-data-changing section[readonly] .input-group, .katrid-app table.grid.inline-editor .form-data-changing section[readonly] label.checkbox {
+  display: none;
+}
+.katrid-app table.grid.inline-editor .form-data-changing section[readonly] label.prepend-icon {
+  display: none;
+}
+.katrid-app table.grid .form-data-readonly .form-field {
+  display: none;
+}
+.katrid-app table.grid .form-data-readonly td {
+  padding: 4px;
+}
+.katrid-app table.grid .form-data-readonly .grid-field-readonly {
+  margin: 4px;
+}
+.katrid-app .form-data-readonly .grid-toolbar {
+  display: none;
+}
+.katrid-app table.grid.inline-editor .grid-field-readonly {
+  margin: 4px;
+}
+.katrid-app table.grid.inline-editor .grid-field-readonly {
+  margin: 0;
+}
+.katrid-app #action-manager {
+  width: 100%;
+  display: flex;
+  flex: 1 1 auto;
+  flex-flow: column nowrap;
+}
+.katrid-app .main-content {
+  display: flex;
+  flex: 1 1 auto;
+}
+.katrid-app .view-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+.katrid-app .content-scroll {
+  width: 100%;
+  position: relative;
+  background-color: #ffffff;
+  overflow: auto;
+  flex: 1 1 auto;
+}
+.katrid-app .data-form {
+  width: 100%;
+  display: flex;
+  flex-flow: column nowrap;
+}
+.katrid-app .data-heading {
+  width: 100%;
+  border-bottom: 1px solid #d6d6d6;
+  background-color: #f8f9fa;
+}
+.katrid-app .data-heading > .panel-body {
+  padding: 10px 15px;
+}
+.katrid-app .content-container {
+  padding: 15px;
+}
+.katrid-app .content {
+  padding: 0;
+}
+.katrid-app .content > .page-sheet {
+  background-image: url(/static/admin/assets/img/bg.png);
+  background-origin: content-box;
+}
+.katrid-app .content.container {
+  padding: 10px 0 20px;
+}
+.katrid-app .content .data-panel.panel {
+  border: 1px solid #c8c8d3;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 0;
+}
+.katrid-app .card-view {
+  display: flex;
+  overflow-x: visible;
+  align-content: stretch;
+  flex-wrap: wrap;
+}
+.katrid-app .card-view .card-group .card-header {
+  display: flex;
+  border-bottom: none;
+  padding: 10px 0;
+  background-color: transparent;
+}
+.katrid-app .card-view .card-group .card-header .btn {
+  font-size: 10px;
+  color: #a7a7a7;
+}
+.katrid-app .card-view .card-group .card-header .card-h {
+  flex: 1 1 auto;
+  font-size: 1.2rem;
+}
+.katrid-app .card-view .card-group .card-item {
+  margin: 0;
+  border-radius: 0;
+}
+.katrid-app .search-dropdown-menu {
+  position: absolute;
+  z-index: 1000;
+  display: none;
+  float: left;
+  min-width: 160px;
+  padding: 5px 0;
+  margin: 2px 0 0;
+  list-style: none;
+  font-size: 13px;
+  text-align: left;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  -webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+  background-clip: padding-box;
+}
+.katrid-app .search-dropdown-menu.show {
+  display: block;
+}
+.katrid-app .search-dropdown-menu li > a {
+  display: block;
+  padding: 3px 20px 3px 25px;
+  clear: both;
+  font-weight: 400;
+  line-height: 1.42857143;
+  color: #333;
+  white-space: nowrap;
+}
+.katrid-app .search-dropdown-menu li.active > a {
+  text-decoration: none;
+  color: #fff;
+  background-color: #3276b1;
+}
+.katrid-app .search-dropdown-menu .search-results {
+  padding: 0;
+  list-style: none;
+}
+.katrid-app .search-view-more-area a {
+  padding-left: 20px;
+}
+.katrid-app .search-view-more-area a.selected {
+  font-weight: bold;
+}
+.katrid-app .search-view-more-area a.selected:before {
+  font-family: "Font Awesome 5 Free";
+  position: absolute;
+  left: 6px;
+  content: "\f00c";
+}
+.katrid-app .form-label-checkbox {
+  display: block;
+}
+.katrid-app .form-view.changing .form-field-readonly {
+  display: none;
+  margin: 0;
+}
+.katrid-app .form-view.changing .checkbox-span {
+  display: none;
+}
+.katrid-app .form-view.changing section[readonly] .form-field-readonly {
+  min-height: 26px;
+  display: block;
+  border: 1px solid #e6e6e6;
+  background-color: #f5f5f5;
+  padding: 3px 5px 0 8px;
+  font-weight: normal;
+  border-radius: 0.375rem;
+}
+.katrid-app .form-view.changing section[readonly] .checkbox-span {
+  display: inline-block;
+}
+.katrid-app .form-view.changing section[readonly] .form-field, .katrid-app .form-view.changing section[readonly] .input-group, .katrid-app .form-view.changing section[readonly] label.checkbox {
+  display: none !important;
+}
+.katrid-app .form-view.changing section[readonly] label.prepend-icon {
+  display: none;
+}
+.katrid-app .form-view.readonly .form-field, .katrid-app .form-view.readonly .input-group, .katrid-app .form-view.readonly .BooleanField label.checkbox {
+  display: none !important;
+}
+.katrid-app .form-view.readonly label.prepend-icon {
+  display: none;
+}
+.katrid-app list-view {
+  min-width: 100%;
+}
+.katrid-app list-view > .table > tbody > tr {
+  cursor: pointer;
+}
+.katrid-app list-view .list-record-star {
+  width: 1px;
+  color: #8d8d8d;
+}
+.katrid-app list-view .list-record-star:hover {
+  color: #2b2b2b;
+}
+.katrid-app .list-record-selector {
+  width: 1px;
+}
+.katrid-app .list-record-selector input[type=checkbox] {
+  margin-top: 4px;
+}
+.katrid-app .dropdown-menu {
+  font-size: 13px;
+}
+.katrid-app .data-form .media {
+  width: 100%;
+}
+.katrid-app .data-form .content.container > .card {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+.katrid-app .card-deck {
+  margin: 4px 0;
+}
+.katrid-app #header .header-link {
+  color: rgb(220, 220, 220);
+}
+.katrid-app .form-control-dark {
+  color: #fff;
+}
+.katrid-app .form-control-dark:focus {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.katrid-app .btn-lg {
+  font-size: 1.25rem;
+}
+.katrid-app .comment .media-left {
+  margin-right: 10px;
+}
+.katrid-app .comment .media-left img {
+  max-width: 50px;
+  max-height: 500px;
+}
+.katrid-app .page-title {
+  font-size: 24px;
+  color: #55595d;
+  font-weight: 300;
+}
+.katrid-app .page-title span {
+  font-size: 16px;
+  color: #555555;
+  display: inline-block;
+  vertical-align: 1px;
+}
+.katrid-app .sparks {
+  list-style: none;
+  text-align: right;
+}
+.katrid-app .sparks h5 {
+  color: #676767;
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+.katrid-app .sparks .sparks-info span {
+  font-size: 18px;
+  display: block;
+}
+.katrid-app .sparks li:first-child {
+  border-left: none;
+}
+.katrid-app .sparks li {
+  border-left: 1px dotted #d1d1d1;
+  padding: 0 10px;
+  display: inline-block;
+}
+.katrid-app .dropdown-item.checked > :first-child::before {
+  content: "\f00c";
+  font-family: "FontAwesome";
+  float: left;
+}
+.katrid-app .borderless {
+  border: none !important;
+}
+.katrid-app #img-logo {
+  max-width: 200px;
+}
+.katrid-app #left-menu .menu-item ul.nav {
+  display: none;
+}
+.katrid-app #left-menu .menu-item.open ul.nav {
+  display: block;
+}
+.katrid-app #header .nav.modules {
+  text-transform: uppercase;
+  font-size: 11px;
+}
+.katrid-app .input-file-hidden {
+  position: absolute;
+  top: -99999px;
+  left: -99999px;
+  opacity: 0;
+}
+.katrid-app .dropdown-menu.attachments-menu > li > a {
+  padding-right: 8px;
+}
+.katrid-app .dropdown-menu.attachments-menu > li > a:first-child {
+  padding-right: 28px;
+}
+.katrid-app .dropdown-menu.attachments-menu > li > a > span {
+  position: absolute;
+  right: 9px;
+  padding: 3px;
+}
+.katrid-app .form-control, .katrid-app .form-select {
+  font-size: 13px;
+}
+.katrid-app .form-control.readonly, .katrid-app .form-select.readonly {
+  background-color: #f6f6f6;
+}
+.katrid-app .form-control-lg {
+  height: calc(1.2em + 1rem + 2px);
+  font-size: 1.25rem;
+}
+.katrid-app #footer.page-footer {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  height: 24px;
+  width: 100%;
+  font-family: monospace;
+  padding: 4px 8px;
+}
+.katrid-app .breadcrumb li {
+  font-size: 16px;
+}
+.katrid-app .content-scroll > .content {
+  padding-bottom: 30px;
+}
+.katrid-app .attachments-area li {
+  cursor: pointer;
+}
+.katrid-app #katrid-action-view #h-loading {
+  margin: 0;
+  padding: 16px;
+}
+.katrid-app .table td.BooleanField {
+  text-transform: capitalize;
+}
+.katrid-app .table-bordered td, .katrid-app .table-bordered th {
+  border: none;
+  border-bottom: 1px solid #e2e2e2;
+}
+.katrid-app .table-bordered th {
+  border-top: 1px solid #e2e2e2;
+  font-weight: 600;
+}
+.katrid-app #img-logo {
+  max-width: 200px;
+}
+.katrid-app #header .nav.modules a {
+  text-transform: uppercase;
+  font-size: 11px;
+}
+.katrid-app a:hover {
+  text-decoration: none;
+}
+.katrid-app .input-file-hidden {
+  position: absolute;
+  top: -99999px;
+  left: -99999px;
+  opacity: 0;
+}
+.katrid-app .dropdown-menu.attachments-menu > li > a {
+  padding-right: 8px;
+}
+.katrid-app .dropdown-menu.attachments-menu > li > a:first-child {
+  padding-right: 28px;
+}
+.katrid-app .dropdown-menu.attachments-menu > li > a > span {
+  position: absolute;
+  right: 9px;
+  padding: 3px;
+}
+.katrid-app #footer.page-footer {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  height: 24px;
+  width: 100%;
+  font-family: monospace;
+  padding: 4px 8px;
+}
+.katrid-app .content-scroll > .content {
+  padding-bottom: 30px;
+  width: 100%;
+  overflow: auto;
+  position: absolute;
+  bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+.katrid-app .attachments-area li {
+  cursor: pointer;
+}
+.katrid-app #katrid-action-view #h-loading {
+  margin: 0;
+  padding: 16px;
+}
+.katrid-app .input-group .btn {
+  padding: 2px 8px;
+}
+.katrid-app .modal-dialog {
+  z-index: 1041;
+}
+@media (min-width: 992px) {
+  .katrid-app .modal-lg {
+    max-width: 900px;
+  }
+}
+@media (min-width: 1200px) {
+  .katrid-app .modal-lg {
+    max-width: 1000px;
+  }
+}
+@media (min-width: 1400px) {
+  .katrid-app .modal-lg {
+    max-width: 1200px;
+  }
+}
+.katrid-app #header {
+  padding: 0;
+}
+.katrid-app #logo {
+  background-color: #ffffff;
+  max-width: 190px;
+}
+.katrid-app select.form-control {
+  padding-top: 2px;
+}
+.katrid-app .card.full-width.no-border {
+  border-radius: 0;
+  border: none;
+}
+.katrid-app .dataTable span a:hover {
+  color: #007bff;
+}
+.katrid-app .comments .comment {
+  margin-bottom: 10px;
+}
+.katrid-app .comments .comment .media-body {
+  margin-top: 5px;
+}
+.katrid-app .comments .comment .media-body .timestamp {
+  font-style: italic;
+}
+.katrid-app .attachments-menu .dropdown-item {
+  padding-right: 40px;
+}
+.katrid-app .attachments-menu .remove-attachment-button {
+  position: absolute;
+  top: 2px;
+  right: 8px;
+  padding: 4px;
+}
+.katrid-app #main-content ui-view ui-view > div {
+  height: 100%;
+}
+.katrid-app .action-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+.katrid-app .params-params {
+  padding: 10px 15px;
+}
+.katrid-app .params-params .form-group {
+  margin-bottom: 0.5rem;
+}
+.katrid-app .params-params .control-label {
+  margin-bottom: 0.3rem;
+}
+.katrid-app input[type=date].form-control, .katrid-app input[type=datetime-local] {
+  padding: 2px 0 2px 8px;
+}
+.katrid-app [v-cloak] {
+  display: none !important;
+}
+.katrid-app h3 .form-control-lg {
+  font-size: 1.3rem;
+}
+.katrid-app .header-buttons .btn {
+  margin-right: 8px;
+}
+.katrid-app .search-view-facets {
+  display: flex;
+}
+.katrid-app .search-view-filter-menu {
+  min-width: 270px;
+}
+.katrid-app .search-view-filter-menu .filter-condition {
+  margin-bottom: 8px;
+}
+.katrid-app .search-view-filter-menu .filter-condition:first-child {
+  margin-top: 8px;
+}
+.katrid-app .search-view-filter-menu .form-group {
+  margin-bottom: 4px;
+}
+.katrid-app .list-column-sortable {
+  width: 1px;
+}
+.katrid-app td.list-column-sortable {
+  cursor: all-scroll;
+}
+.katrid-app table.table.table-no-border td {
+  border: none;
+}
+.katrid-app table.data-table th {
+  cursor: default;
+}
+.katrid-app table.data-table th.sortable {
+  cursor: pointer;
+}
+.katrid-app .numpad table {
+  width: 100%;
+}
+.katrid-app .numpad td {
+  padding: 3px;
+}
+.katrid-app .numpad .row {
+  margin-bottom: 5px;
+}
+.katrid-app .numpad .numpad-display {
+  font-size: 24px;
+}
+.katrid-app div.ace_editor {
+  height: 150px;
+}
+.katrid-app .indent-1 {
+  padding-left: 8px;
+}
+.katrid-app .indent-2 {
+  padding-left: 16px;
+}
+.katrid-app .indent-3 {
+  padding-left: 24px;
+}
+.katrid-app .indent-4 {
+  padding-left: 32px;
+}
+.katrid-app dashboard {
+  overflow: auto;
+}
+.katrid-app dashboard grid-view th {
+  cursor: pointer;
+}
+.katrid-app dashboard grid-view .group-row {
+  font-weight: bold;
+}
+.katrid-app dashboard grid-view tfoot td {
+  font-weight: bold;
+}
+.katrid-app .code-editor {
+  min-height: 250px;
+}
+.katrid-app #overlay {
+  position: fixed;
+  display: none;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  z-index: 2;
+  padding-top: 100px;
+  color: #ffffff;
+}
+.katrid-app h1 input.form-control, .katrid-app h2 input.form-control, .katrid-app h3 input.form-control {
+  height: calc(1.2em + 1rem + 2px);
+  padding: 0.5rem 0.8rem;
+  font-size: 1.25rem;
+  line-height: 1.5;
+  border-radius: 0.3rem;
+}
+.katrid-app hr {
+  border-color: #EEEEEE;
+  border-style: solid none;
+  border-width: 1px 0;
+  margin: 18px 0;
+  width: 100%;
+}
+.katrid-app .card-group {
+  width: 332px;
+  display: inline-block;
+  margin: 0 16px;
+  vertical-align: top;
+  flex: 0 0 auto;
+}
+.katrid-app .card-group h4 {
+  font-size: 12pt;
+}
+.katrid-app .card-items {
+  min-height: 400px;
+}
+.katrid-app .calendar.data-panel {
+  height: 100%;
+}
+.katrid-app .calendar.data-panel .panel-body {
+  height: 100%;
+}
+.katrid-app .calendar.data-panel .panel-body .template-placeholder {
+  height: 100%;
+}
+.katrid-app .login-form img.login-logo {
+  max-height: 80px;
+}
+.katrid-app .login-form .form-signin {
+  width: 100%;
+  max-width: 330px;
+  padding: 15px;
+  margin: 0 auto;
+}
+.katrid-app .login-form .form-signin .checkbox {
+  font-weight: 400;
+}
+.katrid-app .login-form .form-signin .form-control {
+  position: relative;
+  box-sizing: border-box;
+  height: auto;
+  padding: 10px;
+  font-size: 16px;
+}
+.katrid-app .login-form .form-signin .form-control:focus {
+  z-index: 2;
+}
+.katrid-app .login-form .form-signin #id-username {
+  margin-bottom: -1px;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.katrid-app .login-form .form-signin input[type=password] {
+  margin-bottom: 10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.katrid-app .modal.show {
+  background-color: rgba(182, 182, 182, 0.2);
+}
+
+.ForeignKey[required] .form-control {
+  background-color: #f4f5ff;
+}
+
+.input-autocomplete.form-control {
+  display: flex;
+  cursor: pointer;
+  flex-flow: row wrap;
+  padding: 4px 35px 1px 4px;
+  align-items: flex-start;
+  min-height: calc(1.2em + 0.6rem + 2px);
+}
+.input-autocomplete.form-control:focus-within {
+  color: #212529;
+  background-color: #fff;
+  border-color: #bcbbd6;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(120, 118, 172, 0.25);
+}
+.input-autocomplete.form-control.v-dirty {
+  background-color: #fcfbf3;
+}
+.input-autocomplete.form-control .facet-view {
+  display: inline-flex;
+  margin-right: 5px;
+  margin-bottom: 2px;
+  padding: 4px;
+}
+.input-autocomplete.form-control .facet-view .facet-remove {
+  margin-left: 5px;
+  margin-right: 3px;
+}
+.input-autocomplete.form-control input {
+  padding: 0 0 0 4px;
+  width: 100%;
+  background-color: transparent;
+}
+.input-autocomplete.form-control .input-dropdown {
+  display: inline-flex;
+  flex: 1 0 100px;
+  max-width: 100%;
+}
+.input-autocomplete.form-control input, .input-autocomplete.form-control input:focus-visible, .input-autocomplete.form-control input:focus {
+  border: none;
+  outline: none;
+  flex: 1 0 auto;
+  line-height: 1.5;
+}
+
+.input-tags {
+  display: flex;
+  flex-flow: row wrap;
+}
+.input-tags .badge {
+  margin-right: 5px;
+  margin-bottom: 2px;
+  padding: 4px;
+}
+
+.readonly .input-tags .badge {
+  color: #212529;
+}
+
+/*# sourceMappingURL=katrid.css.map */
