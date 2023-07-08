@@ -5,6 +5,26 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class WebComponent extends HTMLElement {
+            constructor() {
+                super(...arguments);
+                this._created = false;
+            }
+            connectedCallback() {
+                if (!this._created)
+                    this.create();
+            }
+            create() {
+                this._created = true;
+            }
+        }
+        ui.WebComponent = WebComponent;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     Katrid.$hashId = 0;
@@ -1167,12 +1187,6 @@ var Katrid;
     var Actions;
     (function (Actions) {
         class ReportAction extends Katrid.Actions.Action {
-            constructor(info, scope, location) {
-                super(info);
-                this.fields = [];
-                this.templateUrl = 'view.report.jinja2';
-                this.userReport = {};
-            }
             static async dispatchBindingAction(parent, action) {
                 let format = localStorage.katridReportViewer || 'pdf';
                 let sel = parent.selection;
@@ -1186,6 +1200,12 @@ var Katrid;
             }
             get name() {
                 return this.config.info.name;
+            }
+            constructor(info, scope, location) {
+                super(info);
+                this.fields = [];
+                this.templateUrl = 'view.report.jinja2';
+                this.userReport = {};
             }
             userReportChanged(report) {
                 return this.location.search({
@@ -4179,6 +4199,7 @@ var Katrid;
                 this.config = config;
                 this.$modifiedRecords = [];
                 this._fieldChanging = false;
+                this._callbacks = [];
                 this._pendingPromises = [];
                 this.readonly = false;
                 this.$modifiedRecords = [];
@@ -4220,6 +4241,12 @@ var Katrid;
              */
             create(data) {
                 return this.model.create(data, this);
+            }
+            registerCallback(cb) {
+                this._callbacks.push(cb);
+            }
+            unregisterCallback(cb) {
+                this._callbacks.splice(this._callbacks.indexOf(cb), 1);
             }
             get pageIndex() {
                 return this._pageIndex;
@@ -5013,6 +5040,8 @@ var Katrid;
             childrenNotification(record) {
                 for (let child of this.children)
                     child.parentNotification(record);
+                for (let cb of this._callbacks)
+                    cb(record);
             }
             async parentNotification(parentRecord) {
                 this._clearTimeout();
@@ -6780,12 +6809,6 @@ var Katrid;
         let customTagRegistry = {};
         // CustomTag is a tag shortcut to simplify the view definition
         class CustomTag {
-            constructor(view, template) {
-                this.view = view;
-                let elements = template.querySelectorAll(this.selector());
-                if (elements.length)
-                    this.prepare(elements, template);
-            }
             static render(view, template) {
                 for (let [selector, customTag] of Object.entries(customTagRegistry)) {
                     if (customTag.prototype instanceof CustomTag) {
@@ -6798,6 +6821,12 @@ var Katrid;
             }
             selector() {
                 return;
+            }
+            constructor(view, template) {
+                this.view = view;
+                let elements = template.querySelectorAll(this.selector());
+                if (elements.length)
+                    this.prepare(elements, template);
             }
             prepare(elements, template) {
             }
@@ -7861,6 +7890,13 @@ var Katrid;
                     templ.querySelector('action-navbar').actionManager = this.action.actionManager;
                     let header = templ.querySelector('header');
                     this.mergeHeader(header, form);
+                    let comments = form.querySelector('comments');
+                    if (comments) {
+                        comments.parentElement.removeChild(comments);
+                        comments = document.createElement('user-comments');
+                        comments['datasource'] = this.datasource;
+                        templ.appendChild(comments);
+                    }
                     templ.querySelector('.template-placeholder').append(form);
                     return templ;
                 }
@@ -12378,6 +12414,162 @@ var Katrid;
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
+/// <reference path="../data/datasource.ts" />
+/// <reference path="../components.ts" />
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class UserCommentsElement extends ui.WebComponent {
+            get datasource() {
+                return this._datasource;
+            }
+            set datasource(value) {
+                if (this._callback && this._datasource)
+                    this._datasource.unregisterCallback(this._callback);
+                this._callback = (record) => {
+                    if (this._created)
+                        this.parentNotification(record);
+                };
+                this._datasource = value;
+                if (value)
+                    value.registerCallback(this._callback);
+            }
+            create() {
+                super.create();
+                this._files = [];
+                this.createEditor();
+                this._panel = document.createElement('div');
+                this._panel.className = 'container comments';
+                this.appendChild(this._panel);
+            }
+            createEditor() {
+                let div = document.createElement('div');
+                div.innerHTML = `
+      <div class="container">
+          <h3>${Katrid.i18n.gettext('Comments')}</h3>
+          <div class="form-group">
+          <button class="btn btn-outline-secondary btn-show-editor">${Katrid.i18n.gettext('New message')}</button>
+          <button class="btn btn-outline-secondary">${Katrid.i18n.gettext('Log note')}</button>
+          </div>
+          <div id="mail-editor" style="display: none;">
+            <div class="form-group">
+              <textarea id="mail-msgEditor" class="form-control"></textarea>
+            </div>
+            <div class="form-group">
+              <button class="btn btn-default" type="button" onclick="$(this).next().click()"><i class="fa fa-paperclip"></i></button>
+              <input class="input-file-hidden" type="file" multiple>
+            </div>
+            <div class="form-group">
+              <ul class="list-inline attachments-area">
+              </ul>
+            </div>
+            <div class="from-group">
+              <button class="btn btn-primary btn-send">${Katrid.i18n.gettext('Send')}</button>
+            </div>
+          </div>
+  
+          <hr>`;
+                this._textEditor = div.querySelector('textarea');
+                this._file = div.querySelector('input');
+                this._file.addEventListener('change', event => this.addFile(event));
+                div.querySelector('button.btn-show-editor').addEventListener('click', () => this.showEditor());
+                div.querySelector('button.btn-send').addEventListener('click', () => this.sendMessage(this._textEditor.value));
+                this.appendChild(div);
+            }
+            showEditor() {
+                $(this.querySelector('#mail-editor')).show();
+                this._textEditor.focus();
+                this._textEditor.scrollIntoView();
+            }
+            closeEditor() {
+                $(this.querySelector('#mail-editor')).hide();
+                this.querySelector('.attachments-area').innerHTML = '';
+                this._files = [];
+            }
+            addFile(event) {
+                for (let f of event.target.files) {
+                    this._files.push(f);
+                    let li = `<li title="${Katrid.i18n.gettext('Delete this attachment')}">${f.name} <i class="fa fa-times"></i></li>`;
+                    this.querySelector('.attachments-area').insertAdjacentHTML('beforeend', li);
+                }
+            }
+            async _sendMessage(msg, attachments) {
+                let svc = new Katrid.Services.ModelService('mail.message');
+                console.log(attachments);
+                if (attachments)
+                    attachments = attachments.map(obj => obj.id);
+                let comment = await svc.post('post_message', {
+                    args: [this._datasource.model.name, this._recordId],
+                    kwargs: {
+                        content: msg, content_subtype: 'html', format: true, attachments: attachments
+                    }
+                });
+                this._panel.insertAdjacentElement('afterbegin', this._createComment(comment));
+            }
+            async sendMessage(msg) {
+                this._textEditor.value = '';
+                let files = this._files;
+                this.closeEditor();
+                console.log('files', files);
+                let res = await Katrid.Services.Attachments.upload({ files: files }, { model: this._datasource.model, recordId: this._recordId });
+                console.log('att', res);
+                await this._sendMessage(msg, res.result);
+            }
+            async parentNotification(record) {
+                this._panel.innerHTML = '';
+                let id = this.datasource.recordId;
+                this._recordId = id;
+                if (id != null) {
+                    // get comments
+                    let svc = new Katrid.Services.ModelService('mail.message');
+                    // let res: any = await this.datasource.model.service.rpc('admin_get_comments', { id });
+                    let res = await svc.rpc('get_messages', null, {
+                        model_name: this.datasource.model.name, id
+                    });
+                    if (res.comments)
+                        for (let comment of res.comments)
+                            this._panel.appendChild(this._createComment(comment));
+                }
+            }
+            _createComment(comment) {
+                let attachments = comment.attachments?.length ? `
+      <div class="form-group">
+        <ul class="list-inline">
+          ${comment.attachments.map(file => file.mimetype.startsWith('image') ?
+                    `<li><div class="comment-preview-image" style="width: 16%;height:100px;background-image:url('/web/content/${file.id}')"></div></li>` :
+                    `<li><a href="/web/content/${file.id}/?download">${file.name}</a></li>`).join('')}
+        </ul>
+      </div>
+` : '';
+                let div = document.createElement('div');
+                div.className = 'comment d-flex';
+                div.innerHTML = `
+        <div class="flex-shrink-0"><img src="/static/admin/assets/img/avatar.png" class="avatar rounded"></div>
+        <div class="flex-grow-1 ms-3">
+          <strong>${comment.author_name}</strong> - 
+          <span class="timestamp text-muted" title="${moment(comment.date_time).format('LLLL')}"> ${moment(comment.date_time).fromNow()}</span>
+          <div class="form-group">
+            ${comment.content}
+          </div>
+
+          ${attachments}
+
+        </div>
+      `;
+                return div;
+            }
+        }
+        ui.UserCommentsElement = UserCommentsElement;
+        Katrid.define('user-comments', UserCommentsElement);
+        Katrid.component('user-comments', {
+            template: '<user-comments/>',
+            mounted() {
+                this.$el.datasource = this.$parent.$view?.datasource;
+            }
+        });
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Reports;

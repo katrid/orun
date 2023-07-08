@@ -1052,12 +1052,9 @@ table-field .table tbody tr {
 .katrid-app .btn-lg {
   font-size: 1.25rem;
 }
-.katrid-app .comment .media-left {
-  margin-right: 10px;
-}
-.katrid-app .comment .media-left img {
+.katrid-app .comment img.avatar {
   max-width: 50px;
-  max-height: 500px;
+  max-height: 50px;
 }
 .katrid-app .page-title {
   font-size: 24px;

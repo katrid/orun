@@ -10,11 +10,12 @@ from orun.db import connection, router
 from orun.db.backends import utils
 from orun.db.models import Q
 from orun.db.models.constants import LOOKUP_SEP
-from orun.db.models.deletion import CASCADE, SET_DEFAULT, SET_NULL, DB_PROTECT
+from orun.db.models.deletion import CASCADE, DB_CASCADE, SET_DEFAULT, SET_NULL, DB_PROTECT
 from orun.db.models.query_utils import PathInfo
 from orun.db.models.utils import make_model_name
 from orun.utils.functional import cached_property
 from orun.utils.translation import gettext_lazy as _
+from orun.db import metadata
 
 from . import Field
 from .mixins import FieldCacheMixin
@@ -413,6 +414,7 @@ class ForeignObject(RelatedField):
         self.from_fields = from_fields
         self.to_fields = to_fields
         self.filter = filter
+        self.on_delete = on_delete
 
     def check(self, **kwargs):
         return [
@@ -518,7 +520,11 @@ class ForeignObject(RelatedField):
         if not self.from_fields or len(self.from_fields) != len(self.to_fields):
             raise ValueError('Foreign Object from and to fields must be the same non-zero length')
         if isinstance(self.remote_field.model, str):
-            raise ValueError('Related model %r cannot be resolved' % self.remote_field.model)
+            if self.remote_field.model in apps.models:
+                # try to resolve related model
+                self.remote_field.model = apps[self.remote_field.model]
+            else:
+                raise ValueError('Related model %r cannot be resolved' % self.remote_field.model)
         related_fields = []
         for index in range(len(self.from_fields)):
             from_field_name = self.from_fields[index]
@@ -948,6 +954,15 @@ class ForeignKey(ForeignObject):
 
     def get_data_type(self) -> str:
         return self.target_field.get_data_type()
+
+    def get_metadata(self):
+        fk_definition = f'FOREIGN KEY {self.related_model._meta.db_table}'
+        if self.on_delete is DB_CASCADE:
+            fk_definition += ' ON DELETE CASCADE'
+        return metadata.Column(
+            name=self.name, datatype=self.datatype(), field=self, 
+            type_suffix=fk_definition,
+        )
 
 
 class OneToOneField(ForeignKey):

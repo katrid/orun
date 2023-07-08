@@ -11,6 +11,7 @@ from orun.db import connections
 from orun.db.models import AutoField, Manager, UniqueConstraint
 from orun.db.models.fields import CharField, Fields, Field
 from orun.db.models.query_utils import PathInfo
+from orun.utils.translation import gettext_lazy as _
 from orun.utils.datastructures import ImmutableList, OrderedSet
 from orun.utils.functional import cached_property
 from orun.utils.text import camel_case_to_spaces, format_lazy
@@ -18,6 +19,7 @@ from orun.utils.translation import override
 from orun.utils.module_loading import import_string
 from orun.db.models.indexes import Index
 from orun.db.models.constraints import BaseConstraint
+from orun.db import metadata
 
 
 PROXY_PARENTS = object()
@@ -187,6 +189,13 @@ class Options:
             if not cls.concrete:
                 cls.managed = False
 
+    def get_metadata(self):
+        return metadata.Table(
+            name=self.db_table, schema=self.db_schema, model_name=self.name,
+            columns=[f.get_metadata() for f in self.fields if f.column],
+            model=self.model,
+        )
+
     @property
     def label(self):
         return '%s.%s' % (self.schema, self.object_name)
@@ -323,6 +332,33 @@ class Options:
             else:
                 auto = import_string(settings.DEFAULT_AUTO_FIELD)(verbose_name='ID', primary_key=True, auto_created=True)
                 model.add_to_class('id', auto)
+
+                # TODO move to audit log
+                if self.log_changes and 'created_by' not in self.fields:
+                    from orun.db.models.fields import DateTimeField
+                    from orun.db.models.fields.related import ForeignKey
+                    from orun.contrib.auth import current_user_id
+                    user_model = settings.AUTH_USER_MODEL
+                    model.add_to_class('created_by', ForeignKey(
+                        user_model, verbose_name=_('Created by'),
+                        on_insert_value=current_user_id,
+                        auto_created=True, editable=False, deferred=True, db_index=False, copy=False,
+                        db_constraint=False,
+                    ))
+                    model.add_to_class('created_on', DateTimeField(
+                        auto_now_add=True, verbose_name=_('Created on'),
+                        auto_created=True, editable=False, deferred=True, copy=False
+                    ))
+                    model.add_to_class('updated_by', ForeignKey(
+                        user_model, verbose_name=_('Updated by'),
+                        on_update_value=current_user_id,
+                        auto_created=True, editable=False, deferred=True, db_index=False, copy=False,
+                        db_constraint=False,
+                    ))
+                    model.add_to_class('updated_on', DateTimeField(
+                        auto_now=True, verbose_name=_('Updated on'),
+                        auto_created=True, editable=False, deferred=True, copy=False
+                    ))
 
     @classmethod
     def create_helper(cls, model, attrs, meta):
@@ -1044,6 +1080,11 @@ class Options:
         if self._auto_calc_triggers is None:
             self._auto_calc_triggers = []
         return self._auto_calc_triggers
+
+    def field_by_column(self, col: str) -> Field:
+        for f in self.fields:
+            if f.column == col:
+                return f
 
 
 class ModelHelper:
