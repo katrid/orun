@@ -30,7 +30,7 @@ def create_contenttypes(app_models, verbosity=2, interactive=True, using=DEFAULT
             ct = ContentType.objects.using(using).create(
                 schema=model._meta.schema,
                 name=model._meta.name,
-                object_type='systema',
+                object_type='system',
             )
             created_models.append(ct)
             if verbosity >= 2:
