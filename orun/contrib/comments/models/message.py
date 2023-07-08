@@ -2,6 +2,7 @@ import datetime
 from orun.apps import apps
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
+from orun.contrib.auth import current_user_id
 from orun import api
 
 
@@ -53,7 +54,6 @@ class Message(models.Model):
         index_together = (('model', 'object_id'),)
 
     def get_message(self):
-        print('get message')
         return {
             'id': self.pk,
             'content': self.content,
@@ -71,7 +71,7 @@ class Message(models.Model):
     def post_message(cls, model_name, id, content=None, **kwargs):
         Message = apps['mail.message']
         msg = Message.objects.create(
-            author_id=cls.env.user_id,
+            author_id=current_user_id(),  # logged in user
             content=content,
             model=model_name,
             object_id=id,
@@ -84,8 +84,8 @@ class Message(models.Model):
 
     @api.classmethod
     def get_messages(cls, model_name, id):
-        for msg in cls.objects.filter(model=model_name, object_id=id):
-            yield msg.get_message()
+        # TODO it must be specified in the target model
+        return {'comments': [msg.get_message() for msg in cls.objects.filter(model=model_name, object_id=id)]}
 
 
 class Confirmation(models.Model):
