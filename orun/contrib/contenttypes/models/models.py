@@ -147,6 +147,8 @@ class ContentTypeManager(models.Manager):
 
 class ContentType(models.Model):
     name = models.CharField(verbose_name=_('name'), max_length=256, null=False, unique=True)
+    schema = models.CharField(max_length=256)
+    object_type = models.CharField(max_length=32)
     # metadata = models.TextField()
     objects = ContentTypeManager()
 
