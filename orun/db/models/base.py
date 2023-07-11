@@ -1328,6 +1328,7 @@ class Model(metaclass=ModelBase):
             # auto apply default value in case of not filled
             if raw_value is None and f.required and (default := f.get_default()) is not None:
                 setattr(self, f.attname, default)
+                continue
             if not f.required:
                 continue
             try:
