@@ -1325,7 +1325,10 @@ class Model(metaclass=ModelBase):
             # Skip validation for empty fields with blank=True. The developer
             # is responsible for making sure they have a valid value.
             raw_value = getattr(self, f.attname)
-            if not f.required and raw_value in f.empty_values:
+            # auto apply default value in case of not filled
+            if raw_value is None and f.required and (default := f.get_default()) is not None:
+                setattr(self, f.attname, default)
+            if not f.required:
                 continue
             try:
                 setattr(self, f.attname, f.clean(raw_value, self))
