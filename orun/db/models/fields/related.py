@@ -86,6 +86,8 @@ class RelatedField(FieldCacheMixin, Field):
     def related_model(self):
         # Can't cache this property until all the models are loaded.
         self.model._meta.apps.check_models_ready()
+        if isinstance(self.remote_field.model, str):
+            self.remote_field.model = apps.models[self.remote_field.model]
         return self.remote_field.model
 
     def check(self, **kwargs):
@@ -880,7 +882,7 @@ class ForeignKey(ForeignObject):
     def get_default(self):
         """Return the to_field if the default value is an object."""
         field_default = super().get_default()
-        if isinstance(field_default, self.remote_field.model):
+        if field_default and isinstance(field_default, self.remote_field.model):
             return getattr(field_default, self.target_field.attname)
         return field_default
 
