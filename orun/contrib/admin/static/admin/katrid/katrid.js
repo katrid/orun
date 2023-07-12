@@ -3439,11 +3439,13 @@ var Katrid;
                 // menu.add('Arquivar', this.copyClick);
                 menu.show(evt.pageX, evt.pageY);
             }
-            copyToClipboard(formatting = false) {
+            async copyToClipboard(formatting = false) {
                 if (formatting)
                     navigator.clipboard.writeText(Katrid.UI.Utils.toTsv(this.data));
-                else
+                else {
+                    await this.more(this.data.length - this._loadedRows);
                     navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
+                }
             }
             export() {
                 Katrid.UI.Utils.textToDownload(Katrid.UI.Utils.tableToText(this.table), `${this._queryId}.tsv`);
