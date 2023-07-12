@@ -23,6 +23,11 @@ var katrid;
             }
         }
         ui.WebComponent = WebComponent;
+        class Widget {
+            render() {
+            }
+        }
+        ui.Widget = Widget;
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
 var Katrid;
