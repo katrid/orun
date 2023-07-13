@@ -38,6 +38,7 @@ class Attachment(models.Model):
         name = 'content.attachment'
         title_field = 'file_name'
         index_together = (('model', 'object_id'),)
+        log_changes = False
 
     @property
     def storage(self):
