@@ -5012,6 +5012,8 @@ var Katrid;
             _applyResponse(res) {
                 if (res?.value)
                     this.setValues(res.value);
+                else if (res?.values)
+                    this.setValues(res.values);
             }
             async dispatchEvent(name, ...args) {
                 let res = await this.model.service.rpc(name, ...args);
