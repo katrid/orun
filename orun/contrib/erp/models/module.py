@@ -11,6 +11,7 @@ class ModuleCategory(models.Model):
         name = 'ir.module.category'
         verbose_name = _('Module Category')
         verbose_name_plural = _('Module Categories')
+        log_changes = False
 
 
 class Module(models.Model):
@@ -41,3 +42,4 @@ class Module(models.Model):
         name = 'ir.module'
         verbose_name = _('Module')
         verbose_name_plural = _('Modules')
+        log_changes = False
