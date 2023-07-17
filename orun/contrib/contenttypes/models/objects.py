@@ -40,6 +40,7 @@ class Object(models.Model):
     class Meta:
         name = 'ir.object'
         index_together = (('model', 'object_id'),)
+        log_changes = False
 
     def save(self, *args, **kwargs):
         self.model_name = self.model._meta.name
