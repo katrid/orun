@@ -282,7 +282,6 @@ var Katrid;
                     a.setAttribute('v-on:click.stop.prevent', click);
                 else
                     a.addEventListener('click', click);
-                console.log('click', click);
                 return a;
             }
             generateHelp(help) {
@@ -8321,7 +8320,7 @@ ${Katrid.i18n.gettext('Delete')}
             focus(fieldName) {
                 if (!fieldName)
                     // set focus to first .form-field element
-                    this.element.querySelector('.form-field').focus();
+                    this.element.querySelector('.form-field')?.focus();
             }
             /** Close the current dialog and deletes the current record */
             deleteAndClose() {
@@ -8333,7 +8332,6 @@ ${Katrid.i18n.gettext('Delete')}
                 this.closeDialog();
             }
             async loadPendingViews() {
-                console.debug('load pending views', this._pendingViews);
                 if (!this._pendingViews)
                     return;
                 this._pendingViews = false;
@@ -9123,13 +9121,16 @@ var Katrid;
                 let table = this.element.querySelector('table');
                 let tbody = table.tBodies[0];
                 let tr = this.createInlineEditor();
+                let oldRow = tbody.rows[index];
                 tr.setAttribute('data-index', index.toString());
                 let vm = Katrid.createVm(this.createFormComponent(this.vm.records[index])).mount(tr);
+                Vue.nextTick().then(() => {
+                    this.forms[this._formCounter] = { formRow: tr, relRow: oldRow, index, record: vm.record || {} };
+                    tbody.insertBefore(tr, oldRow);
+                    if (oldRow)
+                        tbody.removeChild(oldRow);
+                });
                 // setTimeout(() => {
-                let oldRow = tbody.rows[index];
-                this.forms[this._formCounter] = { formRow: tr, relRow: oldRow, index, record: vm.record || {} };
-                tbody.insertBefore(tr, oldRow);
-                tbody.removeChild(oldRow);
                 // });
                 return tr;
             }
@@ -9145,7 +9146,7 @@ var Katrid;
             }
             _removeForm(formId) {
                 let form = this.forms[formId];
-                if (form.relRow)
+                if (form.formRow?.parentElement)
                     form.formRow.parentElement.insertBefore(form.relRow, form.formRow);
                 form.formRow.remove();
                 delete this.forms[formId];
@@ -12161,17 +12162,25 @@ var Katrid;
                     }
                 },
                 toggleAll() {
+                    this._invalidateEditor();
                     Katrid.Forms.selectionToggleAll.call(this, ...arguments);
                 },
                 selectToggle(record) {
+                    this._invalidateEditor();
                     Katrid.Forms.selectionSelectToggle.call(this, ...arguments);
                 },
                 unselectAll() {
+                    this._invalidateEditor();
                     Katrid.Forms.unselectAll.call(this, ...arguments);
                 },
                 deleteSelection() {
+                    this._invalidateEditor();
                     Katrid.Forms.selectionDelete.call(this, ...arguments);
                 },
+                _invalidateEditor() {
+                    // clear form inline editor
+                    this.$view.discard();
+                }
             },
             mounted() {
                 this.$view.element = this.$el.parentElement;
