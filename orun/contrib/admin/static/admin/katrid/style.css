@@ -12054,19 +12054,47 @@ h3.popover-title, .popover-title.h3 {
   padding: 3px 8px;
 }
 
-.label.label-menu-corner {
-  position: absolute;
-  top: 10px;
-  right: -3px;
-  padding: 3px;
+.button-menu-notificiations {
+  position: relative;
 }
 
-.label.label-circle {
+.label-menu-corner {
+  position: absolute;
+}
+
+.label-circle {
   position: absolute;
   border-radius: 50%;
   top: 10px;
   right: -3px;
   padding: 3px;
+}
+
+.dropdown-menu-notifications {
+  width: 300px;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  border: 0;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+.dropdown-menu-notifications .dropdown-item {
+  border: 1px solid rgb(224, 224, 224);
+}
+.dropdown-menu-notifications .dropdown-item.unread {
+  background-color: rgb(245, 245, 245);
+  font-weight: 600;
+}
+.dropdown-menu-notifications .dropdown-item h3, .dropdown-menu-notifications .dropdown-item .h3 {
+  font-size: 9pt;
+  font-weight: 600;
+  margin: 0;
+}
+.dropdown-menu-notifications .dropdown-item .timestamp {
+  font-size: 8pt;
+  right: 10px;
+  top: 10px;
+  color: rgb(171, 171, 171);
 }
 
 .rating {
@@ -13787,7 +13815,7 @@ query-view .table-responsive {
 }
 
 .toolbar-action-buttons {
-  display: inline;
+  display: flex;
 }
 .toolbar-action-buttons .btn {
   margin-right: 8px;
@@ -13804,8 +13832,22 @@ query-view .table-responsive {
   margin-bottom: 5px;
 }
 
-.data-heading .toolbar .btn {
-  margin-top: 8px;
+.toolbar-action-buttons .selection-info {
+  border-radius: 4px;
+  background-color: #d1ecf1;
+  padding: 4px 8px;
+  display: flex;
+  margin-right: 10px;
+}
+.toolbar-action-buttons .selection-info span {
+  padding-top: 1px;
+}
+.toolbar-action-buttons .selection-info .btn {
+  margin: 0 0 0 10px;
+  padding: 0.05rem 0.5rem;
+  background-color: #17a2b8;
+  border-color: #17a2b8;
+  color: #fff;
 }
 
 .ForeignKey[required] .form-control {

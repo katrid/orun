@@ -66,6 +66,7 @@ var Katrid;
         return $(templ)[0];
     }
     Katrid.html = html;
+    Katrid.globalData = {};
 })(Katrid || (Katrid = {}));
 var katrid;
 (function (katrid) {
@@ -1908,7 +1909,6 @@ var Katrid;
                     this.loadPage(location.hash, (event.state === null) || (event.state?.clear));
                 });
                 window.addEventListener('beforeunload', event => {
-                    console.debug('bla bla bla');
                     this.beforeUnload();
                 });
             }
@@ -1944,16 +1944,19 @@ var Katrid;
         </div>
         <ul class="navbar-nav">
           <li class="nav-item">
-            <a class="dropdown-toggle nav-link" href="javascript:void(0);" data-action="messages"
+            <a class="dropdown-toggle nav-link button-notification-messages" href="javascript:void(0);" data-action="messages"
                title="View notifications"
                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <div class="position-absolute badge text-bg-warning" style="display:none">
+                <span class="messages-counter">32<span>
+                <span class="visually-hidden">messages</span>
+              </div>
               <i class="fa fa-bell"></i>
-              <!--
-              <span class="label label-warning label-menu-corner">32</span>
-              -->
             </a>
-            <ul class="dropdown-menu dropdown-notifications-menu">
-            </ul>
+
+            <div class="dropdown-menu dropdown-menu-end dropdown-menu-notifications">
+              <a class="dropdown-item"><i class="fa fa-fw"></i> Messages</a>
+            </div>
 
           </li>
           <li class="nav-item d-none d-sm-block">
@@ -1990,6 +1993,69 @@ var Katrid;
                 mainContent.append(actionManager);
                 this.rootElement.append(mainContent);
                 this._actionManager = actionManager;
+                this.buttonNotificationMessages = this.rootElement.querySelector('.button-notification-messages');
+                this.buttonNotificationMessages.addEventListener('mousedown', () => {
+                    let menu = this.buttonNotificationMessages.parentElement.querySelector('.dropdown-menu');
+                    menu.innerHTML = '';
+                    if (this.notificationMessages?.length > 0) {
+                        let items = [];
+                        for (let msg of this.notificationMessages) {
+                            if (!msg.read) {
+                                items.push(msg.id);
+                                msg.read = true;
+                            }
+                            this.createNotificationMessageItem(menu, msg);
+                        }
+                        if (items.length) {
+                            const model = new Katrid.Services.ModelService('mail.message');
+                            model.post('set_read', { kwargs: { ids: items } });
+                        }
+                        setTimeout(() => {
+                            this.hideMessageCounter();
+                        }, 5000);
+                    }
+                });
+                this.messageCounterElement = this.buttonNotificationMessages.querySelector('.messages-counter').parentElement;
+            }
+            hideMessageCounter() {
+                $(this.messageCounterElement).hide();
+            }
+            set newMessagesCount(value) {
+                if (value > 0) {
+                    $(this.messageCounterElement).show();
+                    this.messageCounterElement.querySelector('.messages-counter').innerText = value.toString();
+                }
+                else
+                    this.hideMessageCounter();
+            }
+            get notificationMessages() {
+                return this._notificationMessages;
+            }
+            set notificationMessages(value) {
+                let menu = this.buttonNotificationMessages.parentElement.querySelector('.dropdown-menu');
+                menu.innerHTML = '';
+                this._notificationMessages = value;
+            }
+            createNotificationMessageItem(menu, msg) {
+                let el = document.createElement('a');
+                el.className = 'dropdown-item';
+                let s = '';
+                if (msg.timestamp) {
+                    let m = moment(msg.timestamp);
+                    s += `<small class="timestamp float-sm-end" title="${katrid.filters.dateTimeHumanize(m)}">${m.fromNow()}</small>`;
+                }
+                if (msg.title)
+                    s += `<h3>${msg.title}</h3>`;
+                if (typeof msg.content === 'string')
+                    s += `<div>${msg.content}</div>`;
+                else if (msg.url) {
+                    s += `<div>${msg.content.message}</div>`;
+                    el.href = msg.url;
+                }
+                if (!msg.read)
+                    el.classList.add('unread');
+                el.innerHTML = s;
+                menu.appendChild(el);
             }
             appReady() {
                 $(() => {
@@ -2098,9 +2164,6 @@ var Katrid;
     })(Core = Katrid.Core || (Katrid.Core = {}));
 })(Katrid || (Katrid = {}));
 (function (Katrid) {
-    window.addEventListener('onunhandledrejection', function (e) {
-        console.log('intercept error', e);
-    }, true);
 })(Katrid || (Katrid = {}));
 /// <reference path="app.ts"/>
 var Katrid;
@@ -2323,6 +2386,7 @@ var Katrid;
             getComponentData() {
                 let data = {
                     data: null,
+                    ...Katrid.globalData,
                 };
                 this._applyDataDefinition(data);
                 return data;
@@ -2531,6 +2595,9 @@ var Katrid;
             });
         }
         Forms.compileButtons = compileButtons;
+        Forms.globalSettings = {
+            defaultGridInline: false,
+        };
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -2545,6 +2612,7 @@ var Katrid;
                 super(info);
                 this.pendingOperation = 0;
                 this._active = false;
+                console.log('modelf info', this.action);
             }
             /** Create views instances based on template strings */
             static fromTemplate(action, model, template) {
@@ -2716,11 +2784,17 @@ var Katrid;
             async doViewAction(action, target) {
                 return this._evalResponseAction(await this.model.service.callAdminViewAction({ action: action, ids: [target] }));
             }
+            async callSubAction(action, selection) {
+                return;
+            }
             async _evalResponseAction(res) {
                 if (res?.open) {
                     window.open(res.open);
                 }
                 return res;
+            }
+            getSelectedIds() {
+                return;
             }
             createComponent() {
                 let comp = super.createComponent();
@@ -2780,6 +2854,8 @@ var Katrid;
                     }
                     if (!args.confirm || (args.confirm && confirm(args.confirm))) {
                         const config = { action: args.action, ids: args.ids };
+                        if (!config.ids)
+                            config.ids = await me.getSelectedIds();
                         if (input)
                             config.prompt = input;
                         let res = await me.model.service.callAdminViewAction(config);
@@ -2892,6 +2968,21 @@ var Katrid;
                 super(info);
                 this.autoLoad = true;
             }
+            async getSelectedIds() {
+                // get id list based on search filter params
+                if (this.vm.allSelectionFilter)
+                    return this.model.service.listId({ where: this._lastSearch, limit: 99999 });
+                else
+                    return this.vm.selection.map(obj => obj.id);
+            }
+            async callSubAction(action, selection) {
+                // auto detect selection
+                if (!selection)
+                    selection = await this.getSelectedIds();
+                if (selection?.length)
+                    await this.model.service.callSubAction(action, selection);
+                return;
+            }
             create(info) {
                 super.create(info);
                 this.recordGroups = info.recordGroups || null;
@@ -2961,7 +3052,9 @@ var Katrid;
                     this._searchView.vm.dataOffset = this.datasource.offset;
                     this._searchView.vm.dataOffsetLimit = this.datasource.offsetLimit;
                     this._searchView.vm.recordCount = this.datasource.recordCount;
+                    this.vm.recordCount = this.datasource.recordCount;
                 }
+                this._invalidateSelection();
             }
             setSearchView(searchView) {
                 // render the search view
@@ -2979,6 +3072,7 @@ var Katrid;
                 data.groups = this.prepareGroup(this.recordGroups);
                 data.recordCount = this.recordCount;
                 data.$fields = this.fields;
+                data.allSelectionFilter = false;
                 return data;
             }
             prepareGroup(groups) {
@@ -3057,6 +3151,11 @@ var Katrid;
                 this._lastSearch = params;
                 await this.datasource.search({ where: params });
             }
+            _invalidateSelection() {
+                this.vm.selection = [];
+                this.vm.selectionLength = 0;
+                this.vm.allSelected = false;
+            }
             createToolbar() {
                 let templ = `<div class="data-heading panel panel-default">
       <div class="panel-body">
@@ -3119,6 +3218,7 @@ var Katrid;
                 btnRefresh.title = Katrid.i18n.gettext('Refresh');
                 btnRefresh.setAttribute('v-on:click', 'refresh()');
                 parent.append(btnRefresh);
+                this.createSelectionInfo(parent);
                 // actions
                 let btnActions = document.createElement('div');
                 btnActions.classList.add('btn-group');
@@ -3136,6 +3236,8 @@ var Katrid;
       </div>`;
                 parent.append(btnActions);
                 return parent;
+            }
+            createSelectionInfo(parent) {
             }
             get $modalResult() {
                 return this.vm.$result;
@@ -3629,6 +3731,8 @@ var Katrid;
     (function (Services) {
         // bypass the fetch function
         let $fetch = window.fetch;
+        // !important keep orginal fetch accessible
+        window['$fetch'] = $fetch;
         window.fetch = function () {
             let ajaxStart = new CustomEvent('ajax.start', { detail: document, bubbles: true, cancelable: false });
             let ajaxStop = new CustomEvent('ajax.stop', { detail: document, bubbles: true, cancelable: false });
@@ -6449,7 +6553,10 @@ var Katrid;
                 this.cols = 12;
             }
             get editor() {
-                return this.fieldEl.getAttribute('editor') || 'inline';
+                let editor = this.fieldEl.getAttribute('editor');
+                if (!editor && Katrid.Forms.globalSettings.defaultGridInline)
+                    editor = 'inline';
+                return editor;
             }
             get field() {
                 return this.info.field;
@@ -6911,7 +7018,10 @@ var Katrid;
                         attrs = `, confirm: \`${el.getAttribute('confirm-dialog').replaceAll('`', '\\``')}\``;
                     if (el.hasAttribute('prompt-dialog'))
                         attrs = `, prompt: \`${el.getAttribute('prompt-dialog').replaceAll('`', '\\``')}\``;
-                    el.setAttribute('v-on:click', `callAdminViewAction({ids: [record.id], action: '${el.getAttribute('name')}'${attrs}})`);
+                    el.setAttribute('v-on:click', `callAdminViewAction({action: '${el.getAttribute('name')}'${attrs}})`);
+                }
+                else if ((el.getAttribute('type') === 'sub-action') && el.hasAttribute('name')) {
+                    el.setAttribute('v-on:click', `callSubAction('${el.getAttribute('name')}')`);
                 }
                 if (action.hasAttribute('name'))
                     el.setAttribute('name', action.getAttribute('name'));
@@ -7244,7 +7354,6 @@ var Katrid;
                 if (input?.tagName === 'INPUT')
                     input.addEventListener('mouseup', () => {
                         input.select();
-                        console.log('select all');
                     });
             }
         });
@@ -7357,6 +7466,7 @@ var Katrid;
             if (td && (td.tagName === 'TD')) {
                 menu.addSeparator();
                 menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => filterByFieldContent.call(this, td, record));
+                menu.add('<i class="fa fa-fw fa-paper"></i> Transformar em relatório', () => filterByFieldContent.call(this, td, record));
             }
             if (record) {
                 menu.addSeparator();
@@ -7862,7 +7972,7 @@ var Katrid;
                         let fld = this.fields[name];
                         if (fld) {
                             fld.fieldEl = child;
-                            if (child.hasAttribute('invisible') || (child.getAttribute('visible') === 'false')) {
+                            if (!fld.visible || child.hasAttribute('invisible') || (child.getAttribute('visible') === 'false')) {
                                 child.remove();
                                 continue;
                             }
@@ -9016,6 +9126,27 @@ var Katrid;
                     this.rowSelector = info.multiple;
                 super.create(info);
             }
+            createSelectionInfo(parent) {
+                let div = document.createElement('div');
+                div.className = 'selection-info';
+                let span = document.createElement('span');
+                div.setAttribute('v-if', '(selection.length > 0)');
+                span.setAttribute('v-text', 'selection.length + " ' + Katrid.i18n.gettext('selected') + '"');
+                span.setAttribute('v-if', '!allSelectionFilter');
+                div.append(span);
+                span = document.createElement('span');
+                span.setAttribute('v-if', 'allSelectionFilter');
+                span.setAttribute('v-text', '"Todos " + recordCount + " selecionados"');
+                div.append(span);
+                let btn = document.createElement('button');
+                div.appendChild(btn);
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-secondary';
+                btn.setAttribute('v-if', '(selection.length < recordCount) && allSelected && !allSelectionFilter');
+                btn.innerHTML = '<i class="fas fa-arrow-right"></i> <span>Selecionar todos {{recordCount}}</span>';
+                btn.setAttribute('v-on:click', 'allSelectionFilter = true');
+                parent.appendChild(div);
+            }
             /**
              * Show a selection/search dialog
              * @param options
@@ -9087,6 +9218,8 @@ var Katrid;
                     },
                     data() {
                         return {
+                            ...Katrid.globalData,
+                            allSelectionFilter: false,
                             selection: [],
                             record: record,
                         };
@@ -9103,12 +9236,19 @@ var Katrid;
                         Forms.listRecordContextMenu.call(this, ...arguments);
                     },
                     unselectAll() {
+                        this.allSelectionFilter = false;
                         Forms.unselectAll.call(this, ...arguments);
                     },
                     selectToggle(record) {
+                        this.allSelectionFilter = false;
                         Forms.selectionSelectToggle.call(this, record);
+                        if (!record.$selected)
+                            this.allSelected = false;
+                        else
+                            this.allSelected = this.records.every(rec => rec.$selected);
                     },
                     toggleAll(sel) {
+                        this.allSelectionFilter = false;
                         Forms.selectionToggleAll.call(this, ...arguments);
                     },
                 });
@@ -13337,6 +13477,9 @@ var Katrid;
             search(params, data, config, context) {
                 return this.post('api_search', { kwargs: params }, data, config, context);
             }
+            listId(params, config, context) {
+                return this.post('api_list_id', { kwargs: params }, null, config, context);
+            }
             delete(id) {
                 if (!Array.isArray(id))
                     id = [id];
@@ -13400,6 +13543,9 @@ var Katrid;
             }
             callAdminViewAction(data) {
                 return this.post('admin_call_view_action', { kwargs: data });
+            }
+            callSubAction(action, data) {
+                return this.post('admin_call_sub_action', { params: { ids: data.ids } });
             }
             write(data, params) {
                 return new Promise((resolve, reject) => {
