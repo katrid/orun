@@ -11777,8 +11777,6 @@ fieldset legend {
   font-size: 1.2rem;
 }
 .portlet-panel .portlet {
-  height: 150px;
-  width: 150px;
   border: 1px solid #c1c1c1;
   border-radius: 4px;
   background-color: #FFFFFF;

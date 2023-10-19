@@ -46,6 +46,14 @@ class AdminModel(models.Model, helper=True):
             'count': count,
         }
 
+    @api.classmethod
+    def api_list_id(cls, request: HttpRequest, where=None, limit=PAGE_SIZE):
+        qs = cls._api_search(request, fields=[cls._meta.pk.name], where=where)
+        qs = qs[:limit]
+        return {
+            'data': [obj.pk for obj in qs],
+        }
+
     @classmethod
     def _api_search(cls, request: HttpRequest, where=None, fields=None, params=None, join=None, **kwargs):
         # self.check_permission('read')
@@ -62,6 +70,7 @@ class AdminModel(models.Model, helper=True):
             # optimize select_related fields
             rel_fields = []
             only = []
+            # special $id attr
             for f in fields:
                 field = cls._meta.fields[f]
                 if field.many_to_one:

@@ -27,3 +27,6 @@
   <script src="/static/admin/libs/plotly/plotly.min.js"></script>
 
 {% endblock %}
+{% block additional_assets %}
+  {{ js_assets | safe }}
+{% endblock %}

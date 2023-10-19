@@ -341,20 +341,25 @@ var Katrid;
             }
         }
         Homepage.actionType = 'ui.action.homepage';
+        Homepage.hooks = [];
         Actions.Homepage = Homepage;
         class HomepageView {
             constructor() {
                 this.panels = [];
+                this._rendered = false;
                 this.createElement();
                 this.render();
             }
             createElement() {
                 let div = document.createElement('div');
-                div.classList.add('homepage-toolbar');
+                let toolbar = document.createElement('div');
+                toolbar.className = 'homepage-toolbar';
+                div.append(toolbar);
                 let btn = document.createElement('a');
                 btn.classList.add('btn', 'btn-edit', 'btn-outline-secondary');
                 btn.innerHTML = '<i class="fas fa-pen"></i>';
-                div.append(btn);
+                toolbar.append(btn);
+                div.append(toolbar);
                 btn.addEventListener('click', () => this.edit());
                 div.classList.add('homepage-view', 'col-12');
                 this.element = div;
@@ -362,6 +367,9 @@ var Katrid;
             load(data) {
                 this.panels = data.panels;
                 this.info = data;
+                for (let h of Katrid.Actions.Homepage.hooks)
+                    if (h.onLoad)
+                        h.onLoad(this);
             }
             edit() {
                 let editor = new Katrid.Actions.Portlets.HomepageEditor();
@@ -372,6 +380,9 @@ var Katrid;
                 this.element.remove();
             }
             render() {
+                if (this._rendered)
+                    return;
+                this._rendered = true;
                 console.log('panels', this.panels);
                 for (let panel of this.panels) {
                     let p = this.createPanel();
@@ -379,6 +390,9 @@ var Katrid;
                     p.load(panel);
                     this.element.append(p);
                 }
+                for (let h of Katrid.Actions.Homepage.hooks)
+                    if (h.onRender)
+                        h.onRender(this);
             }
             createPanel() {
                 return document.createElement('portlet-panel');
@@ -14516,6 +14530,10 @@ var katrid;
             }
         }
         filters.date = date;
+        function shortDate(value) {
+            return date(value, 'shortDate');
+        }
+        filters.shortDate = shortDate;
         function dateTimeHumanize(value) {
             if (value) {
                 return moment(value).format('ddd, LLL') + ' (' + moment(value).fromNow() + ')';
@@ -14525,6 +14543,7 @@ var katrid;
     })(filters = katrid.filters || (katrid.filters = {}));
 })(katrid || (katrid = {}));
 Katrid.filter('date', katrid.filters.date);
+Katrid.filter('shortDate', katrid.filters.shortDate);
 Katrid.filter('dateHumanize', function (value) {
     if (value) {
         return moment(value).format('ddd, LL') + ' (' + moment(value).fromNow() + ')';

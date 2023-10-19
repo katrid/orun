@@ -24,8 +24,8 @@ class Homepage(Action):
         home.update(content=layout)
         return True
 
-    def _get_info(self, context):
-        res = super()._get_info(context)
+    def _get_info(self, request, context):
+        res = super()._get_info(request, context)
         # check if exists a user defined homepage
         try:
             home = UserHomepage.objects.get(homepage_id=self.pk, user_id=context['user_id'])
