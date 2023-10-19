@@ -317,6 +317,13 @@ class Registry:
         loop.set_debug(True)
         loop.run_forever()
 
+    def collect_js_assets(self):
+        assets = []
+        for app in self.app_configs.values():
+            if app.js_assets:
+                assets += app.js_assets
+        return assets
+
 
 from .context import Environment, LazyEnvironment
 apps = Registry()

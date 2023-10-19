@@ -21,7 +21,7 @@ class AppConfig:
     db_schema: str = None
     create_schema = True
     verbose_name: str = None
-    js_templates: List[str] = None
+    js_assets: List[str] = None
     fixtures = None
     default_language = None
     dependencies = None

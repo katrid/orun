@@ -1,4 +1,5 @@
 import inspect
+from typing import Callable
 from functools import partial, wraps
 import builtins
 
@@ -53,6 +54,13 @@ def classmethod(name_or_fn=None):
         return _register_method(name_or_fn, name_or_fn.__name__)
     if isinstance(name_or_fn, str):
         return partial(_register_method, meth_name=name_or_fn)
+
+
+def expose(fn: Callable):
+    """
+    Expose a function as a RPC method
+    """
+    pass
 
 
 def method(*args, select=None, each=None, request=None):

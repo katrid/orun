@@ -2147,6 +2147,11 @@ var Katrid;
                             history.replaceState(null, null, href);
                             this.loadPage(href);
                         }
+                        else {
+                            child = document.querySelector('#navbar-menu .menu-item-action');
+                            if (child)
+                                child.click();
+                        }
                     }
                 }
                 if (url.startsWith('#/app/debug/run/')) {

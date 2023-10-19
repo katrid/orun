@@ -14,14 +14,6 @@
     });
   </script>
 
-  <script>
-    let items = [];
-    $('.menu-item>a').each(function (idx, el) {
-      el = $(el);
-      items.push({href: el.attr('href'), name: el.text().trim()});
-    });
-  </script>
-
   <link href="/static/admin/libs/fullcalendar/main.min.css" rel="stylesheet">
   <script src="/static/admin/libs/fullcalendar/main.min.js"></script>
   <script src="/static/admin/libs/plotly/plotly.min.js"></script>
