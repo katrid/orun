@@ -935,6 +935,14 @@ class Model(metaclass=ModelBase):
             if results:
                 for value, field in zip(results[0], returning_fields):
                     setattr(self, field.attname, value)
+
+            # process parent_path field
+            # we need to apply after insert because we need to know the pk
+            if self._meta.parent_path_field and self.parent:
+                parent_path = self.__get_path__()
+                setattr(self, self._meta.parent_path_field, parent_path)
+                self.update(parent_path=parent_path)
+
         if pk_set:
             self.after_update(None, None)
         return updated
@@ -944,6 +952,21 @@ class Model(metaclass=ModelBase):
         Try to update the model. Return True if the model was updated (if an
         update query was done and a matching row was found in the DB).
         """
+        # reprocess parent_path field
+        old_path = None
+        old_parent_path = None
+        if self._meta.parent_path_field:
+            old = self.__class__.objects.select('parent_id', 'parent_path').get(pk=pk_val)
+            if old.parent_id != self.parent_id:
+                old_path = old.__get_path__()
+                old_parent_path = old.parent_path
+                path_value = self.__get_path__()
+                setattr(self, self._meta.parent_path_field, path_value)
+                for i, v in enumerate(values):
+                    if v[0].attname == self._meta.parent_path_field:
+                        values[i] = (v[0], v[1], path_value)
+                        break
+
         filtered = base_qs.filter(pk=pk_val)
         if not values:
             # We can end up here when saving a model in inheritance chain where
@@ -964,7 +987,19 @@ class Model(metaclass=ModelBase):
                     # database is again checked for if the UPDATE query returns 0.
                     (filtered._update(values) > 0 or filtered.exists())
             )
-        return filtered._update(values) > 0
+        res = filtered._update(values) > 0
+
+        # apply recomputed parent_path field
+        if old_path and old_parent_path != (parent_path := getattr(self, self._meta.parent_path_field, None)):
+            for child in self.__class__.objects.select('parent_path').filter(**{self._meta.parent_path_field + '__startswith': old_path}):
+                child.update(parent_path=(parent_path or '') + child.parent_path[len(old_parent_path):])
+
+        return res
+
+    def __get_path__(self) -> str:
+        if self.parent:
+            return f'{self.parent.__get_path__()}{self.pk}/'
+        return f'{self.pk}/'
 
     def _do_insert(self, manager, using, fields, returning_fields, raw):
         """
