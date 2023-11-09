@@ -110,6 +110,7 @@ class Options:
     default_permissions = ('create', 'read', 'update', 'delete')
     permissions = ()
     unique_together: List[str] = None
+    parent_path_field: str = None
 
     help_text: str = None
 

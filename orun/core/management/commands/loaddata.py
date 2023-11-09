@@ -15,7 +15,7 @@ def _load_from_module(module):
     from orun.contrib.contenttypes.models import Registrable
     members = [(inspect.getsourcelines(m)[1], m) for _, m in inspect.getmembers(module, inspect.isclass) if not m.__name__.startswith('_')]
     members.sort(key=lambda m: m[0])
-    for member in members:
+    for _, member in members:
         if inspect.ismodule(member):
             if member.__name__.startswith(f'{module.__name__}.'):
                 _load_from_module(member)

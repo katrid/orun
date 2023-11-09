@@ -972,6 +972,12 @@ class QuerySet:
         self._not_support_combined_queries('filter')
         return self._filter_or_exclude(False, args, kwargs)
 
+    def select(self, *fields):
+        """
+        Return a new QuerySet instance with the fields set.
+        """
+        return self.only(*fields)
+
     def exclude(self, *args, **kwargs):
         """
         Return a new QuerySet instance with NOT (args) ANDed to the existing
