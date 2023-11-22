@@ -985,6 +985,11 @@ var Katrid;
                     else
                         this.view.datasource.insert(true, res.values);
                 }
+                else if (res.invoke) {
+                    // invoke js function/class/object
+                    for (let [k, v] of Object.entries(res.invoke))
+                        katrid.invoke(k)(v);
+                }
                 else if (res.type) {
                     const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
                     return act.execute();
@@ -2857,12 +2862,6 @@ var Katrid;
                 });
                 comp.methods.setViewMode = async function (mode) {
                     return await me.action.showView(mode);
-                };
-                comp.methods.formButtonClick = async function (args) {
-                    const config = { action_name: args.method, target: args.params.id };
-                    let res = await me.model.service.doViewAction(config);
-                    if (res.location)
-                        window.location.href = res.location;
                 };
                 comp.methods.callAdminViewAction = async function (args) {
                     let input;
@@ -7028,6 +7027,9 @@ var Katrid;
                 this.assign(action, el);
                 if (el.hasAttribute('data-action'))
                     el.setAttribute('v-on:click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
+                else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name'))) {
+                    el.setAttribute('v-on:click', `action.formButtonClick(record.id, '${el.getAttribute('name')}')`);
+                }
                 else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name'))) {
                     el.setAttribute('v-on:click', `formButtonClick({params: {id: record.id}, method: '${el.getAttribute('name')}'})`);
                 }
@@ -15393,6 +15395,25 @@ var Katrid;
     }
     Katrid.guid = guid;
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    function printHtml(html) {
+        let iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        let doc = iframe.contentDocument;
+        doc.open();
+        doc.write(html);
+        doc.close();
+        iframe.onload = () => {
+            iframe.contentWindow.print();
+            setTimeout(() => {
+                iframe.remove();
+            }, 1000);
+        };
+    }
+    katrid.printHtml = printHtml;
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     function toCamelCase(s) {
@@ -15426,6 +15447,14 @@ var katrid;
         return new Promise((res) => setTimeout(() => res(), t));
     }
     katrid.sleep = sleep;
+    function invoke(qualName) {
+        let member = window;
+        for (let o of qualName.split('.'))
+            member = member[o];
+        if (member)
+            return member;
+    }
+    katrid.invoke = invoke;
 })(katrid || (katrid = {}));
 (function () {
     class Comments {
