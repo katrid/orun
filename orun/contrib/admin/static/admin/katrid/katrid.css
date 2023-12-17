@@ -9,6 +9,10 @@ label.checkbox, label.radio {
   box-sizing: content-box;
   min-height: 26px;
   margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 label.checkbox.checkbox-inline {
@@ -785,6 +789,9 @@ table-field .table tbody tr {
 }
 .katrid-app label.prepend-icon {
   margin-bottom: 0;
+}
+.katrid-app .image-box {
+  margin-right: 10px;
 }
 .katrid-app .image-box.image-field {
   width: 100px;

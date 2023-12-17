@@ -2421,7 +2421,6 @@ var Katrid;
                 if (this.parentVm)
                     computed = {
                         parent() {
-                            return {};
                             return me.parentVm;
                         }
                     };
@@ -11903,6 +11902,7 @@ var Katrid;
                             if (domain && (typeof domain === 'string'))
                                 domain = JSON.parse(domain);
                             if (this.field.vFilter) {
+                                console.debug('context', vm.parent.record.item);
                                 const newDomain = eval(`(function($parent, ${Object.keys(vm)}) {return ${this.field.vFilter}})`).call(vm, vm.$parent, ...Object.values(vm));
                                 if (newDomain) {
                                     if (domain)
