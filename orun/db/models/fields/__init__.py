@@ -2239,6 +2239,10 @@ class NullBooleanField(BooleanField):
     def get_internal_type(self):
         return "NullBooleanField"
 
+    def get_type(self):
+        # needed for client side
+        return 'BooleanField'
+
 
 class PositiveIntegerRelDbTypeMixin:
 
