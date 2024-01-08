@@ -2236,12 +2236,10 @@ class NullBooleanField(BooleanField):
         del kwargs['blank']
         return name, path, args, kwargs
 
-    def get_internal_type(self):
-        return "NullBooleanField"
-
-    def get_type(self):
-        # needed for client side
-        return 'BooleanField'
+    def _formfield(self):
+        res = super()._formfield()
+        res['type'] = 'BooleanField'
+        return res
 
 
 class PositiveIntegerRelDbTypeMixin:
