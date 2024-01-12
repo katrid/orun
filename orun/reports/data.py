@@ -34,10 +34,10 @@ class Query(DataSource, reptile.data.DataSource):
         fields = [f[0] for f in self.fields]
         return [dict(zip(fields, row)) for row in rows]
 
-    def open(self):
+    def open(self, params=None):
         if not self._opened and self.sql:
             super().open()
-            self._data = self.execute()
+            self._data = self.execute(params)
 
     def __getattr__(self, item):
         return [obj[item] for obj in self._data]
