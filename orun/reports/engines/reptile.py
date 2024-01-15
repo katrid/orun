@@ -100,7 +100,7 @@ class ReptileEngine:
         }
         ext = '.' + fmt
 
-        rep = Report(json.loads(content), default_connection=default_connection)
+        rep = Report(json.loads(content) if isinstance(content, str) else content, default_connection=default_connection)
         rep.variables = where
         doc = rep.prepare()
 
