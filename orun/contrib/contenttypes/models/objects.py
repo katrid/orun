@@ -120,12 +120,18 @@ class Registrable:
                 can_update=not cls.can_update,
             )
         return instance
+    
+    @classmethod
+    def get_object(cls):
+        """Return related model instance"""
+        obj = apps['ir.object'].get_by_natural_key(cls.get_qualname())
+        return obj.content_object
 
     @classmethod
     def get_id(cls):
         """Return id from database"""
-        obj = apps['ir.object'].get_by_natural_key(cls.get_qualname())
-        return obj.content_object.pk
+        obj = cls.get_object()
+        return obj.pk
 
     @classmethod
     def get_qualname(cls):
@@ -135,4 +141,13 @@ class Registrable:
     def update_info(cls):
         pass
 
-
+    @classmethod
+    def delete_object(cls, object_id):
+        Object = apps['ir.object']
+        try:
+            obj = Object.objects.get_object(object_id)
+            content = obj.content_object
+            content.delete()
+            obj.delete()
+        except:
+            pass

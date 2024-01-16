@@ -13,6 +13,12 @@ from orun.core.management.base import BaseCommand, CommandError
 
 def _load_from_module(module):
     from orun.contrib.contenttypes.models import Registrable
+    # if module is a package load each submodule individually
+    if os.path.basename(module.__file__).startswith('__init__'):
+        submodules = [import_module(module.__name__ + f".{f.replace('.py', '')}") for f in filter(lambda x: not x.startswith('_'), os.listdir(os.path.dirname(module.__file__)))]
+        for submodule in submodules:
+            _load_from_module(submodule)
+
     members = [(inspect.getsourcelines(m)[1], m) for _, m in inspect.getmembers(module, inspect.isclass) if not m.__name__.startswith('_')]
     members.sort(key=lambda m: m[0])
     for _, member in members:
