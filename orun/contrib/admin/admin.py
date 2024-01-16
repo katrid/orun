@@ -25,13 +25,15 @@ class MenuItem(Registrable):
         from orun.utils.text import re_camel_case
         if not cls.name:
             cls.name = re_camel_case.sub(r' \1', cls.__name__).strip()
+        if cls.action:
+            cls.action = apps['ir.object'].objects.get(name=cls.action).content_object.pk
         info = {
             'name': cls.name,
             'sequence': cls.sequence,
             'icon': cls.icon,
             'css': cls.css,
             'parent': cls.parent,
-            'action_id': cls.action.get_id() if cls.action else cls.action,
+            'action_id': cls.action,
         }
         m = cls._register_object(Menu, cls.qualname, info)
         return m
