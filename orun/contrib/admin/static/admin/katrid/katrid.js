@@ -9115,6 +9115,7 @@ var Katrid;
                 // if (!viewInfo)
                 // load list and search view info from server
                 let model = config.model;
+                console.debug(model);
                 if (typeof model === 'string')
                     model = new Katrid.Data.Model({ name: model });
                 let viewsInfo = await model.service.loadViews({
@@ -9806,6 +9807,8 @@ var Katrid;
                     '!in': Katrid.i18n.gettext('Not in'),
                     'isnull': Katrid.i18n.gettext('Is null'),
                     '!isnull': Katrid.i18n.gettext('Is not null'),
+                    'true': Katrid.i18n.gettext('Yes'),
+                    'false': Katrid.i18n.gettext('No'),
                 };
                 Search.conditionSuffix = {
                     '=': '',
@@ -10189,19 +10192,21 @@ var Katrid;
                         let s;
                         if (v.length === 1) {
                             v = v[0];
-                            s = this.field.format(v);
+                            if (v != null)
+                                s = this.field.format(v);
                         }
-                        else if (v.length > 1) {
+                        else if (v.length > 1)
                             s = v.map(item => this.field.format(item));
-                        }
-                        return this.field.caption + ' ' + Search.conditionsLabels[this.condition].toLowerCase() + ' "' + s + '"';
+                        s = s ? ' "' + s + '"' : '';
+                        return this.field.caption + ' ' + Search.conditionsLabels[this.condition].toLowerCase() + s;
                     }
                     get value() {
                         let r = {};
                         let fname = this.field.name;
                         if ((this.field instanceof Katrid.Data.DateTimeField) && !['isnull', '!isnull'].includes(this.condition))
                             fname = fname + '__date';
-                        fname += Search.conditionSuffix[this.condition];
+                        let condName = Search.conditionSuffix[this.condition] || '';
+                        fname += condName;
                         if (this.condition === '..')
                             r[fname] = this._value.map(v => this.field.getParamValue(v));
                         else if ((this.condition === '=') || (this.condition === '!='))
@@ -10210,6 +10215,10 @@ var Katrid;
                             r[fname] = true;
                         else if (this.condition === '!isnull')
                             r[fname] = false;
+                        else if (this.condition === 'false')
+                            r[fname] = false;
+                        else if (this.condition === 'true')
+                            r[fname] = true;
                         return r;
                     }
                 }
@@ -11935,6 +11944,7 @@ var Katrid;
                                             event.stopPropagation();
                                             this.hideMenu();
                                             let fkModel = new Katrid.Data.Model({ name: field.model });
+                                            console.debug('field', field);
                                             let view = await Katrid.Forms.TableView.createSearchDialog({ model: fkModel, caption: field.caption });
                                             let res = view.showDialog();
                                             view.ready();
