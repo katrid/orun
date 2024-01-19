@@ -89,12 +89,19 @@ class AdminModel(models.Model, helper=True):
         elif cls._meta.deferred_fields:
             qs.defer(cls._meta.deferred_fields)
 
+        fixed_filter = {}
+        # filter active records only
+        if cls._meta.active_field is not None:
+            fixed_filter[cls._meta.active_field] = True
+
         if where:
             if isinstance(where, list):
                 _args = []
                 _kwargs = {}
                 for w in where:
                     for k, v in w.items():
+                        if k == cls._meta.active_field:
+                            fixed_filter.pop(cls._meta.active_field)
                         f = None
                         if '__' in k:
                             f = cls._meta.fields[k.split('__', 1)[0]]
@@ -126,8 +133,8 @@ class AdminModel(models.Model, helper=True):
         if params:
             qs = qs.filter(**params)
         # filter active records only
-        if cls._meta.active_field is not None:
-            qs = qs.filter(**{cls._meta.active_field: True})
+        if fixed_filter:
+            qs = qs.filter(**fixed_filter)
         if fields:
             qs = qs.only(*fields)
         return qs
@@ -187,8 +194,10 @@ class AdminModel(models.Model, helper=True):
         return cls.api_get_field_choices(request, field, q, exact=True, limit=1)
 
     @api.classmethod
-    def api_get_field_choices(cls, request: HttpRequest, field: str, q=None, count=False, ids=None, page=None, exact=False, limit=None,
-                              **kwargs):
+    def api_get_field_choices(
+            cls, request: HttpRequest, field: str, q=None, count=False, ids=None, page=None, exact=False, limit=None,
+            **kwargs
+    ):
         fmt = kwargs.get('format', 'str')
         field = cls._meta.fields[field]
         related_model = apps[field.remote_field.model]
