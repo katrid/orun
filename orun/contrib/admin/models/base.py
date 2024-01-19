@@ -55,7 +55,7 @@ class AdminModel(models.Model, helper=True):
         }
 
     @classmethod
-    def _api_search(cls, request: HttpRequest, where=None, fields=None, params=None, join=None, **kwargs):
+    def _api_search(cls, request: HttpRequest, where=None, fields=None, params=None, join=None, default=None, **kwargs):
         # self.check_permission('read')
         qs = cls.objects.all()
         domain = kwargs.get('domain')
@@ -89,10 +89,11 @@ class AdminModel(models.Model, helper=True):
         elif cls._meta.deferred_fields:
             qs.defer(cls._meta.deferred_fields)
 
-        fixed_filter = {}
-        # filter active records only
-        if cls._meta.active_field is not None:
-            fixed_filter[cls._meta.active_field] = True
+        if default is None:
+            default = {}
+            # filter active records only
+            if cls._meta.active_field is not None:
+                default[cls._meta.active_field] = True
 
         if where:
             if isinstance(where, list):
@@ -101,7 +102,7 @@ class AdminModel(models.Model, helper=True):
                 for w in where:
                     for k, v in w.items():
                         if k == cls._meta.active_field:
-                            fixed_filter.pop(cls._meta.active_field)
+                            default.pop(cls._meta.active_field)
                         f = None
                         if '__' in k:
                             f = cls._meta.fields[k.split('__', 1)[0]]
@@ -132,8 +133,8 @@ class AdminModel(models.Model, helper=True):
                 qs = qs.filter(where)
         if params:
             qs = qs.filter(**params)
-        if fixed_filter:
-            qs = qs.filter(**fixed_filter)
+        if default:
+            qs = qs.filter(**default)
         if fields:
             qs = qs.only(*fields)
         return qs
@@ -353,7 +354,8 @@ class AdminModel(models.Model, helper=True):
         if id:
             if fields and 'record_name' not in fields:
                 fields.append('record_name')
-            obj = cls._api_search(request, fields=fields).get(pk=id)
+            # default will remove active default condition
+            obj = cls._api_search(request, fields=fields, default={}).get(pk=id)
             return {'data': obj.to_dict(fields=fields)}
         return {'error': 'the record ID must be specified'}
 
