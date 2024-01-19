@@ -132,7 +132,6 @@ class AdminModel(models.Model, helper=True):
                 qs = qs.filter(where)
         if params:
             qs = qs.filter(**params)
-        # filter active records only
         if fixed_filter:
             qs = qs.filter(**fixed_filter)
         if fields:
