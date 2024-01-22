@@ -3766,7 +3766,7 @@ var Katrid;
             constructor(name) {
                 this.name = name;
             }
-            static $fetch(url, config, params) {
+            static $fetch(url, config, params = null) {
                 return this.adapter.$fetch(url, config, params);
             }
             static $post(url, data, params) {
@@ -3957,15 +3957,46 @@ var Katrid;
             }
         }
         class Upload {
+            static callWithFiles(config) {
+                let { model, method, file, vm, data } = config;
+                let form = new FormData();
+                let files = file.files;
+                if (files.length === 1)
+                    form.append('files', file.files[0]);
+                else
+                    files.map(f => form.append('files[]', f));
+                let url = `/web/file/upload/${model.name}/${method}/`;
+                // pass active record id
+                if (vm?.record?.id)
+                    form.append('id', vm.record.id);
+                console.debug('data', data);
+                if (data) {
+                    Object.entries(data).map(([k, v]) => {
+                        form.append(k, v);
+                        console.debug(k, v);
+                    });
+                }
+                // try to detect the current datasource to be refreshed if needed
+                return Service.$fetch(url, {
+                    url,
+                    method: 'POST',
+                    body: form,
+                }).then(res => res.json());
+            }
             static sendFile(config) {
                 let { model, method, file, vm } = config;
                 let form = new FormData();
-                form.append('files', file.files[0]);
+                let files = file.files;
+                if (files.length === 1)
+                    form.append('files', file.files[0]);
+                else
+                    files.map(f => form.append('files[]', f));
                 let url = `/web/file/upload/${model.name}/${method}/`;
-                if (vm.record && vm.record.id)
+                // pass active record id
+                if (vm?.record?.id)
                     form.append('id', vm.record.id);
                 // try to detect the current datasource to be refreshed if needed
-                let dataSource = vm.dataSource;
+                let dataSource = vm?.dataSource;
                 $.ajax({
                     url: url,
                     data: form,
@@ -6796,6 +6827,68 @@ var katrid;
         }
         db_1.ClientTable = ClientTable;
     })(db = katrid.db || (katrid.db = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        function createDialogElement(config) {
+            let dialog = document.createElement('dialog');
+            // dialog.className = 'modal-content';
+            if (config.header !== false) {
+                const header = document.createElement('div');
+                header.className = 'modal-header';
+                if (typeof config.header === 'string')
+                    header.innerHTML = config.header;
+                dialog.appendChild(header);
+            }
+            const body = document.createElement('div');
+            body.className = 'modal-body';
+            dialog.appendChild(body);
+            if (config.footer !== false) {
+                const footer = document.createElement('div');
+                footer.className = 'modal-footer';
+                if (typeof config.footer === 'string')
+                    footer.innerHTML = config.footer;
+                dialog.appendChild(footer);
+            }
+            return dialog;
+        }
+        ui.createDialogElement = createDialogElement;
+        function confirm(config) {
+            return new Promise(resolve => {
+                let dialog = createDialogElement({ header: config.title, autoDestroy: true });
+                // create buttons
+                let footer = dialog.querySelector('.modal-footer');
+                let btn = document.createElement('button');
+                btn.innerText = Katrid.i18n.gettext('OK');
+                btn.classList.add('btn', 'btn-outline-secondary');
+                btn.type = 'button';
+                btn.addEventListener('click', () => {
+                    dialog.close();
+                    dialog.remove();
+                    resolve(true);
+                });
+                footer.appendChild(btn);
+                btn = document.createElement('button');
+                btn.innerText = Katrid.i18n.gettext('Cancel');
+                btn.type = 'button';
+                btn.classList.add('btn', 'btn-outline-secondary', 'ms-1');
+                btn.addEventListener('click', () => {
+                    dialog.close();
+                    dialog.remove();
+                    resolve(false);
+                });
+                footer.appendChild(btn);
+                dialog.appendChild(footer);
+                if (config.dom)
+                    dialog.querySelector('.modal-body').appendChild(config.dom);
+                document.body.appendChild(dialog);
+                dialog.showModal();
+            });
+        }
+        ui.confirm = confirm;
+    })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -14533,6 +14626,27 @@ var Katrid;
         ui.Calendar = Calendar;
     })(ui = Katrid.ui || (Katrid.ui = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        async function openFileDialog(accept, multiple = false) {
+            let input = document.createElement('input');
+            input.type = 'file';
+            input.style.display = 'none';
+            input.accept = accept;
+            input.multiple = multiple;
+            return new Promise((resolve, reject) => {
+                input.addEventListener('change', () => {
+                    resolve(input);
+                });
+                input.addEventListener('cancel', () => resolve());
+                input.click();
+            });
+        }
+        ui.openFileDialog = openFileDialog;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var katrid;
 (function (katrid) {
     var filters;
