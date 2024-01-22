@@ -7770,8 +7770,17 @@ var Katrid;
             }
             _refresh(records) {
                 this._calendar.removeAllEvents();
+                let i = 0;
                 for (let rec of records) {
-                    let event = { title: rec.$str, start: rec[this.fieldStart] };
+                    i++;
+                    let event = {
+                        id: rec.id,
+                        title: rec.$str, start: rec[this.fieldStart],
+                        extendedProps: {
+                            record: rec,
+                            index: i,
+                        },
+                    };
                     if (this.fieldEnd)
                         event['end'] = rec[this.fieldEnd];
                     this._calendar.addEvent(event);
@@ -7791,6 +7800,10 @@ var Katrid;
                     this._calendar = new FullCalendar.Calendar(calendarEl, {
                         initialView: 'dayGridMonth',
                         height: calendarEl.parentElement.getBoundingClientRect().height,
+                        eventClick: info => {
+                            console.debug(info.event.extendedProps);
+                            this._recordClick(info.event.extendedProps.record, info.event.extendedProps.index);
+                        },
                     });
                     this._calendar.render();
                 });
