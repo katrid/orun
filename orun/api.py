@@ -48,7 +48,7 @@ def _register_method(fn, meth_name, pass_request=None):
     return fn
 
 
-def classmethod(name_or_fn=None):
+def classmethod(name_or_fn=None) -> classmethod:
     if callable(name_or_fn):
         name_or_fn.pass_request = None
         return _register_method(name_or_fn, name_or_fn.__name__)
