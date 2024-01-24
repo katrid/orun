@@ -3,6 +3,8 @@ from orun.contrib.contenttypes.models import Registrable, ref
 
 
 class MenuItem(Registrable):
+    parent = None
+
     def __init__(self, cls: type):
         self._cls = cls
         self.qualname = f'{cls.__module__}.{cls.__name__}'
@@ -17,6 +19,7 @@ class MenuItem(Registrable):
         if action:
             # find action id
             action = action.get_id()
+        parent = parent or (item.parent and ref(item.parent))
         info = {
             'name': name,
             'sequence': getattr(item, 'sequence', 99),
@@ -28,6 +31,8 @@ class MenuItem(Registrable):
         m = self._register_object(Menu, qualname, info)
         # find children
         for k, child in item.__dict__.items():
+            if k == 'parent':
+                continue
             if k.startswith('_') or k == 'action':
                 continue
             if isinstance(child, type):
