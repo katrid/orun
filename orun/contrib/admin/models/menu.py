@@ -52,7 +52,7 @@ class Menu(models.Model):
         if cls._env.user_id == SUPERUSER or cls._env.user.is_superuser:
             items = qs
         else:
-            items = qs.filter(groups__users__pk=cls._env.user_id).distinct('id')
+            items = qs.filter(groups__users__pk=cls._env.user_id).order_by('id').distinct('id')
         for item in items:
             visible_items[item.parent_id].append(item)
 
