@@ -6833,13 +6833,21 @@ var katrid;
     var ui;
     (function (ui) {
         function createDialogElement(config) {
-            let dialog = document.createElement('dialog');
+            let dialog = document.createElement('div');
+            let div = document.createElement('div');
+            let content = document.createElement('div');
+            div.className = 'modal';
+            content.className = 'modal-dialog modal-xl modal-fullscreen-md-down';
+            dialog.className = 'modal-content';
+            div.appendChild(content);
+            content.append(dialog);
             // dialog.className = 'modal-content';
             if (config.header !== false) {
                 const header = document.createElement('div');
                 header.className = 'modal-header';
                 if (typeof config.header === 'string')
-                    header.innerHTML = config.header;
+                    header.innerHTML = `<h5 class="modal-title">${config.header}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>`;
                 dialog.appendChild(header);
             }
             const body = document.createElement('div');
@@ -6852,7 +6860,7 @@ var katrid;
                     footer.innerHTML = config.footer;
                 dialog.appendChild(footer);
             }
-            return dialog;
+            return div;
         }
         ui.createDialogElement = createDialogElement;
         function confirm(config) {
@@ -6865,8 +6873,7 @@ var katrid;
                 btn.classList.add('btn', 'btn-outline-secondary');
                 btn.type = 'button';
                 btn.addEventListener('click', () => {
-                    dialog.close();
-                    dialog.remove();
+                    modal.hide();
                     resolve(true);
                 });
                 footer.appendChild(btn);
@@ -6875,16 +6882,19 @@ var katrid;
                 btn.type = 'button';
                 btn.classList.add('btn', 'btn-outline-secondary', 'ms-1');
                 btn.addEventListener('click', () => {
-                    dialog.close();
-                    dialog.remove();
+                    modal.hide();
                     resolve(false);
                 });
                 footer.appendChild(btn);
-                dialog.appendChild(footer);
                 if (config.dom)
                     dialog.querySelector('.modal-body').appendChild(config.dom);
                 document.body.appendChild(dialog);
-                dialog.showModal();
+                dialog.addEventListener('hidden.bs.modal', evt => {
+                    dialog.remove();
+                    modal.dispose();
+                });
+                let modal = new bootstrap.Modal(dialog);
+                modal.show();
             });
         }
         ui.confirm = confirm;
@@ -12050,7 +12060,6 @@ var Katrid;
                                             event.stopPropagation();
                                             this.hideMenu();
                                             let fkModel = new Katrid.Data.Model({ name: field.model });
-                                            console.debug('field', field);
                                             let view = await Katrid.Forms.TableView.createSearchDialog({ model: fkModel, caption: field.caption });
                                             let res = view.showDialog();
                                             view.ready();
