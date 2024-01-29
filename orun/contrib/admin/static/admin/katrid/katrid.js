@@ -2985,6 +2985,13 @@ var Katrid;
                 super(info);
                 this.autoLoad = true;
             }
+            get orderBy() {
+                return this._orderBy;
+            }
+            set orderBy(value) {
+                this._orderBy = value;
+                this.datasource.orderBy = value;
+            }
             async getSelectedIds() {
                 // get id list based on search filter params
                 if (this.vm.allSelectionFilter)
@@ -4499,7 +4506,7 @@ var Katrid;
                     data = true;
                 // refresh all records
                 if (data === true)
-                    r = this.search({ where: this._params, page: this._page });
+                    r = this.search({ where: this._params, page: this._page, order: this.orderBy });
                 else if (data) {
                     // Refresh current record
                     r = this.get(data[0]);
@@ -4600,12 +4607,14 @@ var Katrid;
                     Object.assign(domain, this.where);
                 if (fields && !Array.isArray(fields))
                     fields = Object.keys(fields);
+                let order = this.orderBy;
                 params = {
                     count: true,
                     page,
                     where: params,
                     fields,
                     domain,
+                    order,
                     limit: options.limit || this.pageLimit,
                 };
                 return new Promise((resolve, reject) => {
@@ -5872,6 +5881,7 @@ var Katrid;
                     td.classList.add(this.cssClass);
                     th.classList.add(this.cssClass);
                 }
+                th.setAttribute('v-on:click', `columnClick('${this.name}')`);
                 view.tHeadRow.append(th);
                 // if (this.name && view.inlineEditor) {
                 //   let formView = view.action.views.form;
@@ -9364,10 +9374,17 @@ var Katrid;
                 };
             }
             createComponent() {
+                let me = this;
                 let comp = super.createComponent();
                 Object.assign(comp.methods, {
                     tableContextMenu(event) {
                         Forms.tableContextMenu.call(this, ...arguments);
+                    },
+                    columnClick(fieldName) {
+                        if (me.orderBy && me.orderBy.includes(fieldName))
+                            fieldName = '-' + fieldName;
+                        me.orderBy = [fieldName];
+                        me.refresh();
                     },
                     recordContextMenu(record, index, event) {
                         Forms.listRecordContextMenu.call(this, ...arguments);

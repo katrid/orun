@@ -26,7 +26,7 @@ PAGE_SIZE = 10
 
 class AdminModel(models.Model, helper=True):
     @api.classmethod
-    def api_search(cls, request: HttpRequest, fields=None, count=None, page=None, limit=None, format=None, **kwargs):
+    def api_search(cls, request: HttpRequest, fields=None, count=None, page=None, limit=None, **kwargs):
         qs = cls._api_search(request, fields=fields, **kwargs)
         if count:
             count = qs.count()
@@ -55,9 +55,13 @@ class AdminModel(models.Model, helper=True):
         }
 
     @classmethod
-    def _api_search(cls, request: HttpRequest, where=None, fields=None, params=None, join=None, default=None, **kwargs):
+    def _api_search(cls, request: HttpRequest, where=None, fields=None, params=None, order=None, default=None, **kwargs):
         # self.check_permission('read')
         qs = cls.objects.all()
+        if order:
+            order_by = ['-' + field.name if '-' + field.name in order else field.name for field in [cls._meta.fields[f[1:] if f.startswith('-') else f] for f in order] if field.concrete]
+            if order_by:
+                qs = qs.order_by(*order)
         domain = kwargs.get('domain')
         if params is None:
             params = {}
