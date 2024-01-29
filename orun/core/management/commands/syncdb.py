@@ -14,7 +14,7 @@ from orun.core.management.sql import (
 from orun.db import DEFAULT_DB_ALIAS, connections, router
 from orun.utils.module_loading import module_has_submodule
 from orun.db.backends.base.base import BaseDatabaseWrapper
-from orun.utils.text import Truncator
+from orun.db import metadata
 
 
 class Command(BaseCommand):
@@ -131,14 +131,6 @@ class Command(BaseCommand):
             if app_config.models_module is not None and app_config.name in app_labels
         ]
 
-        def model_installed(model):
-            opts = model._meta
-            converter = connection.introspection.identifier_converter
-            return not (
-                (converter(opts.db_table) in tables) or
-                (opts.auto_created and converter(opts.auto_created._meta.db_table) in tables)
-            )
-
         manifest = OrderedDict(
             # (app_name, list(filter(model_installed, model_list)))
             (app_name, model_list)
@@ -150,13 +142,13 @@ class Command(BaseCommand):
             self.stdout.write("  Creating tables...\n")
         post_model_list = {}
         with connection.schema_editor() as editor:
-            # if 'orun_table' not in tables:
-            #     editor.create_metadata_table()
+            editor.load_metadata()
             for app_name in manifest:
                 app = apps.app_configs[app_name]
                 if connection.features.schemas_allowed and app.db_schema and app.create_schema and app.db_schema not in schemas:
                     editor.create_schema(app.db_schema)
             # create all tables before additional objects
+            created_models = []
             for app_name, model_list in manifest.items():
                 for model in model_list:
                     # Never install unmanaged models, etc.
@@ -174,6 +166,7 @@ class Command(BaseCommand):
                     if self.verbosity >= 1:
                         self.stdout.write("    Creating table %s\n" % model._meta.db_table)
                     editor.create_model(model)
+                    created_models.append(model)
                 post_model_list[app_name] = model_list
 
             # Deferred SQL is executed when exiting the editor's context.
@@ -182,7 +175,7 @@ class Command(BaseCommand):
             # Check by additional sql objects
             for app_name, model_list in post_model_list.items():
                 for model in model_list:
-                    if model._meta.can_migrate(connection):
+                    if model._meta.can_migrate(connection) and model not in created_models:
                         editor.sync_model(model)
 
             # sync DDL statements on models
@@ -190,19 +183,8 @@ class Command(BaseCommand):
                 for app_name, model_list in post_model_list.items():
                     for model in model_list:
                         editor.sync_model_ddl(model)
-                # for app_name in manifest:
-                #     app = apps.app_configs[app_name]
-                #     ddl_file = os.path.join(app.path, 'ddl.py')
-                #     if os.path.isfile(ddl_file):
-                #         ddl = DDL(connection.ops)
-                #         with open(ddl_file, 'rb') as f:
-                #             for cmd in ddl.generate_sql(f.read()):
-                #                 print(cmd)
-                #                 try:
-                #                     editor.execute(cmd)
-                #                 except:
-                #                     print('Error loading file:', ddl_file)
-                #                     raise
+
+            editor.save_metadata()
 
             # emit post migrate signal
             emit_post_migrate_signal(
