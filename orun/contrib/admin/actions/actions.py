@@ -1,9 +1,11 @@
+import inspect
 from typing import List, Optional, Type
 
 from orun.apps import apps
 from orun.http import HttpRequest
 from orun.utils.translation import gettext
 from orun.contrib.contenttypes.models import ContentType, Object, Registrable
+from orun.db import models
 
 
 class Action(Registrable):
@@ -33,7 +35,7 @@ class WindowAction(Action):
 
     @classmethod
     def update_info(cls):
-        if cls.model not in apps.models:
+        if (isinstance(cls.model, str) and cls.model not in apps.models) and (inspect.isclass(cls.model) and not issubclass(cls.model, models.Model)):
             print('model not found', cls.model)
             return
         model = apps[cls.model]

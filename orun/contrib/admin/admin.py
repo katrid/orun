@@ -19,7 +19,8 @@ class MenuItem(Registrable):
         if action:
             # find action id
             action = action.get_id()
-        parent = parent or (item.parent and ref(item.parent))
+        if parent is None and hasattr(item, 'parent') and item.parent is not None:
+            parent = item.parent
         info = {
             'name': name,
             'sequence': getattr(item, 'sequence', 99),

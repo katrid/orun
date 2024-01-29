@@ -13,8 +13,12 @@
         <menuitem id="menu.settings.ui.action.client" name="Client Actions" action="action.view.ui.action.client"/>
         <menuitem id="menu.settings.ui.action.report" name="Reports" action="action.view.ui.action.report"/>
       </menuitem>
+      <menuitem id="menu.settings.ui.action.server" name="Server Actions" action="action.view.ui.action.server"/>
       <menuitem id="menu.settings.ui.menu" name="Menu" action="action.view.ui.menu"/>
       <menuitem id="menu.settings.ui.view" name="Views" action="action.view.ui.view"/>
+    </menuitem>
+    <menuitem id="menu.settings.server" name="Server Settings">
+      <menuitem id="menu.settings.automation" name="Automations" action="action.view.automations"/>
     </menuitem>
     <menuitem id="menu.settings.db" name="Database Dictionary">
       <menuitem id="menu.settings.ir.models" name="Models" action="action.view.ir.model"/>
