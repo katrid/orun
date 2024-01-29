@@ -1,3 +1,4 @@
+import json
 from collections import namedtuple
 
 # Structure returned by DatabaseIntrospection.get_table_list()
@@ -92,10 +93,6 @@ class BaseDatabaseIntrospection:
                 if not model._meta.managed:
                     continue
                 tables.add(model._meta.db_table)
-                # tables.update(
-                #     f.m2m_db_table() for f in model._meta.local_many_to_many
-                #     if f.remote_field.through._meta.managed
-                # )
         tables = list(tables)
         if only_existing:
             existing_tables = set(self.table_names(include_views=include_views))
@@ -195,3 +192,18 @@ class BaseDatabaseIntrospection:
 
     def get_cursor_description(self, cur):
         desc = cur.description
+
+    def _create_metadata_table(self, cur):
+        cur.execute('''CREATE TABLE orun_metadata (content TEXT)''')
+        cur.execute('''INSERT INTO orun_metadata (content) values ('{"tables": []}')''')
+
+    def get_metadata(self, cur):
+        try:
+            cur.execute('''select content from orun_metadata''')
+        except:
+            self._create_metadata_table(cur)
+            return {'tables': []}
+        s = cur.fetchone()[0]
+        if s:
+            return json.loads(str(s))
+        return {'tables': []}

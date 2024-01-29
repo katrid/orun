@@ -282,12 +282,7 @@ END;
         ) if sql)
 
     def last_executed_query(self, cursor, sql, params):
-        # https://cx-oracle.readthedocs.io/en/latest/cursor.html#Cursor.statement
-        # The DB API definition does not define this attribute.
-        statement = cursor.statement
-        # Unlike Psycopg's `query` and MySQLdb`'s `_executed`, cx_Oracle's
-        # `statement` doesn't contain the query parameters. Substitute
-        # parameters manually.
+        statement = sql
         if isinstance(params, (tuple, list)):
             for i, param in enumerate(params):
                 statement = statement.replace(':arg%d' % i, force_str(param, errors='replace'))
@@ -312,7 +307,7 @@ END;
         return 1000
 
     def max_name_length(self):
-        return 30
+        return 120
 
     def pk_default_value(self):
         return "NULL"
@@ -637,3 +632,6 @@ END;
         if isinstance(expression, RawSQL) and expression.conditional:
             return True
         return False
+
+    def get_tablename(self, schema, table):
+        return f'{schema}_{table}'

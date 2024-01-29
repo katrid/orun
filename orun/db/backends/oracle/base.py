@@ -1,7 +1,7 @@
 """
 Oracle database backend for Orun.
 
-Requires cx_Oracle: https://oracle.github.io/python-cx_Oracle/
+Requires oracledb: https://oracle.github.io/python-oracledb/
 """
 import datetime
 import decimal
@@ -17,39 +17,12 @@ from orun.db.backends.base.base import BaseDatabaseWrapper
 from orun.utils.encoding import force_bytes, force_str
 from orun.utils.functional import cached_property
 
-
-def _setup_environment(environ):
-    # Cygwin requires some special voodoo to set the environment variables
-    # properly so that Oracle will see them.
-    if platform.system().upper().startswith('CYGWIN'):
-        try:
-            import ctypes
-        except ImportError as e:
-            raise ImproperlyConfigured("Error loading ctypes: %s; "
-                                       "the Oracle backend requires ctypes to "
-                                       "operate correctly under Cygwin." % e)
-        kernel32 = ctypes.CDLL('kernel32')
-        for name, value in environ:
-            kernel32.SetEnvironmentVariableA(name, value)
-    else:
-        os.environ.update(environ)
-
-
-_setup_environment([
-    # Oracle takes client-side character set encoding from the environment.
-    ('NLS_LANG', '.AL32UTF8'),
-    # This prevents Unicode from getting mangled by getting encoded into the
-    # potentially non-Unicode database character set.
-    ('ORA_NCHAR_LITERAL_REPLACE', 'TRUE'),
-])
-
-
 try:
-    import cx_Oracle as Database
+    import oracledb as Database
 except ImportError as e:
-    raise ImproperlyConfigured("Error loading cx_Oracle module: %s" % e)
+    raise ImproperlyConfigured("Error loading oracledb module: %s" % e)
 
-# Some of these import cx_Oracle, so import them after checking if it's installed.
+# Some of these import oracledb, so import them after checking if it's installed.
 from .client import DatabaseClient  # NOQA
 from .creation import DatabaseCreation  # NOQA
 from .features import DatabaseFeatures  # NOQA
@@ -65,7 +38,7 @@ def wrap_oracle_errors():
     try:
         yield
     except Database.DatabaseError as e:
-        # cx_Oracle raises a cx_Oracle.DatabaseError exception with the
+        # oracledb raises a oracledb.DatabaseError exception with the
         # following attributes and values:
         #  code = 2091
         #  message = 'ORA-02091: transaction rolled back
@@ -271,7 +244,6 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         if not self.get_autocommit():
             self.commit()
 
-    # @async_unsafe
     def create_cursor(self, name=None):
         return FormatStylePlaceholderCursor(self.connection)
 
@@ -311,7 +283,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             return True
 
     @cached_property
-    def cx_oracle_version(self):
+    def oracledb_version(self):
         return tuple(int(x) for x in Database.version.split('.'))
 
     @cached_property
@@ -481,7 +453,7 @@ class FormatStylePlaceholderCursor:
             return [p.force_bytes for p in params]
 
     def _fix_for_params(self, query, params, unify_by_values=False):
-        # cx_Oracle wants no trailing ';' for SQL statements.  For PL/SQL, it
+        # oracledb wants no trailing ';' for SQL statements.  For PL/SQL, it
         # it does want a trailing ';' but not a trailing '/'.  However, these
         # characters must be included in the original query in case the query
         # is being passed to SQL*Plus.

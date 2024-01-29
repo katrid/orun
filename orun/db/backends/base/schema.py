@@ -1,4 +1,5 @@
 import logging
+import json
 from datetime import datetime
 from collections import defaultdict
 
@@ -11,6 +12,7 @@ from orun.db.backends.base.introspection import FieldInfo
 from orun.db.models import Deferrable, Index, Model
 from orun.db.models.sql import Query
 from orun.db.transaction import TransactionManagementError, atomic
+from orun.db import metadata
 from orun.utils import timezone
 
 logger = logging.getLogger('orun.db.backends.schema')
@@ -95,6 +97,8 @@ class BaseDatabaseSchemaEditor:
     sql_delete_procedure = 'DROP PROCEDURE %(procedure)s'
 
     def __init__(self, connection, collect_sql=False, atomic=True):
+        self._old_fields = None
+        self.new_metadata = None
         self.connection = connection
         self.collect_sql = collect_sql
         if self.collect_sql:
@@ -119,6 +123,14 @@ class BaseDatabaseSchemaEditor:
             self.atomic.__exit__(exc_type, exc_value, traceback)
 
     # Core utility functions
+
+    def load_metadata(self):
+        # load metadata
+        self.new_metadata = metadata.Metadata(self)
+        self.new_metadata.load_all()
+        with self.connection.cursor() as cursor:
+            self.metadata = metadata.Metadata(self)
+            self.metadata.load(self.connection.introspection.get_metadata(cursor))
 
     def execute(self, sql, params=()):
         """Execute the given SQL statement, with optional parameters."""
@@ -305,7 +317,7 @@ class BaseDatabaseSchemaEditor:
         self.execute(sql, params or None)
 
         # Add any field index and index_together's (deferred as SQLite _remake_table needs it)
-        self.deferred_sql.extend(self._model_indexes_sql(model))
+        # self.deferred_sql.extend(self._model_indexes_sql(model))
 
         # Make M2M tables
         return
@@ -790,27 +802,17 @@ class BaseDatabaseSchemaEditor:
         if self.connection.features.connection_persists_old_columns:
             self.connection.close()
 
-    def _alter_column_null_sql(self, model, old_field, new_field):
+    def _alter_column_null_sql(self, new_field: metadata.Column):
         """
         Hook to specialize column null alteration.
 
         Return a (sql, params) fragment to set a column to null or non-null
         as required by new_field, or None if no changes are required.
         """
-        if (self.connection.features.interprets_empty_strings_as_nulls and
-                new_field.get_internal_type() in ("CharField", "TextField")):
-            # The field is nullable in the database anyway, leave it alone.
-            return
-        else:
-            new_db_params = new_field.db_parameters(connection=self.connection)
-            sql = self.sql_alter_column_null if new_field.null else self.sql_alter_column_not_null
-            return (
-                sql % {
-                    'column': self.quote_name(new_field.column),
-                    'type': new_db_params['type'],
-                },
-                [],
-            )
+        sql = self.sql_alter_column_null if new_field.null else self.sql_alter_column_not_null
+        self.execute(
+            sql % {'column': self.quote_name(new_field.column)}
+        )
 
     def _alter_column_default_sql(self, model, old_field, new_field, drop=False):
         """
@@ -885,6 +887,9 @@ class BaseDatabaseSchemaEditor:
             new_field.remote_field.through._meta.get_field(new_field.m2m_field_name()),
         )
 
+    def create_index_name(self, table_name, column_names, suffix=""):
+        return self._create_index_name(table_name, column_names, suffix)
+
     def _create_index_name(self, table_name, column_names, suffix=""):
         """
         Generate a unique name for an index/unique constraint.
@@ -945,6 +950,11 @@ class BaseDatabaseSchemaEditor:
         or expressions. `sql` can be specified if the syntax differs from the
         standard (GIS indexes, ...).
         """
+        if isinstance(model, metadata.Index):
+            return self.sql_create_index % {
+                'name': model.name, 'table': model.model._meta.db_table, 'columns': model.expressions.join(', '),
+                'extra': '', 'condition': '',
+            }
         fields = fields or []
         expressions = expressions or []
         compiler = Query(model, alias_cols=False).get_compiler(
@@ -1008,6 +1018,9 @@ class BaseDatabaseSchemaEditor:
             ):
                 output.append(index.create_sql(model, self))
         return output
+
+    def _collect_indexes_sql(self, table: metadata.Table):
+        return [self._create_index_sql(index) for index in table.indexes]
 
     def _field_indexes_sql(self, model, field):
         """
@@ -1376,17 +1389,55 @@ class BaseDatabaseSchemaEditor:
         }
         self.execute(sql)
 
-    def sync_model(self, model: Model):
-        with self.connection.cursor() as cursor:
-            fields = {f.name: f for f in
-                      self.connection.introspection.get_table_description(cursor, model._meta.db_schema,
-                                                                          model._meta.tablename)}
+    def drop_index(self, index: 'metadata.Index'):
+        self.execute(f'''DROP INDEX IF EXISTS {index.name}''')
 
-        for f in model._meta.local_concrete_fields:
-            if f.column in fields:
-                self.sync_column(fields[f.column], f)
+    def create_index(self, index: 'metadata.Index'):
+        return None
+        self.execute(f'''CREATE INDEX {index.name} ON {index.model._meta.db_table} ({index.expressions.join(', ')})''')
+
+    def sync_model(self, model: Model):
+        # compare the table metadata
+        ## old style
+        with self.connection.cursor() as cursor:
+            self._old_fields = {
+                f.name: f
+                for f in self.connection.introspection.get_table_description(
+                    cursor, model._meta.db_schema, model._meta.tablename
+                )
+            }
+
+        new_table = self.new_metadata.tables[model._meta.name]
+        if table := self.metadata.tables.get(model._meta.name):
+            old_columns = {c.name: c for c in table.columns}
+        else:
+            old_columns = {}
+
+        # TODO rename table
+
+        ## new style
+        for f in new_table.columns:
+            if f.name in old_columns:
+                self.sync_column(old_columns[f.name], f)
             else:
-                self.add_column(f)
+                if f.name in self._old_fields:
+                    print(f'Field {f.name} already exists in table {model._meta.db_table} (nothing to do)')
+                else:
+                    self.add_column(f.field)
+
+        return
+        # sync indexes
+        old_indexes = {ix.name: ix for ix in table.indexes}
+        for ix in new_table.indexes:
+            if ix.name in old_indexes:
+                old_ix = old_indexes[ix]
+                if old_ix != ix:
+                    print(f'    Recreating index {ix.name}')
+                    self.drop_index(old_ix)
+                    self.create_index(ix)
+            else:
+                print(f'    Creating index {ix.name} on {ix.model._meta.name}')
+                self.create_index(ix)
         return
 
         def create_field(field: Field, field_info: FieldInfo):
@@ -1436,7 +1487,34 @@ class BaseDatabaseSchemaEditor:
 
             return
 
-    def sync_column(self, old_field: FieldInfo, new_field: Field):
+    def _drop_fk_constraint(self):
+        pass
+
+    def sync_column(self, old: metadata.Column, new: metadata.Column):
+        # alter column type
+        if old.type != new.type:
+            self.alter_field_type(old, new)
+        else:
+            # foreign key constraint changed
+            if old.fk != new.fk:
+                if old.fk:
+                    self._drop_fk_constraint(old)
+
+            if old.params != new.params:
+                # resize field
+                self.change_field_size(new.field)
+                print('Resize char field', new.name)
+
+            if old.default != new.default:
+                # default value changed
+                self.alter_column_default(new)
+                self._apply_default_value_to_null(new)
+
+            if old.null != new.null:
+                self._alter_column_null_sql(new)
+                print(f'      Column "{new.name}" null changed to {new.null}')
+
+    def _sync_column(self, old_field: FieldInfo, new_field: Field):
         old_style = {
             'BigAutoField': 'BigIntegerField',
             'AutoField': 'AutoField',
@@ -1489,26 +1567,42 @@ class BaseDatabaseSchemaEditor:
             return False
         return True
 
-    def alter_field_type(self, new_field, old_field):
+    def alter_field_type(self, old_field: metadata.Column, new_field: metadata.Column):
         # rename the old field
-        new_name = f'__old_{new_field.column}_1'
-        print(f'Rename {new_field.model._meta.name}->"{old_field.name}" to "{new_name}"; Create new field "{new_field.name}"')
+        new_name = f'__old_{new_field.name}_1'
+        i = 1
+        while new_name in self._old_fields:
+            i += 1
+            new_name = f'__old_{new_field.name}_{i}'
+        ## validate the old field name
+        print(f'Rename {new_field.field.model._meta.name}->"{old_field.name}" to "{new_name}"\n Create new field "{new_field.name}"')
         self.execute(self._rename_field_sql(new_field.model._meta.db_table, old_field.name, new_name))
-        self.add_column(new_field)
+        self.add_column(new_field.field)
         # try to copy the old col value to new value
         try:
-            print(f'UPDATE {new_field.model._meta.db_table} SET {self.quote_name(old_field.name)} = {self.quote_name(new_name)}')
+            print(f'UPDATE {new_field.field.model._meta.db_table} SET {self.quote_name(new_field.name)} = {self.quote_name(old_field.name)}')
+            self.execute(f'UPDATE {new_field.field.model._meta.db_table} SET {self.quote_name(new_field.name)} = {self.quote_name(old_field.name)}')
+            print(f'Data copied from "{old_field.name}" to "{new_field.name}"!')
+            # auto apply default value to null field
+            if new_field.default:
+                self._apply_default_value_to_null(new_field)
+                print(f"Default value applied to {new_field.name}")
         except Exception as e:
             print(e)
-        else:
-            print(f'Data copied from "{new_field.column}" to "{old_field.name}"!')
 
-    def alter_column_default(self, new_field, old_field):
-        if new_field.db_default is NOT_PROVIDED:
+    def _apply_default_value_to_null(self, new_field):
+        self.execute(
+            f'''UPDATE {new_field.field.model._meta.db_table} 
+            SET {self.quote_name(new_field.name)} = {self.prepare_default(new_field.default)}
+            WHERE {self.quote_name(new_field)} IS NULL
+            ''')
+
+    def alter_column_default(self, new_field: metadata.Column):
+        if new_field.default is None:
             self.execute(
                 self.sql_alter_column % {
                     'table': new_field.model._meta.db_table,
-                    'changes': self.sql_alter_column_no_default % {'column': self.quote_name(old_field.name)}
+                    'changes': self.sql_alter_column_no_default % {'column': self.quote_name(new_field.name)}
                 }
             )
         else:
@@ -1516,8 +1610,8 @@ class BaseDatabaseSchemaEditor:
                 self.sql_alter_column % {
                     'table': new_field.model._meta.db_table,
                     'changes': self.sql_alter_column_default % {
-                        'column': self.quote_name(old_field.name),
-                        'default': self.prepare_default(new_field.db_default),
+                        'column': self.quote_name(new_field.name),
+                        'default': self.prepare_default(new_field.default),
                     }
                 }
             )
@@ -1543,3 +1637,11 @@ class BaseDatabaseSchemaEditor:
             DDL = self.connection.ops.vsql_compiler()(self.connection)
             for stmt in DDL.generate_sql(source):
                 self.execute(stmt)
+
+    def save_metadata(self):
+        meta = self.new_metadata
+        with open('test.json', 'w') as f:
+            f.write(str(meta.dump()))
+        s = json.dumps(meta.dump())
+        with self.connection.cursor() as cursor:
+            cursor.execute('''UPDATE orun_metadata SET content = %s''', [s])

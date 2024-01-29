@@ -7,6 +7,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     # Oracle crashes with "ORA-00932: inconsistent datatypes: expected - got
     # BLOB" when grouping by LOBs (#24096).
     allows_group_by_lob = False
+    schemas_allowed = False
     interprets_empty_strings_as_nulls = True
     has_select_for_update = True
     has_select_for_update_nowait = True

@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-import cx_Oracle
+import oracledb as cx_Oracle
 
 from orun.db import models
 from orun.db.backends.base.introspection import (
@@ -274,3 +274,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
                 'orders': orders.split(','),
             }
         return constraints
+
+    def _create_metadata_table(self, cur):
+        cur.execute('''CREATE TABLE orun_metadata (content CLOB)''')
+        cur.execute('''INSERT INTO orun_metadata (content) values ('')''')

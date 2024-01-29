@@ -156,6 +156,8 @@ class Options:
         # variable is always None.
 
     def __init_subclass__(cls, **kwargs):
+        from orun.db import connection
+        ops = connection.ops
         cls.parents = {}
 
         if not cls.abstract:
@@ -176,10 +178,7 @@ class Options:
                 if cls.db_schema and cls.name.startswith(cls.db_schema + '.'):
                     cls.tablename = cls.name.split('.', 1)[-1].replace('.', '_')
                     cls.qualname = '{}.{}'.format(cls.db_schema, cls.tablename)
-                    cls.db_table = '"{}"."{}"'.format(cls.db_schema, cls.tablename)
-                elif not cls.db_schema:
-                    pass
-                    # cls.db_table = f'"{cls.db_table}"'
+                    cls.db_table = ops.get_tablename(cls.db_schema, cls.tablename)
             else:
                 cls.qualname = cls.tablename = cls.db_table
 
@@ -190,12 +189,14 @@ class Options:
             if not cls.concrete:
                 cls.managed = False
 
-    def get_metadata(self):
-        return metadata.Table(
-            name=self.db_table, schema=self.db_schema, model_name=self.name,
-            columns=[f.get_metadata() for f in self.fields if f.column],
-            model=self.model,
+    def get_metadata(self, editor):
+        table = metadata.Table(
+            name=self.db_table, schema=self.db_schema, model=self.name,
         )
+        for f in self.local_concrete_fields:
+            if f.column:
+                f.contribute_to_table(editor, table)
+        return table
 
     @property
     def label(self):
@@ -479,7 +480,7 @@ class Options:
         Return True if the model can/should be migrated on the `connection`.
         `connection` can be either a real connection or a connection alias.
         """
-        if self.proxy or self.swapped or not self.managed:
+        if self.proxy or self.swapped or not self.managed or (self.addon and not self.addon.managed):
             return False
         if isinstance(connection, str):
             connection = connections[connection]

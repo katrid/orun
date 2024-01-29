@@ -1,5 +1,4 @@
-from typing import Optional, Union, Callable
-import collections.abc
+from typing import Optional, Union, Callable, TYPE_CHECKING
 import copy
 import datetime
 import decimal
@@ -30,6 +29,9 @@ from orun.utils.ipv6 import clean_ipv6_address
 from orun.utils.itercompat import is_iterable
 from orun.utils.text import capfirst
 from orun.utils.translation import gettext_lazy as _, gettext
+if TYPE_CHECKING:
+    from orun.db import metadata
+    from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
 
 __all__ = [
     'BaseField', 'AutoField', 'BLANK_CHOICE_DASH', 'BigAutoField', 'BigIntegerField',
@@ -634,54 +636,9 @@ class Field(BaseField):
         arguments over positional ones, and omit parameters with their default
         values.
         """
-        # Short-form way of fetching all the default parameters
-        keywords = {}
-        possibles = {
-            "label": None,
-            "primary_key": False,
-            # "max_length": None,
-            "unique": False,
-            "required": False,
-            "null": True,
-            "db_index": False,
-            "db_default": NOT_PROVIDED,
-            "help_text": None,
-            "db_column": None,
-            "db_tablespace": None,
-            "auto_created": False,
-        }
-        attr_overrides = {
-            "unique": "_unique",
-            "error_messages": "_error_messages",
-            "validators": "_validators",
-            # "verbose_name": "_verbose_name",
-            "db_tablespace": "_db_tablespace",
-        }
-        equals_comparison = {"choices", "validators"}
-        for name, default in possibles.items():
-            value = getattr(self, attr_overrides.get(name, name))
-            # Unroll anything iterable for choices into a concrete list
-            if name == "choices" and isinstance(value, collections.abc.Iterable):
-                value = list(value)
-            # Do correct kind of comparison
-            if name in equals_comparison:
-                if value != default:
-                    keywords[name] = value
-            else:
-                if value is not default:
-                    keywords[name] = value
         # Work out path - we shorten it for known Orun core fields
         path = "%s.%s" % (self.__class__.__module__, self.__class__.__qualname__)
-        # if path.startswith("orun.db.models.fields.related"):
-        #     path = path.replace("orun.db.models.fields.related", "orun.db.models")
-        # if path.startswith("orun.db.models.fields.files"):
-        #     path = path.replace("orun.db.models.fields.files", "orun.db.models")
-        # if path.startswith("orun.db.models.fields.proxy"):
-        #     path = path.replace("orun.db.models.fields.proxy", "orun.db.models")
-        # if path.startswith("orun.db.models.fields"):
-        #     path = path.replace("orun.db.models.fields", "orun.db.models")
-        # Return basic info - other fields should override this.
-        return (self.name, path, [], keywords)
+        return (self.name, path, None, {})
 
     # def clone(self):
     #     """
@@ -1132,6 +1089,31 @@ class Field(BaseField):
         from .events import FieldEvent
         return FieldEvent(self, meth)
 
+    def get_column_def(self):
+        from orun.db.metadata import Column
+        _, datatype, params, kwargs = self.deconstruct()
+        return Column(
+            name=self.column, type=datatype, params=params, null=self.null, pk=self.primary_key,
+            tablespace=self.db_tablespace, computed=self.db_compute, fk=None, attributes=kwargs,
+            field=self,
+        )
+
+    def contribute_to_table(self, editor: 'BaseDatabaseSchemaEditor', table: 'metadata.Table'):
+        """
+        Contribute to table metadata
+        :param table:
+        """
+        from orun.db.metadata import Index
+        table.columns.append(self.get_column_def())
+        if self.db_index:
+            ix_name = editor.create_index_name(self.model._meta.db_table, [self.column])
+            table.indexes.append(
+                Index(
+                    name=ix_name, expressions=[self.column], auto_created=True, model=self.model,
+                    # tablespace=self.db_tablespace,
+                )
+            )
+
 
 class BooleanField(Field):
     empty_strings_allowed = False
@@ -1222,9 +1204,7 @@ class CharField(Field):
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
-        if self.db_collation:
-            kwargs['db_collation'] = self.db_collation
-        return name, path, args, kwargs
+        return name, path, [self.max_length], kwargs
 
     def cast_db_type(self, connection):
         if self.max_length is None:
@@ -1364,17 +1344,6 @@ class DateField(DateTimeCheckMixin, Field):
             ]
 
         return []
-
-    def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        if self.auto_now:
-            kwargs['auto_now'] = True
-        if self.auto_now_add:
-            kwargs['auto_now_add'] = True
-        if self.auto_now or self.auto_now_add:
-            del kwargs['editable']
-            del kwargs['blank']
-        return name, path, args, kwargs
 
     def get_internal_type(self):
         return "DateField"
@@ -1701,11 +1670,7 @@ class DecimalField(Field):
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
-        if self.max_digits is not None:
-            kwargs['max_digits'] = self.max_digits
-        if self.decimal_places is not None:
-            kwargs['decimal_places'] = self.decimal_places
-        return name, path, args, kwargs
+        return name, path, [self.max_digits, self.decimal_places], kwargs
 
     def get_internal_type(self):
         return "DecimalField"
@@ -2026,12 +1991,6 @@ class AutoFieldMixin:
         else:
             return []
 
-    def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        del kwargs['blank']
-        kwargs['primary_key'] = True
-        return name, path, args, kwargs
-
     def validate(self, value, model_instance):
         pass
 
@@ -2229,12 +2188,6 @@ class NullBooleanField(BooleanField):
         kwargs['null'] = True
         kwargs['blank'] = True
         super().__init__(*args, **kwargs)
-
-    def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        del kwargs['null']
-        del kwargs['blank']
-        return name, path, args, kwargs
 
     def _formfield(self):
         res = super()._formfield()
@@ -2487,14 +2440,6 @@ class BinaryField(Field):
         super().__init__(*args, **kwargs)
         if self.max_length is not None:
             self.validators.append(validators.MaxLengthValidator(self.max_length))
-
-    def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        if self.editable:
-            kwargs['editable'] = True
-        else:
-            del kwargs['editable']
-        return name, path, args, kwargs
 
     def get_internal_type(self):
         return "BinaryField"

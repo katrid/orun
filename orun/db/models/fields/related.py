@@ -293,16 +293,6 @@ class RelatedField(FieldCacheMixin, Field):
                 field.do_related_class(related, model)
             lazy_related_operation(resolve_related_class, cls, self.remote_field.model, field=self)
 
-    def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        if self.remote_field.limit_choices_to:
-            kwargs['limit_choices_to'] = self.remote_field.limit_choices_to
-        if self.remote_field.related_name is not None:
-            kwargs['related_name'] = self.remote_field.related_name
-        if self.remote_field.related_query_name is not None:
-            kwargs['related_query_name'] = self.remote_field.related_query_name
-        return name, path, args, kwargs
-
     def get_forward_related_filter(self, obj):
         """
         Return the keyword arguments that when supplied to
@@ -398,8 +388,9 @@ class ForeignObject(RelatedField):
     forward_related_accessor_class = ForwardManyToOneDescriptor
     rel_class = ForeignObjectRel
 
-    def __init__(self, to, on_delete, from_fields, to_fields, rel=None, related_name=None,
-                 related_query_name=None, filter=None, limit_choices_to=None, parent_link=False, **kwargs):
+    def __init__(self, to, on_delete,  from_fields, to_fields, rel=None, related_name=None,
+                 related_query_name=None, filter=None, limit_choices_to=None, parent_link=False, on_update=DB_CASCADE,
+                 **kwargs):
 
         if rel is None:
             rel = self.rel_class(
@@ -417,6 +408,7 @@ class ForeignObject(RelatedField):
         self.to_fields = to_fields
         self.filter = filter
         self.on_delete = on_delete
+        self.on_update = on_update
 
     def check(self, **kwargs):
         return [
@@ -502,21 +494,6 @@ class ForeignObject(RelatedField):
             ]
         else:
             return []
-
-    def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        kwargs['on_delete'] = self.remote_field.on_delete
-        kwargs['from_fields'] = self.from_fields
-        kwargs['to_fields'] = self.to_fields
-
-        if self.remote_field.parent_link:
-            kwargs['parent_link'] = self.remote_field.parent_link
-        # Work out string form of "to"
-        if isinstance(self.remote_field.model, str):
-            kwargs['to'] = self.remote_field.model
-        else:
-            kwargs['to'] = self.remote_field.model._meta.name
-        return name, path, args, kwargs
 
     def resolve_related_fields(self):
         if not self.from_fields or len(self.from_fields) != len(self.to_fields):
@@ -675,6 +652,31 @@ class ForeignObject(RelatedField):
             if self.remote_field.limit_choices_to:
                 cls._meta.related_fkey_lookups.append(self.remote_field.limit_choices_to)
 
+    def get_column_def(self):
+        col = super().get_column_def()
+        field = self.target_field
+        while isinstance(field, OneToOneField):
+            field = field.target_field
+        col.type = field.__class__.__module__ + '.' + field.__class__.__qualname__
+        col.fk = self.related_model._meta.name
+        return col
+
+    def contribute_to_table(self, editor, table):
+        from orun.db.metadata import Constraint
+        super().contribute_to_table(editor, table)
+        # contribute to table with fk constraint
+        fk_name = '_fk_' + self.model._meta.qualname.replace('.', '_') + '__' + self.column
+        table.constraints.append(
+            Constraint(
+                name=fk_name, type='FOREIGN KEY',
+                attributes={
+                    'on_delete': self.on_delete, 'on_update': 'CASCADE', 'column': self.column,
+                    'references': [self.model._meta.db_table, self.remote_field.target_field.name],
+                },
+                auto_created=True,
+            )
+        )
+
 
 ForeignObject.register_lookup(RelatedIn)
 ForeignObject.register_lookup(RelatedExact)
@@ -806,24 +808,6 @@ class ForeignKey(ForeignObject):
             else:
                 only.append(f'{path or self.name}{f.name}')
         return res
-
-    def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        del kwargs['to_fields']
-        del kwargs['from_fields']
-        # Handle the simpler arguments
-        if self.db_index:
-            del kwargs['db_index']
-        else:
-            kwargs['db_index'] = False
-        if self.db_constraint is not True:
-            kwargs['db_constraint'] = self.db_constraint
-        # Rel needs more work.
-        to_meta = getattr(self.remote_field.model, "_meta", None)
-        if self.remote_field.field_name and (
-                not to_meta or (to_meta.pk and self.remote_field.field_name != to_meta.pk.name)):
-            kwargs['to_field'] = self.remote_field.field_name
-        return name, path, args, kwargs
 
     def to_python(self, value):
         if isinstance(value, dict) and 'id' in value:
@@ -993,12 +977,6 @@ class OneToOneField(ForeignKey):
         kwargs['null'] = False
         super().__init__(to, on_delete, to_field=to_field, **kwargs)
 
-    def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        if "unique" in kwargs:
-            del kwargs['unique']
-        return name, path, args, kwargs
-
     def save_form_data(self, instance, data):
         if isinstance(data, self.remote_field.model):
             setattr(instance, self.name, data)
@@ -1018,7 +996,7 @@ def create_many_to_many_intermediary_model(field, klass):
 
     to_model = resolve_relation(klass, field.remote_field.model)
     name = '%s_%s' % (klass._meta.object_name, field.name)
-    lazy_related_operation(set_managed, klass, to_model, name)
+    # lazy_related_operation(set_managed, klass, to_model, name)
 
     to = to_model._meta.model_name
     from_ = klass._meta.model_name
@@ -1118,7 +1096,7 @@ class ManyToManyField(RelatedField):
             db_constraint=db_constraint,
         )
         self.has_null_arg = 'null' in kwargs
-
+        kwargs['concrete'] = False
         super().__init__(**kwargs)
 
         self.db_table = db_table
