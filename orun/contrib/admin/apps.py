@@ -3,6 +3,7 @@ import asyncio
 from orun.core import checks
 from orun.apps import AppConfig
 from orun.db.models.signals import post_sync, pre_migrate
+from orun.dispatch import Signal
 
 from .management import admin_auto_register
 
@@ -16,15 +17,16 @@ class AdminConfig(AppConfig):
     js_templates = [
         'static/admin/katrid/templates.html',
     ]
-    dependencies = ['orun.contrib.auth', 'orun.contrib.contenttypes']
+    dependencies = ['orun.contrib.auth']
     urls_module = 'orun.contrib.admin.urls'
 
     def ready(self):
-        pass
-        # pre_migrate.connect(inject_rename_contenttypes_operations, sender=self)
-        # post_sync.connect(admin_auto_register)
-        # checks.register(check_generic_foreign_keys, checks.Tags.models)
-        # checks.register(check_model_name_lengths, checks.Tags.models)
+        super().ready()
+        # load automations
+        from .models import Automation
+        Automation.setup()
+        # startup signal
+        system_startup.send(self)
 
     def register_object(self, name: str, obj):
         from orun.contrib.contenttypes.models import Object
@@ -41,3 +43,6 @@ class AdminConfig(AppConfig):
         super().load_fixtures(**options)
         self.register_group('group_admin', 'System Administrator')
         self.register_group('group_manager', 'Manager')
+
+
+system_startup = Signal()

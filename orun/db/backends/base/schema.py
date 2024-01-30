@@ -810,9 +810,9 @@ class BaseDatabaseSchemaEditor:
         as required by new_field, or None if no changes are required.
         """
         sql = self.sql_alter_column_null if new_field.null else self.sql_alter_column_not_null
-        self.execute(
-            sql % {'column': self.quote_name(new_field.column)}
-        )
+        sql %= {'column': self.quote_name(new_field.name)}
+        sql = self.sql_alter_column % {'table': new_field.field.model._meta.db_table, 'changes': sql}
+        self.execute(sql)
 
     def _alter_column_default_sql(self, model, old_field, new_field, drop=False):
         """

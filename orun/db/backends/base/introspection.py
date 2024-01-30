@@ -193,7 +193,7 @@ class BaseDatabaseIntrospection:
     def get_cursor_description(self, cur):
         desc = cur.description
 
-    def _create_metadata_table(self, cur):
+    def create_metadata_table(self, cur):
         cur.execute('''CREATE TABLE orun_metadata (content TEXT)''')
         cur.execute('''INSERT INTO orun_metadata (content) values ('{"tables": []}')''')
 
@@ -201,7 +201,7 @@ class BaseDatabaseIntrospection:
         try:
             cur.execute('''select content from orun_metadata''')
         except:
-            self._create_metadata_table(cur)
+            self.create_metadata_table(cur)
             return {'tables': []}
         s = cur.fetchone()[0]
         if s:

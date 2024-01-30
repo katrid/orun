@@ -59,6 +59,7 @@ class AdminModel(models.Model, helper=True):
         # self.check_permission('read')
         qs = cls.objects.all()
         if order:
+            # TODO order by custom expr
             order_by = ['-' + field.name if '-' + field.name in order else field.name for field in [cls._meta.fields[f[1:] if f.startswith('-') else f] for f in order] if field.concrete]
             if order_by:
                 qs = qs.order_by(*order)

@@ -13,13 +13,13 @@ from orun.core.management.base import BaseCommand, CommandError
 
 def _load_from_module(module):
     from orun.contrib.contenttypes.models import Registrable
-    members = [(inspect.getsourcelines(m)[1], m) for _, m in inspect.getmembers(module, inspect.isclass) if not m.__name__.startswith('_')]
-    members.sort(key=lambda m: m[0])
-    for _, member in members:
+    members = [m for _, m in inspect.getmembers(module, inspect.isclass) if not m.__name__.startswith('_')]
+    members.sort(key=lambda o: getattr(o, '__order', 0))
+    for member in members:
         if inspect.ismodule(member):
             if member.__name__.startswith(f'{module.__name__}.'):
                 _load_from_module(member)
-        if isinstance(member, type) and member.__module__ == module.__name__:
+        if isinstance(member, type) and member.__module__.startswith(module.__name__):
             if getattr(member, '_admin_registrable', None):
                 if issubclass(member, Registrable):
                     member.update_info()

@@ -29,6 +29,7 @@ class AppConfig:
     auto_install = False
     version: str = None
     urls_module: str = None
+    managed = True
 
     def __init__(self, app_name: str, app_module):
         self.name = app_name

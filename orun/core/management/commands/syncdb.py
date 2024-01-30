@@ -120,6 +120,8 @@ class Command(BaseCommand):
         with connection.cursor() as cursor:
             schemas = connection.introspection.schema_names(cursor)
             tables = connection.introspection.table_names(cursor)
+            if 'orun_metadata' not in tables:
+                connection.introspection.create_metadata_table(cursor)
 
         # Build the manifest of apps and models that are to be synchronized.
         all_models = [
