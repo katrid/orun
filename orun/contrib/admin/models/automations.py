@@ -1,4 +1,4 @@
-from threading import Thread
+import traceback
 
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
@@ -32,7 +32,7 @@ class Automation(models.Model):
 
     @classmethod
     def setup(cls):
-        Thread(target=cls._setup).start()
+        cls._setup()
 
     @classmethod
     def _setup(cls):
@@ -41,5 +41,10 @@ class Automation(models.Model):
 
     def start(self):
         if self.type == 'startup':
-            exec(self.code)
+            if self.code:
+                try:
+                    exec(self.code)
+                except Exception as e:
+                    traceback.print_exc()
+
         # todo load signal and trigger
