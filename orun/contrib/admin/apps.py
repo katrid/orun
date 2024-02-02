@@ -21,10 +21,12 @@ class AdminConfig(AppConfig):
     urls_module = 'orun.contrib.admin.urls'
 
     def ready(self):
+        from orun.conf import settings
         super().ready()
         # load automations
-        from .models import Automation
-        Automation.setup()
+        if getattr(settings, 'ADMIN_AUTOMATIONS', False):
+            from .models import Automation
+            Automation.setup()
         # startup signal
         system_startup.send(self)
 
