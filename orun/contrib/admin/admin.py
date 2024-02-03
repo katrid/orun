@@ -1,4 +1,5 @@
-from orun.apps import apps
+import inspect
+
 from orun.contrib.contenttypes.models import Registrable, ref
 
 
@@ -21,6 +22,10 @@ class MenuItem(Registrable):
             action = action.get_id()
         if parent is None and hasattr(item, 'parent') and item.parent is not None:
             parent = item.parent
+            if inspect.isclass(parent):
+                parent = parent.__module__ + '.' + parent.__qualname__
+            if isinstance(parent, str):
+                parent = ref(parent)
         info = {
             'name': name,
             'sequence': getattr(item, 'sequence', 99),
