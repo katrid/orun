@@ -827,6 +827,7 @@ class Model(metaclass=ModelBase):
                 raw, cls, force_insert or parent_inserted,
                 force_update, using, update_fields,
             )
+
         # Store the database on which the object was saved
         self._state.db = using
         # Once saved, this is no longer a to-be-added instance.
@@ -880,6 +881,8 @@ class Model(metaclass=ModelBase):
         if update_fields:
             non_pks = [f for f in non_pks
                        if f.name in update_fields or f.attname in update_fields]
+
+        _modified_values = self._state.update_fields
 
         pk_val = self._get_pk_val(meta)
         if pk_val is None:
@@ -942,6 +945,12 @@ class Model(metaclass=ModelBase):
                 parent_path = self.__get_path__()
                 setattr(self, self._meta.parent_path_field, parent_path)
                 self.update(parent_path=parent_path)
+
+        # save many to many values
+        for f, v in _modified_values.items():
+            if v and (field := self._meta.fields[f]) and field.one_to_many:
+                field.set(self, v)
+                getattr(self.__class__, f).delete_cached_value(self)
 
         if pk_set:
             self.after_update(None, None)

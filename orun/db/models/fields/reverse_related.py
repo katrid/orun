@@ -324,6 +324,9 @@ class OneToManyRel(ForeignObjectRel):
             self.set_cached_value(instance, rel_obj)
         return rel_obj
 
+    def __set__(self, instance, value):
+        self.set_cached_value(instance, value)
+
     def get_cache_name(self):
         return self.field.name
 

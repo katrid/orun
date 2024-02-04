@@ -1646,20 +1646,25 @@ class OneToManyField(RelatedField):
     def set(self, instance, value):
         rel_model = self.related_model._meta.apps[self.related_model]
         res = []
-        field = getattr(instance, self.name)
+        #field = getattr(instance, self.name)
+        to_field = self.remote_field.to_field.name
         for v in value:
-            values = v.get('values')
-            action = v['action']
-            if values:
-                if action == 'CREATE':
-                    values[self.remote_field.to_field.name] = instance.pk
-                    obj = rel_model.api_write(values)
-                    if instance.pk is None:
-                        res.append(obj)
-                elif action == 'UPDATE':
-                    rel_model.api_write(values)
-            elif action == 'DESTROY':
-                rel_model.api_delete(None, [v['id']])
+            if isinstance(v, dict):
+                values = v.get('values')
+                action = v['action']
+                if values:
+                    if action == 'CREATE':
+                        values[to_field] = instance.pk
+                        obj = rel_model.api_write(values)
+                        if instance.pk is None:
+                            res.append(obj)
+                    elif action == 'UPDATE':
+                        rel_model.api_write(values)
+                elif action == 'DESTROY':
+                    rel_model.api_delete(None, [v['id']])
+            else:
+                setattr(v, to_field, instance)
+                v.save()
         if res:
             setattr(instance, self.name, res)
 
