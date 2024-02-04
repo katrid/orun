@@ -1498,7 +1498,11 @@ class BaseDatabaseSchemaEditor:
             # foreign key constraint changed
             if old.fk != new.fk:
                 if old.fk:
-                    self._drop_fk_constraint(old)
+                    try:
+                        self._drop_fk_constraint(old)
+                    except:
+                        # ignore if fk doesn't exist
+                        pass
 
             if old.params != new.params:
                 # resize field
