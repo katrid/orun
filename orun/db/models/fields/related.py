@@ -987,6 +987,9 @@ class OneToOneField(ForeignKey):
         # Override ForeignKey since check isn't applicable here.
         return []
 
+    def get_type(self):
+        return 'ForeignKey'
+
 
 def create_many_to_many_intermediary_model(field, klass):
     from orun.db import models
