@@ -6,7 +6,7 @@ from asgiref.sync import async_to_sync, sync_to_async
 
 from orun.conf import settings
 from orun.core.exceptions import ImproperlyConfigured, MiddlewareNotUsed
-from orun.core.signals import request_finished
+from orun.core.signals import request_finished, app_started
 from orun.db import connections, transaction
 from orun.urls import get_resolver, set_urlconf
 from orun.utils.log import log_response
@@ -18,10 +18,16 @@ logger = logging.getLogger('orun.request')
 
 
 class BaseHandler:
+    _app_started = False
     _view_middleware = None
     _template_response_middleware = None
     _exception_middleware = None
     _middleware_chain = None
+
+    def __init__(self):
+        if not BaseHandler._app_started:
+            BaseHandler._app_started = True
+            app_started.send(sender=self)
 
     def load_middleware(self, is_async=False):
         """

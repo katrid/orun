@@ -9,6 +9,12 @@
   <action id="action.view.ui.action.view" type="ui.action.window" name="View Actions" model="ui.action.view">
     <field name="view_mode">list,form</field>
   </action>
+  <action id="action.view.ui.action.server" type="ui.action.window" name="Server Actions" model="ui.action.server">
+    <field name="view_mode">list,form</field>
+  </action>
+  <action id="action.view.automations" type="ui.action.window" name="Automations" model="admin.automation">
+    <field name="view_mode">list,form</field>
+  </action>
   <action id="action.view.ir.model" type="ui.action.window" name="Models" model="ir.model">
     <field name="view_mode">list,form</field>
   </action>

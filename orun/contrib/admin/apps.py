@@ -1,11 +1,5 @@
-import asyncio
-
-from orun.core import checks
+from orun.core.signals import app_started
 from orun.apps import AppConfig
-from orun.db.models.signals import post_sync, pre_migrate
-from orun.dispatch import Signal
-
-from .management import admin_auto_register
 
 
 class AdminConfig(AppConfig):
@@ -21,14 +15,17 @@ class AdminConfig(AppConfig):
     urls_module = 'orun.contrib.admin.urls'
 
     def ready(self):
-        from orun.conf import settings
         super().ready()
+        app_started.connect(self._app_started)
+
+    def _app_started(self, sender, **kwargs):
         # load automations
-        if getattr(settings, 'ADMIN_AUTOMATIONS', False):
-            from .models import Automation
+        from .models import Automation
+        try:
             Automation.setup()
-        # startup signal
-        system_startup.send(self)
+        except:
+            raise
+            pass
 
     def register_object(self, name: str, obj):
         from orun.contrib.contenttypes.models import Object
@@ -46,5 +43,3 @@ class AdminConfig(AppConfig):
         self.register_group('group_admin', 'System Administrator')
         self.register_group('group_manager', 'Manager')
 
-
-system_startup = Signal()

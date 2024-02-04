@@ -1,3 +1,5 @@
+import sys
+import importlib.util
 import traceback
 
 from orun.db import models
@@ -29,6 +31,9 @@ class Automation(models.Model):
     class Meta:
         name = 'admin.automation'
         name_field = 'description'
+        field_groups = {
+            'list_fields': ['description', 'type', 'signal_name'],
+        }
 
     @classmethod
     def setup(cls):
@@ -43,7 +48,9 @@ class Automation(models.Model):
         if self.type == 'startup':
             if self.code:
                 try:
-                    exec(self.code)
+                    spec = importlib.util.spec_from_loader(f'orun.contrib.admin.automations.__dynmod{self.pk}', loader=None)
+                    module = importlib.util.module_from_spec(spec)
+                    exec(self.code, module.__dict__)
                 except Exception as e:
                     traceback.print_exc()
 
