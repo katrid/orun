@@ -954,6 +954,8 @@ class Model(metaclass=ModelBase):
 
         if pk_set:
             self.after_update(None, None)
+        else:
+            self.after_insert([])
         return updated
 
     def _do_update(self, base_qs, using, pk_val, values, update_fields, forced_update):
@@ -1019,7 +1021,6 @@ class Model(metaclass=ModelBase):
             [self], fields=fields, returning_fields=returning_fields,
             using=using, raw=raw,
         )
-        self.after_insert([])
         return ret
 
     def _prepare_related_fields_for_save(self, operation_name):
