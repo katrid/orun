@@ -5728,8 +5728,9 @@ var Katrid;
                         input.setAttribute(k, this.attrs[k]);
                     }
                 }
-                input.autocomplete = 'nope';
+                input.autocomplete = 'no';
                 input.spellcheck = false;
+                input.setAttribute('v-input', 'v-input');
                 if (this.attrs.required)
                     input.setAttribute('required', 'required');
                 if (this.maxLength)
@@ -5742,6 +5743,10 @@ var Katrid;
                     input.placeholder = this.caption;
                 if (this.attrs.ngFieldChange || this.ngChange)
                     input.setAttribute('v-on:change', this.attrs.ngFieldChange || this.ngChange);
+                if (this.info?.attrs) {
+                    for (let [attr, v] of Object.entries(this.info.attrs))
+                        input.setAttribute(attr, v.toString());
+                }
                 return input;
             }
             getValue(value) {
@@ -12192,6 +12197,29 @@ var Katrid;
         });
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        function inputRegexPattern(el, pattern) {
+            const re = new RegExp(pattern);
+            el.addEventListener('keypress', (evt) => {
+                if (!evt.ctrlKey && !evt.altKey && re.test(evt.key)) {
+                    return true;
+                }
+                evt.preventDefault();
+            });
+        }
+        ui.inputRegexPattern = inputRegexPattern;
+        Katrid.directive('input', {
+            mounted(el) {
+                if (el.hasAttribute('input-re-pattern')) {
+                    inputRegexPattern(el, el.getAttribute('input-re-pattern'));
+                }
+            }
+        });
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
