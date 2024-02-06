@@ -1,3 +1,4 @@
+from orun.conf import settings
 from orun.core.signals import app_started
 from orun.apps import AppConfig
 
@@ -16,7 +17,8 @@ class AdminConfig(AppConfig):
 
     def ready(self):
         super().ready()
-        app_started.connect(self._app_started)
+        if getattr(settings, 'ADMIN_AUTOMATION', None):
+            app_started.connect(self._app_started)
 
     def _app_started(self, sender, **kwargs):
         # load automations
