@@ -1397,6 +1397,7 @@ class BaseDatabaseSchemaEditor:
         self.execute(f'''CREATE INDEX {index.name} ON {index.model._meta.db_table} ({index.expressions.join(', ')})''')
 
     def sync_model(self, model: Model):
+        from orun.db.models.fields import BooleanField
         # compare the table metadata
         ## old style
         with self.connection.cursor() as cursor:
@@ -1424,6 +1425,20 @@ class BaseDatabaseSchemaEditor:
                     print(f'Field {f.name} already exists in table {model._meta.db_table} (nothing to do)')
                 else:
                     self.add_column(f.field)
+                    if isinstance(f.field, DecimalField) and not f.field.null and f.field.default == 0:
+                        try:
+                            # apply default value if literal where null
+                            # TODO do that for another field types
+                            self.deferred_sql.append(f'UPDATE {f.field.model._meta.db_table} SET {f.field.column} = 0 WHERE {f.field.column} IS NULL')
+                        except:
+                            pass
+                    elif isinstance(f.field, BooleanField) and not f.field.null and (f.field.default is True or f.field.default is False):
+                        try:
+                            # apply default value if literal where null
+                            # TODO do that for another field types
+                            self.deferred_sql.append(f"""UPDATE {f.field.model._meta.db_table} SET {f.field.column} = {'true' if f.field.default else 'false'} WHERE {f.field.column} IS NULL""")
+                        except:
+                            pass
 
         return
         # sync indexes
