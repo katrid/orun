@@ -5814,8 +5814,11 @@ var Katrid;
                 if (attrs[':readonly']) {
                     section.setAttribute(':readonly', attrs[':readonly']);
                 }
-                else if (attrs.readonly)
+                else if (attrs.readonly) {
                     section.setAttribute('readonly', 'readonly');
+                }
+                else
+                    section.setAttribute(':readonly', `readonlyFields?.includes('${this.name}')`);
                 if (attrs[':required'])
                     section.setAttribute(':required', attrs[':required']);
                 section.classList.add('form-group');
@@ -8030,8 +8033,10 @@ var Katrid;
                 //   child.setParentRecord(value);
                 for (let cb of this.dataCallbacks)
                     cb(this.vm.record);
-                if (this.element)
-                    this.element.dispatchEvent(new CustomEvent('recordChanged', { detail: { record: this.vm.record } }));
+                if (this.element) {
+                    console.debug('record changer');
+                    this.element.dispatchEvent(new CustomEvent('record-changed', { detail: { record: this.vm.record } }));
+                }
             }
             addDataCallback(cb) {
                 this.dataCallbacks.push(cb);
@@ -8110,6 +8115,8 @@ var Katrid;
                 }
             }
             beforeRender(template) {
+                // form events
+                this._attributes = template.attributes;
                 // return a template view
                 let form = template;
                 form.setAttribute('autocomplete', 'off');
@@ -8211,6 +8218,16 @@ var Katrid;
                 this.createToolbarButtons(toolbar);
                 return toolbar;
             }
+            createElement() {
+                super.createElement();
+                if (this._attributes)
+                    Array.from(this._attributes).map(attr => {
+                        if (attr.name.startsWith('v-on:')) {
+                            const fn = new Function('__ctx__', `with (__ctx__) { ${attr.value} }`);
+                            this.element.addEventListener(attr.name.substring(5), () => fn(this.vm));
+                        }
+                    });
+            }
             createToolbarButtons(container) {
                 let parent = container.querySelector('.toolbar-action-buttons');
                 let div = document.createElement('div');
@@ -8279,6 +8296,7 @@ ${Katrid.i18n.gettext('Delete')}
                     $fields: this.fields,
                     recordIndex: this._recordIndex,
                     recordCount: this.recordCount,
+                    readonlyFields: null,
                 };
                 this._applyDataDefinition(data);
                 return data;
@@ -8405,6 +8423,18 @@ ${Katrid.i18n.gettext('Delete')}
                     },
                     copy() {
                         me.copy();
+                    },
+                    readonly(ro, fields, exclude) {
+                        // set fields to readonly
+                        if (ro) {
+                            if (fields === '*') {
+                                this.readonlyFields = Object.keys(me.model.fields);
+                            }
+                            if (this.readonlyFields?.length && exclude?.length)
+                                this.readonlyFields = this.readonlyFields.filter(f => !exclude.includes(f));
+                        }
+                        else
+                            this.readonlyFields = null;
                     },
                     deleteAndClose() {
                         me.deleteAndClose();
@@ -12663,10 +12693,10 @@ var Katrid;
                     this.$name = this.$el.getAttribute('name');
                     this.$elView = el;
                     this.$recordLoaded = (...args) => this.recordLoaded(...args);
-                    el.addEventListener('recordChanged', this.$recordLoaded);
+                    el.addEventListener('record-changed', this.$recordLoaded);
                 },
                 unmounted() {
-                    this.$elView.removeEventListener('recordChanged', this.$recordLoaded);
+                    this.$elView.removeEventListener('record-changed', this.$recordLoaded);
                 },
                 methods: {
                     async recordLoaded(event) {
