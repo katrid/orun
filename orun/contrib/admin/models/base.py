@@ -386,14 +386,14 @@ class AdminModel(models.Model, helper=True):
                 # make a copy of old data
                 old = copy.deepcopy(obj)
                 cls._from_json(obj, row)
-                before_update.send(cls._meta.name, old=obj, new=obj)
+                # before_update.send(cls._meta.name, old=obj, new=obj)
             else:
                 cls._from_json(obj, row)
             if obj._state.adding:
                 cls._from_json(obj, row)
                 # dispatch event
-                if cls._meta.name in after_insert.models:
-                    after_insert.send(cls._meta.name, old=None, new=obj)
+                # if cls._meta.name in after_insert.models:
+                #     after_insert.send(cls._meta.name, old=None, new=obj)
 
             res.append(obj.pk)
         return res
