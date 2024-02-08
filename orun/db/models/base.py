@@ -947,10 +947,11 @@ class Model(metaclass=ModelBase):
                 self.update(parent_path=parent_path)
 
         # save many to many values
-        for f, v in _modified_values.items():
-            if v and (field := self._meta.fields[f]) and field.one_to_many:
-                field.set(self, v)
-                getattr(self.__class__, f).delete_cached_value(self)
+        if _modified_values:
+            for f, v in _modified_values.items():
+                if v and (field := self._meta.fields[f]) and field.one_to_many:
+                    field.set(self, v)
+                    getattr(self.__class__, f).delete_cached_value(self)
 
         if pk_set:
             self.after_update(None, None)
