@@ -1659,8 +1659,6 @@ class BaseDatabaseSchemaEditor:
 
     def save_metadata(self):
         meta = self.new_metadata
-        with open('test.json', 'w') as f:
-            f.write(str(meta.dump()))
         s = json.dumps(meta.dump())
         with self.connection.cursor() as cursor:
             cursor.execute('''UPDATE orun_metadata SET content = %s''', [s])
