@@ -1913,13 +1913,14 @@ class Model(metaclass=ModelBase):
     @classmethod
     def _from_json(cls, instance, data, **kwargs):
         data.pop('id', None)
-        # children = {}
+        children = {}
         for k, v in data.items():
             field = cls._meta.fields[k]
             v = field.to_python(v)
-            # if field.one_to_many or field.many_to_many:
-            #     children[field] = v
-            if field.many_to_one and isinstance(v, (str, int)):
+            if field.one_to_many or field.many_to_many:
+                children[field] = v
+                continue
+            elif field.many_to_one and isinstance(v, (str, int)):
                 setattr(instance, field.attname, v)
             field.save_form_data(instance, v)
 
@@ -1932,29 +1933,29 @@ class Model(metaclass=ModelBase):
         else:
             instance.save(**kwargs)
 
-        # for child, v in children.items():
-        #     try:
-        #         if child.many_to_many:
-        #             v = v or []
-        #             if v:
-        #                 v = list(
-        #                     child.remote_field.model.objects.db_manager(
-        #                         using=kwargs.get('using', DEFAULT_DB_ALIAS)).only('pk').filter(
-        #                         **{'%s__in' % child.remote_field.model._meta.pk.name: v}
-        #                     )
-        #                 )
-        #             getattr(instance, child.name).set(v)
-        #             # setattr(instance, child.name, v)
-        #         else:
-        #             child.set(instance, v)
-        #     except ValidationError as e:
-        #         if isinstance(e.message, str):
-        #             e.error_list.append(e.message)
-        #         else:
-        #             for k, v in dict(e.message_dict).items():
-        #                 e.message_dict[k] = e.message_dict.pop(k)
-        #                 # e.error_dict[f"{child.name}.{k}"] = e.error_dict.pop(k)
-        #         raise
+        for child, v in children.items():
+            try:
+                if child.many_to_many:
+                    v = v or []
+                    if v:
+                        v = list(
+                            child.remote_field.model.objects.db_manager(
+                                using=kwargs.get('using', DEFAULT_DB_ALIAS)).only('pk').filter(
+                                **{'%s__in' % child.remote_field.model._meta.pk.name: v}
+                            )
+                        )
+                    getattr(instance, child.name).set(v)
+                    # setattr(instance, child.name, v)
+                else:
+                    child.set(instance, v)
+            except ValidationError as e:
+                if isinstance(e.message, str):
+                    e.error_list.append(e.message)
+                else:
+                    for k, v in dict(e.message_dict).items():
+                        e.message_dict[k] = e.message_dict.pop(k)
+                        # e.error_dict[f"{child.name}.{k}"] = e.error_dict.pop(k)
+                raise
         return instance
 
     def to_dict(self, fields=None, exclude=None, view_type=None):
