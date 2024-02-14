@@ -1100,6 +1100,7 @@ class ManyToManyField(RelatedField):
         )
         self.has_null_arg = 'null' in kwargs
         kwargs['concrete'] = False
+        kwargs.setdefault('readonly', False)
         super().__init__(**kwargs)
 
         self.db_table = db_table
