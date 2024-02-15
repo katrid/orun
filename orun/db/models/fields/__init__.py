@@ -1695,7 +1695,9 @@ class DecimalField(Field):
         return value
 
     def get_db_prep_save(self, value, connection):
-        if value == 0:
+        if value is None and not self.null:
+            return '0'
+        elif value == 0:
             return '0'
         return value
         # TODO adapt decimal
@@ -1710,7 +1712,7 @@ class DecimalField(Field):
             return float(value)
 
     def save_form_data(self, instance, data):
-        if data:
+        if data is not None:
             data = float(data)
         elif not self.null:
             data = 0
