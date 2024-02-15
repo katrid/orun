@@ -1712,6 +1712,8 @@ class DecimalField(Field):
     def save_form_data(self, instance, data):
         if data:
             data = float(data)
+        elif not self.null:
+            data = 0
         super().save_form_data(instance, data)
 
 
