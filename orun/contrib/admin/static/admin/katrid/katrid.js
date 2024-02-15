@@ -6591,8 +6591,12 @@ var Katrid;
                     val = val.split(',');
                 return val;
             }
-            formCreate(view) {
-                let section = super.formCreate(view);
+            loadInfo(info) {
+                super.loadInfo(info);
+                console.debug('loadinfo', info);
+            }
+            formCreate(fieldEl) {
+                let section = super.formCreate(fieldEl);
                 section.classList.add('ManyToManyField');
                 return section;
             }
@@ -8524,6 +8528,8 @@ ${Katrid.i18n.gettext('Delete')}
                 this.dialogPromise = new Promise(async (resolve, reject) => {
                     this._modal = new bootstrap.Modal(el, options);
                     el.addEventListener('hidden.bs.modal', () => {
+                        if (!this.$result)
+                            this.$discard();
                         resolve(this.$result);
                         this._modal.dispose();
                         el.remove();
@@ -8601,7 +8607,6 @@ ${Katrid.i18n.gettext('Delete')}
                 this.closeDialog();
             }
             discardAndClose() {
-                this.$discard();
                 this.$result = false;
                 this.closeDialog();
             }
