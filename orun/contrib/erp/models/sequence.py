@@ -22,6 +22,11 @@ class Sequence(models.Model):
     class Meta:
         name = 'ir.sequence'
         ordering = ('name',)
+        
+    def get_next(self):
+        self.update(next_id=self.next_id + self.step, current_id=self.next_id)
+        if self.code:
+            return self.code.format(current_id=self.current_id, next_id=self.next_id)
 
 
 class SequenceDateRange(models.Model):
