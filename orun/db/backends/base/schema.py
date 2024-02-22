@@ -1429,7 +1429,8 @@ class BaseDatabaseSchemaEditor:
                         try:
                             # apply default value if literal where null
                             # TODO do that for another field types
-                            self.deferred_sql.append(f'UPDATE {f.field.model._meta.db_table} SET {f.field.column} = 0 WHERE {f.field.column} IS NULL')
+                            #self.deferred_sql.append(f'UPDATE {f.field.model._meta.db_table} SET {f.field.column} = 0 WHERE {f.field.column} IS NULL')
+                            pass
                         except:
                             pass
                     elif isinstance(f.field, BooleanField) and not f.field.null and (f.field.default is True or f.field.default is False):
