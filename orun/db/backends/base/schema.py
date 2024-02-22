@@ -1429,6 +1429,7 @@ class BaseDatabaseSchemaEditor:
                         try:
                             # apply default value if literal where null
                             # TODO do that for another field types
+                            # Postpone updates for after alter table commit
                             #self.deferred_sql.append(f'UPDATE {f.field.model._meta.db_table} SET {f.field.column} = 0 WHERE {f.field.column} IS NULL')
                             pass
                         except:
