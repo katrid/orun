@@ -808,7 +808,8 @@ class Model(metaclass=ModelBase):
         assert update_fields is None or update_fields
         cls = origin = self.__class__
         meta = cls._meta
-        is_updating = self.pk is None
+        inserted = self.pk is None
+        _modified_values = self._state.update_fields
         if not meta.auto_created:
             pre_save.send(
                 sender=origin, instance=self, raw=raw, using=using,
@@ -828,10 +829,22 @@ class Model(metaclass=ModelBase):
                 force_update, using, update_fields,
             )
 
+        # save many to many values
+        if _modified_values:
+            for f, v in _modified_values.items():
+                if v and (field := self._meta.fields[f]) and field.one_to_many:
+                    field.set(self, v)
+                    getattr(self.__class__, f).delete_cached_value(self)
+
         # Store the database on which the object was saved
         self._state.db = using
         # Once saved, this is no longer a to-be-added instance.
         self._state.adding = False
+
+        if inserted:
+            self.after_insert([])
+        else:
+            self.after_update(None, None)
 
         # Signal that the save is complete
         if not meta.auto_created:
@@ -881,8 +894,6 @@ class Model(metaclass=ModelBase):
         if update_fields:
             non_pks = [f for f in non_pks
                        if f.name in update_fields or f.attname in update_fields]
-
-        _modified_values = self._state.update_fields
 
         pk_val = self._get_pk_val(meta)
         if pk_val is None:
@@ -946,17 +957,6 @@ class Model(metaclass=ModelBase):
                 setattr(self, self._meta.parent_path_field, parent_path)
                 self.update(parent_path=parent_path)
 
-        # save many to many values
-        if _modified_values:
-            for f, v in _modified_values.items():
-                if v and (field := self._meta.fields[f]) and field.one_to_many:
-                    field.set(self, v)
-                    getattr(self.__class__, f).delete_cached_value(self)
-
-        if pk_set:
-            self.after_update(None, None)
-        else:
-            self.after_insert([])
         return updated
 
     def _do_update(self, base_qs, using, pk_val, values, update_fields, forced_update):
