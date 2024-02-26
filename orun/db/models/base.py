@@ -1917,7 +1917,7 @@ class Model(metaclass=ModelBase):
         for k, v in data.items():
             field = cls._meta.fields[k]
             v = field.to_python(v)
-            if field.one_to_many or field.many_to_many:
+            if field.many_to_many:
                 children[field] = v
                 continue
             elif field.many_to_one and isinstance(v, (str, int)):
