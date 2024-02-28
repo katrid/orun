@@ -78,6 +78,10 @@ class HtmlEngine:
         rep.from_node(report)
         doc = rep.prepare()
         templ = loader.get_template(kwargs['template'])
+        display_params = params.get('displayParams') or ''
+        if not company:
+            from orun.contrib.erp.models import Company
+            company = Company.objects.filter(active=True).first()
 
         display_params = ''
         html = templ.render(context={
