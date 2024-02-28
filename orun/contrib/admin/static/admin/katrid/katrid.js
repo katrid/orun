@@ -145,6 +145,164 @@ var katrid;
     }
     katrid.localData = localData;
 })(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class BaseActionView {
+            constructor(options) {
+                this.template = options?.template;
+                this.app = options?.app;
+            }
+            createElement() {
+                const el = document.createElement('div');
+                el.className = 'action-view';
+                if (this.template)
+                    el.innerHTML = this.template;
+                return el;
+            }
+            _prepareElement(el) {
+                return el;
+            }
+            getElement() {
+                if (!this.element) {
+                    this.element = this.createElement();
+                    // prepare element for the first time usage
+                    this._prepareElement(this.element);
+                }
+                return this.element;
+            }
+            ready() {
+                return this._ready;
+            }
+            async _execute() {
+            }
+            async execute(app) {
+                app.actionViewer.appendChild(this.getElement());
+                this._ready = new Promise(async (resolve) => {
+                    await this._execute();
+                    resolve();
+                });
+            }
+        }
+        ui.BaseActionView = BaseActionView;
+        class ActionView extends BaseActionView {
+            _prepareElement(el) {
+                super._prepareElement(el);
+                this.vm = this.createVm(el);
+                return el;
+            }
+            defineData() {
+                return {};
+            }
+            defineMethods() {
+                return {};
+            }
+            defineComponent() {
+                return {
+                    data: () => this.defineData(),
+                    methods: this.defineMethods(),
+                };
+            }
+            createVm(el) {
+                const comp = this.defineComponent();
+                this.vm = Katrid.createVm(comp).mount(el);
+                return this.vm;
+            }
+        }
+        ui.ActionView = ActionView;
+        class BaseApplication {
+            constructor(options) {
+                this.actions = {};
+                this.element = options.el;
+                this.template = options.template;
+                this.title = options.title;
+                this.actionViewer = this.element.querySelector('.action-manager');
+                this.render(this.element);
+                katrid.init();
+            }
+            get title() {
+                return this._title;
+            }
+            set title(value) {
+                this._title = value;
+                document.title = value;
+            }
+            $nextTick() {
+                return Vue.nextTick();
+            }
+            registerAction(actionId, action) {
+                // register a builtin action
+                this.actions[actionId] = action;
+            }
+            render(el) {
+                if (!this.actionViewer) {
+                    this.actionViewer = document.createElement('div');
+                    this.actionViewer.className = 'action-manager';
+                }
+                if (typeof this.template === 'string')
+                    this.actionViewer.innerHTML = this.template;
+                el.appendChild(this.actionViewer);
+                el.className = 'katrid-base-app';
+                this.prepareElement(el);
+                this._ready = Promise.resolve(this);
+            }
+            prepareElement(el) {
+            }
+            async gotoAction(actionId) {
+                const action = this.actions[actionId];
+                if (action instanceof BaseActionView)
+                    return await this.setAction(action);
+                else if (action instanceof Function)
+                    return await this.setAction(new action({ app: this }));
+                else
+                    throw new Error('Invalid action');
+            }
+            async setAction(action) {
+                this.action = action;
+                this.actionViewer.innerHTML = '';
+                if (this.action) {
+                    await this.push(this.action);
+                    return this.action;
+                }
+            }
+            push(action) {
+                return action.execute(this);
+            }
+            ready() {
+                return this._ready;
+            }
+        }
+        ui.BaseApplication = BaseApplication;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+/// <reference path="apps/base.ts" />
+var katrid;
+(function (katrid) {
+    var pwa;
+    (function (pwa) {
+        class Application extends katrid.ui.BaseApplication {
+            prepareElement(el) {
+                super.prepareElement(el);
+                // auto create view model
+                Katrid.createVm(this.defineComponent()).mount(el);
+            }
+            defineData() {
+                return {};
+            }
+            defineMethods() {
+                return {};
+            }
+            defineComponent() {
+                return {
+                    data: () => this.defineData(),
+                    methods: this.defineMethods(),
+                };
+            }
+        }
+        pwa.Application = Application;
+    })(pwa = katrid.pwa || (katrid.pwa = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Actions;
@@ -4270,7 +4428,7 @@ var Katrid;
         class Exception extends Error {
             constructor(message) {
                 super(message);
-                Katrid.Forms.Dialogs.alert({ text: message, icon: 'error' });
+                // Katrid.Forms.Dialogs.alert({text: message, icon: 'error'});
             }
         }
         Exceptions.Exception = Exception;
@@ -4346,6 +4504,19 @@ var Katrid;
     }
     Katrid.LocalSettings = LocalSettings;
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    let initialized = false;
+    function init() {
+        if (!initialized) {
+            initialized = true;
+            // register custom elements
+            for (let [tag, entry] of Object.entries(Katrid.customElementsRegistry))
+                customElements.define(tag, entry.constructor, entry.options);
+        }
+    }
+    katrid.init = init;
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Data;
@@ -11413,6 +11584,7 @@ var Katrid;
                 this.element.value = this._formatValue(v);
             }
         }
+        Forms.InputDecimal = InputDecimal;
         Katrid.component('input-decimal', {
             props: ['modelValue'],
             //template: `<!--<input class="form-control">-->`,
@@ -11448,6 +11620,13 @@ var Katrid;
         });
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        ui.InputDecimal = Katrid.Forms.InputDecimal;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -12084,7 +12263,6 @@ var Katrid;
                             if (domain && (typeof domain === 'string'))
                                 domain = JSON.parse(domain);
                             if (this.field.vFilter) {
-                                console.debug('context', vm.parent.record.item);
                                 const newDomain = eval(`(function($parent, ${Object.keys(vm)}) {return ${this.field.vFilter}})`).call(vm, vm.$parent, ...Object.values(vm));
                                 if (newDomain) {
                                     if (domain)
