@@ -128,6 +128,7 @@ class WindowAction(Action):
         model = apps[self.model]
         info['fields'] = model.admin_get_fields_info()
         info['caption'] = info.pop('name')
+        info['help_text'] = model._meta.help_text
         view_id = self.view_id
         views_info = info['viewsInfo'] = {}
         # check if there's a specified view
