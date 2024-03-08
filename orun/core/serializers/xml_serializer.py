@@ -213,6 +213,7 @@ class Deserializer(base.Deserializer):
                     # todo replace by cascade
                     child.groups.delete()
                     child.delete()
+                obj.groups.delete()
             obj.delete()
             xml_obj.delete()
         except:
