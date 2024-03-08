@@ -210,6 +210,8 @@ class Deserializer(base.Deserializer):
                 for child in obj.traverse_children_objects():
                     if (child_obj := Object.objects.get_by_object_id('ui.menu', child.pk)):
                         child_obj.delete()
+                    # todo replace by cascade
+                    child.groups.delete()
                     child.delete()
             obj.delete()
             xml_obj.delete()
