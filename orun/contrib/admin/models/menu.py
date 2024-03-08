@@ -81,6 +81,12 @@ class Menu(models.Model):
     def admin_search_menu(cls, request: HttpRequest, term: str):
         pass
 
+    def traverse_children_objects(self):
+        for child in self.objects.filter(parent_id=self.pk):
+            for m in child.traverse_children_objects():
+                yield m
+            yield child
+
 
 class Group(orun.contrib.auth.models.Group, helper=True):
     menus = models.ManyToManyField(Menu, through='ui.menu.groups.rel')

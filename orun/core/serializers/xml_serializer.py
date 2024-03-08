@@ -205,6 +205,12 @@ class Deserializer(base.Deserializer):
         try:
             xml_obj = Object.objects.get_object(obj.attrib['id'])
             obj = xml_obj.content_object
+            # detect if cascade delete is needed
+            if obj._meta.name == 'ui.menu':
+                for child in obj.traverse_children_objects():
+                    if (child_obj := Object.objects.get_by_object_id('ui.menu', child.pk)):
+                        child_obj.delete()
+                    child.delete()
             obj.delete()
             xml_obj.delete()
         except:
