@@ -1,6 +1,7 @@
 from functools import wraps
 from orun.core.exceptions import ValidationError, RPCError, ObjectDoesNotExist
 from orun.http.response import HttpResponseBase
+from orun.db import transaction
 import orun.messages
 
 
@@ -13,21 +14,22 @@ def jsonrpc(fn):
         _id = None
         kwargs['params'] = data.get('params')
         try:
-            r = fn(request, *args, **kwargs)
-            if isinstance(r, HttpResponseBase):
-                return r
+            with transaction.atomic():
+                r = fn(request, *args, **kwargs)
+                if isinstance(r, HttpResponseBase):
+                    return r
 
-            msgs = orun.messages.get()
-            res = {
-                'jsonrpc': '2.0',
-                'id': _id,
-                'result': r,
-            }
-            if msgs is not None:
-                # add katrid.admin.processMessages Response Processor (should be evaluated by client-side)
-                res['katrid.admin.ResponseMessagesProcessor'] = msgs
+                msgs = orun.messages.get()
+                res = {
+                    'jsonrpc': '2.0',
+                    'id': _id,
+                    'result': r,
+                }
+                if msgs is not None:
+                    # add katrid.admin.processMessages Response Processor (should be evaluated by client-side)
+                    res['katrid.admin.ResponseMessagesProcessor'] = msgs
 
-            return JsonResponse(res)
+                return JsonResponse(res)
         except ValidationError as e:
             code = getattr(e, 'code', None)
             return JsonResponse({

@@ -31,7 +31,6 @@ IGNORED_METHODS = [
 
 
 @login_required
-@transaction.atomic
 @jsonrpc
 def rpc(request, service, meth, params):
     data = request.json
