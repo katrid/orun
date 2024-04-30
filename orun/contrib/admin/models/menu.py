@@ -93,8 +93,8 @@ class Group(orun.contrib.auth.models.Group, helper=True):
 
 
 class MenuGroup(models.Model):
-    menu = models.ForeignKey(Menu, null=False)
-    group = models.ForeignKey('auth.group', null=False)
+    menu = models.ForeignKey(Menu, null=False, ondelete=models.DB_CASCADE)
+    group = models.ForeignKey('auth.group', null=False, on_delete=models.DB_CASCADE)
 
     class Meta:
         name = 'ui.menu.groups.rel'

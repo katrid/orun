@@ -9,4 +9,5 @@ class Draft(models.Model):
     content = models.TextField()
 
     class Meta:
+        name = 'admin.draft'
         log_changes = False
