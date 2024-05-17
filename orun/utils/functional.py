@@ -348,7 +348,6 @@ class LazyObject:
         return copy.deepcopy(self._wrapped, memo)
 
     __bytes__ = new_method_proxy(bytes)
-    __int__ = new_method_proxy(int)
     __str__ = new_method_proxy(str)
     __bool__ = new_method_proxy(bool)
 
