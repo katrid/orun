@@ -1,0 +1,46 @@
+.rating {
+  line-height: 25px;
+  color: #c7c7c7;
+  font-size: 15px;
+  margin-bottom: 4px;
+  height: 19px;
+}
+
+.rating > input {
+  position: absolute;
+  left: -9999px;
+}
+
+.rating > label {
+  float: right;
+  display: block;
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+.rating-variant (@color) {
+
+  & > input:checked ~ label {
+    color: lighten(@color, 10%);
+  }
+
+  &:not(:checked) > label:hover, &:not(:checked) > label:hover ~ label {
+    color: @color;
+  }
+
+  & > input:checked + label:hover, & > input:checked + label:hover ~ label, & > input:checked ~ label:hover, & > input:checked ~ label:hover ~ label, & > label:hover ~ input:checked ~ label {
+    color: @color;
+  }
+}
+
+.rating {
+  .rating-variant(@brand-cyan);
+}
+
+.rating-primary {
+  .rating-variant(@brand-primary)
+}
+
+.rating-success {
+  .rating-variant(@brand-success)
+}

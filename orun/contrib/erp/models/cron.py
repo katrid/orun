@@ -30,7 +30,7 @@ class Cron(models.Model):
     interval_type = models.SelectionField(INTERVAL_TYPE, default='month')
     interval = models.PositiveIntegerField(help_text='Repeat every x.')
     limit = models.IntegerField(default=1, help_text='Number of times the method will be called,\na negative number indicates no limite.')
-    repeat_missed = models.BooleanField(default=False, help_text='Repeat missed occurrences where the server restarts.')
+    repeat_missed = models.BooleanField(default=False, help_text='Repeat missed occurrencies where the server restarts.')
     next_call = models.DateTimeField(label='Next Execution', required=True, default=datetime.datetime.now(), help_text='Next planned execution datetime for this job.')
     priority = models.IntegerField(default=5, help_text='Job priority: 0 higher priority; 10 lower priority.')
 

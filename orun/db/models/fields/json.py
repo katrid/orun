@@ -123,7 +123,6 @@ class StructField(JSONField):
     """
     Complex field structure
     """
-
     def __init__(self, structure, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.structure = structure

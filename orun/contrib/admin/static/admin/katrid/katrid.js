@@ -219,9 +219,7 @@ var katrid;
                 this.title = options.title;
                 this.actionViewer = this.element.querySelector('.action-manager');
                 this.render(this.element);
-                katrid.ui.app = this;
-                //katrid.init();
-                this.ready();
+                katrid.init();
             }
             get title() {
                 return this._title;
@@ -272,7 +270,6 @@ var katrid;
                 return action.execute(this);
             }
             ready() {
-                console.log('ready');
                 return this._ready;
             }
         }
@@ -288,7 +285,7 @@ var katrid;
             prepareElement(el) {
                 super.prepareElement(el);
                 // auto create view model
-                this.vm = Katrid.createVm(this.defineComponent()).mount(el);
+                Katrid.createVm(this.defineComponent()).mount(el);
             }
             defineData() {
                 return {};
@@ -1296,11 +1293,8 @@ var Katrid;
                     h6.innerText = Katrid.i18n.gettext('Technical information');
                     const p = document.createElement('pre');
                     p.innerText = 'Model name: ' + this.modelName;
-                    const pDesc = document.createElement('p');
-                    pDesc.innerHTML = this.config.help_text || '';
                     help.element.append(h6);
                     help.element.append(p);
-                    help.element.append(pDesc);
                 }
                 if (this.view?.fields) {
                     this.view.generateHelp(help);
@@ -4215,28 +4209,19 @@ var Katrid;
             let contentType = res.headers.get('Content-Type');
             let name = res.headers.get('Content-Disposition');
             let url = URL.createObjectURL(bytes);
+            let a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
             if (name?.includes('filename='))
                 name = name.split('filename=', 2)[1];
-            // a.download = name;
-            if (contentType.indexOf('pdf') > -1) {
-                // Open a new window and write the PDF viewer into it
-                let viewer = window.open('/pdf-viewer/pdf/web/viewer.html');
-                viewer.addEventListener('load', async () => {
-                    await viewer.PDFViewerApplication.open({ url, originalUrl: name });
-                    URL.revokeObjectURL(url);
-                });
-            }
-            else {
-                let a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.target = '_blank';
-                a.download = name;
-                document.body.append(a);
+            a.download = name;
+            document.body.append(a);
+            if (contentType.indexOf('pdf') > 1)
+                window.open(url);
+            else
                 a.click();
-                a.remove();
-                URL.revokeObjectURL(url);
-            }
+            URL.revokeObjectURL(url);
+            a.remove();
         }
     })(Services = Katrid.Services || (Katrid.Services = {}));
 })(Katrid || (Katrid = {}));
@@ -4436,22 +4421,22 @@ var Katrid;
         Components.Widget = Widget;
     })(Components = Katrid.Components || (Katrid.Components = {}));
 })(Katrid || (Katrid = {}));
-var katrid;
-(function (katrid) {
-    var exceptions;
-    (function (exceptions) {
+var Katrid;
+(function (Katrid) {
+    var Exceptions;
+    (function (Exceptions) {
         class Exception extends Error {
             constructor(message) {
                 super(message);
-                Katrid.Forms.Dialogs.alert({ text: message, icon: 'error' });
+                // Katrid.Forms.Dialogs.alert({text: message, icon: 'error'});
             }
         }
-        exceptions.Exception = Exception;
+        Exceptions.Exception = Exception;
         class ValidationError extends Exception {
         }
-        exceptions.ValidationError = ValidationError;
-    })(exceptions = katrid.exceptions || (katrid.exceptions = {}));
-})(katrid || (katrid = {}));
+        Exceptions.ValidationError = ValidationError;
+    })(Exceptions = Katrid.Exceptions || (Katrid.Exceptions = {}));
+})(Katrid || (Katrid = {}));
 // initialize the katrid namespace
 var Katrid;
 (function (Katrid) {

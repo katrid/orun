@@ -1,0 +1,85 @@
+.callout {
+  padding: 20px;
+  margin: 20px 0;
+  border: 1px solid #eee;
+  border-left-width: 5px;
+  border-radius: 3px;
+}
+
+.callout h4 {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.callout p:last-child {
+  margin-bottom: 0;
+}
+
+.callout code {
+  border-radius: 3px;
+}
+
+.callout + .callout {
+  margin-top: -5px;
+}
+
+.callout-variant (@color) {
+  background-color: #ffffff;
+  border-left-color: @color;
+
+  h4 {
+    color: @color;
+  }
+}
+
+.callout-default {
+  .callout-variant(#777)
+}
+
+.callout-primary {
+  .callout-variant(@brand-primary);
+}
+
+.callout-success {
+  .callout-variant(@brand-success);
+}
+
+.callout-info {
+  .callout-variant(@brand-info)
+}
+
+.callout-warning {
+  .callout-variant(@brand-warning);
+}
+
+.callout-danger {
+  .callout-variant(@brand-danger);
+}
+
+.callout-deep-purple {
+  .callout-variant(@brand-deep-purple);
+}
+
+.callout-light-green {
+  .callout-variant(@brand-light-green);
+}
+
+.callout-light-blue {
+  .callout-variant(@brand-light-blue);
+}
+
+.callout-blue-gray {
+  .callout-variant(@brand-blue-gray);
+}
+
+.callout-pink {
+  .callout-variant(@brand-pink);
+}
+
+.callout-orange {
+  .callout-variant(@brand-orange);
+}
+
+.callout-teal {
+  .callout-variant(@brand-teal);
+}

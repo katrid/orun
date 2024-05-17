@@ -1,0 +1,27 @@
+
+.modal-variant (@brand-color) {
+  .modal-content {
+    border-left: 6px solid @brand-color;
+  }
+
+  .modal-title {
+    color: @brand-color;
+    font-weight: 400;
+  }
+}
+
+.modal-primary {
+  .modal-variant(@brand-primary);
+}
+.modal-success {
+  .modal-variant(@brand-success);
+}
+.modal-info {
+  .modal-variant(@brand-info);
+}
+.modal-warning {
+  .modal-variant(@brand-warning);
+}
+.modal-danger {
+  .modal-variant(@brand-danger);
+}
