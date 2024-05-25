@@ -195,6 +195,14 @@ class Transform(RegisterLookupMixin, Func):
         return bilateral_transforms
 
 
+# TODO: move to postgres contrib app
+@CharField.register_lookup
+class Unaccent(Transform):
+    bilateral = True
+    lookup_name = "unaccent"
+    function = "UNACCENT"
+
+
 class BuiltinLookup(Lookup):
     def process_lhs(self, compiler, connection, lhs=None):
         lhs_sql, params = super().process_lhs(compiler, connection, lhs)
