@@ -9,6 +9,7 @@ from orun.apps import apps
 from orun.utils.xml import get_xml_fields, etree
 from orun.utils.translation import gettext
 from orun import api
+from orun.conf import settings
 from orun.db import models
 from orun.template.loader import select_template
 from orun.contrib.admin.models import ui
@@ -111,6 +112,8 @@ class AdminModel(models.Model, helper=True):
                         f = None
                         if '__' in k:
                             f = cls._meta.fields[k.split('__', 1)[0]]
+                            if settings.ACCENT_INSENSITIVE and k.endswith('__icontains'):
+                                k = k[:-11] + '__unaccent__icontains'
                         if k == 'OR':
                             _args.append(
                                 reduce(lambda a, b: a | b, ([Q(**{k2: v2 for k2, v2 in f.items()}) for f in v]))
@@ -609,10 +612,13 @@ def _resolve_fk_search(field: models.Field, exact=False):
                 if isinstance(f, models.ForeignKey):
                     name_fields.extend(_resolve_fk_search(f, exact=exact))
                 elif isinstance(f, models.CharField):
+                    t = f.name
+                    if settings.ACCENT_INSENSITIVE:
+                        t += '__unaccent'
                     if exact:
-                        name_fields.append(f.name + '__iexact')
+                        name_fields.append(t + '__iexact')
                     else:
-                        name_fields.append(f.name + '__icontains')
+                        name_fields.append(t + '__icontains')
                 else:
                     name_fields.append(f.name)
         return [f'{field.name}__{f}' for f in name_fields]
@@ -620,8 +626,11 @@ def _resolve_fk_search(field: models.Field, exact=False):
         if field.full_text_search:
             return [f'{field.name}__search']
         else:
+            t = field.name
+            if settings.ACCENT_INSENSITIVE:
+                t += '__unaccent'
             if exact:
-                return [f'{field.name}__iexact']
+                return [f'{t}__iexact']
             else:
-                return [f'{field.name}__icontains']
+                return [f'{t}__icontains']
     return [field.name]
