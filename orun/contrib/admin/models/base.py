@@ -112,7 +112,7 @@ class AdminModel(models.Model, helper=True):
                         f = None
                         if '__' in k:
                             f = cls._meta.fields[k.split('__', 1)[0]]
-                            if settings.ACCENT_INSENSITIVE and k.endswith('__icontains'):
+                            if settings.ACCENT_INSENSITIVE and k.endswith('__icontains') and isinstance(f, models.CharField):
                                 k = k[:-11] + '__unaccent__icontains'
                         if k == 'OR':
                             _args.append(
