@@ -929,6 +929,8 @@ var Katrid;
                     this.view.createElement();
                     if (mode === 'form')
                         await this.view.loadPendingViews();
+                    else
+                        this.lastSearchMode = mode;
                     // this.view.container = this.actionManager;
                     this.view.renderTo(this.container);
                     this._cachedViews[Object.getPrototypeOf(this.view).constructor.viewType] = this.view;
@@ -1261,7 +1263,7 @@ var Katrid;
                 if ((this.viewMode === 'form') && this.canBackToSearch && (index === 0)) {
                     let li = document.createElement('li');
                     li.classList.add('breadcrumb-item');
-                    li.append(this.createBackItemLink(super.getDisplayText(), true, `back(${index}, 'list')`));
+                    li.append(this.createBackItemLink(super.getDisplayText(), true, `back(${index}, '${this.lastSearchMode || 'list'}')`));
                     ol.append(li);
                 }
                 if ((this.viewMode === 'form') && (index < (this.actionManager.actions.length - 1))) {
@@ -3184,7 +3186,11 @@ var Katrid;
                     this.record = record;
                     if (this.action) {
                         let formView = await this.action.showView('form', { params: { id: record.id } });
-                        formView.records = this.vm.records;
+                        console.debug('set records', this.groupLength);
+                        if (this.groupLength)
+                            formView.records = this.datasource.records;
+                        else
+                            formView.records = this.vm.records;
                         formView.recordIndex = index;
                     }
                 }
@@ -5326,6 +5332,7 @@ var Katrid;
                         this.vm.groups.splice.apply(this.vm.groups, [index + 1, 0].concat(res.data));
                     }
                     this._records = this._chain();
+                    console.debug('expand group', this._records);
                 }
                 else {
                     // expand next group level
@@ -9015,6 +9022,8 @@ var Katrid;
                 return comp;
             }
             update(vm) {
+                if (this._resultView)
+                    this._resultView.groupLength = this.controller.groupLength;
                 if (this.controller.groupLength) {
                     // this.controller._groupLength = this.controller.groupLength;
                     if (this._resultView)
@@ -9442,6 +9451,9 @@ var Katrid;
                     field.listCreate(this, fld);
                 }
             }
+            compile() {
+                // compile a function to render line by line
+            }
         }
         Forms.ListRenderer = ListRenderer;
         class TableView extends Forms.RecordCollectionView {
@@ -9692,6 +9704,7 @@ var Katrid;
                 }
             }
             renderTemplate(template) {
+                console.debug('list render', template);
                 template.setAttribute('data-options', JSON.stringify({ rowSelector: this.rowSelector }));
                 let renderer = new ListRenderer({ model: this.model }, { allowGrouping: this.allowGrouping });
                 let div = document.createElement('div');
