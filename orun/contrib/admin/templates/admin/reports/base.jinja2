@@ -1,7 +1,6 @@
 <html class="report">
 <head>
-  <link href="{{ static_path('/admin/katrid/style.css') }}"
-        rel="stylesheet">
+  <link href="/static/admin/katrid/style.css" rel="stylesheet">
   <style>
     @page {
         size: A4;
@@ -18,7 +17,7 @@
     <tr>
       <td class="report-title-logo">
         {% if company.image %}
-        <img src="{{ company.image.path }}">
+        <img src="{{ encode_image_file(company.image.path) }}">
         {% endif %}
       </td>
       <td>
