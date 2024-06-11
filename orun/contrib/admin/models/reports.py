@@ -11,9 +11,10 @@ import mimetypes
 from jinja2 import Template, Environment, pass_context
 
 from orun import api
-from orun.http import HttpRequest
+from orun.http import HttpRequest, HttpResponse
 from orun.apps import apps
 from orun.conf import settings
+from orun.reports.runtime import PreparedReport
 from orun.db import models, connection
 from orun.template import loader
 from orun.utils.translation import gettext_lazy as _
@@ -182,13 +183,18 @@ class ReportAction(Action):
         rep = engine.export(
             xml,
             connection=ConnectionProxy(connection),
-            # company=g.user.user_company,
             name=self.name,
             template='admin/reports/base.jinja2',
             company=apps['auth.user'].objects.get(pk=1).user_company,
             format=format, model=model, query=qs, report_title=self.name, params=params, where=where,
             output_file=output_path,
         )
+        if isinstance(rep, PreparedReport):
+            return {
+                'invoke': {
+                    'katrid.printHtml': rep.content,
+                },
+            }
         if not isinstance(rep, (dict, str)):
             return rep
         if rep:
