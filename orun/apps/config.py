@@ -264,5 +264,9 @@ class AppConfig:
             for filename in self.fixtures:
                 self._load_file(filename, **options)
 
+    @property
+    def docs_path(self):
+        return os.path.join(self.path, 'docs')
+
 
 app_config_ready = Signal()

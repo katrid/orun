@@ -1386,7 +1386,7 @@ var Katrid;
                 let svc = new Katrid.Services.ModelService('ui.action.report');
                 let res = await svc.post('export_report', { args: [action.id], kwargs: { format, params } });
                 if (res.open)
-                    return window.open(res.open);
+                    window.open(res.open);
             }
             get name() {
                 return this.config.info.name;
@@ -1451,7 +1451,6 @@ var Katrid;
                     directives: Katrid.directivesRegistry,
                 });
                 vm.mount(el);
-                console.log('render report dialog');
                 return vm;
             }
         }
@@ -13602,13 +13601,16 @@ var Katrid;
                 }
             }
             getValues() { }
-            export(format) {
+            async export(format) {
                 if (format == null)
                     format = localStorage.katridReportViewer || 'pdf';
                 const params = this.getUserParams();
                 const svc = new Katrid.Services.ModelService('ui.action.report');
-                console.log(params);
-                svc.post('export_report', { args: [this.info.id], kwargs: { format, params } });
+                let res = await svc.post('export_report', { args: [this.info.id], kwargs: { format, params } });
+                console.debug('invoke', res.invoke);
+                if (res.invoke)
+                    for (let [k, v] of Object.entries(res.invoke))
+                        katrid.invoke(k)(v);
                 return false;
             }
             preview() {
@@ -15860,6 +15862,7 @@ var katrid;
         doc.write(html);
         doc.close();
         iframe.onload = () => {
+            console.debug('page loaded');
             iframe.contentWindow.print();
             setTimeout(() => {
                 iframe.remove();

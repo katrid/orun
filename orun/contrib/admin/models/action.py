@@ -1,3 +1,4 @@
+import os
 from collections import defaultdict
 
 from orun import api
@@ -128,7 +129,7 @@ class WindowAction(Action):
         model = apps[self.model]
         info['fields'] = model.admin_get_fields_info()
         info['caption'] = info.pop('name')
-        info['help_text'] = model._meta.help_text
+        info['help_text'] = self.get_help_text(model)
         view_id = self.view_id
         views_info = info['viewsInfo'] = {}
         # check if there's a specified view
@@ -141,6 +142,15 @@ class WindowAction(Action):
         })
         info['viewsInfo']['search'] = model._admin_get_view_info(request, view_type='search')
         return info
+
+    def get_help_text(self, model) -> str:
+        if model._meta.addon and model._meta.addon.path:
+            app_docs = os.path.join(model._meta.addon.docs_path, 'models', model._meta.name, 'index.md')
+            if os.path.isfile(app_docs):
+                with open(app_docs) as f:
+                    return f.read()
+            if model._meta.help_text:
+                return model._meta.help_text
 
 
 class WindowActionView(models.Model):

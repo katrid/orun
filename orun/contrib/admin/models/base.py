@@ -1,3 +1,4 @@
+import os
 from typing import List
 from collections import defaultdict
 import copy
@@ -444,7 +445,15 @@ class AdminModel(models.Model, helper=True):
 
     @classmethod
     def admin_get_field_info(cls, field, view_type=None):
-        return field.fieldinfo
+        info = field.fieldinfo
+        model = field.model
+        # collect md documentation
+        if model._meta.addon and model._meta.addon.path:
+            app_docs = os.path.join(model._meta.addon.docs_path, 'models', model._meta.name, 'fields', f'{field.name}.md')
+            if os.path.isfile(app_docs):
+                with open(app_docs) as f:
+                    info['help_text'] = f.read()
+        return info
 
     @api.classmethod
     def admin_get_fields_info(cls, view_id=None, view_type='form', toolbar=False, context=None, xml=None):
