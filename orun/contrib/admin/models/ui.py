@@ -119,8 +119,6 @@ class View(models.Model):
         pos = element.attrib.get('position')
         expr = element.attrib.get('expr')
         target = source
-        logger.critical('xpath %s %s' % (expr, self.template_name))
-        logger.critical(etree.tostring(element))
         if expr:
             target = target.xpath(expr)[0]
         self._merge(target, pos, element)
