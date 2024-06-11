@@ -1,3 +1,4 @@
+import os
 import json
 import types
 import re
@@ -5,6 +6,8 @@ import markupsafe
 import datetime
 import decimal
 import itertools
+from base64 import encodebytes
+
 from jinja2 import pass_context, Undefined
 from reptile.bands.widgets import Text
 
@@ -50,4 +53,11 @@ def linebreaks(text):
 def groupby(value, attribute):
     expr = lambda x: x[attribute]
     return itertools.groupby(sorted(value, key=expr), expr)
+
+
+def encode_image_file(image_file: str):
+    if os.path.isfile(image_file):
+        with open(image_file, 'rb') as f:
+            ext = image_file.rsplit('.')[-1]
+            return f"data:image/{ext};base64,{encodebytes(f.read()).decode('utf-8')}"
 

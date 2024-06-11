@@ -6,7 +6,7 @@ import jinja2
 from lxml import etree
 import reptile
 from reptile.html import HtmlReport, Grid, GridColumn
-from reptile.chrome import print_to_pdf
+# from reptile.chrome import print_to_pdf
 
 import orun.reports.filters
 from orun.template import engines
@@ -14,7 +14,7 @@ from orun.reports.data import Query
 from orun.db import models
 from orun.template import loader
 from orun.utils.encoding import force_str
-from orun.conf import settings
+from orun.reports.runtime import PreparedReport
 
 
 def create_datasource(sql):
@@ -38,6 +38,7 @@ def url_to_path(path):
 
 
 env.env.globals['static_path'] = url_to_path
+env.env.globals['encode_image_file'] = orun.reports.filters.encode_image_file
 reptile.EnvironmentSettings.env.finalize = orun.reports.filters.localize
 reptile.EnvironmentSettings.env.create_datasource = create_datasource
 
@@ -69,7 +70,7 @@ class HtmlEngine:
                 where[k] = v
         return where
 
-    def export(self, report, format='pdf', company=None, queryset=None, where=None, output_file=None, params=None, **kwargs):
+    def export(self, report, format='pdf', company=None, queryset=None, where=None, output_file=None, params=None, **kwargs) -> str | PreparedReport:
         rep = Report(model=kwargs.get('model'))
         rep.title = kwargs.get('report_title')
         if not where and params:
@@ -88,18 +89,19 @@ class HtmlEngine:
             'content': doc, 'report_title': rep.title, 'company': company, 'display_params': display_params,
         })
         html_file = output_file + '.html'
-        print(html_file)
-        with open(html_file, 'w') as f:
-            f.write(html)
-        self.to_pdf(
-            html_file, output_file,
-            report_footer=reptile.EnvironmentSettings.env.from_string(self.report_footer).render(company=company),
-        )
-        return output_file
+        # Render the prepared report on the browser
+        # with open(html_file, 'w') as f:
+        #     f.write(html)
+        # self.to_pdf(
+        #     html_file, output_file,
+        #     report_footer=reptile.EnvironmentSettings.env.from_string(self.report_footer).render(company=company),
+        # )
+        # temporary send as html
+        return PreparedReport(html, content_type='text/html')
 
     def to_pdf(self, html_path, pdf_path, report_footer):
-        with open(pdf_path, 'wb') as pdf:
-            pdf.write(print_to_pdf(self.loop, pathlib.Path(html_path).as_uri(), report_footer=report_footer, host=getattr(settings, 'CHROME_REPORT_SERVER', 'localhost')))
+        # with open(pdf_path, 'wb') as pdf:
+        #     pdf.write(print_to_pdf(self.loop, pathlib.Path(html_path).as_uri(), report_footer=report_footer, host=getattr(settings, 'CHROME_REPORT_SERVER', 'localhost')))
         return True
 
 
