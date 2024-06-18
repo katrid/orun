@@ -1597,7 +1597,7 @@ class BaseDatabaseSchemaEditor:
             new_name = f'__old_{new_field.name}_{i}'
         ## validate the old field name
         print(f'Rename {new_field.field.model._meta.name}->"{old_field.name}" to "{new_name}"\n Create new field "{new_field.name}"')
-        self.execute(self._rename_field_sql(new_field.model._meta.db_table, old_field.name, new_name))
+        self.execute(self._rename_field_sql(new_field.field.model._meta.db_table, old_field.name, new_name))
         self.add_column(new_field.field)
         # try to copy the old col value to new value
         try:
