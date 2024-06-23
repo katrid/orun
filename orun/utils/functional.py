@@ -3,8 +3,6 @@ import itertools
 import operator
 from functools import total_ordering, wraps
 
-from orun.utils.version import PY36, get_docs_version
-
 
 # You can't trivially replace this with `functools.partial` because this binds
 # to classes and returns bound instances, whereas functools.partial (on
@@ -39,24 +37,7 @@ class cached_property:
         return name.startswith('__') and not name.endswith('__')
 
     def __init__(self, func, name=None):
-        if PY36:
-            self.real_func = func
-        else:
-            func_name = func.__name__
-            name = name or func_name
-            if not (isinstance(name, str) and name.isidentifier()):
-                raise ValueError(
-                    "%r can't be used as the name of a cached_property." % name,
-                )
-            if self._is_mangled(name):
-                raise ValueError(
-                    'cached_property does not work with mangled methods on '
-                    'Python < 3.6 without the appropriate `name` argument. See '
-                    'https://docs.orunproject.com/en/%s/ref/utils/'
-                    '#cached-property-mangled-name' % get_docs_version(),
-                )
-            self.name = name
-            self.func = func
+        self.real_func = func
         self.__doc__ = getattr(func, '__doc__')
 
     def __set_name__(self, owner, name):
