@@ -9128,6 +9128,7 @@ var Katrid;
 <input-date class="input-group date" v-model="cond.value[1]" date-picker="L" v-if="cond.condition === '..'"></input-date>
               </div>
               <input class="form-control" v-model="cond.value[0]" type="text" v-else-if="cond.$field.internalType === 'StringField'">
+
 <div v-else-if="['IntegerField', 'FloatField', 'DecimalField'].includes(cond.$field.internalType)">
               <input class="form-control" v-model="cond.value[0]" type="number">
               <input class="form-control" v-model="cond.value[1]" type="number" v-if="cond.condition === '..'">
@@ -10057,8 +10058,10 @@ var Katrid;
                     getParams() {
                         let r = [];
                         for (let i of this.vm.facets)
-                            if (!i.grouping)
+                            if (!i.grouping) {
                                 r = r.concat(i.getParamValues());
+                                console.debug('params', i);
+                            }
                         return r;
                     }
                     addFacet(facet) {
@@ -10554,7 +10557,6 @@ var Katrid;
                         this.condition = condition;
                         if (((field instanceof Katrid.Data.DateField) || (field instanceof Katrid.Data.DateTimeField)) && Array.isArray(value))
                             value = value.map(val => typeof val === 'string' ? moment(val) : val);
-                        console.log('new value', value);
                         this._value = value;
                         this._selected = true;
                     }
@@ -10581,6 +10583,8 @@ var Katrid;
                         if (this.condition === '..')
                             r[fname] = this._value.map(v => this.field.getParamValue(v));
                         else if ((this.condition === '=') || (this.condition === '!='))
+                            r[fname] = this.field.getParamValue(this._value[0]);
+                        else if ((this.condition === '%') || (this.condition === '!%'))
                             r[fname] = this.field.getParamValue(this._value[0]);
                         else if (this.condition === 'isnull')
                             r[fname] = true;
