@@ -213,7 +213,8 @@ class Deserializer(base.Deserializer):
                     # todo replace by cascade
                     child.groups.delete()
                     child.delete()
-                obj.groups.delete()
+                # obj.groups.delete()
+                apps['ui.menu.groups.rel'].objects.filter(menu=obj).delete()
             obj.delete()
             xml_obj.delete()
         except:
