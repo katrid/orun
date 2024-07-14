@@ -1,5 +1,6 @@
 from orun.db.models import Field, DecimalField, NOT_PROVIDED
 from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
+from orun.db import metadata
 
 
 class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
@@ -95,3 +96,20 @@ WHERE schemas.name = %s AND tables.name = %s AND all_columns.name = %s'''
                 }
             )
 
+    def _alter_column_null_sql(self, new_field: metadata.Column):
+        """
+        Hook to specialize column null alteration for SQL Server.
+
+        Return a (sql, params) fragment to set a column to null or non-null
+        as required by new_field, or None if no changes are required.
+        """
+        sql = self.sql_alter_column_null if new_field.null else self.sql_alter_column_not_null
+        sql %= {
+            'column': self.quote_name(new_field.name),
+            'type': new_field.field.db_type(self.connection)
+        }
+        sql = self.sql_alter_column % {
+            'table': new_field.field.model._meta.db_table,
+            'changes': sql
+        }
+        self.execute(sql)
