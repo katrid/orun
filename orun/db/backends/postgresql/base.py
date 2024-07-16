@@ -129,6 +129,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'istartswith': "LIKE UPPER({}) || '%%'",
         'endswith': "LIKE '%%' || {}",
         'iendswith': "LIKE '%%' || UPPER({})",
+        'unaccent': "unaccent({})",
     }
 
     Database = Database
