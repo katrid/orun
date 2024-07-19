@@ -416,7 +416,7 @@ var Katrid;
             }
             search() {
             }
-            onHashChange(params) {
+            async onHashChange(params) {
                 $(this.app).trigger('action', [this]);
             }
             getDisplayText() {
@@ -468,11 +468,11 @@ var Katrid;
             }
         }
         UrlAction.actionType = 'ir.action.url';
-        function goto(actionId, config) {
+        function goto(actionId, config, reset = false) {
             let params = { action: actionId };
             if (config)
                 Object.assign(params, config);
-            return Katrid.webApp.actionManager.onHashChange(params, false);
+            return Katrid.webApp.actionManager.onHashChange(params, reset);
         }
         Actions.goto = goto;
         Actions.registry[UrlAction.actionType] = UrlAction;
@@ -850,7 +850,7 @@ var Katrid;
                 // apply params
                 let viewType = this.params.view_type;
                 if (viewType === this.viewType)
-                    this.view.onHashChange(params);
+                    await this.view.onHashChange(params);
                 else {
                     // this.viewType = viewType;
                     await this.showView(viewType);
@@ -960,7 +960,7 @@ var Katrid;
                 if (mode === 'form') {
                     const form = this.view;
                     if (!params?.params?.id && !this.params?.id)
-                        form.insert();
+                        await form.insert();
                     else
                         form.setState(Katrid.Data.DataSourceState.browsing);
                 }
@@ -1311,6 +1311,16 @@ var Katrid;
         }
         WindowAction.actionType = 'ui.action.window';
         Actions.WindowAction = WindowAction;
+        async function gotoNewRecord(config) {
+            let actionId = config.actionId;
+            let action = await Katrid.Actions.goto(actionId, { view_type: 'list' }, true);
+            // TODO replace by await
+            setTimeout(() => {
+                console.log('goto', config.values);
+                action.view.vm.insert(config.values);
+            }, 1000);
+        }
+        Actions.gotoNewRecord = gotoNewRecord;
         Katrid.Actions.registry[WindowAction.actionType] = WindowAction;
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
@@ -3045,9 +3055,9 @@ var Katrid;
                             window.location.href = res.location;
                     }
                 };
-                comp.methods.insert = async function () {
+                comp.methods.insert = async function (defaultValues) {
                     let view = await this.setViewMode('form');
-                    view.vm.insert();
+                    view.vm.insert(defaultValues);
                 };
                 comp.computed.$fields = function () {
                     return me.fields;
@@ -8229,10 +8239,8 @@ var Katrid;
                 //   child.setParentRecord(value);
                 for (let cb of this.dataCallbacks)
                     cb(this.vm.record);
-                if (this.element) {
-                    console.debug('record changer');
+                if (this.element)
                     this.element.dispatchEvent(new CustomEvent('record-changed', { detail: { record: this.vm.record } }));
-                }
             }
             addDataCallback(cb) {
                 this.dataCallbacks.push(cb);
@@ -8599,8 +8607,9 @@ ${Katrid.i18n.gettext('Delete')}
                     edit() {
                         me.edit();
                     },
-                    insert() {
-                        me.insert();
+                    insert(defaultValues) {
+                        console.log('insert', defaultValues);
+                        me.insert(defaultValues);
                     },
                     save() {
                         me.save();
@@ -9643,6 +9652,18 @@ var Katrid;
                         this.allSelectionFilter = false;
                         Forms.selectionToggleAll.call(this, ...arguments);
                     },
+                    async actionViewClick(methName, params) {
+                        try {
+                            if (!params?.selection)
+                                params = { ids: this.selection.map(rec => rec.id) };
+                            this.pendingOperation = true;
+                            let res = await me.model.service.rpc(methName, null, params);
+                            await me.action._evalResponseAction(res);
+                        }
+                        finally {
+                            this.pendingOperation = false;
+                        }
+                    },
                 });
                 return comp;
             }
@@ -10594,6 +10615,8 @@ var Katrid;
                             r[fname] = false;
                         else if (this.condition === 'true')
                             r[fname] = true;
+                        else
+                            r[fname] = this._value[0];
                         return r;
                     }
                 }
