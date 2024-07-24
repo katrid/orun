@@ -1,10 +1,14 @@
 <form>
-    <div class="media-left">
-      <field name="image" label="Imagem"/>
+  <div class="d-flex">
+    <div class="flex-shrink-0">
+      <field name="image" label="Image"/>
     </div>
-    <div class="media-body row col">
-      <field name="name" cols="3"/>
+    <div class="flex-grow-1">
+      <div class="row">
+        <field name="name"/>
+      </div>
     </div>
+  </div>
   <tabset>
     <tab>
       <tab-heading>Impressão de Documentos</tab-heading>

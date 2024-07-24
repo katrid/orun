@@ -1,15 +1,16 @@
 <form>
-  <div class="media">
-    <div class="d-flex">
+
+  <div class="d-flex">
+    <div class="flex-shrink-0">
       <field name="image" nolabel ng-empty-image="(record.company_type === 'individual' && '/static/admin/assets/img/avatar.png') || ('/static/admin/assets/img/no-image.png')"/>
     </div>
-    <div class="media-body col-12">
+    <div class="flex-grow-1">
       <h3 class="row">
         <field name="name" cols="12" class="form-control-lg" nolabel="placeholder"/>
       </h3>
       <div class="row">
-        <field name="company_type"/>
-        <field name="parent" caption="{{ _('Company') }}"/>
+        <field name="company_type" cols="3"/>
+        <field name="parent" caption="{{ _('Company') }}" cols="9"/>
       </div>
     </div>
   </div>
