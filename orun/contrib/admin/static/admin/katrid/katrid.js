@@ -3344,7 +3344,7 @@ var Katrid;
             }
             async setSearchParams(params) {
                 let p = {};
-                if (this.action.info?.domain)
+                if (this.action?.info?.domain)
                     p = JSON.parse(this.action.info.domain);
                 for (let [k, v] of Object.entries(p)) {
                     let arg = {};
@@ -9510,6 +9510,7 @@ var Katrid;
                         { text: Katrid.i18n.gettext('Cancel'), click: '$closeDialog(null)' },
                     ];
                 view.render();
+                search.resultView = view;
                 search.render();
                 let body = view.element.querySelector('.modal-body');
                 body.insertBefore(search.element, body.firstElementChild);
@@ -10126,7 +10127,8 @@ var Katrid;
                             this._groupLength = this.groupLength;
                             await this.searchView.resultView.applyGroups(this.groupBy(), this.getParams());
                         }
-                        else { }
+                        else {
+                        }
                         // apply changes to window action
                         // this.action.setSearchParams(this.getParams());
                         this.vm.update();
