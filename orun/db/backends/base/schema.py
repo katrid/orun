@@ -1525,7 +1525,7 @@ class BaseDatabaseSchemaEditor:
             if old.default != new.default:
                 # default value changed
                 self.alter_column_default(new)
-                self._apply_default_value_to_null(new)
+                self._apply_default_value_to_null(new, new.field.db_default)
 
             if old.null != new.null:
                 self._alter_column_null_sql(new)
