@@ -8,7 +8,7 @@ from orun.db.backends.ddl_references import (
     Columns, Expressions, ForeignKeyName, IndexName, Statement, Table,
 )
 from orun.db.backends.utils import names_digest, split_identifier
-from orun.db.models.fields import Field, DecimalField, NOT_PROVIDED, CharField, IntegerField
+from orun.db.models.fields import Field, DecimalField, NOT_PROVIDED, CharField, IntegerField, FloatField, DateField
 from orun.db.backends.base.introspection import FieldInfo
 from orun.db.models import Deferrable, Index, Model
 from orun.db.models.sql import Query
@@ -1436,13 +1436,18 @@ class BaseDatabaseSchemaEditor:
                 else:
                     self.add_column(f.field)
                     if (
-                        (isinstance(f.field, DecimalField) and not f.field.null and isinstance(f.field.db_default, (int, float, decimal.Decimal))) or
+                        (isinstance(f.field, (DecimalField, FloatField)) and not f.field.null and isinstance(f.field.db_default, (int, float, decimal.Decimal))) or
                         (isinstance(f.field, BooleanField) and not f.field.null and isinstance(f.field.db_default, bool)) or
                         (isinstance(f.field, IntegerField) and not f.field.null and isinstance(f.field.db_default, int)) or
-                        (isinstance(f.field, CharField) and not f.field.null and isinstance(f.field.db_default, str))
+                        (isinstance(f.field, IntegerField) and not f.field.null and isinstance(f.field.db_default, int)) or
+                        (isinstance(f.field, CharField) and not f.field.null and isinstance(f.field.db_default, str)) or
+                        (isinstance(f.field, DateField) and not f.field.null and (callable(f.field.default) or isinstance(f.field.db_default, str)))
                     ):
+                        def_value = f.field.db_default
+                        if callable(f.field.default):
+                            def_value = f.field.default()
                         # apply default value if literal where null
-                        self._apply_default_value_to_null(f, f.field.db_default)
+                        self._apply_default_value_to_null(f, def_value)
         return
         # sync indexes
         old_indexes = {ix.name: ix for ix in table.indexes}
@@ -1632,8 +1637,8 @@ class BaseDatabaseSchemaEditor:
             self.sql_update_with_default % {
                 'table': new_field.field.model._meta.db_table,
                 'column': self.quote_name(new_field.name),
-                'default': self.prepare_default(default),
-            }
+                'default': '%s',
+            }, (default,)
         )
 
     def alter_column_default(self, new_field: metadata.Column):
