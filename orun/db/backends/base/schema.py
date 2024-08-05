@@ -8,7 +8,7 @@ from orun.db.backends.ddl_references import (
     Columns, Expressions, ForeignKeyName, IndexName, Statement, Table,
 )
 from orun.db.backends.utils import names_digest, split_identifier
-from orun.db.models.fields import Field, DecimalField, NOT_PROVIDED
+from orun.db.models.fields import Field, DecimalField, NOT_PROVIDED, CharField, IntegerField
 from orun.db.backends.base.introspection import FieldInfo
 from orun.db.models import Deferrable, Index, Model
 from orun.db.models.sql import Query
@@ -222,6 +222,9 @@ class BaseDatabaseSchemaEditor:
         #     'subclasses of BaseDatabaseSchemaEditor for backends which have '
         #     'requires_literal_defaults must provide a prepare_default() method'
         # )
+        # quote value if type is string
+        if isinstance(value, str):
+            return "'%s'" % value
         return str(value)
 
     @staticmethod
@@ -1434,7 +1437,9 @@ class BaseDatabaseSchemaEditor:
                     self.add_column(f.field)
                     if (
                         (isinstance(f.field, DecimalField) and not f.field.null and isinstance(f.field.db_default, (int, float, decimal.Decimal))) or
-                        (isinstance(f.field, BooleanField) and not f.field.null and (isinstance(f.field.db_default, bool)))
+                        (isinstance(f.field, BooleanField) and not f.field.null and isinstance(f.field.db_default, bool)) or
+                        (isinstance(f.field, IntegerField) and not f.field.null and isinstance(f.field.db_default, int)) or
+                        (isinstance(f.field, CharField) and not f.field.null and isinstance(f.field.db_default, str))
                     ):
                         # apply default value if literal where null
                         self._apply_default_value_to_null(f, f.field.db_default)
