@@ -2,6 +2,7 @@ import logging
 import json
 from datetime import datetime
 from collections import defaultdict
+import decimal
 
 from orun.db.backends.ddl_references import (
     Columns, Expressions, ForeignKeyName, IndexName, Statement, Table,
@@ -95,6 +96,7 @@ class BaseDatabaseSchemaEditor:
     sql_delete_pk = sql_delete_constraint
 
     sql_delete_procedure = 'DROP PROCEDURE %(procedure)s'
+    postponed_sql: list[list | tuple]
 
     def __init__(self, connection, collect_sql=False, atomic=True):
         self._old_fields = None
@@ -110,6 +112,7 @@ class BaseDatabaseSchemaEditor:
 
     def __enter__(self):
         self.deferred_sql = []
+        self.postponed_sql = []
         if self.atomic_migration:
             self.atomic = atomic(self.connection.alias)
             self.atomic.__enter__()
@@ -121,6 +124,10 @@ class BaseDatabaseSchemaEditor:
                 self.execute(sql)
         if self.atomic_migration:
             self.atomic.__exit__(exc_type, exc_value, traceback)
+        # postponed sql must be executed in a new transaction
+        if self.postponed_sql:
+            with atomic(self.connection.alias):
+                self.apply_postponed_sql()
 
     # Core utility functions
 
@@ -1425,23 +1432,12 @@ class BaseDatabaseSchemaEditor:
                     print(f'Field {f.name} already exists in table {model._meta.db_table} (nothing to do)')
                 else:
                     self.add_column(f.field)
-                    if isinstance(f.field, DecimalField) and not f.field.null and f.field.default == 0:
-                        try:
-                            # apply default value if literal where null
-                            # TODO do that for another field types
-                            # Postpone updates for after alter table commit
-                            #self.deferred_sql.append(f'UPDATE {f.field.model._meta.db_table} SET {f.field.column} = 0 WHERE {f.field.column} IS NULL')
-                            pass
-                        except:
-                            pass
-                    elif isinstance(f.field, BooleanField) and not f.field.null and (f.field.default is True or f.field.default is False):
-                        try:
-                            # apply default value if literal where null
-                            # TODO do that for another field types
-                            self.deferred_sql.append(f"""UPDATE {f.field.model._meta.db_table} SET {f.field.column} = {self.prepare_default(f.field.default)} WHERE {f.field.column} IS NULL""")
-                        except:
-                            pass
-
+                    if (
+                        (isinstance(f.field, DecimalField) and not f.field.null and isinstance(f.field.db_default, (int, float, decimal.Decimal))) or
+                        (isinstance(f.field, BooleanField) and not f.field.null and (isinstance(f.field.db_default, bool)))
+                    ):
+                        # apply default value if literal where null
+                        self._apply_default_value_to_null(f, f.field.db_default)
         return
         # sync indexes
         old_indexes = {ix.name: ix for ix in table.indexes}
@@ -1602,8 +1598,9 @@ class BaseDatabaseSchemaEditor:
         # try to copy the old col value to new value
         try:
             print(f'UPDATE {new_field.field.model._meta.db_table} SET {self.quote_name(new_field.name)} = {self.quote_name(old_field.name)}')
-            self.execute(f'UPDATE {new_field.field.model._meta.db_table} SET {self.quote_name(new_field.name)} = {self.quote_name(old_field.name)}')
-            print(f'Data copied from "{old_field.name}" to "{new_field.name}"!')
+            # postpone data copy
+            self.postponed_sql.append(f'UPDATE {new_field.field.model._meta.db_table} SET {self.quote_name(new_field.name)} = {self.quote_name(old_field.name)}')
+            print(f'Data will be copied from "{old_field.name}" to "{new_field.name}"!')
             # auto apply default value to null field
             if new_field.default:
                 self._apply_default_value_to_null(new_field)
@@ -1611,12 +1608,28 @@ class BaseDatabaseSchemaEditor:
         except Exception as e:
             print(e)
 
-    def _apply_default_value_to_null(self, new_field):
-        self.execute(
-            f'''UPDATE {new_field.field.model._meta.db_table} 
-            SET {self.quote_name(new_field.name)} = {self.prepare_default(new_field.default)}
-            WHERE {self.quote_name(new_field)} IS NULL
-            ''')
+    def add_postponed_sql(self, sql, params=None):
+        self.postponed_sql.append((sql, params))
+
+    def apply_postponed_sql(self):
+        """
+        Apply postponed sql into database
+        :return:
+        """
+        for sql, params in self.postponed_sql:
+            if params:
+                self.execute(sql, params)
+            else:
+                self.execute(sql)
+
+    def _apply_default_value_to_null(self, new_field, default):
+        self.add_postponed_sql(
+            self.sql_update_with_default % {
+                'table': new_field.field.model._meta.db_table,
+                'column': self.quote_name(new_field.name),
+                'default': self.prepare_default(default),
+            }
+        )
 
     def alter_column_default(self, new_field: metadata.Column):
         if new_field.default is None:
