@@ -1439,7 +1439,6 @@ class BaseDatabaseSchemaEditor:
                         (isinstance(f.field, (DecimalField, FloatField)) and not f.field.null and isinstance(f.field.db_default, (int, float, decimal.Decimal))) or
                         (isinstance(f.field, BooleanField) and not f.field.null and isinstance(f.field.db_default, bool)) or
                         (isinstance(f.field, IntegerField) and not f.field.null and isinstance(f.field.db_default, int)) or
-                        (isinstance(f.field, IntegerField) and not f.field.null and isinstance(f.field.db_default, int)) or
                         (isinstance(f.field, CharField) and not f.field.null and isinstance(f.field.db_default, str)) or
                         (isinstance(f.field, DateField) and not f.field.null and (callable(f.field.default) or isinstance(f.field.db_default, str)))
                     ):
