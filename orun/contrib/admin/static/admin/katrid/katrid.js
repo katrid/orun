@@ -1129,11 +1129,18 @@ var Katrid;
                     this.pendingOperation = false;
                 }
             }
-            onActionLink(actionId, actionType, context) {
+            onActionLink(actionId, actionType, context, evt) {
                 let ctx = { active_id: this.view?.record?.id };
                 if (context)
                     Object.assign(ctx, context);
                 Object.assign(ctx, this.context);
+                if (evt.target.hasAttribute('data-binding-params')) {
+                    let bindingParams = evt.target.getAttribute('data-binding-params');
+                    // TODO replace by katrid eval api function
+                    const fn = new Function('__ctx__', `with (__ctx__) { return ${bindingParams} }`);
+                    const params = fn.call(this, this.view.vm);
+                    ctx.bindingParams = params;
+                }
                 return Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx);
             }
             async _evalResponseAction(res) {
@@ -7352,7 +7359,7 @@ var Katrid;
                 el.classList.add('dropdown-item');
                 this.assign(action, el);
                 if (el.hasAttribute('data-action'))
-                    el.setAttribute('v-on:click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}')`);
+                    el.setAttribute('v-on:click', `action.onActionLink('${action.getAttribute('data-action')}', '${action.getAttribute('data-action-type')}', null, $event)`);
                 else if ((el.getAttribute('type') === 'object') && (el.hasAttribute('name'))) {
                     el.setAttribute('v-on:click', `action.formButtonClick(record.id, '${el.getAttribute('name')}')`);
                 }
@@ -7376,6 +7383,9 @@ var Katrid;
                     el.setAttribute('id', action.id);
                 if (action.hasAttribute('caption'))
                     el.innerHTML = action.getAttribute('caption');
+                // binding params
+                if (action.hasAttribute('binding-params'))
+                    el.setAttribute('data-binding-params', action.getAttribute('binding-params'));
                 return el;
             }
         }

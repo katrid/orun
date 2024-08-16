@@ -139,7 +139,7 @@ class ReportAction(Action):
             data['content'] = '<params/>'
         return data
 
-    def _export_report(self, format='pdf', params=None, where=None):
+    def _export_report(self, format='pdf', params=None, where=None, binding_params=None):
         qs = model = None
         if self.model:
             model = apps[self.model]
@@ -180,12 +180,17 @@ class ReportAction(Action):
         engine = get_engine(REPORT_ENGINES[rep_type])
         fname = uuid.uuid4().hex + '.pdf'
         output_path = os.path.join(settings.REPORT_PATH, fname)
+        if 'company_id' in binding_params:
+            company = apps['res.company'].objects.get(pk=binding_params['company_id'])
+        else:
+            # TODO get the current user company
+            company = apps['auth.user'].objects.get(pk=1).user_company
         rep = engine.export(
             xml,
             connection=ConnectionProxy(connection),
             name=self.name,
             template='admin/reports/base.jinja2',
-            company=apps['auth.user'].objects.get(pk=1).user_company,
+            company=company,
             format=format, model=model, query=qs, report_title=self.name, params=params, where=where,
             output_file=output_path,
         )
@@ -237,7 +242,7 @@ class ReportAction(Action):
             }
 
     @api.classmethod
-    def export_report(cls, id, format='pdf', params=None, where=None):
+    def export_report(cls, id, format='pdf', params=None, where=None, binding_params=None):
         # TODO check permission
         if isinstance(id, list):
             id = id[0]
@@ -247,18 +252,21 @@ class ReportAction(Action):
             rep = cls.objects.get(pk=id)
         if params:
             where = params.pop('where', None)
-        return rep._export_report(format=format, params=params, where=where)
+        return rep._export_report(format=format, params=params, where=where, binding_params=binding_params)
 
     @api.classmethod
     def on_execute_action(cls, action_id, context):
         fmt = context.pop('format', 'pdf')
         params = context.pop('params', None)
+        binding_params = None
         if params is None:
             if 'active_id' in context:
                 params = {
                     'where': {'pk': context['active_id']},
                 }
-        return cls.export_report(action_id, fmt, params)
+        if context and 'bindingParams' in context:
+            binding_params = context['bindingParams']
+        return cls.export_report(action_id, fmt, params, binding_params=binding_params)
 
     @api.classmethod
     def get_metadata(cls, request: HttpRequest, id):
