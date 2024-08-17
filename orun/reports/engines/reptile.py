@@ -89,7 +89,8 @@ class ReptileEngine:
                 vars['report_logo'] = logo
         from orun.contrib.erp.models import Company
 
-        company = Company.objects.filter(active=True).first()
+        if company is None:
+            company = Company.objects.filter(active=True).first()
         if company:
             try:
                 where['company_logo'] = company.image.read()
