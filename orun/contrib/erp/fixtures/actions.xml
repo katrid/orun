@@ -33,6 +33,9 @@
   <action id="action.view.auth.group" type="ui.action.window" name="Groups" model="auth.group">
     <field name="view_mode">list,form</field>
   </action>
+  <action id="action.view.auth.rule" type="ui.action.window" name="Rules" model="auth.rule">
+    <field name="view_mode">list,form</field>
+  </action>
   <action id="action.view.res.company" type="ui.action.window" name="Companies" model="res.company">
     <field name="view_mode">list,form</field>
   </action>

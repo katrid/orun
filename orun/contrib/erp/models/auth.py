@@ -4,6 +4,7 @@ from orun.contrib import auth
 from orun.conf import settings
 from orun.contrib.auth.hashers import check_password
 from orun.core.exceptions import PermissionDenied
+from orun.http import HttpRequest
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 from orun.contrib.auth.models import AbstractUser
@@ -86,6 +87,11 @@ class User(AbstractUser, Partner):
                 return False
         return True
 
+    def has_group(self, group: str | int):
+        if isinstance(group, int):
+            return self.groups.filter(group_id=group).exists()
+        return self.groups.filter(name=group).exists()
+
     @classmethod
     def authenticate(cls, username, password):
         usr = cls.objects.filter(username=username, active=True, is_staff=True).first()
@@ -119,7 +125,7 @@ class Rule(models.Model):
     active = models.BooleanField(default=True)
     model = models.ForeignKey('content.type')
     groups = models.ManyToManyField('auth.group')
-    domain = models.TextField()
+    domain = models.TextField(label='Conditions', help_text='Python expression representing the filter condition')
     can_read = models.BooleanField(default=True)
     can_change = models.BooleanField(default=True)
     can_create = models.BooleanField(default=True)
@@ -127,6 +133,15 @@ class Rule(models.Model):
 
     class Meta:
         name = 'auth.rule'
+        verbose_name = 'Rule'
+        verbose_name_plural = 'Rules'
+
+    @classmethod
+    def get_rules(cls, model: str):
+        return cls.objects.filter(model__name=model)
+
+    def eval_rule(self, context: dict):
+        return eval(self.domain, context)
 
 
 class Export(models.Model):

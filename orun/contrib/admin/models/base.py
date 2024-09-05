@@ -12,6 +12,7 @@ from orun.utils.xml import get_xml_fields, etree
 from orun.utils.translation import gettext
 from orun import api
 from orun.conf import settings
+from orun import SUPERUSER
 from orun.db import models
 from orun.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
 from orun.template.loader import select_template
@@ -162,6 +163,23 @@ class AdminModel(models.Model, helper=True):
             qs = qs.filter(**default)
         if fields:
             qs = qs.only(*fields)
+
+        # TODO move to erp
+        if 'auth.rule' in apps.models:
+            Rule = apps.models['auth.rule']
+            current_user = request.user
+            current_user_id = request.user_id
+            if current_user_id == SUPERUSER or current_user.is_superuser:
+                return qs
+            ctx = {'current_user': current_user, 'current_user_id': current_user.pk, 'user': current_user,
+                   'user_id': current_user.pk}
+            for r in Rule.get_rules(cls._meta.name):
+                rule = r.eval_rule(ctx)
+                if isinstance(rule, dict):
+                    rule = [rule]
+                if isinstance(rule, list):
+                    for i in rule:
+                        qs = qs.filter(**i)
         return qs
 
     def _api_format_choice(self, format=None, **context):

@@ -5,6 +5,7 @@
       <menuitem id="menu.settings.auth.user" name="Users" action="action.view.auth.user"/>
       <menuitem id="menu.settings.auth.group" name="Groups" action="action.view.auth.group"/>
       <menuitem id="menu.settings.auth.company" name="Companies" action="action.view.res.company"/>
+      <menuitem id="menu.settings.auth.rules" name="Rules" action="action.view.auth.rule"/>
     </menuitem>
     <menuitem id="menu.settings.ui" name="User Interface">
       <menuitem id="menu.settings.ui.action" name="Actions" action="action.view.ui.action">
