@@ -7,11 +7,13 @@ from itertools import chain
 import io
 
 from orun.apps import apps
+from orun.core.exceptions import FieldDoesNotExist
 from orun.utils.xml import get_xml_fields, etree
 from orun.utils.translation import gettext
 from orun import api
 from orun.conf import settings
 from orun.db import models
+from orun.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
 from orun.template.loader import select_template
 from orun.contrib.admin.models import ui
 from orun.db.models import NOT_PROVIDED, Field, BooleanField, Q, ObjectDoesNotExist
@@ -112,9 +114,23 @@ class AdminModel(models.Model, helper=True):
                             default.pop(cls._meta.active_field)
                         f = None
                         if '__' in k:
-                            f = cls._meta.fields[k.split('__', 1)[0]]
-                            if settings.ACCENT_INSENSITIVE and k.endswith('__icontains') and isinstance(f, models.CharField):
-                                k = k[:-11] + '__unaccent__icontains'
+                            k_fname, k2 = k.split('__', 1)
+                            try:
+                                f = cls._meta.fields[k_fname]
+                                if isinstance(f, models.OneToManyField):
+                                    # special resolve o2m field
+                                    # get name field
+                                    assert f.related_model._meta.name_field
+                                    name_field = f.related_model._meta.name_field
+                                    k = f.name + '__' + name_field + '__' + k.split('__', 1)[1]
+                                elif settings.ACCENT_INSENSITIVE and k.endswith('__icontains') and isinstance(f, models.CharField):
+                                    k = k[:-11] + '__unaccent__icontains'
+                            except FieldDoesNotExist:
+                                # check if field is a related field
+                                f = getattr(cls, k_fname, None)
+                                if not isinstance(f, ReverseManyToOneDescriptor):
+                                    # resolve related field
+                                    raise
                         if k == 'OR':
                             _args.append(
                                 reduce(lambda a, b: a | b, ([Q(**{k2: v2 for k2, v2 in f.items()}) for f in v]))

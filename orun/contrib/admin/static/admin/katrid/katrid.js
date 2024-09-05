@@ -10437,6 +10437,8 @@ var Katrid;
                                 this.pattern = /^[\d.\s\-:\/;]+$/;
                             this.expandable = false;
                         }
+                        if (el.hasAttribute('search-key'))
+                            this.searchKey = el.getAttribute('search-key');
                         if (el && el.hasAttribute('search-pattern'))
                             this.pattern = new RegExp(el.getAttribute('search-pattern'));
                     }
@@ -10484,7 +10486,7 @@ var Katrid;
                     }
                     getParamValue(value) {
                         let r = {};
-                        let name = this.name;
+                        let name = this.searchKey || this.name;
                         if (Array.isArray(value)) {
                             r[name + this.lookup] = value[0];
                         }
