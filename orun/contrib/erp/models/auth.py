@@ -1,3 +1,4 @@
+from typing import ClassVar
 from orun import api
 from orun.apps import apps
 from orun.contrib import auth
@@ -141,6 +142,7 @@ class Rule(models.Model):
         return cls.objects.filter(model__name=model)
 
     def eval_rule(self, context: dict):
+        context['__builtins__'] = None
         return eval(self.domain, context)
 
 
@@ -159,3 +161,17 @@ class ExportField(models.Model):
     class Meta:
         name = 'auth.export.field'
 
+
+class UserData(models.Model):
+    user = models.ForeignKey(User, null=False, on_delete=models.CASCADE)
+    key = models.CharField(128, null=False, db_index=True)
+    value = models.TextField()
+
+    class Meta:
+        name = 'auth.user.data'
+        log_changes = False
+
+    @classmethod
+    def get_data(cls, user_id: int, key: str):
+        d = cls.objects.filter(user_id=user_id, key=key).first()
+        return d and d.value
