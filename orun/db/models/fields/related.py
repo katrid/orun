@@ -1665,8 +1665,8 @@ class OneToManyField(RelatedField):
                     elif action == 'UPDATE':
                         rel_model.api_write(values)
                 elif action == 'DESTROY':
-                    # rel_model.api_delete(None, [v['id']])
-                    rel_model.objects.filter(pk=v['id']).delete()
+                    rel_model.api_delete(apps.env.request, [v['id']])
+                    # rel_model.objects.filter(pk=v['id']).delete()
             else:
                 setattr(v, to_field, instance)
                 v.save()
