@@ -10420,6 +10420,7 @@ var Katrid;
                         this.field = field;
                         this._expanded = false;
                         this.options = $(el).data('options');
+                        this.caption = el.getAttribute('caption') || field.caption;
                         if (field.type === 'ForeignKey') {
                             this.expandable = true;
                             this.children = [];
@@ -10502,9 +10503,6 @@ var Katrid;
                         }
                         return r;
                     }
-                    get caption() {
-                        return this.field.caption;
-                    }
                     get value() {
                         if (this._value)
                             return this._value;
@@ -10566,7 +10564,7 @@ var Katrid;
                     }
                     get template() {
                         return Katrid.i18n.interpolate(Katrid.i18n.gettext(`Search <i>%(caption)s</i> by: <strong>%(text)s</strong>`), {
-                            caption: this.field.caption,
+                            caption: this.caption,
                             text: this.view.vm.searchText,
                         });
                     }
@@ -15450,10 +15448,10 @@ var Katrid;
         ui.Tooltip = Tooltip;
     })(ui = Katrid.ui || (Katrid.ui = {}));
 })(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var UI;
-    (function (UI) {
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
         const DEFAULT_EXPAND_CLASS = 'fa-caret-right';
         const DEFAULT_COLLAPSE_CLASS = 'fa-caret-down';
         class Component {
@@ -15468,7 +15466,7 @@ var Katrid;
                 el.katrid = { object: this };
             }
         }
-        UI.Component = Component;
+        ui.Component = Component;
         class TreeNode extends Component {
             constructor(treeView, item) {
                 super();
@@ -15666,7 +15664,7 @@ var Katrid;
                 }
             }
         }
-        UI.TreeNode = TreeNode;
+        ui.TreeNode = TreeNode;
         class TreeView {
             constructor(cfg) {
                 this._selection = [];
@@ -15783,9 +15781,9 @@ var Katrid;
                     return this.selection[this.selection.length - 1];
             }
         }
-        UI.TreeView = TreeView;
-    })(UI = Katrid.UI || (Katrid.UI = {}));
-})(Katrid || (Katrid = {}));
+        ui.TreeView = TreeView;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var katrid;
 (function (katrid) {
     var ui;
