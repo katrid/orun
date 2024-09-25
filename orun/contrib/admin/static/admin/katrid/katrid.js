@@ -1394,6 +1394,12 @@ var Katrid;
     var Actions;
     (function (Actions) {
         class ReportAction extends Katrid.Actions.Action {
+            constructor(info, scope, location) {
+                super(info);
+                this.fields = [];
+                this.templateUrl = 'view.report.jinja2';
+                this.userReport = {};
+            }
             static async dispatchBindingAction(parent, action) {
                 let format = localStorage.katridReportViewer || 'pdf';
                 let sel = parent.selection;
@@ -1407,12 +1413,6 @@ var Katrid;
             }
             get name() {
                 return this.config.info.name;
-            }
-            constructor(info, scope, location) {
-                super(info);
-                this.fields = [];
-                this.templateUrl = 'view.report.jinja2';
-                this.userReport = {};
             }
             userReportChanged(report) {
                 return this.location.search({
@@ -2809,6 +2809,9 @@ var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
+        function x() {
+            return "";
+        }
         Forms.searchModes = ['table', 'card'];
         Forms.registry = {};
         class ModelView extends Forms.BaseView {
@@ -3811,65 +3814,80 @@ var Katrid;
     (function (BI) {
         class QueryViewer extends Katrid.WebComponent {
             create() {
-                this.innerHTML = `<div class="col-12"><h5>Query Viewer</h5><div class="toolbar"><select id="select-query" class="form-select"><option>SELECIONE A CONSULTA</option></select></div></div><div class="query-view row"></div>`;
+                this.innerHTML = `
+        <div class="col-12 px-2"><h4 class="text-muted">Visualizador de Consultas</h4></div>
+        <div class="row px-3">
+          <div class="col-2 overflow-auto" id="query-viewer-treeview" style="max-height: 85vh"></div>
+          <div class="col-10 query-view card shadow flex-column overflow-auto" style="max-height: 85vh"></div>
+        </div>
+      `;
                 this.load();
             }
             async load() {
-                let sel = this.querySelector('#select-query');
                 this.container = this.querySelector('.query-view');
                 let res = await Katrid.Services.Query.all();
                 if (res.data) {
+                    for (let item of res.data) {
+                        item.onclick = async () => {
+                            $(this.container).empty();
+                            this.query = new Katrid.Services.Query(item.id);
+                            window.history.pushState("", "", "#/query-viewer/?id=" + item.id.toString());
+                            let res = await this.query.getMetadata();
+                            this.metadata = res;
+                            let fields = res.fields;
+                            const params = res.params;
+                            // this.searchView.fields = this.fields = Katrid.Data.Fields.fromArray(res.fields);
+                            // for (let f of res.fields)
+                            // f.filter = this.getFilter(f);
+                            // let _toObject = (fields, values) => {
+                            //   let r = {},
+                            //     i = 0;
+                            //   for (let f of fields) {
+                            //     r[f.name] = values[i];
+                            //     i++;
+                            //   }
+                            //   return r;
+                            // };
+                            this.params = null;
+                            if (params) {
+                                this.createParamsPanel(params);
+                            }
+                            if (fields)
+                                this.createQueryView(fields, res.data).ready();
+                            else if (res.type === "query") {
+                                const data = await this.query.execute({});
+                                this.createQueryView(data.fields, data.data).ready();
+                            }
+                        };
+                    }
+                    ;
+                    let treeView = new Katrid.WebComponent.TreeView(res.data, 'query-viewer-treeview');
+                    await treeView.makeTreeView();
                     // group items
-                    let cats = {};
-                    res.data.forEach(obj => (cats[obj.category] = cats[obj.category] || []).push(obj));
-                    for (let [k, v] of Object.entries(cats)) {
-                        let g = document.createElement('optgroup');
-                        g.label = k;
-                        for (let q of v) {
-                            let opt = document.createElement('option');
-                            opt.innerText = q.name;
-                            opt.value = q.id;
-                            g.append(opt);
-                        }
-                        sel.append(g);
-                    }
+                    // let cats = {};
+                    // res.data.forEach(obj => (cats[obj.category] = cats[obj.category] || []).push(obj))
+                    // for (let [k, v] of Object.entries(cats)) {
+                    //   let g: any = document.createElement('optgroup');
+                    //   g.label = k;
+                    //   for (let q of <any>v) {
+                    //     let opt = document.createElement('option');
+                    //     opt.innerText = q.name;
+                    //     opt.value = q.id;
+                    //     g.append(opt);
+                    //   }
+                    //   // sel.append(g);
+                    // }
                 }
-                sel.addEventListener('change', async () => {
-                    $(this.container).empty();
-                    this.query = new Katrid.Services.Query(sel.value);
-                    window.history.pushState('', '', '#/query-viewer/?id=' + sel.value.toString());
-                    let res = await this.query.getMetadata();
-                    this.metadata = res;
-                    let fields = res.fields;
-                    const params = res.params;
-                    // this.searchView.fields = this.fields = Katrid.Data.Fields.fromArray(res.fields);
-                    // for (let f of res.fields)
-                    // f.filter = this.getFilter(f);
-                    let _toObject = (fields, values) => {
-                        let r = {}, i = 0;
-                        for (let f of fields) {
-                            r[f.name] = values[i];
-                            i++;
-                        }
-                        return r;
-                    };
-                    this.params = null;
-                    if (params) {
-                        this.createParamsPanel(params);
-                    }
-                    if (fields)
-                        this.createQueryView(fields, res.data).ready();
-                    else if (res.type === 'query') {
-                        const data = await this.query.execute({});
-                        this.createQueryView(data.fields, data.data).ready();
-                    }
-                });
             }
             createParamsPanel(params) {
+                const title = document.createElement('div');
+                title.className = 'col-12 px-3';
+                title.innerHTML = `<h4 class="text-muted mb-0">${this.metadata.name}</div>`;
+                this.container.appendChild(title);
                 this.params = Object.values(params).map(p => new Katrid.Reports.Param(p));
                 Katrid.Reports.createParamsPanel(this.container, this.params);
                 const div = document.createElement('div');
-                div.className = 'col-12 text-end toolbar-action-buttons';
+                div.className = 'col-12 text-end toolbar-action-buttons px-3';
                 let btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'btn btn-outline-secondary';
@@ -7275,6 +7293,12 @@ var Katrid;
         let customTagRegistry = {};
         // CustomTag is a tag shortcut to simplify the view definition
         class CustomTag {
+            constructor(view, template) {
+                this.view = view;
+                let elements = template.querySelectorAll(this.selector());
+                if (elements.length)
+                    this.prepare(elements, template);
+            }
             static render(view, template) {
                 for (let [selector, customTag] of Object.entries(customTagRegistry)) {
                     if (customTag.prototype instanceof CustomTag) {
@@ -7287,12 +7311,6 @@ var Katrid;
             }
             selector() {
                 return;
-            }
-            constructor(view, template) {
-                this.view = view;
-                let elements = template.querySelectorAll(this.selector());
-                if (elements.length)
-                    this.prepare(elements, template);
             }
             prepare(elements, template) {
             }
