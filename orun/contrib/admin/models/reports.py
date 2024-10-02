@@ -139,7 +139,7 @@ class ReportAction(Action):
             data['content'] = '<params/>'
         return data
 
-    def _export_report(self, format='pdf', params=None, where=None, binding_params=None):
+    def _export_report(self, format='pdf', params=None, where=None, binding_params=None, bytes: bool=False):
         qs = model = None
         if self.model:
             model = apps[self.model]
@@ -185,15 +185,23 @@ class ReportAction(Action):
         else:
             # TODO get the current user company
             company = apps['auth.user'].objects.get(pk=1).user_company
-        rep = engine.export(
-            xml,
-            connection=ConnectionProxy(connection),
-            name=self.name,
-            template='admin/reports/base.jinja2',
-            company=company,
-            format=format, model=model, query=qs, report_title=self.name, params=params, where=where,
-            output_file=output_path,
-        )
+        export_data = {
+            'xml': xml,
+            'connection': ConnectionProxy(connection),
+            'name': self.name,
+            'template': "admin/reports/base.jinja2",
+            'company': company,
+            'format': format,
+            'model': model,
+            'query': qs,
+            'report_title': self.name,
+            'params': params,
+            'where': where,
+            'output_file': output_path,
+        }
+        if bytes:
+            return engine.export_bytes(**export_data)
+        rep = engine.export(**export_data)
         if isinstance(rep, PreparedReport):
             return {
                 'invoke': {
@@ -242,7 +250,7 @@ class ReportAction(Action):
             }
 
     @api.classmethod
-    def export_report(cls, id, format='pdf', params=None, where=None, binding_params=None):
+    def export_report(cls, id, format='pdf', params=None, where=None, binding_params=None, bytes: bool=False):
         # TODO check permission
         if isinstance(id, list):
             id = id[0]
@@ -252,7 +260,7 @@ class ReportAction(Action):
             rep = cls.objects.get(pk=id)
         if params:
             where = params.pop('where', None)
-        return rep._export_report(format=format, params=params, where=where, binding_params=binding_params)
+        return rep._export_report(format=format, params=params, where=where, binding_params=binding_params, bytes=bytes)
 
     @api.classmethod
     def on_execute_action(cls, action_id, context):
