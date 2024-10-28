@@ -7939,6 +7939,7 @@ var Katrid;
             // this.records = this.records.filter(rec => rec.$state !== Katrid.Data.RecordState.destroyed);
             this.selection = [];
             this.selectionLength = 0;
+            this.$onChange();
         }
         Forms.selectionDelete = selectionDelete;
         class SelectionHelper extends Array {
