@@ -13792,8 +13792,8 @@ query-viewer {
 }
 query-viewer .query-view {
   display: flex;
-  flex-direction: row;
-  /* flex: 0 1 100%; */
+  flex-direction: column;
+  flex: 0 1 100%;
 }
 query-viewer .query-view .table-responsive {
   flex: 1 1 500px;
@@ -13807,7 +13807,7 @@ query-viewer .table {
 
 query-view {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex: 1 1 auto;
   overflow-y: auto;
 }

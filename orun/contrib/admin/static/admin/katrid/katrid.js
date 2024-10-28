@@ -1394,12 +1394,6 @@ var Katrid;
     var Actions;
     (function (Actions) {
         class ReportAction extends Katrid.Actions.Action {
-            constructor(info, scope, location) {
-                super(info);
-                this.fields = [];
-                this.templateUrl = 'view.report.jinja2';
-                this.userReport = {};
-            }
             static async dispatchBindingAction(parent, action) {
                 let format = localStorage.katridReportViewer || 'pdf';
                 let sel = parent.selection;
@@ -1413,6 +1407,12 @@ var Katrid;
             }
             get name() {
                 return this.config.info.name;
+            }
+            constructor(info, scope, location) {
+                super(info);
+                this.fields = [];
+                this.templateUrl = 'view.report.jinja2';
+                this.userReport = {};
             }
             userReportChanged(report) {
                 return this.location.search({
@@ -3031,8 +3031,9 @@ var Katrid;
                     },
                     sum(iterable, member) {
                         let res = 0;
-                        for (let obj of iterable)
-                            res += obj[member] || 0;
+                        if (iterable)
+                            for (let obj of iterable)
+                                res += obj[member] || 0;
                         return res;
                     },
                     sendFile(name, file) {
@@ -6111,6 +6112,7 @@ var Katrid;
                 td.setAttribute('field-name', this.name);
                 view.tRow.append(td);
                 let th = document.createElement('th');
+                // th.setAttribute('name', this.name);
                 th.innerHTML = this.listCaptionTemplate();
                 if (this.cssClass) {
                     td.classList.add(this.cssClass);
@@ -7293,12 +7295,6 @@ var Katrid;
         let customTagRegistry = {};
         // CustomTag is a tag shortcut to simplify the view definition
         class CustomTag {
-            constructor(view, template) {
-                this.view = view;
-                let elements = template.querySelectorAll(this.selector());
-                if (elements.length)
-                    this.prepare(elements, template);
-            }
             static render(view, template) {
                 for (let [selector, customTag] of Object.entries(customTagRegistry)) {
                     if (customTag.prototype instanceof CustomTag) {
@@ -7311,6 +7307,12 @@ var Katrid;
             }
             selector() {
                 return;
+            }
+            constructor(view, template) {
+                this.view = view;
+                let elements = template.querySelectorAll(this.selector());
+                if (elements.length)
+                    this.prepare(elements, template);
             }
             prepare(elements, template) {
             }
@@ -7937,6 +7939,7 @@ var Katrid;
             // this.records = this.records.filter(rec => rec.$state !== Katrid.Data.RecordState.destroyed);
             this.selection = [];
             this.selectionLength = 0;
+            this.$onChange();
         }
         Forms.selectionDelete = selectionDelete;
         class SelectionHelper extends Array {
@@ -12622,7 +12625,7 @@ var Katrid;
                     dataOffset: 0,
                     dataOffsetLimit: 0,
                     selectionLength: 0,
-                    $editing: false,
+                    $editing: false, // avoid to click twice
                     loading: false,
                     readonly: false,
                 };
