@@ -1,17 +1,3 @@
-/// <reference types="jquery" />
-declare namespace Katrid {
-    let $hashId: number;
-    let customElementsRegistry: any;
-    function define(name: string, constructor: any, options?: any): void;
-    function createVm(config: any): any;
-    let componentsRegistry: {};
-    let directivesRegistry: {};
-    let filtersRegistry: {};
-    function component(name: string, config: any): void;
-    function directive(name: string, config: any): void;
-    function filter(name: string, config: any): void;
-    function html(templ: string): HTMLElement;
-}
 /**
  * Katrid.js API specification
  */
@@ -92,7 +78,530 @@ declare namespace Katrid.Specification {
         }
     }
 }
+declare namespace katrid.ui {
+    class WebComponent extends HTMLElement {
+        protected _created: boolean;
+        connectedCallback(): void;
+        protected create(): void;
+    }
+    class Widget {
+        render(): void;
+    }
+}
+declare namespace Katrid {
+    let $hashId: number;
+    let customElementsRegistry: any;
+    function define(name: string, constructor: any, options?: any): void;
+    function createVm(config: any): any;
+    let componentsRegistry: {};
+    let directivesRegistry: {};
+    let filtersRegistry: {};
+    function component(name: string, config: any): void;
+    function directive(name: string, config: any): void;
+    function filter(name: string, config: any): void;
+    function html(templ: string): HTMLElement;
+    let globalData: any;
+}
+declare namespace katrid {
+}
+declare var __katridMobileHost: any;
+declare namespace katrid.mobile {
+    const isAndroid: boolean;
+    const isIOS: boolean;
+    const isApp: boolean;
+    function writeStringToFile(key: string, value: string): void;
+    function readStringFromFile(key: string): string;
+}
+declare namespace katrid {
+    class localStorage {
+        static setItem(key: string, value: string): void;
+        static getItem(key: string): string;
+    }
+    class localData {
+        dbName: string;
+        version?: number;
+        db: IDBDatabase;
+        constructor(dbName: string, version?: number);
+        open(): Promise<IDBDatabase>;
+        setItem(key: string, value: string | any): Promise<unknown>;
+        getItem(key: string): Promise<string | any>;
+    }
+}
+declare namespace katrid.ui {
+    interface BaseApplicationOptions {
+        el: HTMLElement;
+        template?: string | HTMLElement;
+        title?: string;
+    }
+    class BaseActionView {
+        app: BaseApplication;
+        element: HTMLElement;
+        template: string;
+        constructor(options?: any);
+        protected createElement(): HTMLDivElement;
+        protected _prepareElement(el: HTMLElement): HTMLElement;
+        getElement(): HTMLElement;
+        ready(): Promise<void>;
+        protected _execute(): Promise<void>;
+        protected _ready: Promise<void>;
+        execute(app: BaseApplication): Promise<void>;
+    }
+    class ActionView extends BaseActionView {
+        protected _prepareElement(el: HTMLElement): HTMLElement;
+        protected defineData(): {};
+        protected defineMethods(): {};
+        protected defineComponent(): {
+            data: () => {};
+            methods: {};
+        };
+        vm: any;
+        protected createVm(el: HTMLElement): any;
+    }
+    class BaseApplication {
+        element: HTMLElement;
+        actionViewer: HTMLElement;
+        actions: Record<string, BaseActionView | typeof BaseActionView>;
+        action: BaseActionView;
+        template: string | HTMLElement;
+        private _title;
+        protected _ready: Promise<BaseApplication>;
+        constructor(options: BaseApplicationOptions);
+        get title(): string;
+        set title(value: string);
+        $nextTick(): any;
+        registerAction(actionId: string, action: BaseActionView | typeof BaseActionView): void;
+        protected render(el: HTMLElement): void;
+        protected prepareElement(el: HTMLElement): void;
+        gotoAction(actionId: string): Promise<BaseActionView>;
+        setAction(action?: any): Promise<BaseActionView>;
+        push(action: BaseActionView): Promise<void>;
+        ready(): Promise<BaseApplication>;
+    }
+    let app: BaseApplication;
+}
+declare namespace katrid.pwa {
+    class Application extends katrid.ui.BaseApplication {
+        vm: any;
+        protected prepareElement(el: HTMLElement): void;
+        protected defineData(): {};
+        protected defineMethods(): {};
+        protected defineComponent(): {
+            data: () => {};
+            methods: {};
+        };
+    }
+}
+declare namespace Katrid.Actions {
+    let registry: any;
+    interface IActionConfig {
+        id?: string | number;
+        isDialog?: boolean;
+        app?: Katrid.Core.WebApplication;
+        actionManager?: Katrid.Actions.ActionManager;
+        caption?: string;
+        container?: HTMLElement;
+        context?: any;
+        info?: Katrid.Specification.UI.IActionInfo;
+        usage?: string;
+    }
+    class Action {
+        static actionType: string;
+        private static _context;
+        scope: any;
+        app: Katrid.Core.WebApplication;
+        config: IActionConfig;
+        /** Represents the action dom element */
+        element: HTMLElement;
+        /** The action will be displayed as a dialog window */
+        isDialog: boolean;
+        path: any;
+        params: any;
+        state: any;
+        actionManager: ActionManager;
+        container: HTMLElement;
+        info: Katrid.Specification.UI.IActionInfo;
+        constructor(config: IActionConfig);
+        confirmDiscard(): Promise<boolean>;
+        debug(): Promise<void>;
+        render(): Promise<void>;
+        renderTo(container?: HTMLElement): Promise<void>;
+        destroy(): void;
+        get id(): any;
+        private _context;
+        /** Action context contains the contextual data to be sent to a RPC server */
+        get context(): any;
+        doAction(act: any): any;
+        onActionLink(actionId: string, actionType: string, context?: any): Promise<unknown>;
+        openObject(service: string, objectId: any, evt: any): boolean;
+        restore(): void;
+        apply(): void;
+        execute(): void;
+        search(): void;
+        onHashChange(params: any): Promise<void>;
+        getDisplayText(): string;
+        createBreadcrumbItem(ol: HTMLElement, index: number): void;
+        createBackItemLink(text: string, backArrow: boolean, click: string | ((evt: MouseEvent) => void)): HTMLAnchorElement;
+        generateHelp(help: any): void;
+    }
+    function goto(actionId: string, config: any, reset?: boolean): Promise<Action>;
+}
+declare namespace Katrid.Actions {
+    class Homepage extends Action {
+        static actionType: string;
+        static hooks: any[];
+        get content(): any;
+        onHashChange(params: any): void;
+    }
+    class HomepageView {
+        actionId: string;
+        element: HTMLElement;
+        constructor();
+        createElement(): void;
+        panels: any[];
+        info: any;
+        load(data: any): void;
+        edit(): void;
+        private _rendered;
+        render(): void;
+        createPanel(): Katrid.Actions.Portlets.PortletPanel;
+    }
+}
+declare namespace Katrid.Actions {
+    import IActionInfo = Katrid.Specification.UI.IActionInfo;
+    interface IActionParams {
+        action?: string;
+        model?: string;
+        id?: string;
+    }
+    /**
+     * ActionManager is useful be used to navigate between a stack of actions
+     * @constructor
+     */
+    export class ActionManager extends HTMLElement {
+        /** Stack of nested actions */
+        actions: Action[];
+        currentAction: Action;
+        mainAction: Action;
+        $cachedActions: Record<string, IActionInfo>;
+        constructor();
+        private _action;
+        /** Current/visible action */
+        get action(): Action;
+        set action(value: Action);
+        private _navbarVisible;
+        get navbarVisible(): boolean;
+        set navbarVisible(value: boolean);
+        back(action?: number | Action): void;
+        removeAction(action: Action): void;
+        get length(): number;
+        get context(): any;
+        empty(): void;
+        reset(): void;
+        get path(): any;
+        doAction(action: Action): void;
+        confirmDiscard(): Promise<boolean>;
+        onHashChange(params: IActionParams, reset: boolean): Promise<Action>;
+        /** Add an action to the stack */
+        addAction(action: Action): void;
+        execAction(info: IActionInfo): Promise<void>;
+        debug(info: any): Promise<void>;
+        registerActions(actions: Record<string, IActionInfo>): void;
+    }
+    export {};
+}
+declare namespace Katrid.Actions {
+    import ViewInfo = Katrid.Forms.IModelViewInfo;
+    import IFieldInfo = Katrid.Data.IFieldInfo;
+    let DEFAULT_VIEWS: string[];
+    /** Represents a model window action structure */
+    interface IWindowActionConfig extends IActionConfig {
+        /** Target model */
+        model: string | Katrid.Data.Model;
+        /** View type with respective id. {form: 18, list: 19...} */
+        views?: Record<string, string | number | Katrid.Forms.ModelView>;
+        /** Types of views that will be available. ['form', 'card'] */
+        viewModes?: string[];
+        /** Information of views */
+        viewsInfo?: Record<string, ViewInfo>;
+        /** The default view mode */
+        viewMode?: string;
+        /** Action usage information string */
+        usage?: string;
+        /** List of view types with respective templates. */
+        templates?: Record<string, string | HTMLTemplateElement>;
+        /** Initial data records */
+        records?: any[];
+        fields?: Record<string, IFieldInfo>;
+        info?: Katrid.Specification.UI.IModelWindowActionInfo;
+    }
+    /** WindowAction should be used to display and manipulate data records of a model */
+    class WindowAction extends Katrid.Actions.Action {
+        static actionType: string;
+        config: IWindowActionConfig;
+        searchView: Katrid.Forms.SearchView;
+        /** Available view modes */
+        viewModes: string[];
+        /** Default view mode */
+        viewMode: string;
+        model: Katrid.Data.Model;
+        modelName: string;
+        views: Record<string, ViewInfo>;
+        fields: any[];
+        fieldList: any[];
+        /** Current view */
+        view: Katrid.Forms.ModelView;
+        _loadDataCallbacks: any[];
+        lastViewType: any;
+        lastSearchMode: string;
+        lastUrl: any;
+        private _cachedViews;
+        viewInfo: Katrid.Forms.IModelViewInfo;
+        constructor(config: IWindowActionConfig, location?: any);
+        createSearchView(): void;
+        onHashChange(params: any): Promise<void>;
+        getCaption(): any;
+        rpc(method: string, data: any, event: any): void;
+        protected prepareContext(): any;
+        getDisplayText(): string;
+        onLoadData(recs: any[]): void;
+        addLoadDataCallback(callback: any): void;
+        removeLoadDataCallback(callback: any): void;
+        switchView(viewType: string, params?: any): void;
+        showView(mode: string, params?: any): Promise<Forms.ModelView>;
+        render(): Promise<void>;
+        createViewsButtons(container: HTMLElement): void;
+        get selectionLength(): any;
+        copyTo(configId: any): Promise<void>;
+        makeUrl(viewType?: string): string;
+        recordId: any;
+        execute(): Promise<void>;
+        changeUrl(): void;
+        _viewType: string;
+        get viewType(): string;
+        set viewType(value: string);
+        searchText(q: string): void;
+        _prepareParams(params: any): any;
+        setSearchParams(params: any): Promise<void>;
+        searchResultView: Katrid.Forms.Views.RecordCollectionView;
+        applyGroups(groups: any, params: any): Promise<void>;
+        groupHeaderClick(record: any, index: any): void;
+        loadGroupRecords(group: any): Promise<void>;
+        doViewAction(viewAction: any, target: any, confirmation: any, prompt: any): any;
+        _doViewAction(scope: any, viewAction: any, target: any, confirmation: any, prompt: any): any;
+        protected pendingOperation: boolean;
+        formButtonClick(id: any, meth: any): Promise<void>;
+        onActionLink(actionId: string, actionType: string, context?: any, evt?: any): Promise<unknown>;
+        _evalResponseAction(res: any): Promise<any>;
+        doBindingAction(evt: any): void;
+        listRowClick(index: any, row: any, evt?: any): void;
+        record: any;
+        private _recordIndex;
+        get recordIndex(): number;
+        set recordIndex(value: number);
+        onDataStateChange(event: any, dataSource: any): void;
+        autoReport(): any;
+        get selection(): any;
+        getSelection(): any[];
+        set attachments(value: any[]);
+        deleteAttachment(attachments: any, index: any): void;
+        markStar(record: any): void;
+        addFilter(field: string, value: any): void;
+        static fromModel(model: string): Promise<WindowAction>;
+        protected canBackToSearch(): boolean;
+        createBreadcrumbItem(ol: HTMLElement, index: any): void;
+        back(index: number, mode?: string): void;
+        get index(): number;
+        generateHelp(help: any): void;
+    }
+    function gotoNewRecord(config: any): Promise<void>;
+}
+declare namespace Katrid {
+    enum ComponentState {
+        Loading = 0,
+        Loaded = 1
+    }
+    class WebComponent extends HTMLElement {
+        private _created;
+        connectedCallback(): void;
+        protected create(): void;
+    }
+}
+declare namespace katrid {
+}
+declare var kjs: typeof katrid;
+declare namespace Katrid.Actions {
+    /** Represents the navigation element */
+    class ActionNavbar extends Katrid.WebComponent {
+        private _actionManager;
+        protected create(): void;
+        get actionManager(): ActionManager;
+        set actionManager(value: ActionManager);
+        render(): void;
+    }
+}
+declare namespace Katrid.Actions {
+    class ReportAction extends Katrid.Actions.Action {
+        static actionType: string;
+        fields: any;
+        static dispatchBindingAction(parent: any, action: any): Promise<void>;
+        get name(): any;
+        templateUrl: string;
+        userReport: any;
+        constructor(info: any, scope: any, location: any);
+        userReportChanged(report: any): any;
+        onHashChange(params: any): Promise<void>;
+        debug(): Promise<void>;
+        vm: any;
+        renderParams(): void;
+        report: Katrid.Reports.Report;
+        createVm(el: HTMLElement): any;
+    }
+}
+declare namespace Katrid.Actions {
+    class ViewAction extends Action {
+        static actionType: string;
+        view: Katrid.Forms.BaseView;
+        constructor(config: IActionConfig);
+        onHashChange(params: any): Promise<void>;
+        render(): Promise<void>;
+    }
+}
+declare namespace Katrid.Actions.Portlets {
+    class HomepageEditor extends Katrid.Actions.HomepageView {
+        createPanel(): Katrid.Actions.Portlets.PortletPanel;
+        createElement(): void;
+        edit(): void;
+        dump(): {
+            panels: {
+                caption: string;
+                portlets: any[];
+            }[];
+        };
+        save(): Promise<void>;
+        private _back;
+        back(): void;
+        render(): void;
+    }
+}
+declare namespace Katrid.Actions.Portlets {
+    class BasePortlet {
+        header: string;
+        text: string;
+        description: string;
+        helpText: string;
+        element: HTMLElement;
+        wrapper: HTMLElement;
+        editing: boolean;
+        render(): void;
+        renderTo(panel: HTMLElement): void;
+        load(info: any): void;
+    }
+    class Portlet extends BasePortlet {
+        renderTo(panel: HTMLElement): void;
+    }
+    class PortletGroup {
+        element: HTMLElement;
+        text: string;
+        portlets: BasePortlet[];
+        homepage: Katrid.Actions.HomepageElement;
+        constructor(config?: any);
+        addPortlet(portlet: BasePortlet): void;
+        renderTo(container: HTMLElement): void;
+    }
+    class PortletPanel extends HTMLElement {
+        caption: string;
+        editing: boolean;
+        portlets: Portlet[];
+        connectedCallback(): void;
+        render(): void;
+        availableItems: any[];
+        renderEditor(container: any): Promise<HTMLDivElement>;
+        dump(): {
+            caption: string;
+            portlets: any[];
+        };
+        info: any;
+        load(info: any): void;
+        addPortlet(info: any): HTMLElement;
+        addPortletClick(sender: HTMLElement): void;
+    }
+    class PortletEditor extends HTMLElement {
+        connectedCallback(): void;
+        create(): void;
+        info: any;
+        el: HTMLElement;
+        portlet: Portlet;
+        panel: PortletPanel;
+        load(info: any): void;
+        render(): void;
+        removePortlet(): void;
+    }
+    class PortletElement extends HTMLElement {
+        editing: boolean;
+        info: any;
+        connectedCallback(): void;
+        create(): void;
+        dump(): any;
+        loaded: boolean;
+        load(info: any): void;
+        render(container?: HTMLElement): void;
+    }
+    class CreateNew extends Portlet {
+        model: string;
+        action: string;
+        create(): void;
+        dump(): any;
+        load(info: any): void;
+    }
+    class ModelActionPortlet extends Portlet {
+        actionId: string;
+        model: string;
+        action: string;
+        constructor(actionId: string);
+        render(): void;
+        dump(): any;
+        load(info: any): void;
+    }
+    class GotoList extends Portlet {
+        model: string;
+        action: string;
+        viewType: string;
+        create(): void;
+        dump(): any;
+        render(): void;
+    }
+    class GotoReport extends Portlet {
+        model: string;
+        action: string;
+        create(): void;
+        load(info: any): void;
+        dump(): any;
+        render(): void;
+    }
+    let registry: any;
+}
+declare namespace katrid.admin {
+    class Messages {
+        static message(info: any): void;
+    }
+}
+declare namespace katrid.admin {
+    /**
+     * Consume the response messages
+     */
+    class ResponseMessagesProcessor {
+        response: Response;
+        constructor(response: Response);
+        process(content: any): void;
+    }
+    let requestMiddleware: any[];
+    let responseMiddleware: any[];
+}
+declare namespace Katrid.BI {
+    function newPlot(el: any, data: any, layout: any, config: any): any;
+}
 declare namespace Katrid.Core {
+    import ActionManager = Katrid.Actions.ActionManager;
     interface IMenuInfo {
         id?: any;
         name: string;
@@ -109,7 +618,7 @@ declare namespace Katrid.Core {
         lastLogin?: string;
         lang?: string;
     }
-    interface IApplicationConfig {
+    interface IAppConfig {
         menu?: IMenuInfo[];
         actions?: Record<string, Katrid.Actions.Action>;
         userInfo?: IUserInfo;
@@ -141,8 +650,16 @@ declare namespace Katrid.Core {
         private _actionManager;
         constructor(config: any);
         beforeUnload(): void;
-        get actionManager(): Katrid.Actions.ActionManager;
+        get actionManager(): ActionManager;
         render(): void;
+        protected hideMessageCounter(): void;
+        set newMessagesCount(value: number);
+        messageCounterElement: HTMLElement;
+        private _notificationMessages;
+        get notificationMessages(): any[];
+        set notificationMessages(value: any[]);
+        protected createNotificationMessageItem(menu: HTMLElement, msg: any): void;
+        buttonNotificationMessages: HTMLElement;
         protected appReady(): void;
         formatActionHref(actionId: any): string;
         get currentMenu(): any;
@@ -159,18 +676,382 @@ declare namespace Katrid {
     let app: Katrid.Core.Application;
     let webApp: Katrid.Core.WebApplication;
 }
-declare namespace Katrid {
-    enum ComponentState {
-        Loading = 0,
-        Loaded = 1
+declare namespace Katrid.Core {
+    export class Plugin {
+        app: Application;
+        constructor(app: Application);
+        hashChange(url: string): boolean;
     }
-    class WebComponent extends HTMLElement {
-        private _created;
-        connectedCallback(): void;
+    class Plugins extends Array<typeof Plugin> {
+        start(app: Application): void;
+    }
+    export let plugins: Plugins;
+    export function registerPlugin(cls: typeof Plugin): void;
+    export {};
+}
+declare namespace Katrid.BI {
+}
+declare namespace Katrid.Forms {
+    import IViewInfo = Katrid.Specification.UI.IViewInfo;
+    interface IView {
+        template?: string | HTMLElement;
+        container?: HTMLElement;
+        info?: Katrid.Specification.UI.IViewInfo;
+    }
+    class BaseView {
+        config: IView;
+        dialog: boolean;
+        /** Vue View Model instance */
+        vm: any;
+        parentVm: any;
+        container: HTMLElement;
+        element: HTMLElement;
+        /** Pre-initialized template element */
+        template: HTMLTemplateElement;
+        /** html template */
+        html: string;
+        /** IViewInfo instance */
+        protected info: IViewInfo;
+        constructor(config: IView);
+        protected create(info: IView): void;
+        protected _applyDataDefinition(data: any): any;
+        protected getComponentData(): any;
+        protected createComponent(): any;
+        protected cloneTemplate(): HTMLElement;
+        domTemplate(): HTMLElement;
+        protected createDialogButtons(buttons: string[] | any[]): HTMLButtonElement[];
+        protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
+        scripts: string[];
+        _readyEventListeners: any[];
+        /** Create vue View Model instance */
+        protected createVm(el: HTMLElement): any;
+        beforeRender(templ: HTMLElement): HTMLElement;
+        createElement(): void;
+        applyCustomTags(template: HTMLElement): void;
+        render(): HTMLElement;
+        protected _modal: bootstrap.Modal;
+        closeDialog(): void;
+        /** Render the view content into a container */
+        renderTo(container: HTMLElement): void;
+        onHashChange(params: any): Promise<void>;
+    }
+    function compileButtons(container: HTMLElement): void;
+    interface ISetupScript {
+        /** Vue methods */
+        methods: any;
+        /** Vue computed members */
+        computed: any;
+        /** Will be fired when vue created */
+        created(): unknown;
+        /** Will be fired when view element is ready */
+        ready(view: BaseView): unknown;
+    }
+    let globalSettings: any;
+}
+declare namespace Katrid.Forms {
+    interface ISearchOptions {
+        id?: number | string;
+        index?: number;
+        where?: Record<string, any>;
+        page?: number;
+        limit?: number;
+        timeout?: number;
+    }
+    let searchModes: string[];
+    let registry: any;
+    interface IModelViewInfo extends IView {
+        /** deprecated */
+        name?: string;
+        /** Model instance */
+        model?: Katrid.Data.Model;
+        fields?: Record<string, Katrid.Data.IFieldInfo>;
+        toolbar?: any;
+        toolbarVisible?: boolean;
+        autoLoad?: boolean;
+        /** Represents the initial data records */
+        record?: any;
+        records?: any[];
+        /** Useful to initialize a structured data representation and can be used with a RecordCollectionView */
+        recordGroups?: any[];
+        action?: Katrid.Actions.WindowAction;
+        recordClick?: (record: any, index: number, event: Event) => void;
+        multiple?: boolean;
+        viewInfo?: Katrid.Forms.ModelViewInfo;
+    }
+    class ModelView extends BaseView {
+        datasource: Katrid.Data.DataSource;
+        model: Katrid.Data.Model;
+        fields: Record<string, Katrid.Data.Field>;
+        action: Katrid.Actions.WindowAction;
+        toolbarVisible: boolean;
+        pendingOperation: number;
+        protected _record: any;
+        record: any;
+        config: IModelViewInfo;
+        dialogButtons: string[] | any[];
+        protected _readonly: boolean;
+        protected _loadingHandle: any;
+        protected info: IModelViewInfo;
+        constructor(info: IModelViewInfo);
+        static viewType: string;
+        /** Create views instances based on template strings */
+        static fromTemplate(action: Katrid.Actions.WindowAction, model: Katrid.Data.Model, template: string): ModelView;
+        static createViewModeButton(container: HTMLElement): void;
+        deleteSelection(sel: any[]): Promise<boolean>;
+        protected create(info: Katrid.Forms.IModelViewInfo): void;
+        protected dataSourceCallback(data: Katrid.Data.IDataCallback): void;
+        protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
+        protected _records: any[];
+        get records(): any[];
+        set records(value: any[]);
+        private _recordCount;
+        get recordCount(): number;
+        set recordCount(value: number);
+        private _active;
+        get active(): boolean;
+        set active(value: boolean);
+        protected setActive(value: boolean): void;
+        protected getComponentData(): any;
+        get readonly(): boolean;
+        set readonly(value: boolean);
+        ready(): Promise<any>;
+        refresh(): void;
+        protected _search(options: ISearchOptions): Promise<any>;
+        private _mergeHeader;
+        mergeHeader(parent: HTMLElement, container: HTMLElement): HTMLElement;
+        protected _vmCreated(vm: any): void;
+        doViewAction(action: string, target: any): Promise<any>;
+        callSubAction(action: string, selection?: any[]): Promise<void>;
+        protected _evalResponseAction(res: any): Promise<any>;
+        protected getSelectedIds(): Promise<any[]>;
+        protected createComponent(): any;
+        getViewType(): any;
+        autoCreateView(): HTMLElement;
+        domTemplate(): HTMLElement;
+        beforeRender(template: HTMLElement): HTMLElement;
+        protected renderTemplate(template: HTMLElement): HTMLElement;
+        createToolbar(): HTMLElement;
+        dialogPromise: Promise<any>;
+        generateHelp(help: any): void;
+    }
+    interface IRecordGroup {
+        $str: string;
+        $count: number;
+        $children?: any[];
+        $expanded?: boolean;
+        $hasChildren?: boolean;
+    }
+    abstract class RecordCollectionView extends ModelView {
+        private _searchView;
+        autoLoad: boolean;
+        recordGroups: IRecordGroup[];
+        groupLength: number;
+        private _orderBy;
+        constructor(info: IModelViewInfo);
+        get orderBy(): string[];
+        set orderBy(value: string[]);
+        getSelectedIds(): Promise<any[]>;
+        callSubAction(action: string, selection?: any[]): Promise<void>;
+        protected create(info: Katrid.Forms.IModelViewInfo): void;
+        protected _recordClick(record: any, index?: number): Promise<void>;
+        nextPage(): void;
+        prevPage(): void;
+        protected createComponent(): any;
+        protected setActive(value: boolean): void;
+        get searchView(): SearchView;
+        set searchView(value: SearchView);
+        protected dataSourceCallback(data: Katrid.Data.IDataCallback): void;
+        protected setSearchView(searchView: SearchView): void;
+        protected getComponentData(): any;
+        protected prepareGroup(groups: IRecordGroup[]): IRecordGroup[];
+        groupBy(data: any[]): Promise<any>;
+        applyGroups(groups: any, params: any): Promise<void>;
+        private _addRecordsToGroup;
+        /**
+         * Expands a group
+         */
+        expandGroup(group: IRecordGroup): Promise<void>;
+        /**
+         * Expands all groups
+         */
+        expandAll(): void;
+        /**
+         * Collapses all groups
+         */
+        collapseAll(): void;
+        /**
+         * Collapses a group
+         */
+        collapseGroup(group: IRecordGroup): void;
+        private _lastSearch;
+        setSearchParams(params: any): Promise<void>;
+        protected _invalidateSelection(): void;
+        createToolbar(): HTMLElement;
+        protected createToolbarButtons(container: HTMLElement): HTMLElement;
+        protected createSelectionInfo(parent: HTMLElement): void;
+        get $modalResult(): any;
+        set $modalResult(value: any);
+        showDialog(options?: any): Promise<unknown>;
+        ready(): Promise<unknown>;
+    }
+    class ActionViewElement extends Katrid.WebComponent {
+        action: Katrid.Actions.WindowAction;
+        view: ModelView;
         protected create(): void;
     }
 }
-declare namespace Katrid.Exceptions {
+declare namespace Katrid.Forms.Views {
+    export let registry: Record<string, typeof ModelView>;
+    interface ITemplates {
+        form?: string | HTMLTemplateElement;
+        list?: string | HTMLTemplateElement;
+        card?: string | HTMLTemplateElement;
+        [key: string]: any;
+    }
+    export function fromTemplates(action: Katrid.Actions.WindowAction, model: Katrid.Data.Model, templates: ITemplates): Record<string, ModelView>;
+    export {};
+}
+declare namespace Katrid.BI {
+    export class QueryView extends Katrid.Forms.RecordCollectionView {
+        static viewType: string;
+        private _queryId;
+        searchViewVisible: boolean;
+        fieldList: Katrid.Data.Field[];
+        table: HTMLTableElement;
+        data: any;
+        metadata: any;
+        get queryId(): string | number;
+        set queryId(value: string | number);
+        queryChange(query: any): Promise<void>;
+        refreshQuery(query: any, params?: any): Promise<any>;
+        loadData(data: any): void;
+        private _loadedRows;
+        private _lastGroup;
+        private _lastGroupValues;
+        groups: string[];
+        groupsIndex: number[];
+        evalTotal(col: Column, values: any[]): number;
+        addGroupHeader(grouper: any, record: any, data: any[]): void;
+        addGroupFooter(): void;
+        more(count: number): number;
+        params: any[];
+        columns: Column[];
+        ready(): Promise<void>;
+        tableScroll(evt: any): void;
+        contextMenu(evt: any): void;
+        copyToClipboard(formatting?: boolean): Promise<void>;
+        export(): void;
+        get orientation(): "landscape" | "portrait";
+        reportTemplate: string;
+        print(): Promise<void>;
+        destroy(): void;
+    }
+    class Column {
+        name: string | number;
+        label: string;
+        type: string;
+        visible: boolean;
+        dataIndex: number;
+        total: string;
+        width: number;
+        cols: number;
+        constructor(info: any);
+    }
+    export {};
+}
+declare namespace Katrid.BI {
+    class QueryViewer extends Katrid.WebComponent {
+        container: HTMLElement;
+        protected create(): void;
+        queryId: any;
+        query: Katrid.Services.Query;
+        load(): Promise<void>;
+        metadata: any;
+        params: Katrid.Reports.Param[];
+        btnPrint: HTMLButtonElement;
+        btnExport: HTMLButtonElement;
+        createParamsPanel(params: any): void;
+        applyParams(): Promise<void>;
+        queryView: QueryView;
+        print(): Promise<void>;
+        createQueryView(fields: any, data: any, reportType?: string): QueryView;
+    }
+}
+declare namespace Katrid.Services {
+    class Service {
+        name: string;
+        static url: string;
+        constructor(name: string);
+        static adapter: BaseAdapter;
+        static $fetch(url: any, config: any, params?: any): any;
+        static $post(url: any, data: any, params?: any): any;
+        get(name: string, params: any): JQuery.jqXHR<any>;
+        post(name: string, data: any, params?: any, config?: any, context?: any): Promise<unknown>;
+    }
+    class Data extends Service {
+        static get url(): string;
+        /**
+         * Reorder/reindex a collection of records
+         * @param model
+         * @param ids
+         * @param field
+         * @param offset
+         */
+        reorder(model: any, ids: any, field?: string, offset?: number): Promise<unknown>;
+    }
+    /**
+     * Represents the attachments services api
+     */
+    class Attachments {
+        static delete(id: any): void;
+        static upload(file: any, config: any): Promise<any>;
+    }
+    class Upload {
+        static callWithFiles(config: any): any;
+        static sendFile(config: any): void;
+        static uploadTo(url: any, file: any): JQuery.jqXHR<any>;
+    }
+    let data: Data;
+    function post(url: string, data: any): Promise<any>;
+}
+declare namespace Katrid.BI {
+    interface ITableConfig {
+        caption?: string;
+        fieldElements?: HTMLElement[];
+    }
+    export class TableWidget {
+        el: HTMLElement;
+        config?: ITableConfig;
+        constructor(el: HTMLElement, config?: ITableConfig);
+        private _queryCommand;
+        get queryCommand(): string;
+        set queryCommand(value: string);
+        private _waiting;
+        get waiting(): boolean;
+        set waiting(value: boolean);
+        protected _refresh(data: any): void;
+    }
+    export class TableWidgetElement extends Katrid.WebComponent {
+        protected create(): void;
+    }
+    export {};
+}
+declare namespace Katrid.BI {
+    class ReportPreview {
+        loadReport(report: any): void;
+        loadBand(data: any): void;
+        loadText(data: any): HTMLSpanElement;
+        loadImage(data: any): HTMLImageElement;
+    }
+}
+declare namespace Katrid.Components {
+    class Component {
+        name: string;
+    }
+    class Widget extends Component {
+    }
+}
+declare namespace katrid.exceptions {
     class Exception extends Error {
         constructor(message: any);
     }
@@ -192,17 +1073,982 @@ declare namespace Katrid {
         set searchMenuVisible(value: boolean);
     }
 }
-declare namespace Katrid.Core {
-    export class Plugin {
-        app: Application;
-        constructor(app: Application);
-        hashChange(url: string): boolean;
+declare namespace katrid {
+    function init(): void;
+}
+declare namespace Katrid.Data {
+    export enum DataSourceState {
+        inserting = 0,
+        browsing = 1,
+        editing = 2,
+        loading = 3,
+        inactive = 4
     }
-    class Plugins extends Array<typeof Plugin> {
-        start(app: Application): void;
+    export interface IDataRecord {
+        id?: any;
+        $record: DataRecord;
     }
-    export let plugins: Plugins;
-    export function registerPlugin(cls: typeof Plugin): void;
+    interface IDataSourceConfig {
+        model: Katrid.Data.Model;
+        fields?: Record<string, Katrid.Data.Field>;
+        field?: Katrid.Data.Field;
+        readonly?: boolean;
+        master?: DataSource;
+        pageLimit?: number;
+        vm?: any;
+        domain?: any;
+        /** Action context */
+        context?: any;
+    }
+    interface IDataSourceSearchOptions {
+        where?: any;
+        page?: number;
+        limit?: number;
+        fields?: string[];
+        timeout?: number;
+        order?: string[];
+    }
+    interface IDataSourceGetOptions {
+        id: number | string;
+        index?: number;
+        timeout?: number;
+        viewType?: string;
+    }
+    export interface IDataCallback {
+        record?: any;
+        records?: any[];
+    }
+    export class DataSource {
+        config: IDataSourceConfig;
+        readonly: boolean;
+        orderBy: string[];
+        $modifiedRecords: DataRecord[];
+        scope: any;
+        action: any;
+        _recordIndex: any;
+        loading: boolean;
+        recordCount: number;
+        private _loadingRecord;
+        _masterSource: DataSource;
+        _pageIndex: number;
+        pageLimit: number;
+        offset: number;
+        offsetLimit: number;
+        requestInterval: number;
+        private _pendingRequest;
+        pendingTimeout: any;
+        children: DataSource[];
+        modifiedData: any;
+        uploading: number;
+        rawData: any;
+        private _state;
+        fieldWatchers: Array<any>;
+        _pendingChanges: boolean;
+        _recordId: any;
+        private _canceled;
+        private _params;
+        _records: any[];
+        model: Katrid.Data.Model;
+        private _pendingPromises;
+        private _lastFieldName;
+        dataCallback: (data: IDataCallback) => void;
+        domain: any;
+        field: Katrid.Data.Field;
+        /** Vue View Model instance */
+        vm: any;
+        private _$form;
+        fields: Record<string, Katrid.Data.Field>;
+        /** Current context */
+        context: any;
+        /** Default values for new records */
+        defaultValues: Record<string, any>;
+        private _callbacks;
+        constructor(config: IDataSourceConfig);
+        /**
+         * Create a new record
+         */
+        create(data?: any): DataRecord;
+        registerCallback(cb: any): void;
+        unregisterCallback(cb: any): void;
+        get pageIndex(): number;
+        set pageIndex(page: number);
+        requestCallback: any;
+        get loadingRecord(): boolean;
+        set loadingRecord(value: boolean);
+        get pendingRequest(): boolean;
+        set pendingRequest(value: boolean);
+        private _loadingAction;
+        get loadingAction(): boolean;
+        set loadingAction(v: boolean);
+        changing: boolean;
+        get $form(): any;
+        set $form(value: any);
+        cancel(): Promise<unknown>;
+        private _createRecord;
+        copy(id: any): Promise<unknown>;
+        findById(id: any): any;
+        $removeById(id: any): any;
+        hasKey(id: any): boolean;
+        refresh(data?: any): any;
+        refreshRecord(id?: number | string): Promise<unknown>;
+        validate(record?: any, raiseError?: boolean): Promise<boolean>;
+        indexOf(obj: any): number;
+        private _page;
+        private _fields;
+        getFieldChoices(where: any, timeout?: any): Promise<unknown>;
+        where: string;
+        search(options: IDataSourceSearchOptions): Promise<unknown>;
+        groups: any;
+        groupBy(group: any, params: any): Promise<any>;
+        _loadGroup(group: any, index?: any, where?: any, parent?: any): Promise<any[]>;
+        goto(index: number): number;
+        scrollCallback: any;
+        moveBy(index: number): void;
+        _clearTimeout(): void;
+        set masterSource(master: DataSource);
+        get masterSource(): DataSource;
+        applyModifiedData(form: any, element: any, record: any): any;
+        save(autoRefresh?: boolean): Promise<any>;
+        delete(sel: any): Promise<void>;
+        _getNested(recs: any): any[];
+        _getModified(data: any): any;
+        getModifiedData(form: any, element: any, record: any): any;
+        get(options: IDataSourceGetOptions): Promise<unknown>;
+        insert(loadDefaults?: boolean, defaultValues?: any, kwargs?: any): Promise<DataRecord>;
+        setValues(values: any, record?: DataRecord): void;
+        edit(): void;
+        toClientValue(attr: string, value: any): any;
+        fieldByName(fieldName: string): Field;
+        _modifiedFields: any;
+        inserting: boolean;
+        editing: boolean;
+        stateChangeCallback: any;
+        set state(state: DataSourceState);
+        get browsing(): boolean;
+        childByName(fieldName: string): DataSource;
+        get state(): DataSourceState;
+        get record(): DataRecord;
+        set recordId(value: any);
+        get recordId(): any;
+        private _record;
+        set record(rec: DataRecord | any);
+        setRecord(obj: any): any;
+        set records(recs: any[]);
+        get records(): any[];
+        next(): void;
+        prior(): void;
+        nextPage(): void;
+        prevPage(): void;
+        set recordIndex(index: any);
+        get recordIndex(): any;
+        addRecord(rec: any): void;
+        expandGroup(index: number, row: any): Promise<void>;
+        collapseGroup(index: number, row: any): void;
+        _chain(): DataRecord[];
+        _applyResponse(res: any): void;
+        dispatchEvent(name: string, ...args: any[]): Promise<void>;
+        open(): Promise<unknown>;
+        get parent(): DataSource;
+        set parent(value: DataSource);
+        $setDirty(field: any): void;
+        destroyChildren(): void;
+        childrenNotification(record: any): void;
+        parentNotification(parentRecord: any): Promise<void>;
+        destroy(): void;
+        /**
+         * Save record changes to memory
+         * @param validate
+         * @param browsing
+         */
+        flush(validate?: boolean, browsing?: boolean): DataRecord;
+        discardChanges(): void;
+        protected encodeObject(obj: any): any;
+        /**
+         * Prepare a record to be sent by encode each available field
+         * @param dataSource
+         * @param rec
+         * @protected
+         */
+        static encodeRecord(dataSource: DataSource, rec: any): any;
+        private _fieldChanging;
+        /**
+         * Send field change notification to server
+         * @param field
+         * @param newValue
+         * @param record
+         */
+        $onFieldChange(field: Katrid.Data.Field, newValue: any, record: DataRecord): void;
+        /**
+         * Encode data to be sent on field changed
+         * @param record
+         */
+        encode(record: DataRecord): {};
+    }
+    export {};
+}
+declare namespace katrid.ui {
+    type DataSource = Katrid.Data.DataSource;
+}
+declare namespace Katrid.Data {
+    let emptyText: string;
+}
+declare namespace Katrid.Data {
+    /** Model information structure */
+    interface IModelInfo {
+        /** The name of model (model methods can be called via rpc) */
+        name?: string;
+        /** Fields data dictionary */
+        fields?: Field[] | IFieldInfo[] | Record<string, IFieldInfo> | Record<string, Field>;
+        /** Indicates if the model instance will be readonly */
+        readonly?: boolean;
+    }
+    class Model {
+        /** Model name */
+        name: string;
+        fields: Record<string, Field>;
+        allFields: any;
+        /** Model records is readonly */
+        readonly: boolean;
+        /** The name of id field */
+        idField: string;
+        /** The field representing the record name */
+        nameField: string;
+        constructor(info: IModelInfo);
+        onFieldChange: (field: Field, value: any) => void;
+        private _recordClass;
+        get recordClass(): typeof DataRecord;
+        private _service;
+        get service(): Katrid.Services.ModelService;
+        create(data?: any, datasource?: DataSource): DataRecord;
+        newRecord(data?: any, datasource?: DataSource): DataRecord;
+        fromObject(obj: any, datasource?: DataSource): DataRecord;
+        fromArray(list: any[]): DataRecord[];
+        flush(rec: DataRecord): void;
+        discard(rec: DataRecord): void;
+        /** Validates a given record */
+        validate(record: any): void;
+    }
+}
+declare namespace Katrid.Data {
+    enum RecordState {
+        unmodified = 0,
+        destroyed = 1,
+        created = 2,
+        modified = 3
+    }
+    class DataRecord {
+        /** The record state is undefined by default */
+        $state: RecordState;
+        /** Original data */
+        $pristine: Record<string, any>;
+        /** Indicates if record has been modified */
+        $dirty: boolean;
+        /** Pending changes to be persisted */
+        $pending: Record<string, any>;
+        /** Temporary record changes */
+        $data: Record<string, any>;
+        $modified: string[];
+        id: any;
+        [key: string]: any;
+        $transient: Record<string, any>;
+        $parent: DataRecord;
+        $parentField: string;
+        $childrenData: DataRecord[];
+        constructor(obj?: any);
+        $flush(validate?: boolean): true | Katrid.Data.Validation;
+        $validate(): Katrid.Data.Validation;
+        $destroy(): void;
+        $discard(): void;
+        $$discard(): void;
+        $serialize(): any;
+        $reset(): void;
+    }
+}
+declare namespace katrid.sql {
+    function exec(query: string, params: any): Promise<any>;
+}
+declare namespace Katrid.Data {
+    interface FieldValidation {
+        field: Field;
+        msgs: string[];
+    }
+    export class Validation {
+        record: DataRecord;
+        valid: boolean;
+        model: Model;
+        validations: FieldValidation[];
+        constructor(record: DataRecord);
+        validate(): this;
+        showError(): void;
+    }
+    export {};
+}
+declare namespace Katrid.Data {
+    class Field {
+        widget: string;
+        cols: any;
+        visible: boolean;
+        info: any;
+        cssClass: string;
+        caption: string;
+        helpText: string;
+        required: boolean;
+        onChange: true;
+        nolabel: any;
+        emptyText: string;
+        defaultSearchLookup: string;
+        vReadonly: any;
+        vRequired: string;
+        vMaxLength: any;
+        vMinLength: any;
+        ngChange: string;
+        readonly: boolean;
+        displayChoices: Record<string | number, string>;
+        choices: any;
+        defaultValue: any;
+        protected _loaded: boolean;
+        name: string;
+        boundFields: Katrid.Forms.BoundField[];
+        total: string;
+        constructor(info: IFieldInfo);
+        create(): void;
+        setChoices(choices: any): void;
+        loadInfo(info: any): void;
+        get internalType(): string;
+        vShow: string;
+        vIf: string;
+        vClass: any;
+        filter: any;
+        attrs: any;
+        el: HTMLElement;
+        ['constructor']: typeof Field;
+        viewType: string;
+        inplaceEditor: boolean;
+        protected _fieldEl: HTMLElement;
+        get fieldEl(): HTMLElement;
+        set fieldEl(value: HTMLElement);
+        protected setElement(value: HTMLElement): void;
+        formLabel(formEl: Element): HTMLLabelElement;
+        tag: string;
+        protected getControlId(): string;
+        formControl(fieldEl?: Element): HTMLElement;
+        getValue(value: any): any;
+        protected getFieldAttributes(fieldEl: Element): any;
+        renderTo(fieldEl: Element, view: Katrid.Forms.ModelView): void;
+        formCreate(fieldEl: Element): any;
+        widgetHelp: string;
+        getTooltip(el: HTMLElement): Katrid.ui.Tooltip;
+        createTooltip(section: HTMLElement): void;
+        listCreate(view: Katrid.Forms.ListRenderer, fieldEl: HTMLElement): void;
+        formSpanTemplate(): string;
+        listSpanTemplate(): string;
+        listCaptionTemplate(): string;
+        cardCreate(): HTMLSpanElement;
+        setValue(record: Katrid.Data.DataRecord, value: any, datasource?: DataSource): void;
+        get hasChoices(): boolean;
+        get model(): string;
+        get maxLength(): any;
+        get type(): any;
+        getParamTemplate(): string;
+        format(value: any): any;
+        getParamValue(value: any): any;
+        $set(val: any): any;
+        toJSON(val: any): any;
+        createWidget(widget: string, fieldEl: Element): any;
+        validate(value: any): string[];
+        /** Validate a given value for a bound field */
+        validateForm(boundField: Katrid.Forms.BoundField, value: any): string[];
+        get defaultCondition(): string;
+        isControlVisible(condition: any): boolean;
+        getFilterConditions(): any[];
+        formBind(el: HTMLElement, fieldEl: HTMLElement): Forms.BoundField;
+        formUnbind(el: HTMLElement): void;
+    }
+}
+declare namespace Katrid.Data.Fields {
+    let registry: any;
+    /** Create a field instance from a field definition */
+    function fromInfo(config: any, name?: string): Katrid.Data.Field;
+    /** Create a collection of fields from a list of fields definitions */
+    function fromArray(fields: any[] | Record<string, any>): any;
+}
+declare var moment: any;
+declare namespace Katrid.Data {
+    class DateField extends Field {
+        widgetHelp: string;
+        loadInfo(info: any): void;
+        formSpanTemplate(): string;
+        toJSON(val: any): any;
+        getParamTemplate(): string;
+        getParamValue(value: any): any;
+        format(value: any): any;
+        tag: string;
+        formControl(fieldEl: HTMLElement): HTMLElement;
+        createTooltip(section: HTMLElement): void;
+        listSpanTemplate(): string;
+    }
+    class DateTimeField extends DateField {
+        formSpanTemplate(): string;
+        create(): void;
+        listSpanTemplate(): string;
+        formControl(fieldEl: HTMLElement): HTMLElement;
+        createTooltip(section: HTMLElement): void;
+    }
+    class TimeField extends Field {
+        loadInfo(info: any): void;
+        create(): void;
+        formSpanTemplate(): string;
+        tag: string;
+    }
+}
+declare namespace Katrid.Data {
+    class StringField extends Field {
+        constructor(info: any);
+        getFilterConditions(): any[];
+    }
+    class ChoiceField extends Field {
+        formSpanTemplate(): string;
+        formControl(fieldEl: Element): HTMLElement;
+    }
+    class PasswordField extends StringField {
+        formControl(): HTMLElement;
+        formSpanTemplate(): string;
+    }
+    class BooleanField extends Field {
+        constructor(info: any);
+        formSpanTemplate(): string;
+        create(): void;
+        getParamTemplate(): string;
+        getFilterConditions(): any[];
+        formLabel(fieldEl: Element): HTMLLabelElement;
+        formControl(fieldEl: Element): HTMLElement;
+    }
+    class NumericField extends Field {
+        tag: string;
+        decimalPlaces: number;
+        widgetHelp: string;
+        constructor(info: any);
+        create(): void;
+        setValue(record: Katrid.Data.DataRecord, value: any): void;
+        toJSON(val: any): any;
+        $set(val: any): any;
+        formSpanTemplate(): string;
+        getParamValue(value: any): any;
+    }
+    class IntegerField extends NumericField {
+        loadInfo(info: any): void;
+        create(): void;
+        formSpanTemplate(): string;
+        formControl(fieldEl: Element): HTMLElement;
+        toJSON(val: any): any;
+    }
+    class FloatField extends NumericField {
+    }
+    class DecimalField extends NumericField {
+        constructor(info: any);
+        formControl(fieldEl: Element): HTMLElement;
+        listSpanTemplate(): string;
+    }
+    class TextField extends StringField {
+        tag: string;
+        formControl(fieldEl: Element): HTMLElement;
+    }
+    class XmlField extends TextField {
+    }
+    class JsonField extends TextField {
+    }
+    class RadioField extends ChoiceField {
+        formControl(fieldEl: Element): HTMLElement;
+    }
+}
+declare namespace Katrid.Data {
+    class ForeignKey extends Field {
+        tag: string;
+        vFilter: string;
+        formControl(fieldEl?: HTMLElement): HTMLElement;
+        listSpanTemplate(): string;
+        formSpanTemplate(): string;
+        create(): void;
+        setChoices(choices: any): void;
+        getParamTemplate(): string;
+        getParamValue(value: any): any;
+        format(value: any): any;
+        /**
+         * Returns the id attribute from the Object value
+         * @param {Object} val - The value to be prepared
+         */
+        toJSON(val: any): any;
+        setValue(record: Katrid.Data.DataRecord, value: any): any;
+        getLabelById(svc: Katrid.Services.ModelService, id: number | string): Promise<unknown>;
+        createTooltip(section: HTMLElement): void;
+    }
+}
+declare namespace Katrid.Data {
+    class ImageField extends Field {
+        noImageUrl: string;
+        constructor(info: any);
+        get vSrc(): any;
+        formSpanTemplate(): string;
+        formControl(): HTMLElement;
+    }
+}
+declare namespace Katrid.Data {
+    interface IFieldInfo {
+        name?: string;
+        caption?: string;
+        widget?: string;
+        type?: string;
+        required?: boolean;
+        visible?: boolean;
+        primaryKey?: boolean;
+        choices?: string[] | Record<string, any>;
+        defaultValue?: any;
+        cols?: number;
+        helpText?: string;
+        views?: any;
+    }
+}
+declare namespace Katrid.Data {
+    class ManyToManyField extends ForeignKey {
+        tag: string;
+        toJSON(val: any): any;
+        loadInfo(info: any): void;
+        formCreate(fieldEl: HTMLElement): HTMLElement;
+        formSpanTemplate(): string;
+    }
+}
+declare namespace Katrid.Data {
+    class OneToManyField extends Field {
+        views: Record<string, Katrid.Forms.ModelViewInfo>;
+        viewMode: string;
+        fields: Katrid.Data.Field[];
+        pasteAllowed: boolean;
+        create(): void;
+        get editor(): string;
+        get field(): any;
+        loadInfo(info: any): void;
+        loadViews(fieldEl?: HTMLElement): Promise<void>;
+        setElement(el: HTMLElement): void;
+        setValue(record: Katrid.Data.DataRecord, value: any, datasource?: DataSource): void;
+        formSpanTemplate(): string;
+        formControl(): HTMLElement;
+        createTooltip(section: any): void;
+        getView(mode?: string): Katrid.Forms.ModelView;
+    }
+}
+declare namespace katrid.db {
+    class ClientDatabase {
+        config: any;
+        db: IDBDatabase;
+        name: string;
+        version: number;
+        tables: any | string[];
+        constructor(config: any);
+        table(tableName: string): ClientTable;
+        open(): Promise<any>;
+        transaction(tables: string[], mode?: IDBTransactionMode): IDBTransaction;
+    }
+    class ClientTable {
+        db: ClientDatabase;
+        name: string;
+        constructor(config: any);
+        all(query?: IDBKeyRange | IDBValidKey): Promise<unknown>;
+        delete(key: string | number): Promise<any>;
+        clear(): Promise<unknown>;
+        get(key: string | number): Promise<any>;
+        put(item: any, key?: string | number): Promise<any>;
+    }
+}
+declare namespace katrid.ui {
+    export function createDialogElement(config: {
+        autoDestroy: boolean;
+        header?: string | boolean;
+        footer?: string | boolean;
+    }): HTMLDivElement;
+    type ConfirmConfig = {
+        title: string;
+        html: string;
+        dom: HTMLElement;
+    };
+    export function confirm(config: ConfirmConfig): Promise<boolean>;
+    export {};
+}
+declare namespace Katrid.Forms {
+    class MenuItem {
+        menu: ContextMenu;
+        text: string;
+        children: MenuItem[];
+        onclick: any;
+        el: HTMLElement;
+        constructor(menu: ContextMenu, text?: string);
+        addEventListener(type: any, listener: any, options?: any): void;
+        get index(): number;
+    }
+    class MenuItemSeparator extends MenuItem {
+        constructor(menu: ContextMenu);
+    }
+    class ContextMenu {
+        container: HTMLElement;
+        static instances: ContextMenu[];
+        items: MenuItem[];
+        target: any;
+        el: HTMLElement;
+        _visible: boolean;
+        _eventHook: any;
+        _eventKeyDownHook: any;
+        constructor(container?: HTMLElement);
+        add(item: any, clickCallback?: any): MenuItem;
+        insert(index: number, item: any): MenuItem;
+        addSeparator(): void;
+        protected destroyElement(): void;
+        protected createElement(): void;
+        show(x: number, y: number, target?: any): void;
+        close(): void;
+        get visible(): boolean;
+        static closeAll(): void;
+    }
+}
+declare namespace Katrid.Forms {
+    class CustomTag {
+        view: BaseView;
+        static render(view: BaseView, template: HTMLElement): void;
+        selector(): string;
+        constructor(view: BaseView, template: HTMLElement);
+        prepare(elements: NodeListOf<HTMLElement>, template: HTMLElement): void;
+        assign(source: HTMLElement, dest: HTMLElement): void;
+    }
+    class ActionsTag extends CustomTag {
+        prepare(elements: NodeListOf<HTMLElement>, template: HTMLElement): void;
+        selector(): string;
+        prepareAction(action: HTMLElement): HTMLElement;
+    }
+    function registerCustomTag(selector: string, customTag: typeof CustomTag | Function): void;
+}
+declare let Swal: any;
+declare let toastr: any;
+declare namespace Katrid.Forms.Dialogs {
+    class Alerts {
+        static success(msg: string): bootstrap.Toast;
+        static warning(msg: string): bootstrap.Toast;
+        static warn(msg: string): bootstrap.Toast;
+        static info(msg: string): bootstrap.Toast;
+        static error(msg: string): bootstrap.Toast;
+    }
+    class WaitDialog {
+        static show(): void;
+        static hide(): void;
+    }
+    class ExceptionDialog {
+        static show(title: string, msg: string, traceback?: string): void;
+    }
+    function toast(message: string): void;
+    function alert(message: string | any, title?: string, icon?: string): void | bootstrap.Toast;
+    function createModal(title?: string, content?: string, buttons?: any[]): HTMLDivElement;
+    function createDialog(title?: string, content?: string, buttons?: any[]): bootstrap.Modal;
+}
+declare namespace Katrid.Forms {
+    /** Field bound to a form */
+    class BoundField {
+        field: Katrid.Data.Field;
+        name: string;
+        fieldEl: HTMLElement;
+        form: FormView;
+        /** Field container */
+        container: HTMLElement;
+        /** Field input/control */
+        control: HTMLElement;
+        visible: boolean;
+        constructor(field: Katrid.Data.Field, name: string, fieldEl: HTMLElement);
+        focus(): void;
+        private _dirty;
+        get dirty(): boolean;
+        set dirty(value: boolean);
+        get required(): boolean;
+        reset(): void;
+        private _touched;
+        get touched(): boolean;
+        set touched(value: boolean);
+        private _valid;
+        get valid(): boolean;
+        set valid(value: boolean);
+        get pristine(): boolean;
+        set pristine(value: boolean);
+        get invalid(): boolean;
+        set invalid(value: boolean);
+        get untouched(): boolean;
+        set untouched(value: boolean);
+    }
+    class DataForm {
+        el: HTMLElement;
+        fields: Record<string, BoundField[]>;
+        touched: boolean;
+        valid: boolean;
+        dirty: boolean;
+        constructor(el: HTMLElement);
+        setFieldValue(field: Katrid.Data.Field, value: any): void;
+        setValid(value: any): void;
+        reset(): void;
+        private _loading;
+        setLoading(value: any): void;
+    }
+    interface IFormField extends HTMLElement {
+        $field: BoundField;
+    }
+    interface IFormElement extends HTMLElement {
+        $form: DataForm;
+    }
+}
+declare namespace Katrid.Forms {
+    class ModelViewInfo {
+        info: IModelViewInfo;
+        fields: Record<string, Katrid.Data.Field>;
+        content: string;
+        toolbar: any;
+        autoLoad: boolean;
+        constructor(info: IModelViewInfo);
+        private _pending;
+        loadPendingViews(): Promise<void>;
+        get template(): HTMLElement;
+    }
+}
+declare namespace Katrid.Forms {
+    function selectionSelectToggle(record: any): void;
+    function selectionToggleAll(sel?: boolean): void;
+    function tableContextMenu(event: any, config: any): void;
+    function listRecordContextMenu(record: any, index: any, event: any): void;
+    function unselectAll(): void;
+    function selectionDelete(): void;
+    class SelectionHelper extends Array<Katrid.Data.DataRecord> {
+        private _allSelected;
+        private _element;
+        get element(): HTMLElement;
+        set element(value: HTMLElement);
+        get allSelected(): boolean;
+        set allSelected(value: boolean);
+        selectToggle(record: Katrid.Data.DataRecord): void;
+        selectRecord(record: Katrid.Data.DataRecord): void;
+        toggleAll(): void;
+        unselectRecord(record: Katrid.Data.DataRecord): void;
+        unselectAll(): void;
+        clear(): void;
+    }
+}
+declare namespace Katrid.Forms {
+    class View extends BaseView {
+        constructor(info: IView);
+    }
+}
+declare var FullCalendar: any;
+declare namespace Katrid.Forms {
+    class CalendarView extends RecordCollectionView {
+        static viewType: string;
+        static createViewModeButton(container: HTMLElement): void;
+        protected _calendar: FullCalendar.Calendar;
+        fieldStart: string;
+        fieldEnd: string;
+        beforeRender(template: HTMLElement): HTMLElement;
+        protected dataSourceCallback(data: Katrid.Data.IDataCallback): void;
+        protected _refresh(records: any[]): void;
+        renderTemplate(content: HTMLElement): HTMLElement;
+        render(): HTMLElement;
+    }
+}
+declare namespace Katrid.Forms {
+    class CardRenderer {
+        fields: any;
+        constructor(fields: any);
+        renderField(fieldEl: HTMLElement): HTMLSpanElement;
+        render(template: HTMLElement): HTMLElement;
+    }
+    class CardView extends RecordCollectionView {
+        static viewType: string;
+        static createViewModeButton(container: HTMLElement): void;
+        protected renderTemplate(template: HTMLElement): HTMLElement;
+        protected createComponent(): any;
+        insert(): void;
+    }
+}
+declare namespace Katrid.Forms {
+    class ChartView extends RecordCollectionView {
+        static createViewModeButton(container: HTMLElement): void;
+    }
+}
+declare namespace Katrid.Forms {
+    import DataSourceState = Katrid.Data.DataSourceState;
+    export const changingStates: DataSourceState[];
+    export class FormView extends ModelView {
+        static viewType: string;
+        protected _state: DataSourceState;
+        dataForm: DataForm;
+        nestedViews: any[];
+        dataCallbacks: any[];
+        constructor(info: IModelViewInfo);
+        protected create(info: Katrid.Forms.IModelViewInfo): void;
+        get record(): any;
+        set record(value: any);
+        addDataCallback(cb: any): void;
+        get state(): DataSourceState;
+        set state(value: DataSourceState);
+        setState(state: DataSourceState): void;
+        get inserting(): boolean;
+        get editing(): boolean;
+        get changing(): boolean;
+        renderField(fld: Katrid.Data.Field, fieldEl: HTMLElement): any;
+        protected sumHooks: Record<string, ISumHookFieldInfo[]>;
+        protected addSumHook(field: Katrid.Data.Field, el: HTMLElement): void;
+        private _attributes;
+        beforeRender(template: HTMLElement): HTMLElement;
+        createToolbar(): HTMLElement;
+        createElement(): void;
+        protected createToolbarButtons(container: HTMLElement): Element;
+        protected getComponentData(): any;
+        ready(): Promise<void>;
+        onHashChange(params: any): Promise<void>;
+        render(): HTMLElement;
+        private _recordIndex;
+        get recordIndex(): number;
+        set recordIndex(value: number);
+        protected setRecordId(value: number): Promise<void>;
+        edit(): void;
+        insert(defaultValues?: any): Promise<number>;
+        save(): Promise<void>;
+        discard(): void;
+        next(): void;
+        prior(): void;
+        moveBy(index: number): void;
+        back(index: number, mode?: string): void;
+        refresh(): void;
+        copy(): Promise<void>;
+        protected createComponent(): any;
+        $result: any;
+        protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
+        /**
+         * Shows the form as a modal dialog
+         * @param options
+         */
+        showDialog(options?: any): Promise<void>;
+        $onFieldChange(field: Katrid.Data.Field, value: any): void;
+        static createNew(config: ICreateNewConfig): Promise<FormView>;
+        getDisplayText(): string;
+        saveAndClose(commit?: boolean): void;
+        discardAndClose(): void;
+        recordClick(event: any, index: any, record: any): void;
+        /** Put focus to field if specified or to the first one */
+        focus(fieldName?: string): void;
+        /** Close the current dialog and deletes the current record */
+        deleteAndClose(): void;
+        private _pendingViews;
+        loadPendingViews(): Promise<void>;
+        protected $discard(): void;
+    }
+    interface ICreateNewConfig {
+        model: string;
+        dialog?: boolean;
+        id?: any;
+        record?: any;
+        buttons?: any[];
+    }
+    interface ISumHookFieldInfo {
+        field: Katrid.Data.Field;
+        fieldToSum: string;
+    }
+    export {};
+}
+declare namespace Katrid.Forms {
+    interface ISearchModelViewInfo extends IModelViewInfo {
+        resultView?: RecordCollectionView;
+    }
+    /** SearchView is a special view mode, and search instances will be generally rendered inside toolbar
+     * region of a RecordCollectionView descendant instance. */
+    export class SearchView extends ModelView {
+        static viewType: string;
+        /** Current result view */
+        private _resultView;
+        constructor(info: ISearchModelViewInfo, action?: Katrid.Actions.WindowAction);
+        get resultView(): RecordCollectionView;
+        set resultView(value: RecordCollectionView);
+        protected getComponentData(): any;
+        private _dataOffset;
+        get dataOffset(): number;
+        set dataOffset(value: number);
+        private _dataOffsetLimit;
+        get dataOffsetLimit(): number;
+        set dataOffsetLimit(value: number);
+        pageSize: number;
+        private _pageIndex;
+        get pageIndex(): number;
+        set pageIndex(value: number);
+        nextPage(): void;
+        prevPage(): void;
+        protected _vmCreated(vm: any): void;
+        protected createComponent(): any;
+        update(vm: any): void;
+        beforeRender(): HTMLElement;
+        controller: Katrid.Forms.Views.Search.SearchViewController;
+        render(): HTMLElement;
+        load(query: any): void;
+        renderTo(container: HTMLElement): void;
+        protected getFieldConditions(field: Katrid.Data.Field): any;
+    }
+    export {};
+}
+declare namespace Katrid.Forms {
+    export class ListRenderer {
+        viewInfo: Katrid.Forms.IModelViewInfo;
+        options?: any;
+        tHead: HTMLElement;
+        tHeadRow: HTMLElement;
+        tBody: HTMLElement;
+        tRow: HTMLElement;
+        table: HTMLTableElement;
+        inlineEditor: boolean;
+        rowSelector: boolean;
+        constructor(viewInfo: Katrid.Forms.IModelViewInfo, options?: any);
+        render(list: HTMLElement, records?: string): HTMLElement;
+        columns: Katrid.Data.Field[];
+        addField(fld: HTMLElement): void;
+        compile(): void;
+    }
+    export class TableView extends RecordCollectionView {
+        static viewType: string;
+        private _formCounter;
+        forms: Record<number, ITableRowForm>;
+        protected _readonly: boolean;
+        rowSelector: boolean;
+        context: any;
+        static createViewModeButton(container: HTMLElement): void;
+        static createSearchDialog(config?: any): Promise<TableView>;
+        protected create(info: Katrid.Forms.IModelViewInfo): void;
+        protected createSelectionInfo(parent: HTMLElement): void;
+        /**
+         * Show a selection/search dialog
+         * @param options
+         */
+        showDialog(options?: any): Promise<any>;
+        createInlineEditor(): HTMLTableRowElement;
+        protected _recordClick(record: any, index: number): Promise<void>;
+        createFormComponent(record: any): {
+            created(): void;
+            data(): any;
+        };
+        protected createComponent(): any;
+        edit(index: number): HTMLTableRowElement;
+        insert(): void;
+        private _removeForm;
+        save(formId?: number): void;
+        discard(formId?: number | string): void;
+        allowGrouping: boolean;
+        protected renderTemplate(template: HTMLElement): HTMLDivElement;
+        $columns: any[];
+        groupBy(data: any[]): Promise<any>;
+    }
+    interface ITableRowForm {
+        formRow: HTMLTableRowElement;
+        relRow?: HTMLTableRowElement;
+        index: number;
+        record: any;
+    }
+    export function dataTableContextMenu(evt: any): void;
     export {};
 }
 declare var KATRID_I18N: any;
@@ -244,21 +2090,565 @@ declare namespace Katrid {
     export let i18n: Ii18n;
     export {};
 }
-declare namespace Katrid {
-    function isString(obj: any): boolean;
-    function isNumber(obj: any): boolean;
-    function isObject(obj: any): boolean;
-    function hash(obj: any): any;
-    function sum(iterable: any, member: any): number;
-    function avg(iterable: any, member: any): number;
-    function guid(): string;
+declare namespace Katrid.Forms.Views.Search {
+    interface ISchemaItem {
+        name: string;
+        type: string;
+        label: string;
+    }
+    interface ISchema {
+        items: ISchemaItem[];
+    }
+    class SearchViewController {
+        searchView: Katrid.Forms.SearchView;
+        query: SearchQuery;
+        facets: any[];
+        input: HTMLInputElement;
+        searchText: string;
+        searchItems: any[];
+        searchFields: any[];
+        filterGroups: any[];
+        fields: Record<string, Katrid.Data.Field>;
+        groups: SearchGroups[];
+        _groupLength: number;
+        view: any;
+        facetGrouping: FacetGroup;
+        menu: HTMLElement;
+        groupLength: number;
+        viewContent: Element;
+        model: Katrid.Services.ModelService;
+        private _schema;
+        action: Katrid.Actions.WindowAction;
+        vm: any;
+        constructor(searchView: Katrid.Forms.SearchView);
+        get text(): any;
+        get schema(): any;
+        set schema(value: any);
+        setContent(schema: HTMLElement | ISchema): void;
+        addItem(item: SearchItem): void;
+        private _availableItems;
+        get availableItems(): any[];
+        show(): void;
+        close(): void;
+        reset(): void;
+        clear(): void;
+        addCustomFilter(field: Katrid.Data.Field, value: any): void;
+        first(): void;
+        removeItem(index: number): void;
+        getParams(): any[];
+        addFacet(facet: any): void;
+        load(filter: any[]): void;
+        getByName(name: string): any;
+        dump(): any[];
+        onUpdate: any;
+        update(): Promise<void>;
+        groupBy(): string[];
+    }
 }
-declare namespace Katrid {
-    function toCamelCase(s: string): string;
-    function dict(obj: any[]): any;
+declare namespace Katrid.Forms.Views.Search {
+    let conditionsLabels: any;
+    let conditionSuffix: any;
+    class SearchItem {
+        view: Katrid.Forms.SearchView;
+        name: string;
+        el: Element;
+        value: any;
+        pattern: RegExp;
+        searchString: string;
+        controller: SearchViewController;
+        constructor(view: Katrid.Forms.SearchView, name: string, el: Element);
+        test(s: string): boolean;
+        getDisplayValue(): any;
+        getParamValue(name: any, value: any): any;
+        _doChange(): void;
+    }
+    class SearchFilter extends SearchItem {
+        protected _selected: boolean;
+        caption: string;
+        group: SearchFilters;
+        constructor(view: Katrid.Forms.SearchView, name: string, caption: string, domain?: any, group?: SearchFilters, el?: HTMLElement);
+        static fromItem(view: any, el: HTMLElement, group: any): SearchFilter;
+        toString(): string;
+        toggle(): void;
+        get selected(): boolean;
+        set selected(value: boolean);
+        getDisplayValue(): string;
+        get facet(): FacetView;
+        domain: any;
+        getParamValue(): any;
+        get value(): any;
+    }
+    class SearchFilters {
+        view: Katrid.Forms.SearchView;
+        private _selection;
+        controller: SearchViewController;
+        facet: FacetView;
+        items: SearchItem[];
+        constructor(view: Katrid.Forms.SearchView, facet?: FacetView);
+        static fromItem(view: Katrid.Forms.SearchView, el: any): SearchFilters;
+        static fromGroup(view: any, el: any): SearchFilters;
+        private _selected;
+        get selected(): boolean;
+        set selected(value: boolean);
+        toggle(): void;
+        addValue(item: any): void;
+        removeValue(item: any): void;
+        selectAll(): void;
+        get caption(): string;
+        toString(): string;
+        _refresh(): void;
+        getParamValue(v: any): any;
+        clear(): void;
+        push(item: SearchFilter): void;
+    }
+    class SearchObject {
+        _ref: any;
+        display: any;
+        value: any;
+        constructor(display: any, value: any);
+    }
+    class SearchResult {
+        field: any;
+        value: any;
+        text: string;
+        indent: boolean;
+        constructor(field: any, value: any);
+        select(): void;
+    }
+    class SearchField extends SearchItem {
+        field: any;
+        private _expanded;
+        expandable: any;
+        children: any[];
+        options: any;
+        searchKey: string;
+        caption: string;
+        constructor(view: any, name: any, el: HTMLElement, field: any);
+        get expanded(): boolean;
+        set expanded(value: boolean);
+        loading: boolean;
+        _loadChildren(): void;
+        protected _facet: any;
+        get facet(): any;
+        getDisplayValue(): any;
+        lookup: string;
+        getParamValue(value: any): any;
+        _value: any;
+        get value(): any;
+        select(): Promise<boolean>;
+        selectItem(item: any): void;
+        static fromField(view: Katrid.Forms.SearchView, el: HTMLElement): SearchField;
+        get template(): string;
+    }
 }
-declare namespace katrid {
-    function sleep(t: number): Promise<unknown>;
+declare namespace Katrid.Forms.Views.Search {
+    class CustomFilterItem extends SearchFilter {
+        field: any;
+        condition: any;
+        _value: any;
+        constructor(view: Katrid.Forms.SearchView, field: Katrid.Data.Field, condition: string, value: any, group: SearchFilters);
+        toString(): string;
+        get value(): any;
+    }
+    class CustomFilterHelper {
+        searchView: SearchViewController;
+        constructor(searchView: SearchViewController, container: HTMLElement);
+    }
+    class GroupFilterHelper {
+        constructor(searchView: SearchViewController, container: HTMLElement);
+    }
+    class SaveFilterHelper {
+        constructor(searchView: SearchViewController, container: HTMLElement);
+    }
+}
+declare namespace Katrid.Forms.Views.Search {
+    class FacetView {
+        item: any;
+        values: any[];
+        constructor(item: any);
+        get separator(): string;
+        init(item: any, values: any[]): void;
+        addValue(value: any): number;
+        get caption(): any;
+        clear(): void;
+        get templateValue(): string;
+        template(): string;
+        link(searchView: any): JQuery<HTMLElement>;
+        element: any;
+        render(el: any): void;
+        refresh(): any;
+        load(searchView: any): void;
+        destroy(): void;
+        getParamValues(): any[];
+    }
+}
+declare namespace Katrid.Forms.Views.Search {
+    class FacetGroup extends FacetView {
+        grouping: boolean;
+        constructor(...args: any[]);
+        clear(): void;
+        get separator(): string;
+        get caption(): string;
+    }
+    class SearchGroups extends SearchFilters {
+        constructor(view: SearchView, facet: any);
+        static fromGroup(opts: any): SearchGroups;
+        static fromField({ view, field }: {
+            view: any;
+            field: any;
+        }): SearchGroups;
+        addValue(item: any): void;
+        removeValue(item: any): void;
+        _refresh(): void;
+    }
+    class SearchGroup extends SearchFilter {
+        context: any;
+        groupBy: string | string[];
+        constructor(view: SearchViewController, name: string, caption: string, group: any, el?: HTMLElement);
+        static fromItem(view: any, el?: HTMLElement, group?: any): SearchGroup;
+        static fromField(view: any, field: any, group?: any): SearchGroup;
+        toString(): string;
+    }
+}
+declare namespace Katrid.Forms.Views.Search {
+    class SearchQuery {
+        items: any[];
+        groups: any[];
+        searchView: any;
+        constructor(searchView: any);
+        add(item: any): void;
+        loadItem(item: any): void;
+        remove(item: any): void;
+        getParams(): any;
+    }
+}
+declare namespace Katrid.Forms.Controls {
+}
+declare namespace Katrid.Forms.Controls {
+}
+declare namespace Katrid.UI {
+    class InputMask {
+        el: HTMLInputElement;
+        private options?;
+        private _changed;
+        private _inputMask;
+        constructor(el: HTMLInputElement, options?: any);
+        protected _keyPress(event: KeyboardEvent): boolean;
+        protected _keyDown(event: KeyboardEvent): boolean;
+        protected _format(): void;
+        protected _create(): void;
+        protected _invalidate(): void;
+    }
+}
+declare namespace Katrid.Forms {
+    class InputDate extends Katrid.UI.InputMask {
+    }
+}
+declare namespace katrid.utils {
+    function autoCompleteDate(s: string, format: string): Date;
+}
+declare namespace Katrid.UI {
+    function toggleFullScreen(): void;
+}
+interface JQuery {
+    select2(...args: any[]): JQuery;
+    modal(...args: any[]): JQuery;
+    tabset(...args: any[]): JQuery;
+    dropdown(...args: any[]): JQuery;
+    toast(...args: any[]): JQuery;
+    inputmask(...args: any[]): any;
+    datetimepicker(...args: any[]): JQuery;
+}
+declare namespace Katrid.Forms {
+    class InputDecimal {
+        element: HTMLInputElement;
+        protected _formula: boolean;
+        private _changed;
+        constructor(element: HTMLInputElement);
+        protected _formatValue(val: number): string;
+        protected _format(): void;
+        protected _create(): void;
+        protected _invalidate(): void;
+        getValue(): number;
+        setValue(v: number | string): void;
+    }
+}
+declare namespace katrid.ui {
+    let InputDecimal: typeof Katrid.Forms.InputDecimal;
+}
+declare namespace Katrid.Forms.Widgets {
+    /** Represents a data field renderer */
+    class Widget {
+        field: Katrid.Data.Field;
+        fieldEl: Element;
+        constructor(field: Katrid.Data.Field, fieldEl: Element);
+        renderToForm: any;
+        formLabel(): HTMLLabelElement;
+        afterRender(el: HTMLElement): HTMLElement;
+    }
+    let registry: Record<string, any>;
+}
+declare namespace Katrid.Forms.Widgets {
+    class StatusField extends Widget {
+        renderToForm(): HTMLElement;
+    }
+    class RadioField extends Widget {
+        formControl(): HTMLElement;
+    }
+    class StatValue extends Widget {
+        renderToForm(): HTMLElement;
+    }
+    class PasswordField extends Widget {
+        afterRender(el: HTMLElement): HTMLElement;
+    }
+}
+declare var Popper: any;
+declare namespace Katrid.UI {
+    export const keyCode: any;
+    interface DropdownItem {
+        id: any;
+        text: string;
+        template?: string | any;
+    }
+    export class DropdownMenu {
+        protected options?: any;
+        el: HTMLElement;
+        template: string | any;
+        waitTemplate: string | any;
+        activeItem: HTMLElement;
+        _source: any;
+        _loading: boolean;
+        delay: number;
+        items: DropdownItem[];
+        private _pendingTimeout;
+        private _elements;
+        private _wait;
+        private _popper;
+        input: InputAutoComplete;
+        target: HTMLElement;
+        constructor(input?: InputAutoComplete | any, options?: any);
+        show(): void;
+        hide(): void;
+        get visible(): boolean;
+        loadItems(items: any[]): void;
+        clearItems(): void;
+        _pending: any;
+        init(): void;
+        search(): Promise<unknown>;
+        cancelSearch(): void;
+        showWait(): void;
+        hideWait(): void;
+        get loading(): boolean;
+        set loading(value: boolean);
+        mouseDown: boolean;
+        addItem(item: any): HTMLElement;
+        onSelectItem(item?: HTMLElement): CustomEvent<any>;
+        onActivateItem(item: HTMLElement): void;
+        onDeactivateItem(item: HTMLElement): void;
+        move(distance: number): void;
+        get source(): any | string;
+        set source(value: any | string);
+    }
+    export class BaseInputWidget {
+        el: HTMLElement;
+        constructor(options: any);
+        protected _create(el: HTMLElement): void;
+    }
+    export class BaseAutoComplete extends BaseInputWidget {
+        field: any;
+        $selectedItem: any;
+        menu: DropdownMenu;
+        onChange: any;
+        closeOnChange: boolean;
+        input: HTMLInputElement;
+        private _source;
+        term: string;
+        multiple: boolean;
+        allowOpen: boolean;
+        protected _create(el: HTMLElement): void;
+        private _tags;
+        private _facets;
+        protected _addTag(tag: any): boolean;
+        addTag(tag: any): void;
+        removeTag(tag: any): void;
+        set tags(value: any[]);
+        private _setValues;
+        protected onInput(): void;
+        protected onClick(): void;
+        protected onFocusout(): void;
+        protected createMenu(): void;
+        protected invalidateValue(): void;
+        protected onKeyDown(evt: any): void;
+        private _dataValue;
+        showMenu(): void;
+        hideMenu(): void;
+        menuVisible(): boolean;
+        setOptions(options: any): void;
+        setSource(value: any | string): void;
+        _selectItem(el?: HTMLElement): CustomEvent<any>;
+        _setValue(item: any, el?: HTMLElement): CustomEvent<{
+            item: any;
+            dropdownItem: HTMLElement;
+        }>;
+        setValue(item: any, el?: HTMLElement): CustomEvent<any>;
+        get selectedItem(): any;
+        set selectedItem(value: any);
+        get selectedValue(): any;
+    }
+    class InputAutoComplete extends BaseAutoComplete {
+        protected _create(el: HTMLElement): void;
+    }
+    export {};
+}
+declare namespace Katrid.Forms.Controls {
+    class InputForeignKeyElement extends Katrid.UI.BaseAutoComplete {
+        actionView: any;
+        allowAdvancedSearch: boolean;
+        allowCreateNew: boolean;
+        filter: any;
+        /**
+         * Bind the element with a Katrid.Data.Field, filter and the "source" of items
+         * @param options
+         */
+        bind(options: any): void;
+    }
+}
+declare namespace Katrid.Forms {
+}
+declare namespace katrid.ui {
+    function inputRegexPattern(el: HTMLElement, pattern: string): void;
+}
+declare namespace Katrid.Forms {
+}
+declare namespace Katrid.Forms.Controls {
+}
+declare namespace Katrid.Forms.Widgets {
+}
+declare namespace Katrid.Forms.Widgets {
+}
+declare namespace Katrid.Forms.Widgets {
+}
+declare namespace katrid.ui {
+    class UserCommentsElement extends WebComponent {
+        private _datasource;
+        private _callback;
+        protected _panel: HTMLElement;
+        protected _textEditor: HTMLTextAreaElement;
+        protected _file: HTMLInputElement;
+        protected _files: any[];
+        protected _recordId: any;
+        get datasource(): DataSource;
+        set datasource(value: DataSource);
+        protected create(): void;
+        protected createEditor(): void;
+        showEditor(): void;
+        closeEditor(): void;
+        addFile(event: Event): void;
+        protected _sendMessage(msg: string, attachments: any[]): Promise<void>;
+        sendMessage(msg: string): Promise<void>;
+        protected parentNotification(record: any): Promise<void>;
+        protected _createComment(comment: any): HTMLElement;
+    }
+}
+declare namespace Katrid.Reports {
+    class Params {
+        static Operations: any;
+        static Labels: any;
+        static DefaultOperations: any;
+        static TypeOperations: any;
+        static Widgets: any;
+    }
+    class Param {
+        info: any;
+        params: any;
+        name: string;
+        field: any;
+        label: string;
+        static: any;
+        type: any;
+        defaultOperation: any;
+        operation: any;
+        operations: any;
+        exclude: any;
+        id: number;
+        choices: any;
+        constructor(info: any, params?: any);
+        defaultValue: any;
+        value1: any;
+        value2: any;
+        el: any;
+        setOperation(op: any, focus: any): void;
+        createControls(): any;
+        getOperations(): {
+            id: string;
+            text: any;
+        }[];
+        operationTemplate(): string;
+        template(): string;
+        render(container: any): any;
+        dump(): {
+            name: string;
+            op: any;
+            value1: any;
+            value2: any;
+            type: any;
+        };
+    }
+    function createParamsPanel(container: HTMLElement, params: Param[]): any;
+    class ReportEngine {
+        static load(el: any): void;
+    }
+}
+declare namespace Katrid.Reports {
+    let currentReport: any;
+    let currentUserReport: any;
+    class Report {
+        action: any;
+        info: any;
+        name: string;
+        id: number;
+        values: any;
+        filters: any[];
+        params: any[];
+        groupables: any[];
+        sortables: any[];
+        totals: any[];
+        container: any;
+        model: any;
+        constructor(action: Katrid.Actions.ReportAction);
+        telegram(): void;
+        getUserParams(): any;
+        loadFromXml(xml: any): void;
+        saveDialog(): boolean;
+        fields: any;
+        load(fields: any, params: any): void;
+        autoCreate: boolean;
+        loadParams(): void;
+        addParam(paramName: string, value?: any): void;
+        createParams(container: HTMLElement): void;
+        getValues(): void;
+        export(format: string): Promise<boolean>;
+        preview(): Promise<boolean>;
+        renderFields(): JQuery<HTMLElement>;
+        elParams: any;
+        renderParams(container: any): any;
+        renderGrouping(container: any): any;
+        renderSorting(container: any): any;
+        render(container: any): any;
+    }
+    function renderDialog(action: Katrid.Actions.ReportAction): string;
+}
+declare namespace katrid.bi {
+    class PreparedPage {
+        metadata: any;
+        load(metadata: any): void;
+    }
+    export class MetaDocument {
+        type: string;
+        pages: PreparedPage[];
+        load(metadata: any): void;
+    }
+    export {};
 }
 declare namespace Katrid.Services {
     abstract class BaseAdapter {
@@ -282,64 +2672,6 @@ declare namespace Katrid.Services {
     }
 }
 declare namespace Katrid.Services {
-    class Service {
-        name: string;
-        static url: string;
-        constructor(name: string);
-        static adapter: BaseAdapter;
-        static $fetch(url: any, config: any, params: any): any;
-        static $post(url: any, data: any, params?: any): any;
-        get(name: string, params: any): JQuery.jqXHR<any>;
-        post(name: string, data: any, params?: any, config?: any, context?: any): Promise<unknown>;
-    }
-    class Data extends Service {
-        static get url(): string;
-        /**
-         * Reorder/reindex a collection of records
-         * @param model
-         * @param ids
-         * @param field
-         * @param offset
-         */
-        reorder(model: any, ids: any, field?: string, offset?: number): Promise<unknown>;
-    }
-    /**
-     * Represents the attachments services api
-     */
-    class Attachments {
-        static delete(id: any): void;
-        static upload(file: any, config: any): Promise<any>;
-    }
-    class Upload {
-        static sendFile(config: any): void;
-        static uploadTo(url: any, file: any): JQuery.jqXHR<any>;
-    }
-    let data: Data;
-    function post(url: string, data: any): Promise<any>;
-}
-declare let Swal: any;
-declare let toastr: any;
-declare namespace Katrid.Forms.Dialogs {
-    class Alerts {
-        static success(msg: string): bootstrap.Toast;
-        static warning(msg: string): bootstrap.Toast;
-        static warn(msg: string): bootstrap.Toast;
-        static info(msg: string): bootstrap.Toast;
-        static error(msg: string): bootstrap.Toast;
-    }
-    class WaitDialog {
-        static show(): void;
-        static hide(): void;
-    }
-    class ExceptionDialog {
-        static show(title: string, msg: string, traceback?: string): void;
-    }
-    function toast(message: string): void;
-    function alert(message: string | any, title?: string, icon?: string): void | bootstrap.Toast;
-    function createModal(title?: string, content?: string, buttons?: any[]): HTMLDivElement;
-    function createDialog(title?: string, content?: string, buttons?: any[]): bootstrap.Modal;
-}
-declare namespace Katrid.Services {
     export interface IGetFieldChoices {
         field: string;
         term?: string;
@@ -360,6 +2692,7 @@ declare namespace Katrid.Services {
         searchByName(kwargs: any): Promise<unknown>;
         createName(name: string): Promise<unknown>;
         search(params: ISearchParams, data?: any, config?: any, context?: any): any;
+        listId(params: any, config?: any, context?: any): Promise<any>;
         delete(id: any): Promise<unknown>;
         getById(id: any, config?: any): any;
         getDefaults(kwargs: any, config?: any): Promise<unknown>;
@@ -373,6 +2706,7 @@ declare namespace Katrid.Services {
         getFieldChoice(config: IGetFieldChoices): Promise<unknown>;
         doViewAction(data: any): Promise<unknown>;
         callAdminViewAction(data: any): Promise<unknown>;
+        callSubAction(action: string, data: any): Promise<unknown>;
         write(data: any, params?: any): Promise<unknown>;
         groupBy(grouping: any, params: any): any;
         autoReport(): Promise<unknown>;
@@ -384,7 +2718,7 @@ declare namespace Katrid.Services {
         static read(config: any): any;
         static all(): any;
         getMetadata(): any;
-        execute(config: any): Promise<unknown>;
+        execute(config: any): Promise<any>;
         static executeSql(sql: string): Promise<unknown>;
     }
     export class Actions extends ModelService {
@@ -399,6 +2733,49 @@ declare namespace Katrid.Services {
         constructor(...args: any[]);
         $fetch(url: any, data: any, params?: any): void;
     }
+}
+declare namespace katrid.sql {
+    class Select {
+    }
+    class From {
+    }
+    class Alias {
+        name: string;
+        constructor(name: string);
+    }
+    function select(): void;
+    function from(): void;
+}
+declare const select: typeof katrid.sql.select;
+declare namespace katrid.test {
+    function click(selector: string): void;
+    function modelActionTour(args: any): Promise<void>;
+    function waitFor(selector: string, timeout?: number): Promise<HTMLElement>;
+    function menuClick(...path: string[]): Promise<void>;
+    function sendKeys(field: string, text: string, value?: any): Promise<void>;
+    class Tour {
+        parent?: HTMLElement;
+        navigationInterval: number;
+        constructor(parent?: HTMLElement);
+        textClick(text: string): Promise<void>;
+        set(field: string | HTMLElement, value: string): Promise<void>;
+        menuClick(path: string[]): Promise<void>;
+        waitFor(selector: string, timeout?: number): Promise<HTMLElement>;
+        click(selector: string): void;
+        sendKeys(el: HTMLInputElement, value: string): Promise<void>;
+        sendKeysToField(container: HTMLElement, field: string, value: string): Promise<void>;
+        addRecordTo(el: HTMLElement, data: any): Promise<void>;
+        editRecordFrom(el: HTMLElement, data: any): Promise<void>;
+        deleteRecordFrom(el: HTMLElement, index: number): Promise<void>;
+        protected _setFields(data: any, container: Element): Promise<void>;
+        protected _modelAction(op: string, step: any): Promise<void>;
+        modelActionTour(structure: any): Promise<void>;
+        assert(condition: any): Promise<void>;
+        protected _step(step: any): Promise<boolean>;
+        tour(steps: any): Promise<void>;
+    }
+    function runTour(steps: any): Promise<void>;
+    function tour(fn: Function): Promise<void>;
 }
 declare namespace Katrid.ui {
     class Application extends Katrid.Core.WebApplication {
@@ -458,98 +2835,6 @@ declare namespace Katrid.UI {
     }
     export {};
 }
-declare var Popper: any;
-declare namespace Katrid.UI {
-    interface DropdownItem {
-        id: any;
-        text: string;
-        template?: string | any;
-    }
-    export class DropdownMenu {
-        protected options?: any;
-        el: HTMLElement;
-        template: string | any;
-        waitTemplate: string | any;
-        activeItem: HTMLElement;
-        _source: any;
-        _loading: boolean;
-        delay: number;
-        items: DropdownItem[];
-        private _pendingTimeout;
-        private _elements;
-        private _wait;
-        private _popper;
-        input: InputAutoComplete;
-        target: HTMLElement;
-        constructor(input?: InputAutoComplete | any, options?: any);
-        show(): void;
-        hide(): void;
-        get visible(): boolean;
-        loadItems(items: any[]): void;
-        clearItems(): void;
-        _pending: any;
-        init(): void;
-        search(): Promise<unknown>;
-        cancelSearch(): void;
-        showWait(): void;
-        hideWait(): void;
-        get loading(): boolean;
-        set loading(value: boolean);
-        mouseDown: boolean;
-        addItem(item: any): HTMLElement;
-        onSelectItem(item?: HTMLElement): CustomEvent<any>;
-        onActivateItem(item: HTMLElement): void;
-        onDeactivateItem(item: HTMLElement): void;
-        move(distance: number): void;
-        get source(): any | string;
-        set source(value: any | string);
-    }
-    export class BaseAutoComplete extends Katrid.WebComponent {
-        field: any;
-        $selectedItem: any;
-        menu: DropdownMenu;
-        onChange: any;
-        closeOnChange: boolean;
-        input: HTMLInputElement;
-        private _source;
-        term: string;
-        multiple: boolean;
-        allowOpen: boolean;
-        create(): void;
-        private _tags;
-        private _facets;
-        protected _addTag(tag: any): boolean;
-        addTag(tag: any): void;
-        removeTag(tag: any): void;
-        set tags(value: any[]);
-        private _setValues;
-        protected onInput(): void;
-        protected onClick(): void;
-        protected onFocusout(): void;
-        protected createMenu(): void;
-        protected invalidateValue(): void;
-        protected onKeyDown(evt: any): void;
-        private _dataValue;
-        showMenu(): void;
-        hideMenu(): void;
-        menuVisible(): boolean;
-        setOptions(options: any): void;
-        setSource(value: any | string): void;
-        _selectItem(el?: HTMLElement): CustomEvent<any>;
-        _setValue(item: any, el?: HTMLElement): CustomEvent<{
-            item: any;
-            dropdownItem: HTMLElement;
-        }>;
-        setValue(item: any, el?: HTMLElement): CustomEvent<any>;
-        get selectedItem(): any;
-        set selectedItem(value: any);
-        get selectedValue(): any;
-    }
-    class InputAutoComplete extends BaseAutoComplete {
-        create(): void;
-    }
-    export {};
-}
 declare namespace Katrid.ui {
     interface IButtonConfig {
         text?: string;
@@ -587,8 +2872,12 @@ declare namespace Katrid.ui {
     }
     export {};
 }
+declare namespace katrid.ui {
+    function openFileDialog(accept: string, multiple?: boolean): Promise<HTMLInputElement>;
+}
 declare namespace katrid.filters {
     function date(value: any, fmt?: string): any;
+    function shortDate(value: any): any;
     function dateTimeHumanize(value: any): string;
 }
 declare function sprintf(fmt: string, obj: any): string;
@@ -618,13 +2907,13 @@ declare namespace Katrid.ui {
     }
     export {};
 }
-declare namespace katrid.ui {
+declare namespace Katrid.UI {
     class HelpProvider {
         getTooltipHelp(tooltip: Katrid.ui.Tooltip): string;
     }
     let helpProvider: HelpProvider;
 }
-declare namespace katrid.ui {
+declare namespace Katrid.UI {
     class HelpCenter {
         app?: Katrid.Core.WebApplication;
         element: HTMLElement;
@@ -640,32 +2929,10 @@ declare namespace katrid.ui {
     }
     function helpCenter(): HelpCenter;
 }
-declare module "src/ui/index" {
-    namespace katrid.ui {
-        let keyCode: any;
-        function toggleFullScreen(): void;
-    }
-    export let kui: typeof katrid.ui;
-}
 declare namespace Katrid.ui {
     class Input {
         input: HTMLInputElement;
         constructor(input: HTMLInputElement);
-    }
-}
-declare namespace katrid.ui {
-    class InputMask extends HTMLInputElement {
-        private _created;
-        private _changed;
-        private _inputMask;
-        constructor();
-        protected _keyPress(event: KeyboardEvent): boolean;
-        protected _keyDown(event: KeyboardEvent): boolean;
-        connectedCallback(): void;
-        protected _format(): void;
-        protected _create(): void;
-        get inputMask(): string;
-        protected _invalidate(): void;
     }
 }
 declare var Plotly: any;
@@ -678,8 +2945,9 @@ declare namespace Katrid.Forms.Widgets {
 declare namespace Katrid.UI.Utils {
     function tableToText(table: HTMLTableElement): string;
     function toTsv(data: any[]): string;
+    function textToDownload(s: string, filename?: string): void;
 }
-declare namespace katrid.ui {
+declare namespace Katrid.UI {
     class Toast {
         static _container: HTMLElement;
         static createElement(config: any): HTMLDivElement;
@@ -690,6 +2958,11 @@ declare namespace katrid.ui {
         static warning(message: any): bootstrap.Toast;
     }
     function showMessage(message: string): unknown;
+}
+declare namespace katrid.ui {
+    class Toolbar {
+        constructor(config: HTMLElement | any);
+    }
 }
 declare namespace Katrid.ui {
     class Tooltip {
@@ -706,7 +2979,7 @@ declare namespace Katrid.ui {
         loadAdditionalTip(): void;
     }
 }
-declare namespace Katrid.UI {
+declare namespace katrid.ui {
     class Component {
         protected _el: HTMLElement;
         get el(): HTMLElement;
@@ -772,5 +3045,46 @@ declare namespace Katrid.UI {
 declare namespace katrid.ui {
     /** Show a search dialog for a given model */
     function search(config: any): Promise<any>;
+}
+declare namespace katrid.ui {
+    class BaseView {
+        constructor(config: any);
+        $render(vm: any): any;
+    }
+    class ModelView extends BaseView {
+        model: Katrid.Data.Model;
+        constructor(config: any);
+    }
+    class RecordCollectionView extends BaseView {
+    }
+    class TableView extends RecordCollectionView {
+        createTableRow(): void;
+    }
+    class CardView extends RecordCollectionView {
+        quickCreateItem(): void;
+        createCardItem(): void;
+        createCardGroup(): void;
+    }
+}
+declare var kui: typeof katrid.ui;
+declare namespace Katrid {
+    function isString(obj: any): boolean;
+    function isNumber(obj: any): boolean;
+    function isObject(obj: any): boolean;
+    function hash(obj: any): any;
+    function sum(iterable: any, member: any): number;
+    function avg(iterable: any, member: any): number;
+    function guid(): string;
+}
+declare namespace katrid {
+    function printHtml(html: string): void;
+}
+declare namespace Katrid {
+    function toCamelCase(s: string): string;
+    function dict(obj: any[]): any;
+}
+declare namespace katrid {
+    function sleep(t: number): Promise<unknown>;
+    function invoke(qualName: string): any;
 }
 //# sourceMappingURL=katrid.d.ts.map
