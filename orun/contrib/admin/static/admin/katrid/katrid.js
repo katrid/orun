@@ -12768,12 +12768,14 @@ var Katrid;
                                 },
                             });
                             form.insert();
+                            // add created record to list
+                            if (!this.records)
+                                this.records = [];
+                            if (!this.$parent.record[this.$field.name])
+                                this.$parent.record[this.$field.name] = this.records;
                             let res = await form.dialogPromise;
                             if (res) {
                                 let rec = form.record;
-                                // add created record to list
-                                if (!this.records)
-                                    this.records = [];
                                 this.records.push(rec);
                                 this.$onChange();
                             }
