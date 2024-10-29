@@ -221,6 +221,7 @@ declare namespace Katrid.Actions {
         container: HTMLElement;
         info: Katrid.Specification.UI.IActionInfo;
         constructor(config: IActionConfig);
+        beforeUnload(event: Event): void;
         confirmDiscard(): Promise<boolean>;
         debug(): Promise<void>;
         render(): Promise<void>;
@@ -361,6 +362,7 @@ declare namespace Katrid.Actions {
         onHashChange(params: any): Promise<void>;
         getCaption(): any;
         rpc(method: string, data: any, event: any): void;
+        beforeUnload(event: any): void;
         protected prepareContext(): any;
         getDisplayText(): string;
         onLoadData(recs: any[]): void;
@@ -649,7 +651,7 @@ declare namespace Katrid.Core {
         private _currentMenu;
         private _actionManager;
         constructor(config: any);
-        beforeUnload(): void;
+        beforeUnload(event: any): void;
         get actionManager(): ActionManager;
         render(): void;
         protected hideMessageCounter(): void;

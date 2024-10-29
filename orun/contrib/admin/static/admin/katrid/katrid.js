@@ -330,6 +330,8 @@ var Katrid;
                 if (this.actionManager)
                     this.actionManager.addAction(this);
             }
+            beforeUnload(event) {
+            }
             async confirmDiscard() {
                 return true;
             }
@@ -869,6 +871,10 @@ var Katrid;
                 else if (!Katrid.isObject(data))
                     data = { args: [data] };
                 this.model.service.rpc(method, data.args, data.kwargs);
+            }
+            beforeUnload(event) {
+                if (this.view.vm.changing)
+                    event.preventDefault();
             }
             prepareContext() {
                 let ctx = super.context();
@@ -2110,11 +2116,12 @@ var Katrid;
                     this.loadPage(location.hash, (event.state === null) || (event.state?.clear));
                 });
                 window.addEventListener('beforeunload', event => {
-                    this.beforeUnload();
+                    this.beforeUnload(event);
                 });
             }
-            beforeUnload() {
-                console.log('confirm unload', this.actionManager.action);
+            beforeUnload(event) {
+                if (this.actionManager.action?.beforeUnload)
+                    return this.actionManager.action.beforeUnload(event);
             }
             get actionManager() {
                 return this._actionManager;
@@ -2820,7 +2827,6 @@ var Katrid;
                 super(info);
                 this.pendingOperation = 0;
                 this._active = false;
-                console.log('modelf info', this.action);
             }
             /** Create views instances based on template strings */
             static fromTemplate(action, model, template) {
