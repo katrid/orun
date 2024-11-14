@@ -186,7 +186,6 @@ class ReportAction(Action):
             # TODO get the current user company
             company = apps['auth.user'].objects.get(pk=1).user_company
         export_data = {
-            'xml': xml,
             'connection': ConnectionProxy(connection),
             'name': self.name,
             'template': "admin/reports/base.jinja2",
@@ -200,8 +199,8 @@ class ReportAction(Action):
             'output_file': output_path,
         }
         if bytes:
-            return engine.export_bytes(**export_data)
-        rep = engine.export(**export_data)
+            return engine.export_bytes(xml, **export_data)
+        rep = engine.export(xml, **export_data)
         if isinstance(rep, PreparedReport):
             return {
                 'invoke': {
