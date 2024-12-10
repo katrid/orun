@@ -3798,6 +3798,7 @@ var katrid;
                 this.caption = config?.caption;
                 this.description = config?.description;
                 this.placeholder = config?.placeholder;
+                this.title = config?.title;
             }
             createEditor(typeEditor) {
                 let editor = document.createElement('section');
@@ -3812,6 +3813,9 @@ var katrid;
                 let value = this.getValue(typeEditor);
                 this.setValue(value, input);
                 editor.append(input);
+                if (this.title) {
+                    editor.title = this.title;
+                }
                 return editor;
             }
             setValue(value, input) {
@@ -4222,7 +4226,7 @@ var katrid;
             igroup.className = 'input-group input-group-sm';
             let span = document.createElement('span');
             span.className = 'input-group-text';
-            span.innerText = text;
+            span.innerHTML = text;
             let input = document.createElement('input');
             input.className = 'form-control input-xl';
             igroup.append(input);
@@ -4265,6 +4269,34 @@ var katrid;
             }
         }
         design.LocationProperty = LocationProperty;
+        class HeightProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('section');
+                editor.classList.add('form-group', 'row', 'property-editor');
+                editor.setAttribute('prop-name', this.name);
+                let size = this.getValue(typeEditor);
+                if (this.caption) {
+                    this.createLabel(editor);
+                }
+                if (this.cssClass) {
+                    editor.classList.add(this.cssClass);
+                }
+                let div = document.createElement('div');
+                div.className = 'col-12';
+                let igroup = createInputGroup('<i class="fa-regular fa-arrows-up-down"></i>');
+                let input = igroup.querySelector('input');
+                input.type = 'number';
+                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, parseInt(evt.target.value)));
+                input.value = size;
+                div.append(igroup);
+                editor.append(div);
+                if (this.title) {
+                    editor.title = this.title;
+                }
+                return editor;
+            }
+        }
+        design.HeightProperty = HeightProperty;
         class SizeProperty extends PropertyEditor {
             createEditor(typeEditor) {
                 const editor = document.createElement('section');
@@ -4279,7 +4311,7 @@ var katrid;
                 }
                 let div = document.createElement('div');
                 div.className = 'col-6';
-                let igroup = createInputGroup('w');
+                let igroup = createInputGroup('<i class="fa-regular fa-arrows-left-right"></i>');
                 let input = igroup.querySelector('input');
                 input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
                     width: parseInt(evt.target.value),
@@ -4290,7 +4322,7 @@ var katrid;
                 editor.append(div);
                 div = document.createElement('div');
                 div.className = 'col-6';
-                igroup = createInputGroup('h');
+                igroup = createInputGroup('<i class="fa-regular fa-arrows-up-down"></i>');
                 input = igroup.querySelector('input');
                 input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
                     width: size.width,
@@ -7827,6 +7859,7 @@ var katrid;
                 this.pages = [];
                 this._page = null;
                 this.modified = false;
+                this.zoomTool.designer = null;
                 this.outlineExplorer.clear();
                 this.dataExplorer.clear();
                 this.pageExplorer.clear();
@@ -9223,6 +9256,7 @@ var katrid;
                 this._sizerHeight = 6;
                 this._resizing = false;
                 this._dy = 0;
+                this._minHeight = 0;
             }
             defaultProps() {
                 super.defaultProps();
@@ -9366,6 +9400,8 @@ var katrid;
                 event.target.setPointerCapture(event.pointerId);
                 this._dy = event.offsetY;
                 event.stopPropagation();
+                event.preventDefault();
+                this._minHeight = Math.max(...this.objects.map(o => o.y + o.height), 0);
                 // create temp sizer
                 // let tempSizer = katrid.drawing.rect(this.x, this.y + this._headerHeight + this.height, this.width, this._sizerHeight, {class: 'band-sizer'});
                 // this._tempSizer = tempSizer;
@@ -9384,6 +9420,9 @@ var katrid;
                 this._resizing = false;
                 event.target.releasePointerCapture(event.pointerId);
                 event.stopPropagation();
+                if (this.height < this._minHeight) {
+                    this.height = this._minHeight;
+                }
                 // reorder bands
                 this.pageDesigner.invalidateBands();
             }
@@ -9392,6 +9431,9 @@ var katrid;
                     dy = dy / (this.pageDesigner.zoom / 100);
                 }
                 // apply new size to band
+                if (this.height + dy < this._minHeight) {
+                    return false;
+                }
                 this.height += dy;
                 this.pageDesigner.invalidateBands();
             }
@@ -9947,14 +9989,14 @@ var katrid;
         var ComponentProperty = katrid.design.ComponentProperty;
         var BackgroundProperty = katrid.design.BackgroundProperty;
         var BooleanProperty = katrid.design.BooleanProperty;
-        var IntegerProperty = katrid.design.IntegerProperty;
         var SelectProperty = katrid.design.SelectProperty;
         var SizeProperty = katrid.design.SizeProperty;
         var StringProperty = katrid.design.StringProperty;
         var registerComponentEditor = katrid.design.registerComponentEditor;
+        var HeightProperty = katrid.design.HeightProperty;
         class BandEditor extends ComponentEditor {
             static defineProperties() {
-                return super.defineProperties().concat(new IntegerProperty('height', { caption: 'Height' }), new SelectProperty('autoSize', {
+                return super.defineProperties().concat(new HeightProperty('height', { title: 'Height' }), new SelectProperty('autoSize', {
                     caption: 'Auto Size',
                     options: {
                         0: 'None', 1: 'Can shrink', 2: 'Can grow', 3: 'Auto'
@@ -13982,6 +14024,25 @@ var katrid;
             }
         }
         design.GrabHandles = GrabHandles;
+    })(design = katrid.design || (katrid.design = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var design;
+    (function (design) {
+        class Rule {
+            create() {
+            }
+            redraw() {
+            }
+        }
+        design.Rule = Rule;
+        class HorizontalRule extends Rule {
+        }
+        design.HorizontalRule = HorizontalRule;
+        class VerticalRule extends Rule {
+        }
+        design.VerticalRule = VerticalRule;
     })(design = katrid.design || (katrid.design = {}));
 })(katrid || (katrid = {}));
 /// <reference path="../drawing/shapes.ts" />
