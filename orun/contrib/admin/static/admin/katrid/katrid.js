@@ -2745,7 +2745,6 @@ var katrid;
                 this._documentKeyDown = (event) => this.onKeyDown(event);
                 document.addEventListener('keydown', this._documentKeyDown);
                 this.container.append(this.el);
-                console.debug('activate');
                 this.reportDesigner.activatePage(this.page);
             }
             deactivate() {
@@ -5435,8 +5434,11 @@ var katrid;
                     this.height = value.height;
                 }
             }
-            getOutline() {
-                return;
+            showConfigWizard() {
+            }
+            hideConfigWizard() {
+            }
+            onConfigClick(event) {
             }
         }
         design.PageDesigner = PageDesigner;
@@ -5469,6 +5471,9 @@ var katrid;
                 this.objects = [];
                 this.loading = false;
                 this.defaultProps();
+            }
+            get isEmpty() {
+                return this.objects?.length === 0;
             }
             defaultProps() {
                 // infinite size
@@ -7590,6 +7595,7 @@ var katrid;
                 btn.title = katrid.i18n.gettext('Pages');
                 btn.addEventListener('click', () => this.showPageExplorer());
                 this.pageExplorer = new bi.PageExplorer(this.leftNav);
+                this.pageExplorer.reportEditor = this;
                 this.pageExplorer.hide();
                 this.dataExplorer = new bi.DataExplorer(this.leftNav);
                 this.dataExplorer.onRemoveDataSource = ds => this.report.removeDataSource(ds);
@@ -7631,8 +7637,12 @@ var katrid;
                 tb = new katrid.ui.Toolbar(this.rightNav);
                 tb.vertical = true;
                 elEditor.appendChild(this.rightNav);
+                // config button
+                btn = tb.addButton('<i class="fa-duotone fa-solid fa-cog"></i>');
+                btn.title = katrid.i18n.gettext('Config page');
+                btn.addEventListener('click', (evt) => this.configCurrentPage(evt));
                 // properties button
-                btn = tb.addButton('<i class="fa fa-fw fa-cog"></i>');
+                btn = tb.addButton('<i class="fa-duotone fa-solid fa-square-list"></i>');
                 btn.title = katrid.i18n.gettext('Properties');
                 btn.addEventListener('click', () => this.showPropertiesEditor());
                 // parameters button
@@ -7719,6 +7729,10 @@ var katrid;
                 this.workspaceElement.appendChild(page.designer.$el);
                 this.inspector.designer = page.designer;
                 this.zoomTool.designer = page.designer;
+                // if page is empty, show configuration wizard
+                if (page.isEmpty) {
+                    this._page.showConfigWizard();
+                }
             }
             get report() {
                 return this._report;
@@ -7786,7 +7800,13 @@ var katrid;
                     this.saveFile();
                 }
                 else {
-                    console.error('save to db');
+                    if (this.onSave) {
+                        this.onSave(this.report.dump());
+                    }
+                    else {
+                        // save as
+                        this.saveFile();
+                    }
                 }
             }
             close() {
@@ -7806,8 +7826,10 @@ var katrid;
                 }
                 this.pages = [];
                 this._page = null;
-                this._modified = false;
+                this.modified = false;
                 this.outlineExplorer.clear();
+                this.dataExplorer.clear();
+                this.pageExplorer.clear();
             }
             addPage(page) {
                 let p = page.createDesigner();
@@ -7816,6 +7838,7 @@ var katrid;
                 if (!this.loading) {
                     this.outlineExplorer.addObject(page);
                 }
+                this.pageExplorer.registerPage(page);
                 return p;
             }
             setModified() {
@@ -7824,8 +7847,9 @@ var katrid;
             newPage(type) {
                 this.setModified();
                 const page = this.report.newPage(type);
-                const d = this.addPage(page);
                 page.name = this.report.getValidName('page');
+                const d = this.addPage(page);
+                d.activate();
                 return d;
             }
             get modified() {
@@ -7833,22 +7857,26 @@ var katrid;
             }
             set modified(value) {
                 this._modified = value;
+                const header = this.el.querySelector('.report-editor-header');
+                if (this._modified) {
+                    header.classList.add('modified');
+                }
+                else {
+                    header.classList.remove('modified');
+                }
             }
             get page() {
                 return this._page;
             }
             set page(value) {
-                if (this._page) {
-                    this._page.deactivate();
-                }
+                this._page?.deactivate();
                 this._page = value;
-                if (value) {
-                    value.activate();
-                }
+                value?.activate();
             }
             load(data, filename) {
                 this.clean();
                 const rep = new katrid.report.Report();
+                rep.name = filename;
                 rep.load(data);
                 this.report = rep;
             }
@@ -7878,10 +7906,14 @@ var katrid;
                 const blob = new Blob([JSON.stringify(this.report.dump())], { type: 'application/json' });
                 await file.write(blob);
                 await file.close();
+                this.modified = false;
             }
             setParams(params) {
                 this.report.params = params;
                 this.setModified();
+            }
+            configCurrentPage(evt) {
+                this.page.onConfigClick(evt);
             }
         }
         bi.ReportEditor = ReportEditor;
@@ -9263,7 +9295,7 @@ var katrid;
                 this.pageDesigner.append(bandDraw);
                 const designer = this.page.designer;
                 let menu = new katrid.ui.ContextMenu();
-                menu.add('Config Bands...', () => console.log('config bands'));
+                // menu.add('Config Bands...', () => console.log('config bands'));
                 menu.add('Delete', () => {
                     this.destroyDesigner();
                     this.pageDesigner.invalidate();
@@ -9710,7 +9742,7 @@ var katrid;
                 if (b.groupHeader) {
                     let g = b.groupHeader;
                     bands.push(g);
-                    while (g.parent) {
+                    while (g.parentBand) {
                         bands.splice(0, 0, g.parentBand);
                         g = g.parentBand;
                     }
@@ -9721,7 +9753,7 @@ var katrid;
                     let g = b.groupHeader;
                     if (g.footer) {
                         bands.push(g.footer);
-                        while (g.parent) {
+                        while (g.parentBand) {
                             bands.push(g.parentBand.footer);
                             g = g.parentBand;
                         }
@@ -9858,6 +9890,27 @@ var katrid;
                     const page = this.page;
                     return page.bands[0].addObject(obj);
                 }
+            }
+            showConfigWizard() {
+                return;
+                let btn = document.createElement('button');
+                btn.innerHTML = '<i class="fa-duotone fa-fw fa-cog"></i> Config Bands';
+                btn.type = 'button';
+                btn.className = 'btn btn-primary';
+                this._configButton = btn;
+                this.$el.parentElement.appendChild(btn);
+            }
+            hideConfigWizard() {
+                this._configButton?.remove();
+            }
+            onConfigClick(event) {
+                const menu = new katrid.ui.ContextMenu();
+                menu.add('Add Report Title', () => this.newBand('ReportTitle'));
+                menu.add('Add Data Band', () => this.newBand('DataBand'));
+                menu.add('Add Page Header', () => this.newBand('PageHeader'));
+                menu.add('Add Page Footer', () => this.newBand('PageFooter'));
+                menu.add('Add Summary', () => this.newBand('SummaryBand'));
+                menu.show(event.clientX, event.clientY);
             }
         }
         report.BandDesigner = BandDesigner;
@@ -10379,7 +10432,7 @@ var katrid;
         const CONTROL_TAGS = ['INPUT', 'SELECT', 'TEXTAREA'];
         class ObjectInspector extends bi.BaseToolWindow {
             getHeaderTemplate() {
-                return '<div class="tool-window-header"><i class="fa fa-fw fa-cog"></i> Properties</div>';
+                return '<div class="tool-window-header"><i class="fa-duotone fa-solid fa-square-list"></i> Properties</div>';
             }
             create() {
                 super.create();
@@ -10519,13 +10572,23 @@ var katrid;
             getHeaderTemplate() {
                 return `<div class="tool-window-header"><i class="fa fa-fw fa-file"></i> Pages</div>
 <div>
-<button class="btn btn-light">New Page</button>
+<button id="btn-new" class="btn btn-light">New Page</button>
 </div>
       <hr>`;
             }
             create() {
                 super.create();
                 this.el.classList.add('page-explorer');
+                this.el.querySelector('#btn-new').addEventListener('click', () => this.reportEditor.newPage());
+                let div = document.createElement('div');
+                this.treeView = new katrid.ui.TreeView(div, { options: { onSelect: (node) => this.reportEditor.page = node.data.object.designer } });
+                this.el.appendChild(div);
+            }
+            registerPage(page) {
+                this.treeView.addItem({ id: page.name, text: page.name, object: page });
+            }
+            clear() {
+                this.treeView.clear();
             }
         }
         bi.PageExplorer = PageExplorer;

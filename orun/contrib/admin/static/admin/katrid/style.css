@@ -13846,6 +13846,11 @@ query-view .table-responsive {
 .report-manager .report-editor-header {
   padding: 8px 8px;
 }
+.report-manager .report-editor-header.modified h3::after, .report-manager .report-editor-header.modified .h3::after {
+  content: " *";
+  display: inline;
+  clear: both;
+}
 .report-manager .report-editor-header .back {
   cursor: pointer;
 }
