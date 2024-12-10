@@ -20,6 +20,7 @@ from orun.template import loader
 from orun.utils.translation import gettext_lazy as _
 from orun.utils.module_loading import import_string
 from .action import Action
+
 try:
     from orun.reports.engines import get_engine, ConnectionProxy
     import reptile
@@ -56,6 +57,7 @@ class ReportAction(Action):
     view = models.ForeignKey('ui.view')
     sql: Optional[str] = models.TextField()
     template: Optional[str] = models.TextField()
+
     # published = models.ChoiceField({'private': 'Private', 'public': 'Public'})
 
     class Meta:
@@ -139,7 +141,7 @@ class ReportAction(Action):
             data['content'] = '<params/>'
         return data
 
-    def _export_report(self, format='pdf', params=None, where=None, binding_params=None, bytes: bool=False):
+    def _export_report(self, format='pdf', params=None, where=None, binding_params=None, bytes: bool = False):
         qs = model = None
         if self.model:
             model = apps[self.model]
@@ -249,7 +251,7 @@ class ReportAction(Action):
             }
 
     @api.classmethod
-    def export_report(cls, id, format='pdf', params=None, where=None, binding_params=None, bytes: bool=False):
+    def export_report(cls, id, format='pdf', params=None, where=None, binding_params=None, bytes: bool = False):
         # TODO check permission
         if isinstance(id, list):
             id = id[0]
@@ -276,21 +278,29 @@ class ReportAction(Action):
         return cls.export_report(action_id, fmt, params, binding_params=binding_params)
 
     @api.classmethod
-    def get_metadata(cls, request: HttpRequest, id):
+    def get_metadata(cls, request: HttpRequest, id, dev_info=False):
         report = cls.objects.only('qualname', 'report_type').get(pk=id)
         if report.qualname:
             klass = import_string(cls.objects.only('qualname').get(pk=id).qualname)
+            if dev_info:
+                info = klass.get_dev_metadata(request)
+                info['id'] = report.pk
+                return info
             return klass.get_metadata(request)
         elif report.report_type == 'query':
-            return report.get_query_info()
+            return report.get_query_info(dev_info)
 
-    def get_query_info(self):
-        return {
+    def get_query_info(self, dev_info=False):
+        info = {
             'name': self.name,
             'params': None,
             'template': None,
             'type': 'query',
         }
+        if dev_info:
+            info['model'] = self.model
+            info['sql'] = self.sql
+        return info
 
     @api.classmethod
     def list_all(cls):
@@ -497,11 +507,14 @@ def COUNT(obj):
 def SUM(expr, band=None, flag=None):
     return sum(expr)
 
+
 def MAX(expr, band=None, flag=None):
     return max(expr)
 
+
 def MIN(expr, band=None, flag=None):
     return min(expr)
+
 
 def AVG(expr, band=None, flag=None):
     return sum(expr) / len(expr)

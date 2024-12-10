@@ -265,6 +265,12 @@ class ReportAction(Action):
             'template': cls._get_template_info(request),
         }
 
+    @classmethod
+    def get_dev_metadata(cls, request: HttpRequest):
+        info = cls.get_metadata(request)
+        info['sql'] = cls.sql
+        return info
+
     def execute(self, **kwargs):
         data, fields = self.read(with_description=True, where=self._values)
         return {

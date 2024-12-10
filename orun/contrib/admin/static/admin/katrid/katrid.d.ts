@@ -639,6 +639,7 @@ declare namespace Katrid.Core {
         plugins: Plugin[];
         constructor(config: IApplicationConfig);
         get context(): any;
+        setView(view: HTMLElement): void;
         /** User information */
         get userInfo(): any;
         set userInfo(value: any);
@@ -677,6 +678,9 @@ declare namespace Katrid.Core {
 declare namespace Katrid {
     let app: Katrid.Core.Application;
     let webApp: Katrid.Core.WebApplication;
+}
+declare namespace katrid {
+    const core: typeof Katrid.Core;
 }
 declare namespace Katrid.Core {
     export class Plugin {
@@ -978,6 +982,10 @@ declare namespace Katrid.BI {
         print(): Promise<void>;
         createQueryView(fields: any, data: any, reportType?: string): QueryView;
     }
+}
+declare namespace katrid.bi {
+}
+declare namespace katrid.bi {
 }
 declare namespace Katrid.Services {
     class Service {
@@ -1710,6 +1718,9 @@ declare namespace Katrid.Forms {
         static closeAll(): void;
     }
 }
+declare namespace katrid.ui {
+    const ContextMenu: typeof Katrid.Forms.ContextMenu;
+}
 declare namespace Katrid.Forms {
     class CustomTag {
         view: BaseView;
@@ -1912,7 +1923,7 @@ declare namespace Katrid.Forms {
         set recordIndex(value: number);
         protected setRecordId(value: number): Promise<void>;
         edit(): void;
-        insert(defaultValues?: any): Promise<number>;
+        insert(defaultValues?: any): Promise<NodeJS.Timeout>;
         save(): Promise<void>;
         discard(): void;
         next(): void;
@@ -2963,7 +2974,11 @@ declare namespace Katrid.UI {
 }
 declare namespace katrid.ui {
     class Toolbar {
-        constructor(config: HTMLElement | any);
+        container: HTMLElement;
+        el: HTMLElement;
+        constructor(container: HTMLElement);
+        create(): void;
+        addButton(text: string): HTMLButtonElement;
     }
 }
 declare namespace Katrid.ui {
@@ -2982,14 +2997,41 @@ declare namespace Katrid.ui {
     }
 }
 declare namespace katrid.ui {
-    class Component {
+    export class Component {
         protected _el: HTMLElement;
         get el(): HTMLElement;
         set el(value: HTMLElement);
         protected setElement(el: any): void;
     }
-    class TreeNode extends Component {
+    export type NodeData = {
+        id?: any;
+        text: string;
+        icon?: string;
+        title?: string;
+        children?: NodeData[];
+        checked?: boolean;
+        [key: string]: any;
+    };
+    type NodeIcons = {
+        default?: string;
+        expanded?: string;
+        collapsed?: string;
+    };
+    type TreeNodeOptions = {
+        icons?: NodeIcons;
+        checkbox?: boolean;
+        onContextMenu?: (node: TreeNode, evt: MouseEvent) => void;
+        onSelect?: (node: TreeNode) => void;
+        onExpand?: (node: TreeNode) => Promise<boolean>;
+        onCollapse?: (node: TreeNode) => Promise<boolean>;
+    };
+    export type NodeOptions = {
+        data?: NodeData | NodeData[];
+        options?: TreeNodeOptions;
+    };
+    export class TreeNode {
         treeView: TreeView;
+        options?: TreeNodeOptions;
         data: Object;
         private readonly _ul;
         private readonly _a;
@@ -3002,11 +3044,20 @@ declare namespace katrid.ui {
         private _canExpand;
         private _level;
         private _icon;
-        constructor(treeView: TreeView, item: any);
+        private _checked;
+        el: HTMLElement;
+        constructor(treeView: TreeView, item: any, options?: TreeNodeOptions);
         get children(): TreeNode[];
-        select(): void;
+        select(): this;
         collapse(): void;
-        expand(): void;
+        checkbox: HTMLInputElement;
+        createCheckbox(): void;
+        setCheckAll(value: boolean): void;
+        protected setChecked(value: boolean | string): void;
+        get checked(): boolean | string;
+        set checked(value: boolean | string);
+        protected updateCheckboxState(): void;
+        expand(): Promise<void>;
         get expanded(): boolean;
         set expanded(value: boolean);
         get index(): number;
@@ -3020,29 +3071,41 @@ declare namespace katrid.ui {
         set selected(value: boolean);
         get parent(): TreeNode;
         set parent(value: TreeNode);
-        add(node: TreeNode): void;
-        remove(node: TreeNode): void;
+        protected _addNode(node: TreeNode): void;
+        addNode(node: TreeNode): TreeNode;
+        addItem(item: NodeData, options?: TreeNodeOptions): TreeNode;
+        remove(): void;
+        protected removeNode(node: TreeNode): void;
         private calcLevel;
         update(): void;
         get level(): number;
         set level(value: number);
         all(): IterableIterator<TreeNode>;
     }
-    class TreeView {
-        nodes: Array<TreeNode>;
+    export class TreeView {
+        options?: NodeOptions;
+        nodes: TreeNode[];
         readonly el: HTMLElement;
+        private _ul;
         private _selection;
-        constructor(cfg: any);
+        private _striped;
+        constructor(el: HTMLElement, options?: NodeOptions);
         get selection(): TreeNode[];
         set selection(value: TreeNode[]);
         get firstNode(): TreeNode;
         get lastNode(): TreeNode;
         previous(): void;
         next(): void;
-        addNodes(nodes: any[], parent?: any): void;
-        addNode(item: any, parent: any): TreeNode;
+        addNodes(nodes: NodeOptions, parent?: any): void;
+        addItem(item: NodeData | string, parent?: TreeNode, options?: TreeNodeOptions): TreeNode;
         get currentNode(): TreeNode;
+        collapseAll(): void;
+        expandAll(): void;
+        get striped(): boolean;
+        set striped(value: boolean);
+        update(): void;
     }
+    export {};
 }
 declare namespace katrid.ui {
     /** Show a search dialog for a given model */

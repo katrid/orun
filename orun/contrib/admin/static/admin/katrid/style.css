@@ -12031,6 +12031,25 @@ h3.popover-title, .popover-title.h3 {
   filter: invert(1) grayscale(100%) brightness(200%);
 }
 
+.katrid-app dialog.dialog {
+  display: flex;
+  flex-direction: column;
+}
+.katrid-app dialog.dialog .dialog-body {
+  flex: 1;
+}
+.katrid-app dialog.dialog .dialog-header {
+  font-size: 1.25rem;
+  font-weight: 400;
+  margin: 8px 0;
+  flex: 0;
+}
+.katrid-app dialog.dialog .dialog-footer {
+  margin-top: 10px;
+  text-align: right;
+  flex: 0;
+}
+
 .badge-primary {
   background-color: #7876ac;
 }
@@ -13818,6 +13837,128 @@ query-view .table-responsive {
   overflow: auto;
 }
 
+.report-manager {
+  --panel-bg-color: #f7f8f9;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+.report-manager .report-editor-header {
+  padding: 8px 8px;
+}
+.report-manager .report-editor-header .back {
+  cursor: pointer;
+}
+.report-manager .report-editor-header h1, .report-manager .report-editor-header .h1, .report-manager .report-editor-header h3, .report-manager .report-editor-header .h3 {
+  margin: 0;
+}
+.report-manager .report-editor-header span {
+  padding: 4px 0;
+}
+.report-manager .property-editor {
+  margin-bottom: 6px;
+}
+.report-manager .toolbar {
+  background-color: var(--panel-bg-color);
+}
+.report-manager .report-explorer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e5e5e5;
+  overflow: hidden;
+}
+.report-manager .floating-toolbar {
+  position: absolute;
+  z-index: 990;
+  bottom: 20px;
+  left: 20px;
+  border-radius: 6px;
+}
+.report-manager .main-toolbar {
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: row;
+}
+.report-manager .main-toolbar .toolbar {
+  flex: 1 0 auto;
+}
+.report-manager .report-editor {
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  height: 100%;
+}
+.report-manager .report-editor > .report-container {
+  position: relative;
+  flex: auto;
+  flex-direction: column;
+  display: flex;
+  background-color: #cccccc;
+}
+.report-manager .report-editor > .report-container .workspace {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow: auto;
+  flex-wrap: wrap;
+  position: relative;
+}
+.report-manager .report-editor > .report-container svg.design-surface {
+  margin-right: 20px;
+  border-right: 1px solid #e5e5e5;
+  background-color: #ffffff;
+}
+.report-manager .report-editor .data-tool-window {
+  border-left: 1px solid #e5e5e5;
+}
+.report-manager .report-editor .data-tool-window > .toolbar {
+  border-left: 1px solid #b4b4b4;
+}
+.report-manager .report-editor .left-side {
+  border-right: 1px solid #b4b4b4;
+}
+.report-manager .report-editor .left-side > .toolbar {
+  border-right: 1px solid #b4b4b4;
+}
+.report-manager .report-editor .toolbox .toolbox-header {
+  margin: 8px 0;
+}
+.report-manager .report-editor .toolbox hr {
+  margin: 4px 0;
+}
+.report-manager .report-editor .toolbox .toolbox-item {
+  text-align: center;
+  padding: 8px 0;
+  border-radius: 6px;
+}
+.report-manager .report-editor .toolbox .toolbox-item:hover {
+  background-color: #d2d2d2;
+}
+.report-manager .report-editor .toolbox .toolbox-item.selected {
+  background-color: #989898;
+}
+.report-manager .tool-window {
+  display: flex;
+  flex: 0 0 300px;
+  float: right;
+  background-color: var(--panel-bg-color);
+  flex-direction: row;
+}
+.report-manager .tool-window .tool-window-content {
+  padding: 10px;
+  flex: 1;
+}
+.report-manager .tool-window .tool-window-header {
+  font-weight: bold;
+  font-size: 11pt;
+  text-transform: uppercase;
+  padding: 8px 0;
+}
+.report-manager .tool-window .tree-item:hover {
+  background-color: rgba(113, 44, 249, 0.1);
+}
+
 .toolbar-action-buttons {
   display: flex;
 }
@@ -13825,11 +13966,36 @@ query-view .table-responsive {
   margin-right: 8px;
 }
 
+.toolbar {
+  display: flex;
+}
+.toolbar.floating {
+  position: absolute;
+  z-index: 990;
+}
 .toolbar .toolbtn {
   color: #8d8d8d;
 }
 .toolbar .toolbtn:hover {
   color: #2b2b2b;
+}
+.toolbar .tool-button {
+  border: none;
+  padding: 0.4rem 0.75rem;
+}
+.toolbar.icon-top {
+  vertical-align: baseline;
+}
+.toolbar.icon-top .btn {
+  margin: 0;
+}
+.toolbar.icon-top .btn .icon {
+  display: block;
+  font-size: 20px;
+  height: 25px;
+}
+.toolbar.vertical {
+  flex-direction: column;
 }
 
 .grid-toolbar {
@@ -14057,6 +14223,537 @@ page[size=A4] {
   right: 10px;
   left: 10px;
   overflow: auto;
+}
+
+.tree-view {
+  --striped-bg-300: #f5f5f5;
+  outline: none;
+  padding: 0;
+}
+.tree-view.striped > ul {
+  background-image: linear-gradient(var(--striped-bg-300) 50%, transparent 0);
+  background-origin: content-box;
+}
+.tree-view ul {
+  list-style: none;
+  padding: 0;
+  user-select: none;
+}
+.tree-view .tree-node > ul {
+  display: none;
+}
+.tree-view .tree-node .indent {
+  width: 12px;
+  display: inline-block;
+}
+.tree-view .tree-node.expanded > ul {
+  display: block;
+}
+.tree-view .tree-node .tree-item {
+  display: block;
+  cursor: pointer;
+  padding: 3px 8px 3px 15px;
+  height: 25px;
+}
+.tree-view .tree-node .tree-item .checkbox {
+  margin-right: 5px;
+  cursor: pointer;
+}
+.tree-view .tree-node .tree-item.selected {
+  background-color: #e3e3e3;
+}
+.tree-view .tree-node .tree-item .icon {
+  margin-right: 6px;
+}
+
+.code-editor-dialog {
+  width: 100%;
+  height: 100%;
+}
+.code-editor-dialog .code-editor {
+  height: 100%;
+}
+
+.report-editor {
+  --widget-designer-border-color: #8266ff;
+  --guide-line-color: #ff79ba;
+  --band-sizer-color: #c7c7c7;
+  --band-header-color: #d65db1;
+  --band-header-color-selected: #d33fa5;
+  --widget-designer-outline: #c8beff;
+}
+.report-editor .guideline {
+  stroke: var(--guide-line-color);
+  z-index: 998;
+}
+.report-editor .selection-box {
+  stroke: #708bde;
+  fill: #b6c8ff;
+  fill-opacity: 0.5;
+}
+.report-editor .designer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+.report-editor .designer .band-sizer {
+  cursor: ns-resize;
+  fill: var(--band-sizer-color);
+}
+.report-editor .designer .band {
+  fill: transparent;
+}
+.report-editor .designer .band-header {
+  fill: var(--band-header-color);
+  font-size: 9pt;
+  z-index: -1;
+}
+.report-editor .designer .band-designer.selected .band-header {
+  fill: var(--band-header-color-selected);
+}
+.report-editor .designer .band-header text, .report-editor .designer .widget-designer {
+  user-select: none;
+  z-index: 99;
+}
+.report-editor .designer .widget-designer {
+  cursor: move;
+}
+.report-editor .designer .widget-designer foreignObject {
+  outline: 1px dotted var(--widget-designer-outline);
+}
+.report-editor .designer .widget-designer foreignObject div.text-object {
+  display: table-cell;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 9pt;
+}
+.report-editor .designer .widget-designer > rect {
+  outline: 1px dotted var(--widget-designer-outline);
+}
+.report-editor rect.resize-handle {
+  stroke: var(--widget-designer-border-color);
+  fill: #a793ff;
+  z-index: 999;
+}
+.report-editor rect.resize-handle.top-right, .report-editor rect.resize-handle.bottom-left {
+  cursor: nesw-resize;
+}
+.report-editor rect.resize-handle.top-left, .report-editor rect.resize-handle.bottom-right {
+  cursor: nwse-resize;
+}
+.report-editor rect.resize-handle.middle-left, .report-editor rect.resize-handle.middle-right {
+  cursor: ew-resize;
+}
+.report-editor rect.resize-handle.top-center, .report-editor rect.resize-handle.bottom-center {
+  cursor: ns-resize;
+}
+
+.designer .widget-wrapper {
+  display: inline-block;
+  position: absolute;
+  border: 1px dotted rgb(194, 194, 194);
+  cursor: move;
+  overflow: hidden;
+  box-sizing: content-box;
+  z-index: 999;
+}
+
+.designer .widget-wrapper:hover {
+  border: 1px solid #fcd0fd;
+}
+
+.designer .widget-wrapper.selected {
+  border: 1px solid #8a4e8d;
+}
+
+.designer .designer-ghost {
+  position: absolute;
+  display: initial;
+  opacity: 0.7;
+  border: 1px solid #8a4e8d;
+}
+
+.designer .text-widget {
+  display: table-cell;
+  white-space: nowrap;
+}
+
+.bi-studio-app {
+  height: 100%;
+}
+
+.bi-studio-app .properties-editor .property-editor {
+  margin-bottom: 10px;
+}
+
+.katrid-bi {
+  height: 100%;
+}
+
+.katrid-bi body {
+  height: 100%;
+}
+
+.katrid-bi .bi-dashboard .table tbody {
+  background-color: #ffffff;
+}
+
+.katrid-bi .toolbar {
+  padding: 5px;
+}
+
+.katrid-bi .dashboard-designer {
+  background-color: #f2f2f2;
+  height: 100%;
+  display: flex;
+  flex-flow: column;
+}
+
+.katrid-bi .dashboard-designer .widget-designer-wrapper {
+  position: absolute;
+  overflow: hidden;
+}
+
+.katrid-bi .dashboard-designer .widget-designer-wrapper .widget-designer-mirror {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.katrid-bi .dashboard-designer .widget-designer-helper {
+  position: absolute;
+  border: 1px solid #a793ff;
+  z-index: 999;
+}
+
+.katrid-bi .dashboard-designer .widget-spot {
+  border-radius: 4px;
+  padding: 2px 4px;
+  border: 1px solid #c7c7c7;
+  border-style: dashed;
+}
+
+.katrid-bi .dashboard-designer .grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.katrid-bi .dashboard-designer .grid .widget {
+  position: absolute;
+  background-color: #ffffff;
+  width: 400px;
+  height: 200px;
+  border: 1px solid #c9c9c9;
+}
+
+.katrid-bi .dashboard-designer .grid .grid-cell {
+  height: 100px;
+  border: 1px dotted #cfcfcf;
+}
+
+.katrid-bi .dashboard-designer .grid .grid-cell.dragover {
+  border-color: #8c7eff;
+  background-color: #e7e4ff;
+  z-index: 999;
+  opacity: 0.5;
+}
+
+.katrid-bi .dashboard-designer .grid .grid-cell.dragover.drag-error {
+  border-color: #ff583d;
+  background-color: #ff9e99;
+}
+
+.katrid-bi .bi-studio-app {
+  display: flex;
+  flex-flow: column;
+}
+
+.katrid-bi .bi-studio-app .toolbar {
+  padding: 8px;
+}
+
+.katrid-bi .page-designer .designer-selection-box {
+  position: absolute;
+  background-color: #cfc4ff;
+  opacity: 0.4;
+  border: 1px solid #7151ff;
+}
+
+.katrid-bi .katrid-studio .properties-editor .input-group-text {
+  padding: 0 0 0 4px;
+  text-align: center;
+  width: 20px;
+}
+
+.katrid-bi .katrid-studio.workspace {
+  flex: 1 1 auto;
+  display: flex;
+}
+
+.katrid-bi .katrid-studio.workspace .page-designer {
+  position: relative;
+}
+
+.katrid-bi .katrid-studio.workspace .design-surface {
+  overflow: auto;
+  padding: 10px;
+  cursor: default;
+  border: 1px solid #e2e2e2;
+  height: 100%;
+}
+
+.katrid-bi .katrid-studio.workspace .prepared-band {
+  position: absolute;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox {
+  vertical-align: top;
+  flex: 0 1 300px;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox .control-label,
+.katrid-bi .katrid-studio.workspace .toolbox .form-control,
+.katrid-bi .katrid-studio.workspace .toolbox select,
+.katrid-bi .katrid-studio.workspace .toolbox .form-check-label {
+  font-size: 9pt;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox .form-control,
+.katrid-bi .katrid-studio.workspace .toolbox select {
+  padding: 1px 3px;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox .form-control:focus,
+.katrid-bi .katrid-studio.workspace .toolbox select:focus {
+  outline: none;
+  box-shadow: none;
+  border: 1px solid gray;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox .form-group {
+  margin-bottom: 4px;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox .toolbox-search {
+  padding: 8px 0;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox .widget-label {
+  font-size: 8pt;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox .properties-editor {
+  padding: 2px 8px;
+}
+
+.katrid-bi .katrid-studio.workspace .right-bar {
+  vertical-align: top;
+  flex: 0 1 41px;
+  border-left: 1px solid #d1d1d1;
+}
+
+.katrid-bi .katrid-studio.workspace .right-bar .tool-button {
+  border-bottom: 1px solid #d1d1d1;
+  padding-top: 4px;
+  width: 36px;
+  height: 36px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.katrid-bi .katrid-studio.workspace .right-bar .tool-button:hover {
+  background-color: #d9d9d9;
+}
+
+.katrid-bi .katrid-studio.workspace .workspace-area {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid #c4c4c4;
+}
+
+.katrid-bi .katrid-studio.workspace .data-source-tree {
+  border-top: 1px solid #d1d1d1;
+  margin-top: 10px;
+  padding-top: 8px;
+}
+
+.katrid-bi .katrid-studio.workspace .datasource-explorer {
+  margin-top: 10px;
+  border-top: 1px solid #d1d1d1;
+  padding-top: 10px;
+}
+
+.katrid-bi .katrid-studio.workspace .tool-window {
+  flex: 0 1 400px;
+  float: right;
+  background-color: #ffffff;
+  padding: 10px;
+}
+
+.katrid-bi .katrid-studio.workspace .tool-window .tool-window-header {
+  font-weight: bold;
+  font-size: 11pt;
+  text-transform: uppercase;
+  padding: 8px 0;
+}
+
+.katrid-bi .katrid-studio.workspace .tool-window .btn:hover {
+  background-color: rgba(113, 44, 249, 0.1);
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox-header {
+  background: #f2f2f2;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.75em;
+  text-transform: uppercase;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox-header span {
+  margin-top: 3px;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox-menu {
+  background: #ffffff;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox-menu .toolbox-item {
+  padding: 8px 2px 0;
+  height: 62px;
+  text-align: center;
+  cursor: default;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox-menu .toolbox-item:hover {
+  background: #f2f2f2;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox-menu .toolbox-item.selected {
+  background: #d9d9d9;
+}
+
+.katrid-bi .katrid-studio.workspace .toolbox-menu .toolbox-item:nth-child(even) {
+  border-left: none;
+}
+
+.katrid-bi .katrid-studio.workspace .widget-designer {
+  overflow: hidden;
+}
+
+.katrid-bi .katrid-studio .report-workspace {
+  position: relative;
+}
+
+.designer rect.resize-handle {
+  fill: #a793ff;
+  position: absolute;
+  border-radius: 50%;
+  z-index: 999;
+}
+
+.katrid-bi .katrid-studio .target-handle.top-right, .katrid-bi .katrid-studio .target-handle.bottom-left {
+  cursor: nesw-resize;
+}
+
+.katrid-bi .katrid-studio .target-handle.top-left, .katrid-bi .katrid-studio .target-handle.bottom-right {
+  cursor: nwse-resize;
+}
+
+.katrid-bi .katrid-studio .target-handle.middle-left, .katrid-bi .katrid-studio .target-handle.middle-right {
+  cursor: ew-resize;
+}
+
+.katrid-bi .katrid-studio .target-handle.top-center, .katrid-bi .katrid-studio .target-handle.bottom-center {
+  cursor: ns-resize;
+}
+
+.katrid-bi .katrid-studio .widget-container {
+  background-color: white;
+}
+
+.katrid-bi .modal-dialog .form-group {
+  margin-bottom: 8px;
+}
+
+.katrid-bi .modal-dialog .code-editor {
+  margin-top: 8px;
+  height: 300px;
+  border: 1px solid #bbbbbb;
+}
+
+.katrid-bi .code-window {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ffffff;
+}
+
+#katrid-report-studio {
+  display: flex;
+  flex: 1 1 auto;
+}
+
+.katrid-report-designer {
+  padding: 10px 10px;
+}
+
+.katrid-report-designer foreignObject .text-object {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-spacing: 0;
+}
+
+.katrid-report-designer foreignObject .text-object td {
+  padding: 0;
+  vertical-align: top;
+}
+
+.katrid-report-designer .band-designer .band-header rect {
+  border: 1px solid #bdbdbd;
+  color: #575757;
+  border-bottom: none;
+  padding: 0 8px;
+  font-size: 8pt;
+  border-radius: 6px 6px 0 0;
+  fill: #7e7e7e;
+  padding-bottom: 10px;
+}
+
+.katrid-report-designer .band-designer .band-header text {
+  font-size: 9pt;
+}
+
+.katrid-report-designer .band-designer.selected .band-header rect {
+  fill: #fcbe63;
+}
+
+.katrid-report-designer .band-designer .band {
+  border: 1px solid #c1c1c1;
+}
+
+.katrid-report-designer .band-designer .sizer {
+  fill: #c7c7c7;
+  cursor: ns-resize;
+}
+
+.katrid-report-designer .sizer-dragging {
+  fill: #d274c2;
+  opacity: 0.7;
+}
+
+.katrid-report-designer .report-workspace {
+  position: relative;
+}
+
+.katrid-report-designer .band-designer .band {
+  background-position: top left, 16px 16px;
+  position: relative;
 }
 
 /*# sourceMappingURL=style.css.map */

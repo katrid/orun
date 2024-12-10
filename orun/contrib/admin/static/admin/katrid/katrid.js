@@ -1997,10 +1997,10 @@ var katrid;
         admin.responseMiddleware = [ResponseMessagesProcessor];
     })(admin = katrid.admin || (katrid.admin = {}));
 })(katrid || (katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var BI;
-    (function (BI) {
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
         function newPlot(el, data, layout, config) {
             // create new plotly plot
             if (!layout)
@@ -2022,9 +2022,3566 @@ var Katrid;
                 config['responsive'] = true;
             return Plotly.newPlot(el, data, layout, config);
         }
-        BI.newPlot = newPlot;
-    })(BI = Katrid.BI || (Katrid.BI = {}));
-})(Katrid || (Katrid = {}));
+        bi.newPlot = newPlot;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../../node_modules/monaco-editor/monaco.d.ts" />
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        async function createCodeEditor(dom, code = null, language = 'javascript', previewType = 'table') {
+            return new Promise((resolve, reject) => {
+                require(['vs/editor/editor.main'], function () {
+                    let codeEditor = monaco.editor.create(dom, {
+                        language,
+                        automaticLayout: true,
+                    });
+                    setTimeout(() => {
+                        codeEditor.layout();
+                    });
+                    if (language) {
+                        monaco.editor.setModelLanguage(codeEditor.getModel(), language);
+                    }
+                    if (code) {
+                        codeEditor.getModel().setValue(code);
+                    }
+                    resolve(codeEditor);
+                });
+            });
+        }
+        bi.createCodeEditor = createCodeEditor;
+        async function showCodeEditor(code, lang) {
+            let div = document.createElement('div');
+            div.className = 'code-editor';
+            let dlg = new kui.Dialog({ title: 'Code Editor', buttons: ['ok', 'cancel'] });
+            dlg.dialog.classList.add('code-editor-dialog');
+            const ed = await createCodeEditor(div, code, lang);
+            dlg.dialog.querySelector('.dialog-body').appendChild(div);
+            dlg.dialog.addEventListener('close', () => {
+                monaco.editor.getModels().forEach(m => m.dispose());
+                dlg.dialog.remove();
+            });
+            const modal = dlg.showModal();
+            setTimeout(() => {
+                ed.layout();
+            }, 1000);
+            return modal;
+        }
+        bi.showCodeEditor = showCodeEditor;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var design;
+    (function (design) {
+        class WidgetDesigner {
+            constructor(target, designer) {
+                this.target = target;
+                this.dragging = false;
+                this.moved = false;
+                this.gridX = 8;
+                this.gridY = 8;
+                this.locked = false;
+                this.designer = designer;
+            }
+            drawDesign(parent) {
+                this.draw = this.target.drawDesign(parent);
+                // design event handlers
+                if (!this._pointerDownHandler) {
+                    this._pointerDownHandler = (event) => this.designMouseDown(event);
+                    this._pointerMoveHandler = (event) => this.designMouseMove(event);
+                    this._pointerUpHandler = (event) => this.designMouseUp(event);
+                    this.target.graphic.$el.addEventListener('pointerdown', this._pointerDownHandler);
+                    this.target.graphic.$el.addEventListener('pointermove', this._pointerMoveHandler);
+                    this.target.graphic.$el.addEventListener('pointerup', this._pointerUpHandler);
+                    this.target.graphic.$el.addEventListener('dblclick', (event) => this.designer.widgetDoubleClick(this, event));
+                }
+                return this.draw;
+            }
+            destroyDesign() {
+                if (this._pointerDownHandler) {
+                    this.target.graphic.$el.removeEventListener('pointerdown', this._pointerDownHandler);
+                    this.target.graphic.$el.removeEventListener('pointermove', this._pointerMoveHandler);
+                    this.target.graphic.$el.removeEventListener('pointerup', this._pointerUpHandler);
+                }
+            }
+            getDesignRect() {
+                return new DOMRect(this.target.x, this.target.y, this.target.width, this.target.height);
+            }
+            get pageY() {
+                return this.target.y + this.target.parent.clientY;
+            }
+            moveTo(x, y) {
+                this.target.x = x;
+                this.target.y = y;
+                this.update(this.target);
+            }
+            moveToParent(parent) {
+                this.target.parent = parent;
+            }
+            moveBy(dx, dy) {
+                let x = Math.max(this.target.x + dx, 0);
+                let y = this.target.y + dy;
+                this.draw.attr('transform', `translate(${x}, ${y})`);
+                this.target.x = x;
+                this.target.y = y;
+            }
+            get page() {
+                return;
+            }
+            resize(width, height) {
+                this.target.width = width;
+                this.target.height = height;
+                this.update(this.target);
+            }
+            update(widget) {
+                widget.redraw();
+            }
+            /** Directly move selected object */
+            designMove(ox, oy) {
+                this.designer?.moveSelectionBy(ox, oy);
+            }
+            /** Apply rect to target object */
+            applyRect(dx, dy, dw, dh) {
+                this.target.x += dx;
+                this.target.y += dy;
+                this.target.width += dw;
+                this.target.height += dh;
+                this.update(this.target);
+            }
+            /** Apply rect delta to designer selection */
+            designApplyRect(dx, dy, dw, dh) {
+                this.designer.applyRectToSelection(dx, dy, dw, dh);
+            }
+            setRect(x, y, width, height) {
+                this.target.x = x;
+                this.target.y = y;
+                this.target.width = width;
+                this.target.height = height;
+                this.update(this.target);
+            }
+            designMouseDown(event) {
+                if (event.button === 0) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.moved = false;
+                    this.designer.dragging = this.dragging = true;
+                    event.target.setPointerCapture(event.pointerId);
+                    this._dx = event.clientX;
+                    this._dy = event.clientY;
+                    if (this.designer.snapToGrid) {
+                        this._dx = Math.trunc(this._dx / this.gridX) * this.gridX;
+                        this._dy = Math.trunc(this._dy / this.gridY) * this.gridY;
+                    }
+                    if (event.shiftKey) {
+                        this.designer.toggleSelection(this.target);
+                    }
+                    else {
+                        this.designer.selectObject(this.target);
+                    }
+                    // display guidelines
+                    this.designer.createGuidelines();
+                }
+            }
+            designMouseMove(event) {
+                if (this.dragging) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    // snap to grid
+                    let x = event.clientX;
+                    let y = event.clientY;
+                    if (this.designer.snapToGrid && !event.ctrlKey) {
+                        x = Math.trunc(x / this.designer.gridX) * this.designer.gridX;
+                        y = Math.trunc(y / this.designer.gridY) * this.designer.gridY;
+                    }
+                    let dx = x - this._dx;
+                    let dy = y - this._dy;
+                    if (dx || dy) {
+                        this.moved = true;
+                        this.designer.clearGuidelines();
+                        this.designMove(dx, dy);
+                        this.designer.undoManager.beginUpdate();
+                        if (x)
+                            this._dx = x;
+                        if (y)
+                            this._dy = y;
+                        this.designer.createGuidelines();
+                    }
+                }
+            }
+            dump() {
+                return {
+                    locked: this.locked,
+                };
+            }
+            load(data) {
+                this.locked = data.locked;
+            }
+            _mouseUp() {
+                if (this.moved) {
+                    this.designer.onSelectionMoved();
+                }
+            }
+            designMouseUp(event) {
+                this.designer.clearGuidelines();
+                this.designer.undoManager.endUpdate();
+                this.designer.dragging = this.dragging = false;
+                event.target.releasePointerCapture(event.pointerId);
+                event.stopPropagation();
+                // clear auto guidelines
+                this.designer.clearGuidelines();
+                this._mouseUp();
+                this.moved = false;
+            }
+        }
+        design.WidgetDesigner = WidgetDesigner;
+    })(design = katrid.design || (katrid.design = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../design/widgets.ts" />
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        class BaseWidget {
+            get clientY() {
+                return this.y + this.parent.clientY;
+            }
+            get clientX() {
+                return this.x + this.parent.clientX;
+            }
+            constructor() {
+                this._created = false;
+                this.defaultProps();
+                this._create();
+            }
+            defaultProps() {
+                this.x = 0;
+                this.y = 0;
+                this.width = 0;
+                this.height = 0;
+            }
+            _create() {
+                if (!this._created) {
+                    this._created = true;
+                    this.create();
+                }
+            }
+            get location() {
+                return { x: this.x, y: this.y };
+            }
+            set location(value) {
+                this.x = value.x;
+                this.y = value.y;
+                this.redraw();
+            }
+            get size() {
+                return { width: this.width, height: this.height };
+            }
+            set size(value) {
+                this.width = value.width;
+                this.height = value.height;
+                this.redraw();
+            }
+            drawTo(parent) {
+                this._create();
+                this.redraw();
+                parent.append(this.graphic);
+            }
+            drawDesign(parent) {
+                this._create();
+                this.redraw();
+                this.graphic.attr('class', 'widget-designer');
+                return this.graphic;
+            }
+            create() {
+                this.graphic = drawing.g({ transform: `translate(${this.x},${this.y})` });
+                this.element = this.graphic.$el;
+            }
+            redraw() {
+                this.graphic.attr('transform', `translate(${this.x},${this.y})`);
+            }
+            remove() {
+                if (this.parent && this.parent.objects.includes(this)) {
+                    this.parent.objects.splice(this.parent.objects.indexOf(this), 1);
+                }
+                this.element.remove();
+            }
+            getDesignRect() {
+                if (this.parent)
+                    return new DOMRect(this.parent.x + this.x, this.clientY, this.width, this.height);
+                return new DOMRect(this.x, this.y, this.width, this.height);
+            }
+            getType() {
+                return this.constructor.name;
+            }
+            dump() {
+                return {
+                    type: this.getType(),
+                    name: this.name,
+                    x: this.x,
+                    y: this.y,
+                    width: this.width,
+                    height: this.height,
+                    objects: this.objects?.map(obj => obj.dump()),
+                };
+            }
+            load(data) {
+                this.name = data.name;
+                this.x = data.x || data.left || 0;
+                this.y = data.y || data.top || 0;
+                this.width = data.width;
+                this.height = data.height;
+                if (data.objects) {
+                    this.loadObjects(data);
+                }
+            }
+            getClassByName(name) {
+                return katrid.report[name];
+            }
+            children() {
+                return this.objects;
+            }
+            /** Load children objects */
+            loadObjects(data) {
+                for (const o of data.objects) {
+                    let cls = this.getClassByName(o.type);
+                    if (cls === undefined) {
+                        console.error(`Class ${o.type} not found`);
+                        continue;
+                    }
+                    let obj = new cls();
+                    this.objects.push(obj);
+                    obj.page = this.page;
+                    obj.parent = this;
+                    obj.load(o);
+                }
+            }
+        }
+        drawing.BaseWidget = BaseWidget;
+        class Rectangle extends BaseWidget {
+            defaultProps() {
+                super.defaultProps();
+                this.width = 100;
+                this.height = 100;
+            }
+            create() {
+                if (!this.element) {
+                    this.graphic = drawing.g({ transform: `translate(${this.x},${this.y})` });
+                    this.element = this.graphic.$el;
+                    this.rect = this.graphic.rect(0, 0, this.width, this.height);
+                }
+            }
+            redraw() {
+                super.redraw();
+                this.rect.attr('width', this.width);
+                this.rect.attr('height', this.height);
+            }
+        }
+        drawing.Rectangle = Rectangle;
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        class Image extends drawing.BaseWidget {
+            constructor() {
+                super(...arguments);
+                this.transparent = false;
+            }
+            defaultProps() {
+                super.defaultProps();
+                this.height = 50;
+                this.width = 50;
+            }
+            dump() {
+                return Object.assign(super.dump(), {
+                    field: this.field,
+                    dataSource: this.datasource?.name,
+                    picture: this.picture,
+                    center: this.center,
+                    transparent: this.transparent,
+                    format: this.format,
+                    width: this.width,
+                    height: this.height,
+                });
+            }
+            load(info) {
+                super.load(info);
+                this.field = info.field;
+                this.picture = info.picture;
+                this.transparent = info.transparent;
+                this.format = info.format;
+                this.center = info.center;
+                if (info.datasource) {
+                    this.datasource = this.report.findObject(info.datasource);
+                }
+            }
+            create() {
+                super.create();
+                this.img = katrid.drawing.draw('image', { x: 0, y: 0, width: this.width, height: this.height });
+                this.graphic.append(this.img);
+                this._rect = this.graphic.rect(0, 0, this.width, this.height);
+            }
+            redraw() {
+                super.redraw();
+                if (this.picture) {
+                    this.img.attr('src', `data:image/${this.format};base64, ` + this.picture);
+                }
+                this.img.attr('width', this.width);
+                this.img.attr('height', this.height);
+                this._rect.attr('width', this.width);
+                this._rect.attr('height', this.height);
+            }
+        }
+        drawing.Image = Image;
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
+/// <reference path="shapes.ts" />
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        class Text extends drawing.BaseWidget {
+            create() {
+                this.graphic = drawing.g({ transform: `translate(${this.x},${this.y})` });
+                let fobj = drawing.draw('foreignObject', { x: 0, y: 0, width: this.width, height: this.height });
+                const div = this._div = document.createElement('div');
+                div.className = 'text-object';
+                this.textElement = document.createElement('span');
+                div.append(this.textElement);
+                fobj.$el.append(div);
+                this.foreignObject = fobj.$el;
+                this.graphic.append(fobj);
+                this.element = this.graphic.$el;
+                this.text = this._text;
+            }
+            defaultProps() {
+                super.defaultProps();
+                this.height = 20;
+                this.width = 100;
+                this.wrap = false;
+                this.allowExpression = true;
+                this.canGrow = false;
+                this.allowTags = false;
+            }
+            get text() {
+                return this._text;
+            }
+            set text(value) {
+                this._text = value;
+                if (this.textElement)
+                    this.textElement.innerHTML = value;
+            }
+            get background() {
+                return this._background;
+            }
+            set background(value) {
+                this._background = value;
+                this.applyStyle();
+            }
+            get displayFormat() {
+                ;
+                return this._displayFormat;
+            }
+            set displayFormat(value) {
+                this._displayFormat = value;
+            }
+            get border() {
+                return this._border;
+            }
+            set border(value) {
+                this._border = value;
+                this.applyStyle();
+            }
+            get font() {
+                if (!this._font)
+                    this._font = { name: 'Helvetica', size: '9pt', color: '#000000' };
+                return this._font;
+            }
+            set font(value) {
+                this._font = value;
+                this.applyStyle();
+            }
+            get hAlign() {
+                return this._hAlign;
+            }
+            set hAlign(value) {
+                this._hAlign = value;
+                this.applyStyle();
+            }
+            get vAlign() {
+                return this._vAlign;
+            }
+            set vAlign(value) {
+                this._vAlign = value;
+                this.applyStyle();
+            }
+            applyStyle() {
+                if (this.border == null) {
+                    this._div.style.border = 'none';
+                }
+                else {
+                    this._div.style.border = 'none';
+                    if (this.border.all)
+                        this._div.style.border = '1px solid gray';
+                    else {
+                        if (this.border.left)
+                            this._div.style.borderLeft = '1px solid gray';
+                        if (this.border.right)
+                            this._div.style.borderRight = '1px solid gray';
+                        if (this.border.top)
+                            this._div.style.borderTop = '1px solid gray';
+                        if (this.border.bottom)
+                            this._div.style.borderBottom = '1px solid gray';
+                    }
+                }
+                if (this.font) {
+                    this._div.style.fontFamily = '';
+                    if (this.font.name)
+                        this._div.style.fontFamily = this.font.name;
+                    if (this.font.size)
+                        this._div.style.fontSize = this.font.size.toString() + 'pt';
+                    this._div.style.fontStyle = null;
+                    if (this.font.italic)
+                        this._div.style.fontStyle = 'italic';
+                    this._div.style.fontWeight = null;
+                    if (this.font.bold)
+                        this._div.style.fontWeight = 'bold';
+                    this._div.style.textDecoration = null;
+                    if (this.font.underline)
+                        this._div.style.textDecoration = 'underline';
+                    if (this.font.color)
+                        this._div.style.color = this.font.color;
+                }
+                if (this._background)
+                    this._div.style.background = this._background.color;
+                if (this._vAlign != null)
+                    switch (this._vAlign) {
+                        case drawing.VAlign.bottom:
+                            this._div.style.verticalAlign = 'bottom';
+                            break;
+                        case drawing.VAlign.middle:
+                            this._div.style.verticalAlign = 'middle';
+                            break;
+                        default:
+                            this._div.style.verticalAlign = 'top';
+                    }
+                if (this._hAlign != null)
+                    switch (this._hAlign) {
+                        case drawing.HAlign.center:
+                            this._div.style.textAlign = 'center';
+                            break;
+                        case drawing.HAlign.right:
+                            this._div.style.textAlign = 'right';
+                            break;
+                        case drawing.HAlign.justify:
+                            this._div.style.textAlign = 'justify';
+                            break;
+                        default:
+                            this._div.style.textAlign = 'left';
+                    }
+            }
+            dump() {
+                const r = super.dump();
+                r.text = this.text;
+                r.hAlign = this.hAlign;
+                r.vAlign = this.vAlign;
+                if (this._font)
+                    r.font = this._font;
+                if (this._border)
+                    r.border = this._border;
+                if (this.background)
+                    r.background = this.background;
+                r.allowExpression = this.allowExpression;
+                r.allowTags = this.allowTags;
+                r.canGrow = this.canGrow;
+                r.wrap = this.wrap;
+                if (this._background) {
+                    r.background = this._background;
+                }
+                if (this._displayFormat) {
+                    r.displayFormat = this._displayFormat;
+                }
+                if (this.highlights) {
+                    r.highlights = this.highlights;
+                }
+                return r;
+            }
+            load(info) {
+                super.load(info);
+                this.text = info.text;
+                this.allowExpression = info.allowExpression;
+                this.allowTags = info.allowTags;
+                this.canGrow = info.canGrow;
+                this.wrap = info.wrap;
+                if (info.hAlign)
+                    this._hAlign = info.hAlign;
+                if (info.vAlign)
+                    this._vAlign = info.vAlign;
+                if (info.font)
+                    this._font = info.font;
+                if (info.border)
+                    this._border = info.border;
+                if (info.background)
+                    this._background = info.background;
+                if (info.displayFormat)
+                    this._displayFormat = info.displayFormat;
+                if (info.highlights)
+                    this.highlights = info.highlights;
+                else if (info.highlight)
+                    this.highlights = [info.highlight];
+                this.applyStyle();
+            }
+            redraw() {
+                super.redraw();
+                this.foreignObject.setAttribute('width', this.width.toString());
+                this.foreignObject.setAttribute('height', this.height.toString());
+                this._div.style.width = this.width.toString() + 'px';
+                this._div.style.height = this.height.toString() + 'px';
+            }
+        }
+        drawing.Text = Text;
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../drawing/shapes.ts" />
+/// <reference path="../drawing/image.ts" />
+/// <reference path="../drawing/text.ts" />
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        bi.componentRegistry = {
+            text: katrid.drawing.Text,
+            Text: katrid.drawing.Text,
+            image: katrid.drawing.Image,
+            Image: katrid.drawing.Image,
+            Barcode: katrid.drawing.Barcode,
+            barcode: katrid.drawing.Barcode,
+        };
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class _DataSource {
+            constructor(name, commandText) {
+                this.commandText = commandText;
+                this.widgets = [];
+                this._name = name;
+            }
+            get name() {
+                return this._name;
+            }
+            set name(value) {
+                this._name = value;
+                for (let widget of this.widgets)
+                    widget._datasourceName = value;
+            }
+            dump() {
+                return {
+                    name: this.name,
+                    commandText: this.commandText,
+                };
+            }
+            static fromJson(data) {
+                return new this(data.name, data.commandText);
+            }
+            async refresh() {
+                this.data = [];
+                if (this.commandText) {
+                    let res = await Katrid.Services.Service.$post('/bi/studio/query/', { query: this.commandText });
+                    this.data = res.data;
+                }
+                // apply data to binding widgets
+                for (let widget of this.widgets)
+                    widget.dataNotification(this);
+            }
+            get dataView() {
+                return this.data;
+            }
+            values(column) {
+                if (this.dataView)
+                    return this.dataView.map(obj => obj[column]);
+                return [];
+            }
+            bind(widget) {
+                if (this.widgets.indexOf(widget) === -1)
+                    this.widgets.push(widget);
+            }
+            unbind(widget) {
+                this.widgets.splice(this.widgets.indexOf(widget), 1);
+            }
+        }
+        bi._DataSource = _DataSource;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+/// <reference path="base.ts"/>
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        bi.GUIDELINE_DELAY = 2000;
+        class BasePageDesigner {
+            constructor(container, page, reportDesigner) {
+                this.container = container;
+                this.page = page;
+                this.reportDesigner = reportDesigner;
+                this.dragging = false;
+                this.snapToGrid = false;
+                this.selectionBox = false;
+                this.draggingSelectionBox = false;
+                this._dx = 0;
+                this._dy = 0;
+                this._bx = 0;
+                this._by = 0;
+                this._bw = 0;
+                this._bh = 0;
+                page.designing = true;
+                page.designer = this;
+                this.selection = [];
+                this.grabs = [];
+            }
+            activate() {
+                if (this._documentKeyDown)
+                    document.removeEventListener('keydown', this._documentKeyDown);
+                // hook keydown events
+                this._documentKeyDown = (event) => this.onKeyDown(event);
+                document.addEventListener('keydown', this._documentKeyDown);
+                this.container.append(this.el);
+                console.debug('activate');
+                this.reportDesigner.activatePage(this.page);
+            }
+            deactivate() {
+                this.clearSelection();
+                if (this.el?.parentElement)
+                    this.el.parentElement.removeChild(this.el);
+                document.removeEventListener('keydown', this._documentKeyDown);
+                this._documentKeyDown = null;
+            }
+            get report() {
+                return this.page.report;
+            }
+            onKeyDown(event) {
+                if (this.selection?.length && !event.altKey && !event.altKey) {
+                    if (event.shiftKey) {
+                        switch (event.key) {
+                            case 'ArrowDown':
+                                // increase height
+                                if (event.ctrlKey)
+                                    this.resizeSelectionBy(0, 1);
+                                else
+                                    this.resizeSelectionBy(0, 1);
+                                break;
+                            case 'ArrowUp':
+                                // decrease height
+                                if (event.ctrlKey)
+                                    this.resizeSelectionBy(0, -1);
+                                else
+                                    this.resizeSelectionBy(0, -1);
+                                break;
+                            case 'ArrowLeft':
+                                // decrease height
+                                if (event.ctrlKey)
+                                    this.resizeSelectionBy(-1, 0);
+                                else
+                                    this.resizeSelectionBy(-1, 0);
+                                break;
+                            case 'ArrowRight':
+                                // decrease height
+                                if (event.ctrlKey)
+                                    this.resizeSelectionBy(1, 0);
+                                else
+                                    this.resizeSelectionBy(1, 0);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    else {
+                        switch (event.key) {
+                            case 'ArrowDown':
+                                // move selection down
+                                if (event.ctrlKey)
+                                    this.moveSelectionBy(0, -1 * this.gridY);
+                                else
+                                    this.moveSelectionBy(0, -1);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowUp':
+                                // move selection up
+                                if (event.ctrlKey)
+                                    this.moveSelectionBy(0, 1 * this.gridY);
+                                else
+                                    this.moveSelectionBy(0, 1);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowLeft':
+                                // move selection left
+                                if (event.ctrlKey)
+                                    this.moveSelectionBy(1 * this.gridX, 0);
+                                else
+                                    this.moveSelectionBy(1, 0);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowRight':
+                                // move selection right
+                                if (event.ctrlKey)
+                                    this.moveSelectionBy(-1 * this.gridX, 0);
+                                else
+                                    this.moveSelectionBy(-1, 0);
+                                this._tempGuidelines();
+                                break;
+                            case 'Delete':
+                                // delete selection
+                                this.deleteSelection();
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+                else if (this.selectedBand && !event.altKey && !event.metaKey && !event.ctrlKey)
+                    if (event.key === 'Delete')
+                        this.deleteSelection();
+            }
+            resizeSelectionBy(deltaX, deltaY) {
+                for (let el of this.selection)
+                    el.resize(el.width + deltaX, el.height + deltaY);
+                this.refreshGrabs();
+                if (this.guidelines?.length) {
+                    clearTimeout(this._resizingTimeout);
+                    this._resizingTimeout = setTimeout(() => this.clearGuidelines(), bi.GUIDELINE_DELAY);
+                }
+            }
+            refreshGrabs() {
+                for (let g of this.grabs)
+                    g.setPosition();
+            }
+            clearGuidelines() {
+                if (this.guidelines)
+                    for (let g of this.guidelines)
+                        g.remove();
+                this.guidelines = [];
+            }
+            clearSelection() {
+                this.destroyGrabHandles();
+                this.selection = [];
+                this.reportDesigner.onSelectionChange(this.selection);
+            }
+            addToSelection(obj) {
+                if (!this.selection.includes(obj)) {
+                    this.selection.push(obj);
+                    this.createGrabHandles(obj);
+                }
+                this.reportDesigner.onSelectionChange(this.selection);
+            }
+            destroyGrabHandles(obj) {
+                for (let gh of Array.from(this.grabs))
+                    if (!obj || (gh.target === obj)) {
+                        gh.destroy();
+                        this.grabs.splice(this.grabs.indexOf(gh), 1);
+                    }
+            }
+            createGrabHandles(obj) {
+                const grabs = new GrabHandles({
+                    container: this.container,
+                    target: obj,
+                    onObjectResizing: () => obj.onDesignResizing(),
+                    onObjectResized: () => obj.onDesignResized(),
+                    snapToGrid: false,
+                    // gridX: this.gridX,
+                    // gridY: this.gridY,
+                });
+                this.grabs.push(grabs);
+            }
+            createElement(widgetName, target, x, y) {
+            }
+            selectObject(obj) {
+                // clear selection if object is not already selected
+                if (!this.selection.includes(obj))
+                    this.clearSelection();
+                this.addToSelection(obj);
+            }
+            removeFromSelection(obj) {
+                if (this.selection.includes(obj)) {
+                    this.destroyGrabHandles(obj);
+                    this.selection.splice(this.selection.indexOf(obj), 1);
+                }
+                this.reportDesigner.onSelectionChange(this.selection);
+            }
+            moveSelectionBy(deltaX, deltaY) {
+                for (let obj of this.selection) {
+                    obj.designMoveBy(deltaX, deltaY);
+                    // detect visual guidelines
+                }
+                for (let grabs of this.grabs)
+                    grabs.setPosition();
+            }
+            deleteSelection() {
+                const sel = this.selection.length;
+                for (let obj of this.selection)
+                    obj.remove();
+                for (let grabs of this.grabs)
+                    grabs.destroy();
+                this.grabs = [];
+                this.reportDesigner.onSelectionChange();
+            }
+            onPointerDown(event) {
+                if (this.selectionBox && event.button === 0) {
+                    this.draggingSelectionBox = true;
+                    this._dx = event.layerX;
+                    this._dy = event.layerY;
+                    this._bx = this._by = this._bw = this._bh = 0;
+                    this.createSelectionBox(this._dx, this._dy, 0, 0);
+                }
+            }
+            createSelectionBox(x, y, width, height) {
+                this._selBox = document.createElement('div');
+                this._selBox.className = 'designer-selection-box';
+                $(this._selBox).css({ left: x, top: y, width: width, height: height });
+                this.container.append(this._selBox);
+            }
+            destroySelectionBox() {
+                this._selBox.remove();
+            }
+            updateSelectionBox(x, y, width, height) {
+                $(this._selBox).css({ left: x, top: y, width, height });
+                this._bx = x;
+                this._by = y;
+                this._bw = width;
+                this._bh = height;
+            }
+            onPointerUp(event) {
+                if (this.selectionBox) {
+                    this.clearGuidelines();
+                    if (this.draggingSelectionBox) {
+                        this.draggingSelectionBox = false;
+                        this.refreshSelection();
+                        this.destroySelectionBox();
+                    }
+                }
+            }
+            refreshSelection() {
+                if (!this.selection?.length)
+                    this.reportDesigner.onSelectionChange([this.page]);
+            }
+            onMouseMove(event) {
+                if (this.draggingSelectionBox) {
+                    event.preventDefault();
+                    let x = this._dx;
+                    let y = this._dy;
+                    let w = event.layerX - this._dx;
+                    let h = event.layerY - this._dy;
+                    if (w < 0) {
+                        x += w;
+                        w = Math.abs(w);
+                    }
+                    if (h < 0) {
+                        y += h;
+                        h = Math.abs(h);
+                    }
+                    this.updateSelectionBox(x, y, w, h);
+                }
+            }
+        }
+        bi.BasePageDesigner = BasePageDesigner;
+        class GrabHandles {
+            constructor(config) {
+                this.dragging = false;
+                this.gridX = 0;
+                this.gridY = 0;
+                this.snapToGrid = false;
+                // init object drag
+                // this.dragObject = new DragObject(el, designer.surface);
+                this.container = config.container;
+                this.target = config.target;
+                // if (!config.container)
+                //   this.container = (this.target as SVGElement).parentElement;
+                this.onObjectResized = config.onObjectResized;
+                this.onObjectResizing = config.onObjectResizing;
+                this.handles = [];
+                this.createHandles();
+                this.setPosition();
+                if (config.snapToGrid) {
+                    this.gridX = config.gridX;
+                    this.gridY = config.gridY;
+                    this.snapToGrid = true;
+                }
+            }
+            createHandle() {
+                let h = document.createElement('label');
+                h.classList.add('target-handle');
+                this.handles.push(h);
+                return h;
+            }
+            clear() {
+                for (let handle of this.handles)
+                    handle.remove();
+                this.handles = [];
+            }
+            setPosition() {
+                const rect = this.target.getDesignRect();
+                // const rect1 = this.designer.surface.getBoundingClientRect();
+                // const rect = new DOMRect(r.left - rect1.left, r.top - rect1.top, r.width, r.height);
+                let handle = new GrabHandle(this.bottomLeft);
+                handle.left = rect.left - 3;
+                handle.top = rect.bottom - 5;
+                handle = new GrabHandle(this.middleLeft);
+                handle.left = rect.left - 3;
+                handle.top = rect.bottom - rect.height / 2 - 4;
+                handle = new GrabHandle(this.topLeft);
+                handle.left = rect.left - 3;
+                handle.top = rect.top - 3;
+                handle = new GrabHandle(this.topRight);
+                handle.left = rect.right - 4;
+                handle.top = rect.top - 3;
+                handle = new GrabHandle(this.middleRight);
+                handle.left = rect.right - 4;
+                handle.top = rect.bottom - rect.height / 2 - 4;
+                handle = new GrabHandle(this.bottomRight);
+                handle.left = rect.right - 4;
+                handle.top = rect.bottom - 5;
+                handle = new GrabHandle(this.topCenter);
+                handle.left = rect.right - rect.width / 2 - 4;
+                handle.top = rect.top - 3;
+                handle = new GrabHandle(this.bottomCenter);
+                handle.left = rect.right - rect.width / 2 - 4;
+                handle.top = rect.bottom - 5;
+            }
+            _setGrabHandle() {
+                let _y, _x, w, h;
+                this.topLeft.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    _y = evt.clientY;
+                    _x = evt.clientX;
+                    if (this.snapToGrid) {
+                        _x = Math.trunc(_x / this.gridX) * this.gridX;
+                        _y = Math.trunc(_y / this.gridY) * this.gridY;
+                    }
+                    let el = this.target;
+                    h = el.height;
+                    w = el.width;
+                    let pos = { left: el.left, top: el.top };
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    targetHandle.setPointerCapture(evt.pointerId);
+                    let _onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = evt.clientY;
+                            let x = evt.clientX;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            if (x || y) {
+                                y = _y - y;
+                                x = _x - x;
+                                // el.css({ left: pos.left - x, top: pos.top - y });
+                                el.left = pos.left - x;
+                                el.top = pos.top - y;
+                                el.height = h + y;
+                                el.width = w + x;
+                                this.setPosition();
+                                if (this.onObjectResizing)
+                                    this.onObjectResizing({ target: this.target });
+                            }
+                        }
+                    };
+                    let _onmouseup = (evt) => {
+                        targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            if (this.onObjectResized)
+                                this.onObjectResized({ target: this.target });
+                            targetHandle.removeEventListener('pointermove', _onmousemove);
+                            targetHandle.removeEventListener('pointerup', _onmouseup);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', _onmousemove);
+                    targetHandle.addEventListener('pointerup', _onmouseup, { once: true });
+                });
+                this.topRight.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    _y = evt.screenY;
+                    _x = evt.screenX;
+                    if (this.snapToGrid) {
+                        _x = Math.trunc(_x / this.gridX) * this.gridX;
+                        _y = Math.trunc(_y / this.gridY) * this.gridY;
+                    }
+                    let el = this.target;
+                    let h = el.height;
+                    let w = el.width;
+                    let pos = { left: el.left, top: el.top };
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    targetHandle.setPointerCapture(evt.pointerId);
+                    let _onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = evt.screenY;
+                            let x = evt.screenX;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            if (x || y) {
+                                y = _y - y;
+                                x = _x - x;
+                                // el.css({ left: pos.left, top: pos.top - y });
+                                el.left = pos.left;
+                                el.top = pos.top - y;
+                                el.height = h + y;
+                                el.width = w - x;
+                                this.setPosition();
+                                if (this.onObjectResizing)
+                                    this.onObjectResizing({ target: this.target });
+                            }
+                        }
+                    };
+                    let _onmouseup = (evt) => {
+                        targetHandle.setPointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            if (this.onObjectResized)
+                                this.onObjectResized({ target: this.target });
+                            targetHandle.removeEventListener('pointermove', _onmousemove);
+                            targetHandle.removeEventListener('pointerup', _onmouseup);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', _onmousemove);
+                    targetHandle.addEventListener('pointerup', _onmouseup, { once: true });
+                });
+                this.bottomRight.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    _y = evt.clientY;
+                    _x = evt.clientX;
+                    if (this.snapToGrid) {
+                        _x = Math.trunc(_x / this.gridX) * this.gridX;
+                        _y = Math.trunc(_y / this.gridY) * this.gridY;
+                    }
+                    let el = this.target;
+                    w = el.width;
+                    h = el.height;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    targetHandle.setPointerCapture(evt.pointerId);
+                    let _onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = _y - evt.clientY;
+                            let x = _x - evt.clientX;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            if (x || y) {
+                                el.height = h - y;
+                                el.width = w - x;
+                                this.setPosition();
+                                if (this.onObjectResizing)
+                                    this.onObjectResizing({ target: this.target });
+                            }
+                        }
+                    };
+                    let _onmouseup = (evt) => {
+                        targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            if (this.onObjectResized)
+                                this.onObjectResized({ target: this.target });
+                            targetHandle.removeEventListener('pointermove', _onmousemove);
+                            targetHandle.removeEventListener('pointerup', _onmouseup);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', _onmousemove);
+                    targetHandle.addEventListener('pointerup', _onmouseup);
+                });
+                this.middleLeft.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    _x = evt.clientX;
+                    if (this.snapToGrid)
+                        _x = Math.trunc(_x / this.gridX) * this.gridX;
+                    let el = this.target;
+                    w = el.width;
+                    let l = el.left;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    targetHandle.setPointerCapture(evt.pointerId);
+                    let _onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            if (this.snapToGrid)
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                            if (x) {
+                                x = _x - x;
+                                el.left = l - x;
+                                el.width = w + x;
+                                this.setPosition();
+                                if (this.onObjectResizing)
+                                    this.onObjectResizing({ target: this.target });
+                            }
+                        }
+                    };
+                    let _onmouseup = (evt) => {
+                        targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            if (this.onObjectResized)
+                                this.onObjectResized({ target: this.target });
+                            targetHandle.removeEventListener('pointermove', _onmousemove);
+                            targetHandle.removeEventListener('pointerup', _onmouseup);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', _onmousemove);
+                    targetHandle.addEventListener('pointerup', _onmouseup);
+                });
+                this.middleRight.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    _x = evt.clientX;
+                    if (this.snapToGrid)
+                        _x = Math.trunc(_x / this.gridX) * this.gridX;
+                    let el = this.target;
+                    w = el.width;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    targetHandle.setPointerCapture(evt.pointerId);
+                    let _onmousemove = (evt) => {
+                        evt.preventDefault();
+                        evt.stopPropagation();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            if (this.snapToGrid)
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                            if (x) {
+                                x = _x - x;
+                                el.width = w - x;
+                                this.setPosition();
+                                if (this.onObjectResizing)
+                                    this.onObjectResizing({ target: this.target });
+                            }
+                        }
+                    };
+                    let _onmouseup = (evt) => {
+                        targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            if (this.onObjectResized)
+                                this.onObjectResized({ target: this.target });
+                            targetHandle.removeEventListener('pointermove', _onmousemove);
+                            targetHandle.removeEventListener('pointerup', _onmouseup);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', _onmousemove);
+                    targetHandle.addEventListener('pointerup', _onmouseup);
+                });
+                this.bottomCenter.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    _y = evt.clientY;
+                    if (this.snapToGrid)
+                        _y = Math.trunc(_y / this.gridY) * this.gridY;
+                    let el = this.target;
+                    h = el.height;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    targetHandle.setPointerCapture(evt.pointerId);
+                    let _onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = evt.clientY;
+                            if (this.snapToGrid)
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            if (y) {
+                                y = _y - y;
+                                el.height = h - y;
+                                this.setPosition();
+                                if (this.onObjectResizing)
+                                    this.onObjectResizing({ target: this.target });
+                            }
+                        }
+                    };
+                    let _onmouseup = (evt) => {
+                        targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            if (this.onObjectResized)
+                                this.onObjectResized({ target: this.target });
+                            targetHandle.removeEventListener('pointermove', _onmousemove);
+                            targetHandle.removeEventListener('pointerup', _onmouseup);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', _onmousemove);
+                    targetHandle.addEventListener('pointerup', _onmouseup);
+                });
+                this.topCenter.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    _y = evt.clientY;
+                    if (this.snapToGrid)
+                        _y = Math.trunc(_y / this.gridY) * this.gridY;
+                    let el = this.target;
+                    h = el.height;
+                    let t = el.top;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    targetHandle.setPointerCapture(evt.pointerId);
+                    let _onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = evt.clientY;
+                            if (this.snapToGrid)
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            if (y) {
+                                y = _y - y;
+                                el.top = t - y;
+                                el.height = h + y;
+                                this.setPosition();
+                                if (this.onObjectResizing)
+                                    this.onObjectResizing({ target: this.target });
+                            }
+                        }
+                    };
+                    let _onmouseup = (evt) => {
+                        targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            if (this.onObjectResized)
+                                this.onObjectResized({ target: this.target });
+                            targetHandle.removeEventListener('pointermove', _onmousemove);
+                            targetHandle.removeEventListener('pointerup', _onmouseup);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', _onmousemove);
+                    targetHandle.addEventListener('pointerup', _onmouseup);
+                });
+                this.bottomLeft.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    _y = evt.clientY;
+                    _x = evt.clientX;
+                    if (this.snapToGrid) {
+                        _x = Math.trunc(_x / this.gridX) * this.gridX;
+                        _y = Math.trunc(_y / this.gridY) * this.gridY;
+                    }
+                    let el = this.target;
+                    h = el.height;
+                    w = el.width;
+                    let l = el.left;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    targetHandle.setPointerCapture(evt.pointerId);
+                    let _onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = evt.clientY;
+                            let x = evt.clientX;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            if (x || y) {
+                                y = _y - y;
+                                x = _x - x;
+                                el.height = h - y;
+                                el.left = l - x;
+                                el.width = w + x;
+                                this.setPosition();
+                                if (this.onObjectResizing)
+                                    this.onObjectResizing({ target: this.target });
+                            }
+                        }
+                    };
+                    let _onmouseup = (evt) => {
+                        targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            if (this.onObjectResized)
+                                this.onObjectResized({ target: this.target });
+                            targetHandle.removeEventListener('pointermove', _onmousemove);
+                            targetHandle.removeEventListener('pointerup', _onmouseup);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', _onmousemove);
+                    targetHandle.addEventListener('pointerup', _onmouseup);
+                });
+            }
+            createHandles() {
+                let handle;
+                // bottom-left
+                this.bottomLeft = handle = this.createHandle();
+                handle.classList.add('bottom-left');
+                this.container.append(handle);
+                // middle-left
+                this.middleLeft = handle = this.createHandle();
+                handle.classList.add('middle-left');
+                this.container.append(handle);
+                // top-left
+                this.topLeft = handle = this.createHandle();
+                handle.classList.add('top-left');
+                this.container.append(handle);
+                // top-right
+                this.topRight = handle = this.createHandle();
+                handle.classList.add('top-right');
+                this.container.append(handle);
+                // middle-right
+                this.middleRight = handle = this.createHandle();
+                handle.classList.add('middle-right');
+                this.container.append(handle);
+                // bottom-right
+                this.bottomRight = handle = this.createHandle();
+                handle.classList.add('bottom-right');
+                this.container.append(handle);
+                // top-center
+                this.topCenter = handle = this.createHandle();
+                handle.classList.add('top-center');
+                this.container.append(handle);
+                // bottom-center
+                this.bottomCenter = handle = this.createHandle();
+                handle.classList.add('bottom-center');
+                this.container.append(handle);
+                this.setPosition();
+                this._setGrabHandle();
+                return this;
+            }
+            destroy() {
+                for (let h of this.handles)
+                    h.remove();
+                this.handles = [];
+            }
+        }
+        bi.GrabHandles = GrabHandles;
+        class GrabHandle {
+            constructor(el) {
+                this.el = el;
+            }
+            set left(value) {
+                this.el.style.left = `${value}px`;
+            }
+            set top(value) {
+                this.el.style.top = `${value}px`;
+            }
+            set width(value) {
+                this.el.style.width = `${value}px`;
+            }
+            set height(value) {
+                this.el.style.height = `${value}px`;
+            }
+        }
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class ReportDesigner {
+            constructor(container) {
+                this.container = container;
+                this.loading = false;
+                this.pages = [];
+                this.create();
+                katrid.bi.reportDesigner = this;
+            }
+            create() {
+                this._datasources = [];
+                this.workspace = document.createElement('div');
+                this.workspace.className = 'katrid-studio workspace';
+                this.el = document.createElement('div');
+                this.el.className = 'katrid-report-designer workspace-area';
+                // create tabset
+                const tabset = document.createElement('div');
+                tabset.className = 'tabset';
+                const nav = document.createElement('ul');
+                nav.className = 'nav nav-tabs';
+                tabset.append(nav);
+                this.tabsetElement = tabset;
+                this.container.append(tabset);
+                this.container.append(this.workspace);
+                this.toolbox = new katrid.bi.Toolbox(this.workspace);
+                this.workspace.append(this.el);
+                this.toolWindow = new katrid.bi.ToolWindow(this, this.workspace);
+                this.container.classList.add('report-designer');
+                // toolbox
+                this.createDragEvents();
+                document.querySelectorAll('.toolbox-item')
+                    .forEach((el, idx) => {
+                    el.setAttribute('draggable', 'true');
+                    el.addEventListener('dragstart', (evt) => {
+                        this.page.clearSelection();
+                        evt.dataTransfer.setData('text', el.getAttribute('data-widget'));
+                        // evt.dataTransfer.dropEffect = 'move';
+                    });
+                });
+                document.querySelectorAll('.toolbox-item img').forEach(el => el.setAttribute('draggable', 'false'));
+                let el = document.querySelector('#properties-editor');
+                this.propertiesEditor = new katrid.bi.ObjectInspector(this, el);
+            }
+            onSelectionChange(selection) {
+                // set component editor
+                if (selection)
+                    this.propertiesEditor.setSelection(selection);
+                else
+                    this.propertiesEditor.setSelection([]);
+                $(this).trigger('selectionChange', selection);
+            }
+            get datasources() {
+                return this._datasources;
+            }
+            createDragEvents() {
+                this.container.addEventListener('dragover', (evt) => {
+                    let target = evt.target;
+                    if (target.closest('.band-designer'))
+                        evt.preventDefault();
+                });
+                this.container.addEventListener('drop', (evt) => {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    this.toolItemDrop(evt.dataTransfer.getData('text'), evt);
+                });
+            }
+            toolItemDrop(widget, evt) {
+                this.createElement(widget, evt.target, evt.offsetX, evt.offsetY);
+            }
+            createElement(widgetName, target, x, y) {
+                this.page.createElement(widgetName, target, x, y);
+            }
+            newReport(reportType = 'banded') {
+                this.clear();
+                if (reportType === 'banded') {
+                    const rep = new BandedReport();
+                    // todo replace by a template
+                    rep.newPage();
+                    this.loadReport(rep);
+                    return rep;
+                }
+                else if (reportType === 'dashboard') {
+                    const rep = new DashboardReport();
+                    rep.newPage();
+                    this.loadReport(rep);
+                    return rep;
+                }
+            }
+            get report() {
+                return this._report;
+            }
+            set report(value) {
+                this._report = value;
+            }
+            /**
+             * Active page designer
+             */
+            get page() {
+                return this._page;
+            }
+            set page(value) {
+                if (value !== this._page) {
+                    if (this._page)
+                        this._page.deactivate();
+                    this._page = value;
+                    if (value) {
+                        value.activate();
+                        this.el.append(value.container);
+                    }
+                }
+            }
+            getValidName(prefix) {
+                return this._report.getValidName(prefix);
+            }
+            async showParamsDialog() {
+                const params = this.report.params;
+                if (params) {
+                    const xml = jQuery.parseXML(params);
+                    // prepare params
+                    let code = '';
+                    let cached = this.report.cache.params || {};
+                    const info = {};
+                    for (let param of xml.querySelector('params').children) {
+                        let paramName = param.getAttribute('name');
+                        let paramLabel = param.getAttribute('label');
+                        let paramType = param.getAttribute('type') || 'StringField';
+                        info[paramName] = { label: paramLabel, type: paramType };
+                        code += `${paramName}: ${cached[paramName] || 'null'}    # ${paramLabel} (${paramType})\n`;
+                    }
+                    const res = await katrid.bi.showCodeEditor(code.trimEnd(), 'yaml', null);
+                    if (res !== false) {
+                        const values = jsyaml.load(res);
+                        const displayParams = {};
+                        // prepare params
+                        for (let [k, v] of Object.entries(values)) {
+                            if (v != null) {
+                                if (info[k].type === 'DateField')
+                                    values[k] = moment.utc(v).format('YYYY-MM-DD');
+                            }
+                        }
+                        this.report.cache.params = values;
+                        return { values, info };
+                    }
+                }
+            }
+            /**
+             * Prepare and preview the report
+             * @param showParams Show params dialog before preview
+             * @returns
+             */
+            async preview(showParams = false) {
+                let params;
+                if (showParams) {
+                    params = await this.showParamsDialog();
+                    if (params === false)
+                        return;
+                }
+                const model = new Katrid.Services.ModelService('ui.action.report');
+                const res = await model.rpc('preview', [JSON.stringify(this.dump()), { values: params.values, info: params.info }]);
+            }
+            loadReport(report) {
+                this.clear();
+                this._report = report;
+                this._datasources = report.datasources;
+                // load data sources
+                for (let ds of this._datasources)
+                    this.toolWindow.registerDataSource(ds);
+                // load each page
+                for (let page of report.pages)
+                    this.pages.push(this.createPageDesigner(page));
+                // goto to first page
+                if (this.pages.length)
+                    this.page = this.pages[0];
+            }
+            createPageDesigner(page) {
+                // create a PageDesigner instance for a given Page
+                const el = document.createElement('div');
+                el.className = 'page-designer';
+                return page.createDesigner(el, this);
+            }
+            async widgetExecuteEditor(widget) {
+                const editorCls = katrid.bi.getComponentEditor(widget.constructor);
+                if (editorCls) {
+                    const editor = new editorCls(widget);
+                    await editor.showEditor();
+                }
+            }
+            async showOpenFilePicker() {
+                [this.fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Reptile Report (*.report)', accept: { 'application/json': ['.report'] } }] });
+                const file = await this.fileHandle.getFile();
+                const contents = await file.text();
+                this.load(JSON.parse(contents), file.name);
+            }
+            async showSaveFilePicker() {
+                if (!this.fileHandle)
+                    this.fileHandle = await window.showSaveFilePicker({ types: [{ description: 'Reptile Report (*.report)', accept: { 'application/json': ['.report'] } }] });
+                const file = await this.fileHandle.createWritable();
+                console.log('content', this._report.dump);
+                const content = this.dump();
+                const blob = new Blob([JSON.stringify(this.dump())], { type: 'application/json' });
+                await file.write(blob);
+                await file.close();
+            }
+            removeObjectNotification(obj) {
+                if (!this.loading)
+                    for (let child of Array.from(this._report.objects()))
+                        child.onRemoveObjectNotification(obj);
+            }
+            dump() {
+                return this._report.dump();
+            }
+            /**
+             * Load report by json structure
+             * @param structure Report structure
+             */
+            load(structure, filename) {
+                this.clear();
+                let rep;
+                const repInfo = structure.report;
+                if (repInfo.type === 'banded')
+                    rep = new BandedReport();
+                rep.load(repInfo);
+                this.loadReport(rep);
+                this.filename = filename;
+                return rep;
+            }
+            set filename(filename) {
+                console.log('set filename', filename);
+                document.title = filename ? filename + ' - Report Editor' : 'Report Editor';
+            }
+            clear() {
+                this.toolWindow.clear();
+                if (this._page)
+                    this._page.deactivate();
+                this.filename = '';
+                this.fileHandle = null;
+                this.pages = [];
+                this._report = null;
+            }
+            registerDataSource(ds) {
+                ds.report = this._report;
+                if (!this._datasources.includes(ds)) {
+                    this._datasources.push(ds);
+                    this.toolWindow.registerDataSource(ds);
+                }
+            }
+        }
+        bi.ReportDesigner = ReportDesigner;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        class Component {
+            getType() {
+                return this.constructor.name;
+            }
+            dump() {
+                return {
+                    type: this.getType(),
+                    name: this.name,
+                };
+            }
+            load(info) {
+                this.name = info.name;
+            }
+        }
+        drawing.Component = Component;
+        let PageSize;
+        (function (PageSize) {
+            PageSize[PageSize["A3"] = { width: 1122, height: 1587 }] = "A3";
+            PageSize[PageSize["A4"] = { width: 794, height: 1122 }] = "A4";
+            PageSize[PageSize["A5"] = { width: 583, height: 794 }] = "A5";
+            PageSize[PageSize["Letter"] = { width: 816, height: 1071 }] = "Letter";
+            PageSize[PageSize["Custom"] = { width: 0, height: 0 }] = "Custom";
+            PageSize[PageSize["Responsive"] = { width: -1, height: -1 }] = "Responsive";
+            PageSize[PageSize["WebSmall"] = { width: 768, height: 1024 }] = "WebSmall";
+            PageSize[PageSize["WebMedium"] = { width: 1024, height: 768 }] = "WebMedium";
+            PageSize[PageSize["WebLarge"] = { width: 1280, height: 1024 }] = "WebLarge";
+        })(PageSize = drawing.PageSize || (drawing.PageSize = {}));
+        let PageOrientation;
+        (function (PageOrientation) {
+            PageOrientation[PageOrientation["Portrait"] = 0] = "Portrait";
+            PageOrientation[PageOrientation["Landscape"] = 1] = "Landscape";
+        })(PageOrientation = drawing.PageOrientation || (drawing.PageOrientation = {}));
+        let HAlign;
+        (function (HAlign) {
+            HAlign[HAlign["left"] = 0] = "left";
+            HAlign[HAlign["center"] = 1] = "center";
+            HAlign[HAlign["right"] = 2] = "right";
+            HAlign[HAlign["justify"] = 3] = "justify";
+        })(HAlign = drawing.HAlign || (drawing.HAlign = {}));
+        let VAlign;
+        (function (VAlign) {
+            VAlign[VAlign["top"] = 0] = "top";
+            VAlign[VAlign["middle"] = 1] = "middle";
+            VAlign[VAlign["bottom"] = 2] = "bottom";
+        })(VAlign = drawing.VAlign || (drawing.VAlign = {}));
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../drawing/graphics.ts" />
+var katrid;
+(function (katrid) {
+    var design;
+    (function (design) {
+        var HAlign = katrid.drawing.HAlign;
+        var VAlign = katrid.drawing.VAlign;
+        class PropertyEditor {
+            constructor(name, config) {
+                this.name = name;
+                this.config = config;
+                this.caption = config?.caption;
+                this.description = config?.description;
+                this.placeholder = config?.placeholder;
+            }
+            createEditor(typeEditor) {
+                let editor = document.createElement('section');
+                editor.classList.add('form-group', 'col-12');
+                editor.setAttribute('prop-name', this.name);
+                editor.classList.add('property-editor');
+                if (this.caption)
+                    this.createLabel(editor);
+                if (this.cssClass)
+                    editor.classList.add(this.cssClass);
+                let input = this.createInput(typeEditor);
+                let value = this.getValue(typeEditor);
+                this.setValue(value, input);
+                editor.append(input);
+                return editor;
+            }
+            setValue(value, input) {
+                if (value != null) {
+                    input.value = value;
+                }
+            }
+            createLabel(editor) {
+                let label = document.createElement('label');
+                label.innerText = this.caption || this.name;
+                label.className = 'control-label';
+                editor.appendChild(label);
+            }
+            createInput(typeEditor) {
+                let input = document.createElement(this.constructor.tag);
+                input.classList.add('form-control');
+                if (this.placeholder)
+                    input.placeholder = this.placeholder;
+                this.createInputEvent(typeEditor, input);
+                return input;
+            }
+            createInputEvent(typeEditor, input) {
+                input.addEventListener('change', evt => this.inputChange(typeEditor, input, evt));
+            }
+            inputChange(typeEditor, input, evt) {
+                this.apply(typeEditor, input.value);
+            }
+            getValue(typeEditor) {
+                return typeEditor.targetObject[this.name];
+            }
+            apply(typeEditor, value) {
+                typeEditor.targetObject[this.name] = value;
+            }
+        }
+        PropertyEditor.tag = 'input';
+        design.PropertyEditor = PropertyEditor;
+        class StringProperty extends PropertyEditor {
+            createInput(typeEditor) {
+                let el = super.createInput(typeEditor);
+                el.spellcheck = false;
+                return el;
+            }
+        }
+        design.StringProperty = StringProperty;
+        class NameStringProperty extends PropertyEditor {
+        }
+        design.NameStringProperty = NameStringProperty;
+        class TextProperty extends StringProperty {
+        }
+        TextProperty.tag = 'textarea';
+        design.TextProperty = TextProperty;
+        class IntegerProperty extends PropertyEditor {
+            createInput(typeEditor) {
+                let el = super.createInput(typeEditor);
+                el.type = 'number';
+                return el;
+            }
+        }
+        design.IntegerProperty = IntegerProperty;
+        class AutocompleteProperty extends StringProperty {
+        }
+        design.AutocompleteProperty = AutocompleteProperty;
+        let CONTROL_COUNT = 0;
+        class BooleanProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                let editor = document.createElement('section');
+                editor.className = 'col-12 property-editor';
+                editor.innerHTML = `<div class="form-check"><input class="form-check-input" type="checkbox" id="_el-input-${++CONTROL_COUNT}"><label class="form-check-label" for="_el-input-${CONTROL_COUNT}">${this.caption}</label></div>`;
+                let input = editor.querySelector('input');
+                input.checked = this.getValue(typeEditor);
+                input.addEventListener('change', () => typeEditor.targetObject[this.name] = input.checked);
+                return editor;
+            }
+        }
+        design.BooleanProperty = BooleanProperty;
+        class BackgroundProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('section');
+                editor.className = 'col-12 property-editor';
+                editor.innerHTML = `
+      <table>
+      <tr>
+      <td><label>Background</label></td>
+      <td style="width:100%">
+      <input class="form-control" type="color" name="background-color">
+      </td></tr>
+      </table>
+      `;
+                const val = this.getValue(typeEditor) || {};
+                const bgColor = editor.querySelector('input[name="background-color"]');
+                if (val.color)
+                    bgColor.value = val.color;
+                else
+                    // TODO - transparent color
+                    bgColor.value = '#FFFFFF';
+                bgColor.addEventListener('change', () => {
+                    val.color = bgColor.value;
+                    typeEditor.targetObject['background'] = val;
+                });
+                return editor;
+            }
+        }
+        design.BackgroundProperty = BackgroundProperty;
+        class FontProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('section');
+                editor.className = 'col-12 property-editor';
+                editor.style.textAlign = 'center';
+                editor.innerHTML = `
+<table>
+<tr>
+<td>
+<select class="form-select-sm" name="font-name">
+<option value=""></option>
+<option value="Arial">Arial</option>
+<option value="Helvetica">Helvetica</option>
+<option value="Times New Roman">Times New Roman</option>
+<option value="Courier">Courier</option>
+<option value="Courier New">Courier New</option>
+</select>
+</td>
+<td>
+<input class="form-control input-sm" type="number" name="font-size" value="9">
+</td>
+<td style="width:40px">
+<input class="form-control input-sm" name="font-color" type="color">
+</td>
+</tr>
+</table>
+<div class="btn-group" style="width: 100%">
+<input class="btn-check" type="checkbox" id="property-font-bold" name="font-bold">
+<label class="btn btn-sm btn-outline-secondary" for="property-font-bold"><i class="fa-solid fa-bold"></i></label>
+<input class="btn-check" type="checkbox" id="property-font-italic" name="font-italic">
+<label class="btn btn-sm btn-outline-secondary" for="property-font-italic"><i class="fa-solid fa-italic"></i></label>
+<input class="btn-check" type="checkbox" id="property-font-underline" name="font-underline">
+<label class="btn btn-sm btn-outline-secondary" for="property-font-underline"><i class="fa-solid fa-underline"></i></label>
+</div>
+`;
+                let val = this.getValue(typeEditor) || {};
+                let bold = editor.querySelector('input[name="font-bold"]');
+                if (val.bold)
+                    bold.checked = true;
+                bold.addEventListener('change', () => {
+                    val.bold = bold.checked;
+                    typeEditor.targetObject.font = val;
+                });
+                let italic = editor.querySelector('input[name="font-italic"]');
+                if (val.italic)
+                    italic.checked = true;
+                italic.addEventListener('change', () => {
+                    val.italic = italic.checked;
+                    typeEditor.targetObject.font = val;
+                });
+                let underline = editor.querySelector('input[name="font-underline"]');
+                if (val.underline)
+                    underline.checked = true;
+                underline.addEventListener('change', () => {
+                    val.underline = underline.checked;
+                    typeEditor.targetObject['font'] = val;
+                });
+                let fontName = editor.querySelector('select[name="font-name"]');
+                fontName.value = typeEditor.targetObject.font?.name;
+                fontName.addEventListener('change', () => {
+                    val.name = fontName.value;
+                    typeEditor.targetObject['font'] = val;
+                });
+                let fontColor = editor.querySelector('input[name="font-color"]');
+                fontColor.value = typeEditor.targetObject['font']?.color;
+                fontColor.addEventListener('change', () => {
+                    val.color = fontColor.value;
+                    typeEditor.targetObject['font'] = val;
+                });
+                let fontSize = editor.querySelector('input[name="font-size"]');
+                if (typeEditor.targetObject['font']?.size) {
+                    let size = typeEditor.targetObject['font'].size;
+                    if (typeof size === 'number')
+                        fontSize.value = size.toString();
+                    else
+                        fontSize.value = size.match(/(\d+)/)[0];
+                }
+                fontSize.addEventListener('change', () => {
+                    val.size = fontSize.value;
+                    typeEditor.targetObject['font'] = val;
+                });
+                return editor;
+            }
+        }
+        design.FontProperty = FontProperty;
+        class BorderProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                let editor = document.createElement('div');
+                editor.className = 'property-editor';
+                editor.style.textAlign = 'center';
+                editor.innerHTML = `
+<div class="btn-group" style="width: 100%">
+<input class="btn-check" type="checkbox" id="property-border-all" name="border-all">
+<label class="btn btn-sm btn-outline-secondary" for="property-border-all"><i class="fa-duotone fa-border-all"></i></label>
+<input class="btn-check" type="checkbox" id="property-border-top" name="border-top">
+<label class="btn btn-sm btn-outline-secondary" for="property-border-top"><i class="fa-duotone fa-border-top"></i></label>
+<input class="btn-check" type="checkbox" id="property-border-right" name="border-right">
+<label class="btn btn-sm btn-outline-secondary" for="property-border-right"><i class="fa-duotone fa-border-right"></i></label>
+<input class="btn-check" type="checkbox" id="property-border-bottom" name="border-bottom">
+<label class="btn btn-sm btn-outline-secondary" for="property-border-bottom"><i class="fa-duotone fa-border-bottom"></i></label>
+<input class="btn-check" type="checkbox" id="property-border-left" name="border-left">
+<label class="btn btn-sm btn-outline-secondary" for="property-border-left"><i class="fa-duotone fa-border-left"></i></label>
+</div>
+      `;
+                let val = this.getValue(typeEditor) || {};
+                let all = editor.querySelector('input[name="border-all"]');
+                let top = editor.querySelector('input[name="border-top"]');
+                let right = editor.querySelector('input[name="border-right"]');
+                let bottom = editor.querySelector('input[name="border-bottom"]');
+                let left = editor.querySelector('input[name="border-left"]');
+                if (val.all)
+                    all.checked = true;
+                else {
+                    top.checked = val.top;
+                    right.checked = val.right;
+                    bottom.checked = val.bottom;
+                    left.checked = val.left;
+                }
+                all.addEventListener('change', () => {
+                    val.all = all.checked;
+                    top.checked = right.checked = bottom.checked = left.checked = val.top = val.right = val.bottom = val.left = val.all;
+                    if (val.all)
+                        typeEditor.targetObject[this.name] = val;
+                    else
+                        typeEditor.targetObject[this.name] = null;
+                });
+                top.addEventListener('change', () => {
+                    val.top = top.checked;
+                    all.checked = val.all = this.allChecked(val);
+                    typeEditor.targetObject[this.name] = val;
+                });
+                right.addEventListener('change', () => {
+                    val.right = right.checked;
+                    all.checked = val.all = this.allChecked(val);
+                    typeEditor.targetObject[this.name] = val;
+                });
+                bottom.addEventListener('change', () => {
+                    val.bottom = bottom.checked;
+                    all.checked = val.all = this.allChecked(val);
+                    typeEditor.targetObject[this.name] = val;
+                });
+                left.addEventListener('change', () => {
+                    val.left = left.checked;
+                    all.checked = val.all = this.allChecked(val);
+                    typeEditor.targetObject[this.name] = val;
+                });
+                return editor;
+            }
+            allChecked(val) {
+                return val.top && val.right && val.bottom && val.left;
+            }
+        }
+        design.BorderProperty = BorderProperty;
+        class VAlignProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                let editor = document.createElement('div');
+                editor.className = 'property-editor';
+                editor.style.textAlign = 'center';
+                editor.innerHTML = `
+<div class="btn-group" style="width: 100%">
+<input class="btn-check" type="radio" id="property-valign-top" name="valign" value="0">
+<label class="btn btn-sm btn-outline-secondary" for="property-valign-top"><i class="fa-duotone fa-objects-align-top"></i></label>
+<input class="btn-check" type="radio" id="property-valign-middle" name="valign" value="1">
+<label class="btn btn-sm btn-outline-secondary" for="property-valign-middle"><i class="fa-duotone fa-objects-align-center-vertical"></i></label>
+<input class="btn-check" type="radio" id="property-valign-bottom" name="valign" value="2">
+<label class="btn btn-sm btn-outline-secondary" for="property-valign-bottom"><i class="fa-duotone fa-objects-align-bottom"></i></label>
+</div>
+      `;
+                let val = this.getValue(typeEditor) || VAlign.top;
+                let top = editor.querySelector('#property-valign-top');
+                let middle = editor.querySelector('#property-valign-middle');
+                let bottom = editor.querySelector('#property-valign-bottom');
+                top.checked = val === VAlign.top;
+                middle.checked = val === VAlign.middle;
+                bottom.checked = val === VAlign.bottom;
+                const change = evt => typeEditor.targetObject[this.name] = parseInt(evt.target.value);
+                top.addEventListener('change', change);
+                middle.addEventListener('change', change);
+                bottom.addEventListener('change', change);
+                return editor;
+            }
+        }
+        design.VAlignProperty = VAlignProperty;
+        class HAlignProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('div');
+                editor.className = 'property-editor';
+                editor.style.textAlign = 'center';
+                editor.innerHTML = `
+<div class="btn-group" style="width: 100%">
+<input class="btn-check" type="radio" id="property-halign-left" name="halign" value="0">
+<label class="btn btn-sm btn-outline-secondary" title="Align to left" for="property-halign-left"><i class="fa-duotone fa-align-left"></i></label>
+<input class="btn-check" type="radio" id="property-halign-center" name="halign" value="1">
+<label class="btn btn-sm btn-outline-secondary" title="Align to center" for="property-halign-center"><i class="fa-duotone fa-align-center"></i></label>
+<input class="btn-check" type="radio" id="property-halign-right" name="halign" value="2">
+<label class="btn btn-sm btn-outline-secondary" title="Align to right" for="property-halign-right"><i class="fa-duotone fa-align-right"></i></label>
+<input class="btn-check" type="radio" id="property-halign-justify" name="halign" value="3">
+<label class="btn btn-sm btn-outline-secondary" title="Justify" for="property-halign-justify"><i class="fa-duotone fa-align-justify"></i></label>
+</div>`;
+                let val = this.getValue(typeEditor) || HAlign.left;
+                let left = editor.querySelector('#property-halign-left');
+                let center = editor.querySelector('#property-halign-center');
+                let right = editor.querySelector('#property-halign-right');
+                let justify = editor.querySelector('#property-halign-justify');
+                left.checked = val === HAlign.left;
+                center.checked = val === HAlign.center;
+                right.checked = val === HAlign.right;
+                justify.checked = val === HAlign.justify;
+                const change = evt => typeEditor.targetObject[this.name] = parseInt(evt.target.value);
+                left.addEventListener('change', change);
+                center.addEventListener('change', change);
+                right.addEventListener('change', change);
+                justify.addEventListener('change', change);
+                return editor;
+            }
+        }
+        design.HAlignProperty = HAlignProperty;
+        class DisplayFormatProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('div');
+                editor.className = 'property-editor';
+                editor.style.textAlign = 'center';
+                editor.innerHTML = `
+      <table><tr>
+      <td><select class="form-select" name="displayFormat"><option value=""></option>
+        <option value="Numeric">Numeric</option>
+        <option value="DateTime">DateTime</option>
+        <option value="String">String</option>
+      </select></td>
+      <td><input class="form-control" type="text"></td>
+      </tr></table>
+`;
+                const val = this.getValue(typeEditor) || {};
+                const input = editor.querySelector('input');
+                const kind = editor.querySelector('select');
+                if (val.type)
+                    kind.value = val.type;
+                if (val.format)
+                    input.value = val.format;
+                const onChange = () => typeEditor.targetObject['displayFormat'] = val;
+                input.addEventListener('change', onChange);
+                kind.addEventListener('change', onChange);
+                return editor;
+            }
+        }
+        design.DisplayFormatProperty = DisplayFormatProperty;
+        class SelectProperty extends StringProperty {
+            getValues(typeEditor) {
+                if (this.config.options) {
+                    if (Array.isArray(this.config.options))
+                        return this.config.options;
+                    return Array.from(Object.entries(this.config.options).map(([k, v]) => ({
+                        value: k.toString(),
+                        text: v.toString()
+                    })));
+                }
+                return;
+            }
+            createInput(typeEditor) {
+                let input = super.createInput(typeEditor);
+                input.className = 'form-select';
+                input.innerHTML = `<option value="">(${this.caption || this.name})</option>`;
+                for (let obj of this.getValues(typeEditor)) {
+                    let el = document.createElement('option');
+                    el.setAttribute('value', obj.value);
+                    el.innerText = obj.text;
+                    input.append(el);
+                }
+                input.addEventListener('change', () => this.selectItem(typeEditor, parseInt(input.value)));
+                return input;
+            }
+            selectItem(typeEditor, index) {
+            }
+        }
+        SelectProperty.tag = 'select';
+        design.SelectProperty = SelectProperty;
+        class ComponentProperty extends SelectProperty {
+            constructor(name, config) {
+                super(name, config);
+                this.onGetValues = config.onGetValues;
+            }
+            getValues(typeEditor) {
+                let vals = Array.from(this.onGetValues(typeEditor));
+                this.values = vals.map(v => v.value);
+                vals.forEach((v, i) => v.value = i);
+                return vals;
+            }
+            selectItem(typeEditor, index) {
+                typeEditor.targetObject[this.name] = this.values[index];
+            }
+            setValue(value, input) {
+                if (value) {
+                    const i = this.values.indexOf(value);
+                    if (i > -1) {
+                        input.value = i.toString();
+                        return;
+                    }
+                }
+                input.value = '';
+            }
+        }
+        design.ComponentProperty = ComponentProperty;
+        function createInputGroup(text) {
+            let igroup = document.createElement('div');
+            igroup.className = 'input-group input-group-sm';
+            let span = document.createElement('span');
+            span.className = 'input-group-text';
+            span.innerText = text;
+            let input = document.createElement('input');
+            input.className = 'form-control input-xl';
+            igroup.append(input);
+            igroup.append(span);
+            return igroup;
+        }
+        class LocationProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                let editor = document.createElement('section');
+                editor.classList.add('form-group', 'row', 'property-editor');
+                editor.setAttribute('prop-name', this.name);
+                let loc = this.getValue(typeEditor);
+                if (this.caption)
+                    this.createLabel(editor);
+                if (this.cssClass)
+                    editor.classList.add(this.cssClass);
+                let div = document.createElement('div');
+                div.className = 'col-6';
+                let igroup = createInputGroup('x');
+                let input = igroup.querySelector('input');
+                input.value = loc.x;
+                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
+                    x: parseInt(evt.target.value),
+                    y: loc.y
+                }));
+                div.append(igroup);
+                editor.append(div);
+                div = document.createElement('div');
+                div.className = 'col-6';
+                igroup = createInputGroup('y');
+                input = igroup.querySelector('input');
+                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
+                    x: loc.x,
+                    y: parseInt(evt.target.value),
+                }));
+                input.value = loc.y;
+                div.append(igroup);
+                editor.append(div);
+                return editor;
+            }
+        }
+        design.LocationProperty = LocationProperty;
+        class SizeProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('section');
+                editor.classList.add('form-group', 'row', 'property-editor');
+                editor.setAttribute('prop-name', this.name);
+                let size = this.getValue(typeEditor);
+                if (this.caption) {
+                    this.createLabel(editor);
+                }
+                if (this.cssClass) {
+                    editor.classList.add(this.cssClass);
+                }
+                let div = document.createElement('div');
+                div.className = 'col-6';
+                let igroup = createInputGroup('w');
+                let input = igroup.querySelector('input');
+                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
+                    width: parseInt(evt.target.value),
+                    height: size.height,
+                }));
+                input.value = size.width;
+                div.append(igroup);
+                editor.append(div);
+                div = document.createElement('div');
+                div.className = 'col-6';
+                igroup = createInputGroup('h');
+                input = igroup.querySelector('input');
+                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
+                    width: size.width,
+                    height: parseInt(evt.target.value),
+                }));
+                input.value = size.height;
+                div.append(igroup);
+                editor.append(div);
+                return editor;
+            }
+        }
+        design.SizeProperty = SizeProperty;
+        let componentEditorRegistry = [];
+        function findComponentEditor(type) {
+            // find by exact type
+            for (let reg of componentEditorRegistry)
+                if (reg.type === type)
+                    return reg;
+            // find by sub class
+            for (let i = componentEditorRegistry.length - 1; i >= 0; i--) {
+                let reg = componentEditorRegistry[i];
+                if (reg.type && type.prototype instanceof reg.type)
+                    return reg;
+            }
+            // find default editor
+            for (let reg of componentEditorRegistry) {
+                if (reg.type === undefined)
+                    return reg;
+            }
+        }
+        design.findComponentEditor = findComponentEditor;
+        function registerComponentEditor(type, editor) {
+            let reg;
+            for (let r of componentEditorRegistry)
+                if (r.type === type) {
+                    reg = r;
+                    break;
+                }
+            if (!reg) {
+                reg = { type, editor };
+                componentEditorRegistry.push(reg);
+            }
+            else {
+                reg.editor = editor;
+            }
+            editor.properties = editor.defineProperties();
+        }
+        design.registerComponentEditor = registerComponentEditor;
+        function getComponentEditor(type) {
+            let reg = findComponentEditor(type);
+            if (reg) {
+                return reg.editor;
+            }
+            return ComponentEditor;
+        }
+        design.getComponentEditor = getComponentEditor;
+        /**
+         * Basic component editor
+         */
+        class ComponentEditor {
+            constructor(comp, designer) {
+                this.designer = designer;
+                this.targetObject = comp;
+            }
+            createEditor() {
+                let editor = document.createElement('div');
+                let props = this.constructor['properties'];
+                for (let prop of props)
+                    editor.append(prop.createEditor(this));
+                return editor;
+            }
+            showEditor() {
+                // show component editor dialog
+            }
+            static registerPropertyEditor(propName, editor) {
+                this.properties[propName] = editor;
+            }
+            static defineProperties() {
+                return [
+                    new StringProperty('name', { placeholder: 'Object Name' }),
+                ];
+            }
+            /** Set a property value and update the designer */
+            setPropValue(proName, value) {
+                this.targetObject[proName] = value;
+                this.designer.updateSelectedObjects();
+            }
+        }
+        design.ComponentEditor = ComponentEditor;
+        registerComponentEditor(katrid.drawing.Component, ComponentEditor);
+        class WidgetEditor extends ComponentEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new LocationProperty('location'), new SizeProperty('size'));
+            }
+        }
+        design.WidgetEditor = WidgetEditor;
+        registerComponentEditor(katrid.drawing.BaseWidget, WidgetEditor);
+        class DataWidgetEditor extends ComponentEditor {
+            static defineProperties() {
+                return [
+                    new StringProperty('title', { caption: 'Title' }),
+                    new DataSourceProperty('datasource', { caption: 'Data Source' }),
+                ];
+            }
+        }
+        class DataSourceProperty extends SelectProperty {
+            getValues(typeEditor) {
+                return appStudio.dataSources.map((obj, idx) => ({ value: idx, text: obj.name }));
+            }
+            getValue(typeEditor) {
+                let target = typeEditor.targetObject;
+                if (target.datasource) {
+                    return appStudio.dataSources.indexOf(target.datasource);
+                }
+            }
+            apply(target, value) {
+                target.targetObject.setDataSource(appStudio.dataSources[value]);
+            }
+        }
+        design.DataSourceProperty = DataSourceProperty;
+        class ChartEditor extends WidgetEditor {
+            async showEditor() {
+                this.targetObject.code = await showCodeEditor(this.targetObject.code, 'javascript', 'chart');
+            }
+        }
+        class PieChartEditor extends ChartEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new AutocompleteProperty('values', { caption: 'Values' }), new AutocompleteProperty('labels', { caption: 'Labels' }));
+            }
+        }
+        class DonutChartEditor extends PieChartEditor {
+        }
+        class BarChartEditor extends ChartEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new AutocompleteProperty('x', { caption: 'X' }), new AutocompleteProperty('y', { caption: 'Y' }));
+            }
+        }
+        class LineChartEditor extends BarChartEditor {
+        }
+        class GridEditor extends WidgetEditor {
+            async showEditor() {
+                this.targetObject.code = await showCodeEditor(this.targetObject.code, 'javascript');
+            }
+        }
+        async function showCodeEditor(value = null, lang = 'javascript', previewType = 'table') {
+            let codeEditor;
+            return new Promise((resolve, reject) => {
+                requirejs(['vs/editor/editor.main'], function () {
+                    let title = 'Code Editor';
+                    let modal = document.createElement('div');
+                    modal.className = 'modal';
+                    modal.tabIndex = -1;
+                    modal.innerHTML = `<div class="modal-dialog modal-xl modal-fullscreen-md-down" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">${title}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+      <div class="code-editor"></div>
+      </div>
+      <div class="modal-footer">
+      <button type="button" class="btn-ok btn btn-outline-secondary">OK</button>
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+                    let lastTimeout;
+                    let dlg = new bootstrap.Modal(modal);
+                    modal.addEventListener('hidden.bs.modal', () => {
+                        modal.remove();
+                        resolve(false);
+                    });
+                    dlg.show();
+                    let btnOk = modal.querySelector('.btn-ok');
+                    if (!codeEditor) {
+                        let editor = modal.querySelector('.code-editor');
+                        let preview = modal.querySelector('.preview');
+                        codeEditor = monaco.editor.create(editor, {
+                            lang,
+                        });
+                        if (previewType === 'table') {
+                            let tbl = new Katrid.bi.TableWidget(preview);
+                            codeEditor.onDidChangeModelContent(event => {
+                                if (lastTimeout)
+                                    clearTimeout(lastTimeout);
+                                lastTimeout = setTimeout(() => {
+                                    let previewType = modal.getAttribute('preview-type');
+                                    lastTimeout = null;
+                                    let code = codeEditor.getModel().getValue();
+                                    if (previewType === 'table')
+                                        tbl.fromCode(code);
+                                    else if (previewType === 'chart')
+                                        chartPreview(preview, code);
+                                    else
+                                        preview.innerHTML = code;
+                                }, 1000);
+                            });
+                        }
+                    }
+                    let defValue = value;
+                    if (!defValue) {
+                        if (lang === 'javascript') {
+                            defValue = ['({})'].join('\n');
+                        }
+                        else if (lang === 'html') {
+                            defValue = '<div></div>';
+                        }
+                    }
+                    if (lang) {
+                        monaco.editor.setModelLanguage(codeEditor.getModel(), lang);
+                    }
+                    codeEditor.getModel().setValue(defValue);
+                    codeEditor.focus();
+                    btnOk.addEventListener('click', () => {
+                        resolve(codeEditor.getModel().getValue());
+                        dlg.hide();
+                    });
+                });
+            });
+        }
+        design.showCodeEditor = showCodeEditor;
+        let _lastChart = null;
+        function chartPreview(preview, code) {
+            $(preview).empty();
+            if (_lastChart) {
+                Plotly.purge(_lastChart);
+                _lastChart = null;
+            }
+            let config = katrid.bi.getTraces(eval(code), this.studio);
+            _lastChart = Plotly.newPlot(preview, config.traces, config.layout || { height: $(preview).height(), width: $(preview).width() }, { responsive: true });
+        }
+        function getTraces(config) {
+            let kwargs = ['datasource', 'x', 'y', 'values', 'labels'];
+            if (config.traces instanceof Function) {
+                let traces = [];
+                for (let t of config.traces()) {
+                    let trace = {};
+                    if (typeof t.datasource === 'string') {
+                        let ds = appStudio.findComponent(t.datasource);
+                        if (ds.data) {
+                            if (t.x)
+                                trace.x = ds.values(t.x);
+                            if (t.y)
+                                trace.y = ds.values(t.y);
+                            if (t.values)
+                                trace.values = ds.values(t.values);
+                            if (t.labels)
+                                trace.labels = ds.values(t.labels);
+                        }
+                        for (let k of Object.keys(t)) {
+                            if (!kwargs.includes(k))
+                                trace[k] = t[k];
+                        }
+                    }
+                    traces.push(trace);
+                }
+                config.traces = traces;
+            }
+            return config;
+        }
+        // Katrid.bi.registerComponentEditor(Katrid.bi.PieChart.type, PieChartEditor);
+        // Katrid.Enterprise.BI.registerComponentEditor(DonutChartWidget.name, DonutChartEditor);
+        // Katrid.Enterprise.BI.registerComponentEditor(BarChartWidget.name, BarChartEditor);
+        // Katrid.Enterprise.BI.registerComponentEditor(LineChartWidget.name, LineChartEditor);
+        // Katrid.Enterprise.BI.registerComponentEditor(TextWidget.name, TextEditor);
+        // Katrid.Enterprise.BI.registerComponentEditor(GridWidget.name, GridEditor);
+        async function createCodeEditor(dom, value = null, lang = 'javascript', previewType = 'table') {
+            return new Promise((resolve, reject) => {
+                requirejs(['vs/editor/editor.main'], function () {
+                    let codeEditor = monaco.editor.create(dom, {
+                        lang,
+                    });
+                    setTimeout(() => {
+                        codeEditor.layout();
+                    });
+                    if (lang)
+                        monaco.editor.setModelLanguage(codeEditor.getModel(), lang);
+                    if (value)
+                        codeEditor.getModel().setValue(value);
+                    resolve(codeEditor);
+                });
+            });
+        }
+        design.createCodeEditor = createCodeEditor;
+    })(design = katrid.design || (katrid.design = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class DataSource {
+            constructor(name) {
+                this.name = name;
+            }
+            get sql() {
+                return this._sql;
+            }
+            set sql(value) {
+                this._sql = value;
+                if (this._sql && this.connection) {
+                    // refresh data
+                    this.read();
+                }
+            }
+            dump() {
+                return {
+                    name: this.name,
+                    sql: this.sql,
+                    master: this.master?.name,
+                };
+            }
+            load(info) {
+                this.name = info.name;
+                this.sql = info.sql;
+                if (info.master) {
+                    this.report.addLoadCallback(() => this.master = this.report.findObject(info.master));
+                }
+            }
+            /**
+             * Return data from connection
+             * @returns Promise<any>
+             */
+            async read() {
+                console.log('read data');
+                this.fields = null;
+                const model = new Katrid.Services.ModelService('ui.action.report');
+                const res = await model.rpc('exec_sql', [this._sql, {}], {});
+                this.data = res.data;
+                this.fields = res.fields;
+                return res;
+            }
+        }
+        bi.DataSource = DataSource;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../design/editors.ts" />
+/// <reference path="bi/datasource.ts" />
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        var ComponentEditor = katrid.design.ComponentEditor;
+        class DataSourceEditor extends ComponentEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new katrid.design.ComponentProperty('master', {
+                    caption: 'Master Source',
+                    onGetValues: (typeEditor) => {
+                        let res = [];
+                        for (let ds of typeEditor.designer.report.datasources)
+                            if (typeEditor.targetObject !== ds)
+                                res.push({ value: ds, text: ds.name });
+                        return res;
+                    }
+                }), new katrid.design.TextProperty('sql', { caption: 'SQL' }));
+            }
+        }
+        bi.DataSourceEditor = DataSourceEditor;
+        katrid.design.registerComponentEditor(katrid.bi.DataSource, DataSourceEditor);
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        drawing.NS = 'http://www.w3.org/2000/svg';
+        class Graphic {
+            constructor(tag, attrs) {
+                this.$el = typeof tag === 'string' ? document.createElementNS(drawing.NS, tag) : tag;
+                if (attrs) {
+                    for (const [key, value] of Object.entries(attrs)) {
+                        this.$el.setAttribute(key, attrs[key].toString());
+                    }
+                }
+            }
+            path(attrs) {
+                const path = draw('path', { ...attrs });
+                this.append(path);
+            }
+            rect(x, y, width, height) {
+                const rect = draw('rect', { x, y, width, height });
+                this.append(rect);
+                return rect;
+            }
+            beginPath(attrs) {
+                if (attrs === undefined)
+                    attrs = { d: '' };
+                this._path = new Graphic('path', attrs);
+                this.append(this._path);
+                // initialize the d path attribute
+                this._d = '';
+                return this._path;
+            }
+            moveTo(x, y) {
+                this._d += ` M${x} ${y}`;
+                this._path.attr('d', this._d);
+                return this;
+            }
+            lineTo(x, y) {
+                this._d += ` L${x} ${y}`;
+                this._path.attr('d', this._d);
+                return this;
+            }
+            closePath() {
+                this._path.attr('d', this._path.attr('d') + ' Z');
+                return this;
+            }
+            text(x, y, text, attrs) {
+                const textObject = draw('text', { x, y, ...attrs });
+                textObject.$el.textContent = text;
+                this.append(textObject);
+                return textObject;
+            }
+            line(x1, y1, x2, y2, attrs) {
+                const line = draw('line', { x1, y1, x2, y2, ...attrs });
+                this.append(line);
+                return line;
+            }
+            image(x, y, width, height, src) {
+                const image = draw('image', { x, y, width, height });
+                this.append(image);
+                return image;
+            }
+            attr(name, value) {
+                if (typeof name === 'string') {
+                    if (value === undefined) {
+                        return this.$el.getAttribute(name);
+                    }
+                    this.$el.setAttribute(name, value.toString());
+                }
+                else {
+                    for (let [k, v] of Object.entries(name)) {
+                        this.$el.setAttribute(k, v.toString());
+                    }
+                }
+                return this;
+            }
+            clear() {
+                this.$el.innerHTML = '';
+                return this;
+            }
+            append(obj) {
+                this.$el.appendChild(obj.$el);
+            }
+            parent() {
+                return new Graphic(this.$el.parentNode);
+            }
+            translate(x, y) {
+                this.attr('transform', `translate(${x},${y})`);
+            }
+            remove() {
+                this.$el.remove();
+            }
+        }
+        drawing.Graphic = Graphic;
+        function svg(el) {
+            return new Graphic(el);
+        }
+        drawing.svg = svg;
+        class Draw extends Graphic {
+        }
+        drawing.Draw = Draw;
+        function draw(tag, attrs) {
+            return new Graphic(tag, attrs);
+        }
+        drawing.draw = draw;
+        function rect(x, y, width, height, attrs) {
+            return new Graphic('rect', { x, y, width, height, ...attrs });
+        }
+        drawing.rect = rect;
+        function g(attrs) {
+            return new Graphic('g', attrs);
+        }
+        drawing.g = g;
+        class SVG extends Draw {
+            constructor(width, height) {
+                super('svg');
+                this.width = width;
+                this.height = height;
+            }
+            get width() {
+                return this._width;
+            }
+            set width(value) {
+                this._width = value;
+                this.$el.setAttribute('width', value.toString());
+            }
+            get height() {
+                return this._height;
+            }
+            set height(value) {
+                this._height = value;
+                this.$el.setAttribute('height', value.toString());
+            }
+        }
+        drawing.SVG = SVG;
+        class Canvas extends SVG {
+            constructor(width = 500, height = 500) {
+                super(width, height);
+            }
+            appendTo(parent) {
+                this.container = parent;
+                parent.appendChild(this.$el);
+            }
+        }
+        drawing.Canvas = Canvas;
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../drawing/svg.ts" />
+var katrid;
+(function (katrid) {
+    var design;
+    (function (design) {
+        const isMac = navigator['userAgentData']?.platform === 'macOS';
+        design.GUIDELINE_DELAY = 1000;
+        class DesignSurface extends katrid.drawing.Canvas {
+            constructor(width = 500, height = 500) {
+                super(width, height);
+                this.dragging = false;
+                this.snapToGrid = false;
+                this.gridX = 4;
+                this.gridY = 4;
+                this.showGrid = false;
+                this.showGuidelines = false;
+                this._loading = false;
+                this._active = false;
+                this.resizing = false;
+                this._zoom = 100;
+                // TODO: implement selection box as separate class
+                this.selectionBox = true;
+                this.draggingSelectionBox = false;
+                this._dx = 0;
+                this._dy = 0;
+                this._bx = 0;
+                this._by = 0;
+                this._bw = 0;
+                this._bh = 0;
+                this.selection = [];
+                this.grabs = [];
+                this.guidelines = [];
+                this.objects = [];
+                this.$el.classList.add('design-surface');
+                this.undoManager = new design.UndoManager(this);
+                this.clipboardManager = new design.ClipboardManager(this);
+                this.defaultProps();
+                this.workspace = this.$el;
+                // surface events
+                this.create();
+            }
+            defaultProps() {
+            }
+            get loading() {
+                return this._loading;
+            }
+            set loading(value) {
+                this.undoManager.enabled = !value;
+                this._loading = value;
+            }
+            /** Stop record undo entries */
+            beginChanges(action) {
+                switch (action) {
+                    case 'move':
+                        this.undoManager.moveSelection(this.selection);
+                        break;
+                }
+                this.undoManager.beginUpdate();
+            }
+            /** Resume record undo entries */
+            endChanges() {
+                this.undoManager.endUpdate();
+            }
+            create() {
+                this.$el.addEventListener('pointerdown', (event) => this.onPointerDown(event));
+                this.$el.addEventListener('pointerup', (event) => this.onPointerUp(event));
+                this.$el.addEventListener('mousemove', (event) => this.onMouseMove(event));
+                this.$el.addEventListener('contextmenu', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.showContextMenu(event.clientX, event.clientY);
+                });
+                this.createDragEvents();
+            }
+            activate() {
+                if (this._active)
+                    return;
+                this._active = true;
+                if (this._keyDownHandler) {
+                    document.removeEventListener('keydown', this._keyDownHandler);
+                }
+                // hook keydown events
+                this._keyDownHandler = (event) => this.onKeyDown(event);
+                document.addEventListener('keydown', this._keyDownHandler);
+            }
+            createSelectionBox(x, y, width, height) {
+                this._selBox = katrid.drawing.draw('rect', { x, y, width, height, class: 'selection-box' });
+                this.append(this._selBox);
+            }
+            deactivate() {
+                if (!this._active)
+                    return;
+                this._active = false;
+                this.clearSelection();
+                document.removeEventListener('keydown', this._keyDownHandler);
+                this._keyDownHandler = null;
+                this.$el.remove();
+            }
+            onKeyDown(event) {
+                let ctrlKey = event.ctrlKey;
+                let altKey = event.altKey;
+                // invert ctrl and alt if mac os
+                if (isMac) {
+                    ctrlKey = altKey;
+                    altKey = false;
+                }
+                if ((!isMac && ctrlKey) || (isMac && event.metaKey && !ctrlKey)) {
+                    if (event.key === 'z') {
+                        event.preventDefault();
+                        // undo
+                        this.undo();
+                        return;
+                    }
+                    else if (event.key === 'c') {
+                        event.preventDefault();
+                        this.copy();
+                        return;
+                    }
+                    else if (event.key === 'v') {
+                        event.preventDefault();
+                        this.paste();
+                        return;
+                    }
+                    else if (event.key === 'x') {
+                        event.preventDefault();
+                        this.cut();
+                    }
+                    else if ((isMac && event.key === 'Z') || (!isMac && event.key === 'y')) {
+                        event.preventDefault();
+                        // redo
+                        this.redo();
+                        return;
+                    }
+                }
+                if (this.selection?.length && !altKey) {
+                    if (event.shiftKey) {
+                        switch (event.key) {
+                            case 'ArrowDown':
+                                event.preventDefault();
+                                // increase height
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(0, 1);
+                                else
+                                    this.resizeSelectionBy(0, this.gridY || 1);
+                                break;
+                            case 'ArrowUp':
+                                event.preventDefault();
+                                // decrease height
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(0, -1);
+                                else
+                                    this.resizeSelectionBy(0, -this.gridY || -1);
+                                break;
+                            case 'ArrowLeft':
+                                event.preventDefault();
+                                // decrease height
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(-1, 0);
+                                else
+                                    this.designer.refre;
+                                this.resizeSelectionBy(-this.gridX || -1, 0);
+                                break;
+                            case 'ArrowRight':
+                                event.preventDefault();
+                                // decrease height
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(1, 0);
+                                else
+                                    this.resizeSelectionBy(this.gridX || 1, 0);
+                                break;
+                        }
+                    }
+                    else {
+                        switch (event.key) {
+                            case 'ArrowDown':
+                                event.preventDefault();
+                                // move selection down
+                                if (ctrlKey)
+                                    this.moveSelectionBy(0, this.gridY || 1);
+                                else
+                                    this.moveSelectionBy(0, 1);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowUp':
+                                event.preventDefault();
+                                // move selection up
+                                if (ctrlKey)
+                                    this.moveSelectionBy(0, -1 * this.gridY || 1);
+                                else
+                                    this.moveSelectionBy(0, -1);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowLeft':
+                                event.preventDefault();
+                                // move selection left
+                                if (ctrlKey)
+                                    this.moveSelectionBy(-this.gridX || -1, 0);
+                                else
+                                    this.moveSelectionBy(-1, 0);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowRight':
+                                // move selection right
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.moveSelectionBy(this.gridX || 1, 0);
+                                else
+                                    this.moveSelectionBy(1, 0);
+                                this._tempGuidelines();
+                                break;
+                            case 'Delete':
+                                event.preventDefault();
+                                // delete selection
+                                this.deleteSelection();
+                                break;
+                        }
+                    }
+                }
+            }
+            applyRectToSelection(dx, dy, dw, dh) {
+                if (dx || dy || dw || dh) {
+                    // save current position
+                    this.undoManager.resizeSelection(this.selection);
+                    for (let obj of this.selection) {
+                        obj.designer.applyRect(dx, dy, dw, dh);
+                    }
+                    this.updateGrabs();
+                }
+            }
+            updateSelectedObjects() {
+                for (let obj of this.selection) {
+                    obj.redraw();
+                }
+                this.updateGrabs();
+            }
+            updateGrabs() {
+                if (!this.resizing) {
+                    this.destroyGrabHandles();
+                    for (let obj of this.selection) {
+                        this.createGrabHandles(obj);
+                    }
+                }
+                for (let grabs of this.grabs) {
+                    grabs.setPosition();
+                }
+            }
+            refreshGrabs() {
+                for (let grabs of this.grabs) {
+                    grabs.setPosition();
+                }
+            }
+            resizeSelectionBy(dw, dh) {
+                this.applyRectToSelection(0, 0, dw, dh);
+            }
+            addObject(obj) {
+                if (this.objects.includes(obj)) {
+                    return obj.designer;
+                }
+                this.objects.push(obj);
+                const designer = this.getDesigner(obj);
+                this.addDesigner(designer);
+                this.undoManager.add('add', [obj]);
+                if (this.onNotification) {
+                    this.onNotification(obj, 'add');
+                }
+                return obj.designer;
+            }
+            addDesigner(designer) {
+                this.append(designer.drawDesign(this));
+            }
+            setSelection(objs) {
+                this.clearSelection();
+                for (let obj of objs) {
+                    this.addToSelection(obj);
+                }
+            }
+            clearSelection() {
+                this.destroyGrabHandles();
+                this.selection = [];
+                this.onSelectionChange();
+            }
+            createGrabHandles(obj) {
+                const grabs = new design.GrabHandles({
+                    container: this.workspace || this.container,
+                    target: obj,
+                    onObjectResizing: () => obj.designer.onDesignResizing?.(),
+                    onObjectResized: () => obj.designer.onDesignResized?.(),
+                    snapToGrid: this.snapToGrid,
+                    designer: this,
+                    gridX: this.gridX,
+                    gridY: this.gridY,
+                });
+                this.grabs.push(grabs);
+            }
+            destroyGrabHandles(obj) {
+                if (this.resizing)
+                    return;
+                for (let gh of Array.from(this.grabs))
+                    if (!obj || (gh.target === obj)) {
+                        gh.destroy();
+                        this.grabs.splice(this.grabs.indexOf(gh), 1);
+                    }
+            }
+            applySelectionBox(rect) {
+                this.clearSelection();
+                for (let obj of this.objects) {
+                    if (katrid.drawing.rectInRect(obj.element.getBoundingClientRect(), rect))
+                        this.addToSelection(obj);
+                }
+            }
+            invalidate() {
+            }
+            getValidName(name) {
+                return;
+            }
+            getDesigner(widget) {
+                if (!widget.designer) {
+                    widget.designer = new design.WidgetDesigner(widget, this);
+                }
+                return widget.designer;
+            }
+            removeFromSelection(obj) {
+                if (this.selection.includes(obj)) {
+                    this.destroyGrabHandles(obj);
+                    this.selection.splice(this.selection.indexOf(obj), 1);
+                }
+            }
+            onSelectionChange() {
+            }
+            addToSelection(obj) {
+                if (!this.selection.includes(obj)) {
+                    this.selection.push(obj);
+                    this.createGrabHandles(obj);
+                }
+                this.onSelectionChange();
+            }
+            selectObject(obj) {
+                // clear selection if object is not already selected
+                if (!this.selection.includes(obj))
+                    this.clearSelection();
+                this.addToSelection(obj);
+            }
+            toggleSelection(obj) {
+                if (this.selection.includes(obj)) {
+                    this.removeFromSelection(obj);
+                }
+                else {
+                    this.addToSelection(obj);
+                }
+            }
+            moveSelectionBy(dx, dy) {
+                // apply zoom factor
+                if (this._zoom !== 100) {
+                    dx = dx / (this._zoom / 100);
+                    dy = dy / (this._zoom / 100);
+                }
+                if (this.selection.length) {
+                    this.undoManager.moveSelection(this.selection);
+                    for (let obj of this.selection) {
+                        obj.designer.moveBy(dx, dy);
+                        // detect visual guidelines
+                    }
+                }
+                for (let grabs of this.grabs)
+                    grabs.setPosition();
+            }
+            onSelectionMoved() {
+            }
+            _createGuideline(x1, y1, x2, y2) {
+                // TODO add guidelines css
+                const line = this.line(x1, y1, x2, y2, { class: 'guideline' });
+                this.guidelines.push(line.$el);
+                this.append(line);
+            }
+            createGuidelines() {
+                if (!this.resizing) {
+                    this.destroyGrabHandles();
+                }
+                for (let obj of this.selection)
+                    for (let comp of this.objects) {
+                        if (comp !== obj) {
+                            let compRect = comp.designer.getDesignRect();
+                            let rect = obj.getDesignRect();
+                            if (rect.right === compRect.right)
+                                this._createGuideline(rect.right, rect.top, compRect.right, compRect.bottom);
+                            if (rect.left === compRect.left)
+                                this._createGuideline(rect.left, rect.top, compRect.left, compRect.bottom);
+                            if (rect.right === compRect.left)
+                                this._createGuideline(rect.right, rect.top, compRect.left, compRect.bottom);
+                            if (rect.left === compRect.right)
+                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.bottom);
+                            if (rect.top === compRect.top)
+                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.top);
+                            if (rect.bottom === compRect.top)
+                                this._createGuideline(rect.left, rect.bottom, compRect.right, compRect.top);
+                            if (rect.top === compRect.bottom)
+                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.bottom);
+                            if (rect.bottom === compRect.bottom)
+                                this._createGuideline(rect.left, rect.bottom, compRect.right, compRect.bottom);
+                        }
+                    }
+            }
+            clearGuidelines() {
+                this.updateGrabs();
+                for (let line of this.guidelines) {
+                    line.remove();
+                }
+                this.guidelines = [];
+            }
+            /** Load object from json data */
+            loadObject(obj) {
+                if (obj.type === 'Text') {
+                    const o = new katrid.drawing.Text();
+                    o.load(obj);
+                    return o;
+                }
+                if (obj.type === 'Rectangle') {
+                    const o = new katrid.drawing.Rectangle();
+                    o.load(obj);
+                    return o;
+                }
+            }
+            removeObject(obj) {
+                this._removeObjects([obj]);
+            }
+            deleteSelection() {
+                const sel = this.selection.length;
+                this._removeObjects(this.selection, `Delete ${sel} objects`);
+                this.grabs = [];
+                this.selection = [];
+                this.onSelectionChange();
+            }
+            _removeObjects(objs, description) {
+                this.undoManager.add('remove', [...objs], description);
+                if (this.onNotification) {
+                    objs.forEach(obj => this.onNotification(obj, 'remove'));
+                }
+                for (let obj of objs) {
+                    // remove from selection
+                    if (this.selection.includes(obj)) {
+                        this.destroyGrabHandles(obj);
+                        this.selection.splice(this.selection.indexOf(obj), 1);
+                    }
+                    // remove from objects
+                    if (this.objects.includes(obj)) {
+                        this.objects.splice(this.objects.indexOf(obj), 1);
+                        obj.remove();
+                    }
+                }
+                // object notification
+                this.updateGrabs();
+            }
+            removeObjects(objs) {
+                this._removeObjects(objs);
+            }
+            async cut() {
+                await this.clipboardManager.copy();
+                this._removeObjects(this.selection);
+            }
+            copy() {
+                if (this.selection.length) {
+                    console.debug('copy', this.selection);
+                    return this.clipboardManager.copy();
+                }
+            }
+            async paste() {
+                try {
+                    this.undoManager.beginUpdate();
+                    const objs = await this.clipboardManager.paste();
+                    this.undoManager.endUpdate();
+                    this.undoManager.add('add', objs);
+                }
+                finally {
+                    this.undoManager.endUpdate();
+                }
+            }
+            undo() {
+                this.undoManager.undo();
+                this.updateGrabs();
+            }
+            redo() {
+                this.undoManager.redo();
+            }
+            resize(width, height) {
+                this.width = width;
+                this.height = height;
+                this._resize();
+            }
+            /** The designer height is relative to page type */
+            getDesignerHeight() {
+                return this.height;
+            }
+            _resize() {
+                let w = this.width;
+                let h = this.getDesignerHeight();
+                if (this._zoom !== 100) {
+                    w = w * (this._zoom / 100);
+                    h = h * (this._zoom / 100);
+                }
+                this.attr('width', w.toString());
+                this.attr('height', h.toString());
+                this.attr('viewBox', `0 0 ${this.width} ${this.getDesignerHeight()}`);
+            }
+            get zoom() {
+                return this._zoom;
+            }
+            set zoom(value) {
+                this._zoom = value;
+                this._resize();
+            }
+            _tempGuidelines() {
+                this.clearGuidelines();
+                this.createGuidelines();
+                clearTimeout(this._resizingTimeout);
+                this._resizingTimeout = setTimeout(() => this.clearGuidelines(), design.GUIDELINE_DELAY);
+            }
+            onPointerDown(event) {
+                event.stopPropagation();
+                this.clearSelection();
+                if (this.selectionBox && event.button === 0) {
+                    this.draggingSelectionBox = true;
+                    const r = this.$el.getBoundingClientRect();
+                    this._dx = event.clientX - r.left;
+                    this._dy = event.clientY - r.top;
+                    this._bx = this._by = this._bw = this._bh = 0;
+                    this.createSelectionBox(this._dx, this._dy, 0, 0);
+                }
+                if (!this.selection.length && event.button === 0)
+                    this.$el.setPointerCapture(event.pointerId);
+            }
+            onMouseMove(event) {
+                if (this.draggingSelectionBox) {
+                    event.preventDefault();
+                    let x = this._dx;
+                    let y = this._dy;
+                    const r = this.$el.getBoundingClientRect();
+                    let w = event.clientX - this._dx - r.left;
+                    let h = event.clientY - this._dy - r.top;
+                    if (w < 0) {
+                        x += w;
+                        w = Math.abs(w);
+                    }
+                    if (h < 0) {
+                        y += h;
+                        h = Math.abs(h);
+                    }
+                    this.updateSelectionBox(x, y, w, h);
+                }
+            }
+            onPointerUp(event) {
+                if (!this.resizing) {
+                    this.clearGuidelines();
+                }
+                if (this.draggingSelectionBox) {
+                    this.draggingSelectionBox = false;
+                    this.$el.releasePointerCapture(event.pointerId);
+                    this._onPointerUp();
+                    this.destroySelectionBox();
+                    this.refreshSelection();
+                }
+            }
+            _onPointerUp() {
+                this.applySelectionBox(this._selBox.$el.getBoundingClientRect());
+            }
+            refreshSelection() {
+            }
+            destroySelectionBox() {
+                this._selBox.remove();
+            }
+            updateSelectionBox(x, y, width, height) {
+                this._selBox.attr({ x, y, width, height });
+                this._bx = x;
+                this._by = y;
+                this._bw = width;
+                this._bh = height;
+            }
+            widgetDoubleClick(widget, event) {
+                event.preventDefault();
+                event.stopPropagation();
+                this.executeEditor(widget);
+            }
+            executeEditor(widget) {
+                let editorCls = design.getComponentEditor(widget.target.constructor);
+                const editor = new editorCls(widget.target, this);
+                editor.showEditor();
+            }
+            toolItemDragOver(evt) {
+            }
+            createDragEvents() {
+                this.$el.addEventListener('dragover', (evt) => {
+                    this.toolItemDragOver(evt);
+                });
+                this.$el.addEventListener('drop', (evt) => {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    this.toolItemDrop(evt.dataTransfer.getData('text'), evt);
+                });
+            }
+            toolItemDrop(widget, evt) {
+                this.createWidget(widget, evt.target, evt.offsetX, evt.offsetY);
+            }
+            createWidget(widgetName, target, x, y) {
+            }
+        }
+        design.DesignSurface = DesignSurface;
+    })(design = katrid.design || (katrid.design = {}));
+})(katrid || (katrid = {}));
+/// <reference path="surface.ts" />
+var katrid;
+(function (katrid) {
+    var design;
+    (function (design) {
+        class PageDesigner extends katrid.design.DesignSurface {
+            constructor(page) {
+                super();
+                this.page = page;
+            }
+            get page() {
+                return this._page;
+            }
+            get report() {
+                return this.page.report;
+            }
+            set page(value) {
+                this._page = value;
+                if (value && value.width > 0) {
+                    this.width = value.width;
+                }
+                if (value && value.height > 0) {
+                    this.height = value.height;
+                }
+            }
+            getOutline() {
+                return;
+            }
+        }
+        design.PageDesigner = PageDesigner;
+    })(design = katrid.design || (katrid.design = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../design/page.ts" />
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class PageDesigner extends katrid.design.PageDesigner {
+            activate() {
+                super.activate();
+                this.reportDesigner.activatePage(this.page);
+            }
+            onSelectionChange() {
+                super.onSelectionChange();
+                this.reportDesigner.onSelectionChanged(this.selection);
+            }
+        }
+        bi.PageDesigner = PageDesigner;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        class BasePage {
+            constructor() {
+                this.objects = [];
+                this.loading = false;
+                this.defaultProps();
+            }
+            defaultProps() {
+                // infinite size
+                this.width = -1;
+                this.height = -1;
+            }
+            get size() {
+                return { width: this.width, height: this.height };
+            }
+            set size(value) {
+                this.width = value.width;
+                this.height = value.height;
+                // check common page size
+                if (this._pageSize && this._pageSize !== 'Custom') {
+                    const pageSize = drawing.PageSize[this._pageSize];
+                    if (pageSize.width !== value.width || pageSize.height !== value.height) {
+                        this._pageSize = 'Custom';
+                    }
+                }
+                if (this.designer) {
+                    this.designer.resize(value.width, value.height);
+                }
+            }
+            get pageSize() {
+                return this._pageSize;
+            }
+            set pageSize(value) {
+                this._pageSize = value;
+                if (value) {
+                    const val = drawing.PageSize[value];
+                    this.width = val.width;
+                    this.height = val.height;
+                    if (this.designer) {
+                        this.designer.resize(val.width, val.height);
+                    }
+                }
+            }
+            get orientation() {
+                this._orientation ?? (this._orientation = drawing.PageOrientation.Portrait);
+                return this._orientation;
+            }
+            set orientation(value) {
+                if (value === this._orientation) {
+                    return;
+                }
+                if (value !== this._orientation) {
+                    // invert size
+                    const { height, width } = this.size;
+                    this.width = height;
+                    this.height = width;
+                    // designer notification
+                    if (this.designer) {
+                        this.designer.resize(this.width, this.height);
+                    }
+                }
+                this._orientation = value;
+            }
+            dump() {
+                return {
+                    name: this.name,
+                    height: this.height,
+                    width: this.width,
+                    pageSize: this._pageSize,
+                    orientation: this._orientation,
+                };
+            }
+            *allObjects() {
+                for (let obj of this.objects) {
+                    yield obj;
+                }
+            }
+            children() {
+                return this.objects;
+            }
+            load(data) {
+                this.name = data.name;
+                this.width = data.width;
+                this.height = data.height;
+                this._pageSize = data.pageSize;
+                this._orientation = data.orientation;
+            }
+            onLoad(info) {
+            }
+            _createDesigner() {
+                return new katrid.design.PageDesigner(this);
+            }
+            createDesigner() {
+                try {
+                    this.loading = true;
+                    this.designer = this._createDesigner();
+                    return this.designer;
+                }
+                finally {
+                    this.loading = false;
+                }
+            }
+        }
+        drawing.BasePage = BasePage;
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../drawing/page.ts" />
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class BasePage extends katrid.drawing.BasePage {
+        }
+        bi.BasePage = BasePage;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Core;
@@ -2051,6 +5608,10 @@ var Katrid;
             }
             get context() {
                 return;
+            }
+            setView(view) {
+                this.element.innerHTML = '';
+                this.element.append(view);
             }
             /** User information */
             get userInfo() {
@@ -2342,9 +5903,10 @@ var Katrid;
                             this.loadPage(href);
                         }
                         else {
-                            child = document.querySelector('#navbar-menu .menu-item-action');
-                            if (child)
+                            child = actionItem.parentElement.querySelector('#navbar-menu .menu-item-action');
+                            if (child) {
                                 child.click();
+                            }
                         }
                     }
                 }
@@ -2378,6 +5940,10 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 (function (Katrid) {
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    katrid.core = Katrid.Core;
+})(katrid || (katrid = {}));
 /// <reference path="app.ts"/>
 var Katrid;
 (function (Katrid) {
@@ -2413,7 +5979,6 @@ var Katrid;
         let QueryEditorPlugin = class QueryEditorPlugin extends Katrid.Core.Plugin {
             hashChange(url) {
                 if (url.startsWith('#/query-viewer/')) {
-                    console.log('hash change');
                     this.execute();
                     return true;
                 }
@@ -2421,9 +5986,7 @@ var Katrid;
             async execute() {
                 let queryViewer = document.createElement('query-viewer');
                 queryViewer.className = 'content-container';
-                console.log(this.app.$search);
-                this.app.element.innerHTML = '';
-                this.app.element.append(queryViewer);
+                this.app.setView(queryViewer);
             }
         };
         QueryEditorPlugin = __decorate([
@@ -2539,7 +6102,6 @@ var Katrid;
                 this.$element = templ;
                 let queries = await Katrid.Services.Query.all();
                 this.$scope.queries = queries.data;
-                console.log('render result');
                 // this.app.$element.html(templ);
                 this.$scope.$apply();
             }
@@ -3960,6 +7522,435 @@ var Katrid;
         Katrid.define('query-viewer', QueryViewer);
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class ReportEditor {
+            constructor(container) {
+                this.container = container;
+                this.loading = false;
+                this._modified = false;
+                this.pages = [];
+                this.create();
+                if (container) {
+                    container.appendChild(this.el);
+                }
+            }
+            onSelectionChanged(selection) {
+                this.inspector.setSelection(selection);
+            }
+            /** Receives a notification if an object is added, removed or renamed */
+            objectNotification(obj, event) {
+                this.outlineExplorer.objectNotification(obj, event);
+            }
+            get reportName() {
+                return this._name || '';
+            }
+            set reportName(value) {
+                this._name = value;
+                this.el.querySelector('.report-editor-header span').textContent = value;
+            }
+            create() {
+                this.el = document.createElement('div');
+                this.el.style.display = 'flex';
+                this.el.style.flexDirection = 'column';
+                this.el.style.flex = '1 1 auto';
+                this.createWorkspace();
+            }
+            createWorkspace() {
+                const header = document.createElement('header');
+                header.innerHTML = `<table><tr><td><h1 class="back"><i class="fa-solid fa-fw fa-chevron-left"></i></h1></td><td><h3>Report Editor</h3>
+      <span>${this.reportName}</span>
+      </td></tr></table>`;
+                header.querySelector('.back').addEventListener('click', () => this.close());
+                header.className = 'report-editor-header';
+                this.el.appendChild(header);
+                // toolbar
+                this.createToolbar(this.el);
+                // editor
+                let elEditor = document.createElement('div');
+                elEditor.className = 'report-editor';
+                this.el.appendChild(elEditor);
+                // left side toolbar
+                this.leftNav = document.createElement('div');
+                elEditor.appendChild(this.leftNav);
+                this.leftNav.className = 'tool-window left-side';
+                let tb = new katrid.ui.Toolbar(this.leftNav);
+                tb.vertical = true;
+                let btn = tb.addButton('<i class="fa-duotone fa-2x fa-fw fa-tools"></i>');
+                btn.title = katrid.i18n.gettext('Tool Box');
+                btn.addEventListener('click', () => this.showToolBox());
+                // data source button
+                btn = tb.addButton('<i class="fa-duotone fa-2x fa-database"></i>');
+                btn.title = katrid.i18n.gettext('Data Sources');
+                btn.addEventListener('click', () => this.showDataExplorer());
+                // outline button
+                btn = tb.addButton('<i class="fa-duotone fa-2x fa-fw fa-sitemap">');
+                btn.title = katrid.i18n.gettext('Outline');
+                btn.addEventListener('click', () => this.showOutlineExplorer());
+                btn = tb.addButton('<i class="fa-duotone fa-2x fa-fw fa-files"></i>');
+                btn.title = katrid.i18n.gettext('Pages');
+                btn.addEventListener('click', () => this.showPageExplorer());
+                this.pageExplorer = new bi.PageExplorer(this.leftNav);
+                this.pageExplorer.hide();
+                this.dataExplorer = new bi.DataExplorer(this.leftNav);
+                this.dataExplorer.onRemoveDataSource = ds => this.report.removeDataSource(ds);
+                this.dataExplorer.onNewDataSource = () => new katrid.bi.DataSource(this.report.getValidName('datasource'));
+                this.dataExplorer.onSelectionChange = ds => this.onSelectionChanged(ds ? [ds] : undefined);
+                this.dataExplorer.hide();
+                this.outlineExplorer = new bi.OutlineExplorer(this.leftNav);
+                this.outlineExplorer.hide();
+                this.outlineExplorer.onSelectItem = (obj) => this.onSelectionChanged([obj]);
+                this.toolBox = new bi.ToolBox(this.leftNav);
+                // container
+                let div = document.createElement('div');
+                div.className = 'report-container';
+                elEditor.appendChild(div);
+                // create floating toolbar
+                this.zoomTool = new bi.ZoomTool(div);
+                // workspace
+                let workspace = document.createElement('div');
+                workspace.className = 'workspace';
+                let designer = document.createElement('div');
+                designer.className = 'designer';
+                designer.addEventListener('pointerdown', evt => {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    this.page?.clearSelection();
+                    if (!this.page.selection.length) {
+                        this.inspector.setSelection([this.page.page]);
+                    }
+                });
+                workspace.appendChild(designer);
+                div.appendChild(workspace);
+                this.workspaceElement = designer;
+                this.rightNav = document.createElement('div');
+                this.rightNav.className = 'tool-window data-tool-window';
+                this.inspector = new bi.ObjectInspector(this.rightNav);
+                this.paramExplorer = new bi.ParamExplorer(this.rightNav);
+                this.paramExplorer.hide();
+                tb = new katrid.ui.Toolbar(this.rightNav);
+                tb.vertical = true;
+                elEditor.appendChild(this.rightNav);
+                // properties button
+                btn = tb.addButton('<i class="fa fa-fw fa-cog"></i>');
+                btn.title = katrid.i18n.gettext('Properties');
+                btn.addEventListener('click', () => this.showPropertiesEditor());
+                // parameters button
+                btn = tb.addButton('<i class="fa-solid fa-list"></i>');
+                btn.title = katrid.i18n.gettext('Parameters');
+                btn.addEventListener('click', () => this.showParamExplorer());
+            }
+            createToolbar(container) {
+                let div = document.createElement('div');
+                div.className = 'main-toolbar';
+                // main buttons
+                let tb = new katrid.ui.Toolbar(div);
+                tb.addButton('<i class="fa-duotone fa-solid fa-2x fa-floppy-disk"></i>').addEventListener('click', () => this.save());
+                tb.addButton('<i class="fa-duotone fa-solid fa-2x fa-folder-open"></i>').addEventListener('click', () => this.openFile());
+                // preview buttons
+                tb = new katrid.ui.Toolbar(div);
+                tb.el.style.flex = '0 0 auto';
+                tb.addButton({
+                    text: katrid.i18n.gettext('Preview'),
+                    iconClass: 'fa-regular fa-fw fa-file-pdf',
+                }).addEventListener('click', () => this.preview());
+                container.appendChild(div);
+                return tb;
+            }
+            preview() {
+                console.debug('preview');
+            }
+            activatePage(page) {
+                if (this._page) {
+                    this._page.onNotification = null;
+                }
+                this._page = page.designer;
+                this._page.onNotification = (obj, event) => this.objectNotification(obj, event);
+                this.workspaceElement.innerHTML = '';
+                this.workspaceElement.appendChild(page.designer.$el);
+                this.inspector.designer = page.designer;
+                this.zoomTool.designer = page.designer;
+            }
+            get report() {
+                return this._report;
+            }
+            set report(value) {
+                this._report = value;
+                this.loadReport(value);
+            }
+            showToolBox() {
+                this.pageExplorer.hide();
+                this.dataExplorer.hide();
+                this.outlineExplorer.hide();
+                this.toolBox.show();
+            }
+            showPageExplorer() {
+                this.outlineExplorer.hide();
+                this.dataExplorer.hide();
+                this.toolBox.hide();
+                this.pageExplorer.show();
+            }
+            showOutlineExplorer() {
+                this.pageExplorer.hide();
+                this.dataExplorer.hide();
+                this.toolBox.hide();
+                this.outlineExplorer.show();
+            }
+            showDataExplorer() {
+                this.toolBox.hide();
+                this.pageExplorer.hide();
+                this.outlineExplorer.hide();
+                this.dataExplorer.show();
+            }
+            showParamExplorer() {
+                this.inspector.hide();
+                this.paramExplorer.show();
+            }
+            showPropertiesEditor() {
+                this.paramExplorer.hide();
+                this.inspector.show();
+            }
+            loadReport(report) {
+                try {
+                    this.loading = true;
+                    this.reportName = report.name;
+                    this.dataExplorer.clear();
+                    // load data sources
+                    for (const ds of report.datasources) {
+                        this.dataExplorer.registerDataSource(ds);
+                    }
+                    // load pages
+                    for (const page of report.pages) {
+                        const pageDesign = this.addPage(page);
+                    }
+                    if (this.pages.length) {
+                        this.pages[0].activate();
+                    }
+                    this.outlineExplorer.loadReport(report);
+                }
+                finally {
+                    this.loading = false;
+                }
+            }
+            save() {
+                if (this.fileHandle) {
+                    this.saveFile();
+                }
+                else {
+                    console.error('save to db');
+                }
+            }
+            close() {
+                // back to manager when available
+                this.el.remove();
+                this.onDestroy?.();
+            }
+            newReport(repType = katrid.report.PageType.Banded) {
+                const rep = new katrid.report.Report(repType);
+                this.report = rep;
+                this.clean();
+                return rep;
+            }
+            clean() {
+                if (this._page) {
+                    this._page.deactivate();
+                }
+                this.pages = [];
+                this._page = null;
+                this._modified = false;
+                this.outlineExplorer.clear();
+            }
+            addPage(page) {
+                let p = page.createDesigner();
+                p.reportDesigner = this;
+                this.pages.push(p);
+                if (!this.loading) {
+                    this.outlineExplorer.addObject(page);
+                }
+                return p;
+            }
+            setModified() {
+                this.modified = true;
+            }
+            newPage(type) {
+                this.setModified();
+                const page = this.report.newPage(type);
+                const d = this.addPage(page);
+                page.name = this.report.getValidName('page');
+                return d;
+            }
+            get modified() {
+                return this._modified;
+            }
+            set modified(value) {
+                this._modified = value;
+            }
+            get page() {
+                return this._page;
+            }
+            set page(value) {
+                if (this._page) {
+                    this._page.deactivate();
+                }
+                this._page = value;
+                if (value) {
+                    value.activate();
+                }
+            }
+            load(data, filename) {
+                this.clean();
+                const rep = new katrid.report.Report();
+                rep.load(data);
+                this.report = rep;
+            }
+            async openFile() {
+                // TODO check if report is modified as ask to save before
+                [this.fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Reptile Report (*.json)', accept: { 'application/json': ['.json'] } }] });
+                this.clean();
+                const file = await this.fileHandle.getFile();
+                const contents = await file.text();
+                this.load(JSON.parse(contents), file.name);
+            }
+            async saveFile() {
+                if (!this.fileHandle) {
+                    this.fileHandle = await window.showSaveFilePicker({ types: [{ description: 'Reptile Report (*.json)', accept: { 'application/json': ['.json'] } }] });
+                }
+                const file = await this.fileHandle.createWritable();
+                const blob = new Blob([JSON.stringify(this.report.dump())], { type: 'application/json' });
+                await file.write(blob);
+                await file.close();
+            }
+        }
+        bi.ReportEditor = ReportEditor;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        let ReportManagerPlugin = class ReportManagerPlugin extends katrid.core.Plugin {
+            hashChange(url) {
+                if (url.startsWith('#/report-manager/')) {
+                    this.execute();
+                    return true;
+                }
+            }
+            async execute() {
+                const div = document.createElement('div');
+                div.className = 'report-manager';
+                this.reportManager = new ReportManager(div);
+                this.app.setView(div);
+            }
+        };
+        ReportManagerPlugin = __decorate([
+            katrid.core.registerPlugin
+        ], ReportManagerPlugin);
+        class ReportManager {
+            constructor(container) {
+                this.container = container;
+                this.create();
+            }
+            create() {
+                this.el = document.createElement('div');
+                this.el.innerHTML = '<div class="report-editor-header"><h1>Report Manager</h1></div>';
+                this.el.className = 'report-explorer';
+                const tb = new katrid.ui.Toolbar(this.el.querySelector('.report-editor-header'));
+                tb.addButton('Report Editor').addEventListener('click', () => this.showReportEditor());
+                this.createExplorer();
+                this.container.appendChild(this.el);
+                this.load();
+            }
+            showContextMenu(node, event) {
+                if (node.data.isReport) {
+                    const menu = new katrid.ui.ContextMenu();
+                    menu.add('Novo...', () => {
+                        console.log('Editar', node.data);
+                    });
+                    menu.add('Editar', () => {
+                        this.editReport(node.data);
+                    });
+                    menu.add('Remover', () => {
+                        console.log('Eliminar', node.data);
+                    });
+                    menu.add('Vincular menu...', () => {
+                        console.log('Eliminar', node.data);
+                    });
+                    menu.show(event.clientX, event.clientY);
+                }
+                else {
+                    const menu = new katrid.ui.ContextMenu();
+                    menu.add('Novo relatório...', () => {
+                        console.log('Editar', node.data);
+                    });
+                    menu.add('Nova pasta...', () => {
+                        console.log('Editar', node.data);
+                    });
+                    menu.add('Remover', () => {
+                        console.log('Eliminar', node.data);
+                    });
+                    menu.show(event.clientX, event.clientY);
+                }
+            }
+            createExplorer() {
+                const input = document.createElement('input');
+                input.type = 'text';
+                this.treeView = new katrid.ui.TreeView(this.el, {
+                    options: {
+                        onContextMenu: (node, event) => {
+                            this.showContextMenu(node, event);
+                        }
+                    }
+                });
+            }
+            async load() {
+                var _a;
+                const res = await Katrid.Services.Query.all();
+                this.reportCatalog = res.data;
+                let categories = {};
+                for (const rep of res.data) {
+                    const cat = categories[_a = rep.category] ?? (categories[_a] = []);
+                    cat.push({ id: rep.id, text: rep.name, isReport: true });
+                }
+                let nodes = Object.entries(categories).map(([k, cat]) => ({
+                    id: k, text: k,
+                    children: cat,
+                }));
+                this.treeView.addNodes({ data: nodes });
+            }
+            hide() {
+                // hide explorer
+                this.el.style.display = 'none';
+                // hide app-header
+                document.querySelector('app-header').style.display = 'none';
+            }
+            show() {
+                this.el.style.display = '';
+                // hide app-header
+                document.querySelector('app-header').style.display = '';
+            }
+            async editReport(data) {
+                const editor = new bi.ReportEditor(this.container);
+                editor.onDestroy = () => {
+                    this.show();
+                };
+                // get report metadata
+                const repService = new Katrid.Services.Query(data.id);
+                const metadata = await repService.getMetadata(true);
+                editor.report = katrid.report.Report.fromMetadata(metadata);
+                this.hide();
+            }
+            async showReportEditor() {
+                const editor = new bi.ReportEditor(this.container);
+                editor.onDestroy = () => {
+                    this.show();
+                };
+                this.hide();
+            }
+        }
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Services;
@@ -4415,6 +8406,1554 @@ var Katrid;
         Katrid.define('table-widget', TableWidgetElement);
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
+/// <reference path="../datasource.ts" />
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class DataToolWindow {
+            constructor(container) {
+                this.container = container;
+                this.create();
+            }
+            create() {
+                this.el = document.createElement('div');
+                this.el.className = 'data-tool-window';
+            }
+            async createDataSourceDialog(opts) {
+                let templ = `
+      <div class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Data Source</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+        <div class="row">
+          <div class="form-group col-6">
+            <label for="id-name">Connection</label>
+            <select class="form-select"><option>(Default)</option></select>
+          </div>
+          <div class="form-group col-6">
+            <label for="id-name">Name</label>
+            <input id="id-name" class="form-control" v-model="dataSourceDialog_name" name="name" value="${opts?.name || ''}"/>
+          </div>
+</div>
+          <div class="form-group">
+            <label for="id-command">SQL Query</label>
+            <div class="code-editor" name="commandText"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+              type="button"
+              class="btn btn-outline-secondary btn-ok"
+              data-bs-dismiss="modal"
+              >
+            OK
+          </button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+      `;
+                let dlg = $(templ)[0];
+                dlg.addEventListener('hidden.bs.modal', () => {
+                    modal.dispose();
+                    dlg.remove();
+                });
+                let domCode = dlg.querySelector('.code-editor');
+                let codeEditor = await bi.createCodeEditor(domCode, opts?.sql || 'select col from tablename', 'sql');
+                let modal = new bootstrap.Modal(dlg);
+                modal.show();
+                return {
+                    dlg,
+                    modal,
+                    btnOk: dlg.querySelector('.btn-ok'),
+                    name: dlg.querySelector('input[name=name]'),
+                    codeEditor,
+                };
+            }
+            async newDataSource() {
+                let dlg = await this.createDataSourceDialog({ name: this.designer.getValidName('dataSource') });
+                dlg.btnOk.addEventListener('click', evt => this.createDataSource(dlg.name.value, dlg.codeEditor.getValue()));
+            }
+            async editDataSource(dataSource) {
+                let dlg = await this.createDataSourceDialog({ name: dataSource.name, sql: dataSource.sql });
+                dlg.name.value = dataSource.name;
+                dlg.btnOk.addEventListener('click', evt => {
+                    this.saveDataSource(dataSource, dlg.name.value, dlg.codeEditor.getValue());
+                });
+            }
+            createDataSource(name, sql) {
+                let ds = new bi.DataSource({ report: this.designer.report, name, sql });
+                this.addDataSource(ds);
+            }
+            saveDataSource(dataSource, name, sql) {
+                dataSource.name = name;
+                dataSource.sql = sql;
+                let i = this.designer.datasources.indexOf(dataSource);
+                this.table.querySelector(`tr:nth-child(${i + 1})`).querySelector('button').innerText = name;
+            }
+            registerDataSource(dataSource) {
+                let tr = document.createElement('tr');
+                $(tr).data('datasource', dataSource);
+                let td1 = document.createElement('td');
+                let td2 = document.createElement('td');
+                let btnEdit = document.createElement('button');
+                btnEdit.className = 'btn btn-light';
+                btnEdit.addEventListener('dblclick', evt => this.editDataSource($(evt.target.closest('tr')).data('datasource')));
+                btnEdit.addEventListener('click', evt => this.designer.onSelectionChange([dataSource]));
+                btnEdit.title = 'Double click to edit';
+                btnEdit.innerText = dataSource.name;
+                let btnDelete = document.createElement('button');
+                btnDelete.className = 'btn btn-light';
+                btnDelete.addEventListener('click', evt => {
+                    console.log(this.designer);
+                    this.designer.removeObjectNotification(dataSource);
+                    tr.remove();
+                });
+                btnDelete.innerHTML = '<i class="fa fas fa-times"></i>';
+                btnDelete.title = 'Remove Data Source';
+                tr.append(td1, td2);
+                td1.appendChild(btnEdit);
+                td2.append(btnDelete);
+                this.table.tBodies[0].appendChild(tr);
+            }
+            addDataSource(dataSource) {
+                this.datasources.push(dataSource);
+                this.registerDataSource(dataSource);
+            }
+            clear() {
+                this.table.tBodies[0].innerHTML = '';
+            }
+            get datasources() {
+                return this.designer.report.datasources;
+            }
+        }
+        bi.DataToolWindow = DataToolWindow;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+/// <reference path="datasource.ts" />
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class ToolWindow {
+            constructor(designer, container) {
+                this.designer = designer;
+                this.template = `
+      <div class="tool-window">
+        <div class="tool-window-header"><i class="fa fa-fw fa-database"></i> Data</div>
+        <div>
+          <button type="button" id="btn-new-datasource" class="btn btn-light new-datasource">
+            Novo Data Source
+          </button>
+        </div>
+        <hr>
+        <div class="row">
+          <div class="col-12">
+            <table><tbody></tbody></table>
+          </div>
+
+        </div>
+      </div>
+    `;
+                $(container).append(this.template);
+                $(container).append(`
+      <div class="right-bar">
+        <div class="tool-button">
+          <span class="fa fa-cog fa-2x"></span>
+        </div>
+        <div class="tool-button">
+          <span class="fa fa-database fa-2x"></span>
+        </div>
+        <div id="bi-btn-code-editor" class="tool-button">
+          <span class="fa fa-code fa-2x"></span>
+        </div>
+      </div>
+      `);
+                this.btnNew = container.querySelector('.new-datasource');
+                this.btnNew.addEventListener('click', evt => this.newDataSource());
+                this.table = container.querySelector('table');
+                const btnCodeEditor = container.querySelector('#bi-btn-code-editor');
+                btnCodeEditor.addEventListener('click', evt => this.showCodeEditor());
+            }
+            async showCodeEditor() {
+                const res = await katrid.bi.showCodeEditor(this.designer.report.params, 'xml', null);
+                if (res)
+                    this.designer.report.params = res;
+            }
+            async createDataSourceDialog(opts) {
+                let templ = `
+      <div class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Data Source</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+        <div class="row">
+          <div class="form-group col-6">
+            <label for="id-name">Connection</label>
+            <select class="form-select"><option>(Default)</option></select>
+          </div>
+          <div class="form-group col-6">
+            <label for="id-name">Name</label>
+            <input id="id-name" class="form-control" v-model="dataSourceDialog_name" name="name" value="${opts?.name || ''}"/>
+          </div>
+</div>
+          <div class="form-group">
+            <label for="id-command">SQL Query</label>
+            <div class="code-editor" name="commandText"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+              type="button"
+              class="btn btn-outline-secondary btn-ok"
+              data-bs-dismiss="modal"
+              >
+            OK
+          </button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+      `;
+                let dlg = $(templ)[0];
+                dlg.addEventListener('hidden.bs.modal', () => {
+                    modal.dispose();
+                    dlg.remove();
+                });
+                let domCode = dlg.querySelector('.code-editor');
+                let codeEditor = await bi.createCodeEditor(domCode, opts?.sql || 'select col from tablename', 'sql');
+                let modal = new bootstrap.Modal(dlg);
+                modal.show();
+                return {
+                    dlg,
+                    modal,
+                    btnOk: dlg.querySelector('.btn-ok'),
+                    name: dlg.querySelector('input[name=name]'),
+                    codeEditor,
+                };
+            }
+            async newDataSource() {
+                let dlg = await this.createDataSourceDialog({ name: this.designer.getValidName('dataSource') });
+                dlg.btnOk.addEventListener('click', evt => this.createDataSource(dlg.name.value, dlg.codeEditor.getValue()));
+            }
+            async editDataSource(dataSource) {
+                let dlg = await this.createDataSourceDialog({ name: dataSource.name, sql: dataSource.sql });
+                dlg.name.value = dataSource.name;
+                dlg.btnOk.addEventListener('click', evt => {
+                    this.saveDataSource(dataSource, dlg.name.value, dlg.codeEditor.getValue());
+                });
+            }
+            createDataSource(name, sql) {
+                let ds = new bi.DataSource({ report: this.designer.report, name, sql });
+                this.addDataSource(ds);
+            }
+            saveDataSource(dataSource, name, sql) {
+                dataSource.name = name;
+                dataSource.sql = sql;
+                let i = this.designer.datasources.indexOf(dataSource);
+                this.table.querySelector(`tr:nth-child(${i + 1})`).querySelector('button').innerText = name;
+            }
+            registerDataSource(dataSource) {
+                let tr = document.createElement('tr');
+                $(tr).data('datasource', dataSource);
+                let td1 = document.createElement('td');
+                let td2 = document.createElement('td');
+                let btnEdit = document.createElement('button');
+                btnEdit.className = 'btn btn-light';
+                btnEdit.addEventListener('dblclick', evt => this.editDataSource($(evt.target.closest('tr')).data('datasource')));
+                btnEdit.addEventListener('click', evt => this.designer.onSelectionChange([dataSource]));
+                btnEdit.title = 'Double click to edit';
+                btnEdit.innerText = dataSource.name;
+                let btnDelete = document.createElement('button');
+                btnDelete.className = 'btn btn-light';
+                btnDelete.addEventListener('click', evt => {
+                    console.log(this.designer);
+                    this.designer.removeObjectNotification(dataSource);
+                    tr.remove();
+                });
+                btnDelete.innerHTML = '<i class="fa fas fa-times"></i>';
+                btnDelete.title = 'Remove Data Source';
+                tr.append(td1, td2);
+                td1.appendChild(btnEdit);
+                td2.append(btnDelete);
+                this.table.tBodies[0].appendChild(tr);
+            }
+            addDataSource(dataSource) {
+                this.datasources.push(dataSource);
+                this.registerDataSource(dataSource);
+            }
+            clear() {
+                this.table.tBodies[0].innerHTML = '';
+            }
+            get datasources() {
+                return this.designer.report.datasources;
+            }
+        }
+        bi.ToolWindow = ToolWindow;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../../drawing/shapes.ts" />
+var katrid;
+(function (katrid) {
+    var report;
+    (function (report) {
+        class ReportElement extends katrid.drawing.BaseWidget {
+            applyStyle() {
+            }
+        }
+        report.ReportElement = ReportElement;
+    })(report = katrid.report || (katrid.report = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var report;
+    (function (report_1) {
+        class ReportDesigner {
+            constructor(container) {
+                this.container = container;
+                this._modified = false;
+                this.loading = false;
+                this.pages = [];
+                this.create();
+                katrid.report.reportDesigner = this;
+            }
+            create() {
+                this._datasources = [];
+                this.workspace = document.createElement('div');
+                this.workspace.className = 'katrid-studio workspace';
+                this.el = document.createElement('div');
+                this.el.className = 'katrid-report-designer workspace-area';
+                // create tabset
+                const tabset = document.createElement('div');
+                tabset.className = 'tabset';
+                const nav = document.createElement('ul');
+                nav.className = 'nav nav-tabs';
+                tabset.append(nav);
+                this.tabsetElement = tabset;
+                this.container.append(tabset);
+                this.container.append(this.workspace);
+                this.toolbox = new katrid.bi.Toolbox(this.workspace);
+                this.workspace.append(this.el);
+                this.toolWindow = new katrid.bi.ToolWindow(this, this.workspace);
+                this.container.classList.add('report-designer');
+                // toolbox
+                this.createDragEvents();
+                document.querySelectorAll('.toolbox-item')
+                    .forEach((el, idx) => {
+                    el.setAttribute('draggable', 'true');
+                    el.addEventListener('dragstart', (evt) => {
+                        this.page.clearSelection();
+                        evt.dataTransfer.setData('text', el.getAttribute('data-widget'));
+                        // evt.dataTransfer.dropEffect = 'move';
+                    });
+                });
+                document.querySelectorAll('.toolbox-item img').forEach(el => el.setAttribute('draggable', 'false'));
+                let el = document.querySelector('#properties-editor');
+                this.propertiesEditor = new katrid.bi.ObjectInspector(this, el);
+            }
+            onSelectionChange(selection) {
+                // set component editor
+                if (selection)
+                    this.propertiesEditor.setSelection(selection);
+                else
+                    this.propertiesEditor.setSelection([]);
+                $(this).trigger('selectionChange', selection);
+            }
+            get datasources() {
+                return this._datasources;
+            }
+            createDragEvents() {
+                this.container.addEventListener('dragover', (evt) => {
+                    let target = evt.target;
+                    if (target.closest('.band-designer'))
+                        evt.preventDefault();
+                });
+                this.container.addEventListener('drop', (evt) => {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    this.toolItemDrop(evt.dataTransfer.getData('text'), evt);
+                });
+            }
+            toolItemDrop(widget, evt) {
+                this.createWidget(widget, evt.target, evt.offsetX, evt.offsetY);
+            }
+            createWidget(widgetName, target, x, y) {
+                let band = target.closest('.band-designer')['$object'];
+                x = x - band.x;
+                y = y - band.clientY;
+                let obj;
+                switch (widgetName) {
+                    case 'text':
+                        let text = new katrid.drawing.Text();
+                        text.name = this.getValidName('text');
+                        text.text = text.name;
+                        text.x = x;
+                        text.y = y;
+                        band.addObject(text);
+                        obj = text;
+                        break;
+                    case 'image':
+                        obj = new katrid.bi.ImageObject();
+                        obj.name = this.getValidName('image');
+                        obj.x = x;
+                        obj.y = y;
+                        band.addObject(obj);
+                        break;
+                    case 'barcode':
+                        let img = new katrid.bi.Barcode();
+                        img.name = this.getValidName('image');
+                        img.left = x;
+                        img.top = y;
+                        band.addObject(img);
+                        obj = img;
+                        break;
+                }
+                this.page.addToSelection(obj);
+            }
+            newReport() {
+                const rep = new report_1.Report();
+                // todo replace by a template
+                rep.newPage();
+                this.loadReport(rep);
+                return rep;
+            }
+            get report() {
+                return this._report;
+            }
+            set report(value) {
+                this._report = value;
+            }
+            /**
+             * Active page designer
+             */
+            get page() {
+                return this._page;
+            }
+            set page(value) {
+                if (value !== this._page) {
+                    // toggle page designer activation
+                    if (this._page)
+                        this._page.deactivate();
+                    this._page = value;
+                    if (value) {
+                        value.activate();
+                        this.el.append(value.container);
+                    }
+                }
+            }
+            getValidName(prefix) {
+                let n = 0;
+                // normalize prefix
+                prefix = prefix[0].toLowerCase() + prefix.slice(1);
+                while (true) {
+                    n++;
+                    let found = false;
+                    let newName = prefix + n;
+                    for (let obj of Array.from(this._report.objects()))
+                        if (obj.name === newName) {
+                            found = true;
+                            break;
+                        }
+                    if (!found)
+                        return newName;
+                }
+            }
+            loadReport(report) {
+                this.clear();
+                this._report = report;
+                this._datasources = report.datasources;
+                // load data sources
+                for (let ds of this._datasources)
+                    this.toolWindow.registerDataSource(ds);
+                // load each page
+                for (let page of report.pages)
+                    this.pages.push(this.addPage(page));
+                // goto to first page
+                if (this.pages.length)
+                    this.page = this.pages[0];
+            }
+            async widgetExecuteEditor(widget) {
+                const editorCls = katrid.bi.getComponentEditor(widget.constructor);
+                if (editorCls) {
+                    const editor = new editorCls(widget);
+                    await editor.showEditor();
+                }
+            }
+            async showOpenFilePicker() {
+                [this.fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Reptile Report (*.report)', accept: { 'application/json': ['.report'] } }] });
+                const file = await this.fileHandle.getFile();
+                const contents = await file.text();
+                this.load(JSON.parse(contents), file.name);
+            }
+            async showSaveFilePicker() {
+                if (!this.fileHandle)
+                    this.fileHandle = await window.showSaveFilePicker({ types: [{ description: 'Reptile Report (*.report)', accept: { 'application/json': ['.report'] } }] });
+                const file = await this.fileHandle.createWritable();
+                console.log('content', this._report.dump);
+                const content = this.dump();
+                const blob = new Blob([JSON.stringify(this.dump())], { type: 'application/json' });
+                await file.write(blob);
+                await file.close();
+            }
+            removeObjectNotification(obj) {
+                if (!this.loading)
+                    for (let child of Array.from(this._report.objects()))
+                        child.onRemoveObjectNotification(obj);
+            }
+            dump() {
+                return this._report.dump();
+            }
+            /**
+             * Load report by json structure
+             * @param info Report structure
+             */
+            load(info, filename) {
+                this.clear();
+                const rep = new report_1.Report();
+                rep.filename = this.filename = filename;
+                rep.load(info);
+                this.loadReport(rep);
+                return rep;
+            }
+            set filename(filename) {
+                document.title = filename ? filename + ' - Report Editor' : 'Report Editor';
+            }
+            clear() {
+                if (this._page)
+                    this._page.deactivate();
+                this.filename = '';
+                this.fileHandle = null;
+                this.pages = [];
+                this._report = null;
+            }
+            registerDataSource(ds) {
+                ds.report = this._report;
+                if (!this._datasources.includes(ds)) {
+                    this._datasources.push(ds);
+                    this.toolWindow.registerDataSource(ds);
+                }
+            }
+            removeObjectNotification(obj) {
+                if (!this.report.loading) {
+                    for (let child of Array.from(this.report.getObjects())) {
+                        child.onRemoveObjectNotification(obj);
+                    }
+                }
+            }
+            addPage(page) {
+                this.setModified();
+                let p = page.createDesigner();
+                this.pages.push(p);
+                return p;
+            }
+            newPage(type) {
+                const page = this.report.newPage(type);
+                const d = this.addPage(page);
+                page.name = this.report.getValidName('page');
+                return d;
+            }
+            setModified(modified = true) {
+                this._modified = modified;
+            }
+        }
+        report_1.ReportDesigner = ReportDesigner;
+    })(report = katrid.report || (katrid.report = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../../drawing/page.ts" />
+var katrid;
+(function (katrid) {
+    var report;
+    (function (report) {
+        class BasePage extends katrid.bi.BasePage {
+        }
+        report.BasePage = BasePage;
+    })(report = katrid.report || (katrid.report = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var report;
+    (function (report) {
+        let PageType;
+        (function (PageType) {
+            PageType["Banded"] = "banded";
+            PageType["Dashboard"] = "dashboard";
+            PageType["Document"] = "document";
+            PageType["Spreadsheet"] = "spreadsheet";
+            PageType["Metadata"] = "metadata";
+        })(PageType = report.PageType || (report.PageType = {}));
+        class Report {
+            //designer: ReportDesigner;
+            constructor(pageType = PageType.Banded) {
+                this.pages = [];
+                this.datasources = [];
+                this.loading = false;
+                this.onLoadCallbacks = [];
+                // default report type
+                this.reportType = pageType;
+            }
+            static fromMetadata(metadata) {
+                const rep = new this(PageType.Banded);
+                rep.name = metadata.name;
+                return rep;
+            }
+            addPage(page) {
+                this.pages.push(page);
+                page.report = this;
+            }
+            removeDataSource(ds) {
+                const idx = this.datasources.indexOf(ds);
+                if (idx > -1) {
+                    this.datasources.splice(idx, 1);
+                }
+            }
+            getValidName(prefix) {
+                let n = 0;
+                // normalize prefix
+                prefix = prefix[0].toLowerCase() + prefix.slice(1);
+                while (true) {
+                    n++;
+                    let found = false;
+                    let newName = prefix + n;
+                    for (let obj of Array.from(this.getObjects())) {
+                        if (obj.name === newName) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        return newName;
+                }
+            }
+            findObject(name) {
+                for (let obj of this.getObjects())
+                    if (obj.name === name) {
+                        return obj;
+                    }
+            }
+            /**
+             * Iter over all report objects
+             */
+            *getObjects() {
+                for (let ds of this.datasources)
+                    yield ds;
+                for (let p of this.pages) {
+                    yield p;
+                    for (let obj of p.allObjects()) {
+                        yield obj;
+                    }
+                }
+            }
+            newPage(type) {
+                type ?? (type = PageType.Banded);
+                let page;
+                if (type === PageType.Banded) {
+                    page = new report.BandedPage();
+                }
+                this.addPage(page);
+                return page;
+            }
+            addDataSource(datasource) {
+                this.datasources.push(datasource);
+            }
+            dump() {
+                return {
+                    report: {
+                        version: 1,
+                        type: this.reportType,
+                        pages: this.pages.map(page => page.dump()),
+                        datasources: this.datasources.map(datasource => datasource.dump()),
+                    }
+                };
+            }
+            loadPage(pageInfo) {
+                if (!pageInfo.pageType || pageInfo.pageType === PageType.Banded) {
+                    // const p = new BasePage();
+                    const p = new report.BandedPage();
+                    p.report = this;
+                    p.load(pageInfo);
+                    return p;
+                }
+            }
+            loadDataSource(ds) {
+                const datasource = new katrid.bi.DataSource();
+                datasource.load(ds);
+                return datasource;
+            }
+            clear() {
+                this.pages = [];
+                this.datasources = [];
+            }
+            load(data) {
+                this.clear();
+                try {
+                    this.loading = true;
+                    this.datasources = data.report.datasources.map((ds) => this.loadDataSource(ds));
+                    this.pages = data.report.pages.map((p, i) => this.loadPage(p));
+                    // notify pending objects operations
+                    for (const cb of this.onLoadCallbacks) {
+                        cb(this);
+                    }
+                }
+                finally {
+                    this.loading = false;
+                }
+            }
+            addLoadCallback(cb) {
+                this.onLoadCallbacks.push(cb);
+            }
+        }
+        report.Report = Report;
+    })(report = katrid.report || (katrid.report = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var report;
+    (function (report) {
+        class BandedObject extends report.ReportElement {
+        }
+        report.BandedObject = BandedObject;
+        class Band extends report.ReportElement {
+            constructor() {
+                super(...arguments);
+                this._sizerHeight = 6;
+                this._resizing = false;
+                this._dy = 0;
+            }
+            defaultProps() {
+                super.defaultProps();
+                this.objects = [];
+                this._headerHeight = 20;
+                this.height = 40;
+                this.width = 400;
+            }
+            getDesignRect() {
+                return new DOMRect(this.x, this.y, this.width, this.height + this._headerHeight + this._sizerHeight);
+            }
+            get clientY() {
+                return this.y + this._headerHeight;
+            }
+            get report() {
+                return this.page.report;
+            }
+            get background() {
+                return this._background;
+            }
+            set background(value) {
+                this._background = value;
+                this.applyStyle();
+            }
+            get totalHeight() {
+                return this.height + this._headerHeight + this._sizerHeight;
+            }
+            addObject(obj) {
+                if (!this.objects.includes(obj)) {
+                    this.objects.push(obj);
+                    obj.parent = this;
+                    this.appendToDesigner(obj);
+                }
+            }
+            dump() {
+                const d = super.dump();
+                d.x = undefined;
+                d.y = undefined;
+                return d;
+            }
+            appendToDesigner(obj) {
+                // check if is designing
+                if (this.pageDesigner) {
+                    this.pageDesigner.addObject(obj);
+                    this.elBand.append(obj.graphic);
+                }
+            }
+            getHeaderCaption() {
+                return this.name + ': ' + this.getType();
+            }
+            createDesigner() {
+                this.pageDesigner ?? (this.pageDesigner = this.page.designer);
+                let bandDraw = katrid.drawing.g({ class: 'band-designer', transform: `translate(${this.x}, ${this.y})` });
+                const header = this._header = katrid.drawing.g({
+                    transform: `translate(${this.x}, ${this.y})`,
+                    class: 'band-header',
+                });
+                katrid.data(bandDraw.$el, 'band', this);
+                this.graphic = bandDraw;
+                this.elBand = katrid.drawing.g({ transform: `translate(0, ${this._headerHeight || 20})`, class: 'band' });
+                this._rect = this.elBand.rect(0, 0, this.width, this.height);
+                this._rect.attr('fill', 'url(#grid)');
+                let canvas = this.page.designer;
+                // canvas.append(sizer);
+                bandDraw.append(header);
+                bandDraw.append(this.elBand);
+                bandDraw.append(this.createSizer(bandDraw));
+                this.bandDesign = bandDraw;
+                this.pageDesigner.append(bandDraw);
+                const designer = this.page.designer;
+                let menu = new katrid.ui.ContextMenu();
+                menu.add('Config Bands...', () => console.log('config bands'));
+                menu.add('Delete', () => {
+                    this.destroyDesigner();
+                    this.pageDesigner.invalidate();
+                });
+                if (this instanceof DataBand) {
+                    menu.add('Add Group', () => this.createGroup());
+                    menu.add('Add Header', () => {
+                        const band = new HeaderBand();
+                        band.name = this.pageDesigner.getValidName('header');
+                        this.header = band;
+                        band.parent = this;
+                        designer.addBand(band);
+                    });
+                    menu.add('Add Footer', () => {
+                        const band = new FooterBand();
+                        band.name = this.pageDesigner.getValidName('footer');
+                        this.footer = band;
+                        band.parent = this;
+                        designer.addBand(band);
+                    });
+                    menu.add('Add Detail', () => {
+                        const band = new DataBand();
+                        band.name = this.pageDesigner.getValidName('detail');
+                        band.parent = this;
+                        designer.addBand(band);
+                    });
+                }
+                this.graphic.$el.addEventListener('contextmenu', (event) => {
+                    this.pageDesigner.selection = [];
+                    // this.designer.onSelectionChange([this._getBandDesigner()]);
+                    event.stopPropagation();
+                    event.preventDefault();
+                    menu.show(event.pageX, event.pageY);
+                });
+                for (let obj of this.objects) {
+                    obj.drawDesign(canvas);
+                }
+                this.redraw();
+            }
+            createGroup() {
+                const band = this;
+                const groupHeader = new GroupHeader();
+                groupHeader.name = this.pageDesigner.getValidName('groupHeader');
+                if (band.groupHeader) {
+                    groupHeader.parentBand = band.groupHeader;
+                }
+                groupHeader.dataBand = band;
+                band.groupHeader = groupHeader;
+                this.pageDesigner.addBand(groupHeader);
+                groupHeader.footer = new GroupFooter();
+                groupHeader.footer.name = this.pageDesigner.getValidName('groupFooter');
+                groupHeader.footer.header = groupHeader;
+                this.pageDesigner.addBand(groupHeader.footer);
+            }
+            createSizer(bandDesigner) {
+                // sizer
+                let sizer = katrid.drawing.rect(this.x, this._headerHeight + this.height, this.width, this._sizerHeight, { class: 'band-sizer' });
+                sizer.$el.addEventListener('pointerdown', event => this._sizerMouseDown(event));
+                sizer.$el.addEventListener('pointerup', event => this._sizerMouseUp(event));
+                sizer.$el.addEventListener('pointermove', event => this._sizerMouseMove(event));
+                this.sizer = sizer;
+                return sizer;
+            }
+            _sizerMouseDown(event) {
+                this._resizing = true;
+                event.target.setPointerCapture(event.pointerId);
+                this._dy = event.offsetY;
+                event.stopPropagation();
+                // create temp sizer
+                // let tempSizer = katrid.drawing.rect(this.x, this.y + this._headerHeight + this.height, this.width, this._sizerHeight, {class: 'band-sizer'});
+                // this._tempSizer = tempSizer;
+                // this.bandDesign.append(tempSizer);
+                this.redraw();
+            }
+            _sizerMouseMove(event) {
+                if (this._resizing) {
+                    event.stopPropagation();
+                    event.preventDefault();
+                    this.sizerMoveBy(event.offsetY - this._dy);
+                    this._dy = event.offsetY;
+                }
+            }
+            _sizerMouseUp(event) {
+                this._resizing = false;
+                event.target.releasePointerCapture(event.pointerId);
+                event.stopPropagation();
+                // reorder bands
+                this.pageDesigner.invalidateBands();
+            }
+            sizerMoveBy(dy) {
+                if (this.pageDesigner?.zoom !== 100) {
+                    dy = dy / (this.pageDesigner.zoom / 100);
+                }
+                // apply new size to band
+                this.height += dy;
+                this.pageDesigner.invalidateBands();
+            }
+            destroyDesigner() {
+                if (this.pageDesigner) {
+                    this.pageDesigner.removeBand(this);
+                }
+            }
+            redraw() {
+                super.redraw();
+                this.width = this.page.width;
+                this.bandDesign.attr('transform', `translate(${this.x}, ${this.y})`);
+                this.sizer.attr('x', this.x);
+                this.sizer.attr('y', this._headerHeight + this.height);
+                this.sizer.attr('width', this.width);
+                this._rect.attr('height', this.height);
+                this._rect.attr('width', this.width);
+                this._header.clear();
+                this._header.rect(0, 0, this.width, this._headerHeight);
+                this._header.text(10, this._headerHeight - 6, this.getHeaderCaption(), { fill: 'white' });
+            }
+            getClassByName(name) {
+                // try to find on registry
+                let cls = katrid.bi.componentRegistry[name];
+                if (cls)
+                    return cls;
+                return super.getClassByName(name);
+            }
+        }
+        report.Band = Band;
+        class DataBand extends Band {
+            get datasource() {
+                return this._datasource;
+            }
+            set datasource(value) {
+                this._datasource = value;
+            }
+            load(info) {
+                super.load(info);
+                if (info.datasource || info.groupHeader || info.header || info.footer || info.parent) {
+                    this.report.addLoadCallback(() => this.onLoad(info));
+                }
+            }
+            dump() {
+                let d = super.dump();
+                if (this._datasource)
+                    d.datasource = this._datasource.name;
+                if (this.groupHeader)
+                    d.groupHeader = this.groupHeader.name;
+                if (this.header)
+                    d.header = this.header.name;
+                if (this.footer)
+                    d.footer = this.footer.name;
+                if (this.parentBand)
+                    d.parent = this.parentBand.name;
+                return d;
+            }
+            onLoad(info) {
+                const rep = this.report;
+                if (info.datasource)
+                    this._datasource = rep.findObject(info.datasource);
+                if (info.groupHeader)
+                    this.groupHeader = rep.findObject(info.groupHeader);
+                if (info.header)
+                    this.header = rep.findObject(info.header);
+                if (info.footer)
+                    this.footer = rep.findObject(info.footer);
+                if (info.parent)
+                    this.parentBand = rep.findObject(info.parent);
+            }
+        }
+        DataBand.type = 'DataBand';
+        report.DataBand = DataBand;
+        class PageHeader extends Band {
+        }
+        PageHeader.type = 'PageHeader';
+        report.PageHeader = PageHeader;
+        class PageFooter extends Band {
+        }
+        PageFooter.type = 'PageFooter';
+        report.PageFooter = PageFooter;
+        class ReportTitle extends Band {
+        }
+        ReportTitle.type = 'ReportTitle';
+        report.ReportTitle = ReportTitle;
+        class HeaderBand extends Band {
+            remove() {
+                super.remove();
+                if (this.parent)
+                    this.parent.header = null;
+            }
+        }
+        HeaderBand.type = 'HeaderBand';
+        report.HeaderBand = HeaderBand;
+        class FooterBand extends Band {
+            remove() {
+                super.remove();
+                if (this.parent)
+                    this.parent.footer = null;
+            }
+        }
+        FooterBand.type = 'FooterBand';
+        report.FooterBand = FooterBand;
+        class GroupHeader extends Band {
+            remove() {
+                super.remove();
+                if (this.footer)
+                    this.footer.destroyDesigner();
+            }
+            onRemoveObjectNotification(obj) {
+                super.onRemoveObjectNotification(obj);
+                if (obj === this.footer)
+                    this.remove();
+                else if (obj === this.parent) {
+                    if (this.parent.parent)
+                        this.parent = this.parent.parent;
+                    else
+                        this.parent = null;
+                }
+            }
+            dump() {
+                let d = super.dump();
+                if (this.expression)
+                    d.expression = this.expression;
+                if (this.footer)
+                    d.footer = this.footer.name;
+                if (this.parentBand)
+                    d.parent = this.parentBand.name;
+                return d;
+            }
+            load(info) {
+                super.load(info);
+                this.expression = info.expression || '';
+                if (info.parent || info.footer) {
+                    this.report.addLoadCallback(() => this.onLoad(info));
+                }
+            }
+            onLoad(info) {
+                if (info.parent) {
+                    this.parentBand = this.report.findObject(info.parent);
+                }
+                if (info.footer) {
+                    this.footer = this.report.findObject(info.footer);
+                }
+            }
+        }
+        GroupHeader.type = 'GroupHeader';
+        report.GroupHeader = GroupHeader;
+        class GroupFooter extends Band {
+            remove() {
+                super.remove();
+                if (this.header) {
+                    this.header.remove();
+                }
+            }
+            load(info) {
+                super.load(katrid.data);
+                if (info.header) {
+                    this.report.addLoadCallback(() => this.onLoad(info));
+                }
+            }
+            onLoad(info) {
+                if (info.header) {
+                    this.header = this.report.findObject(info.header);
+                }
+            }
+        }
+        GroupFooter.type = 'GroupFooter';
+        report.GroupFooter = GroupFooter;
+        class SummaryBand extends Band {
+        }
+        SummaryBand.type = 'SummaryBand';
+        report.SummaryBand = SummaryBand;
+    })(report = katrid.report || (katrid.report = {}));
+})(katrid || (katrid = {}));
+/// <reference path="bands.ts" />
+/// <reference path="../../../design/page.ts" />
+var katrid;
+(function (katrid) {
+    var report;
+    (function (report) {
+        class BandedObjectDesigner extends katrid.design.WidgetDesigner {
+            _mouseUp() {
+                // check objects moved to another band or band needs to increase the height
+                if (this.moved) {
+                    for (let obj of this.designer.selection) {
+                        const py = this.pageY;
+                        if (!(py >= obj.parent.clientY && py <= (obj.parent.clientY + obj.parent.height))) {
+                            for (let b of this.page.bands)
+                                if (b !== obj.parent) {
+                                    if (py >= b.clientY && py <= (b.clientY + b.height)) {
+                                        // object moved
+                                        this.moveToParent(b);
+                                    }
+                                }
+                        }
+                    }
+                }
+            }
+        }
+        report.BandedObjectDesigner = BandedObjectDesigner;
+        class BandDesigner extends katrid.bi.PageDesigner {
+            defaultProps() {
+                super.defaultProps();
+                this.snapToGrid = true;
+            }
+            removeObjectNotification() {
+            }
+            create() {
+                super.create();
+                let pattern = katrid.drawing.draw('pattern', {
+                    id: 'grid',
+                    width: this.gridX * 2,
+                    height: this.gridY * 2,
+                    patternUnits: 'userSpaceOnUse'
+                });
+                pattern.path({ d: 'M8 0 L0 0 0 8', fill: 'none', stroke: '#e9e9e9', 'stroke-width': 0.5 });
+                let defs = katrid.drawing.draw('defs');
+                this.append(defs);
+                defs.append(pattern);
+            }
+            loadBands() {
+                try {
+                    this.loading = true;
+                    for (const b of this.page.bands) {
+                        // load band
+                        this.addBand(b);
+                    }
+                }
+                finally {
+                    this.loading = false;
+                }
+                this.invalidateBands();
+            }
+            addBand(band) {
+                const bandedPage = this.page;
+                band.page = bandedPage;
+                if (!bandedPage.bands.includes(band)) {
+                    bandedPage.addBand(band);
+                }
+                band.pageDesigner = this;
+                band.createDesigner();
+                if (!this.loading) {
+                    this.invalidateBands();
+                }
+                for (const obj of band.objects) {
+                    band.appendToDesigner(obj);
+                }
+                this.onNotification?.(band, 'add');
+            }
+            newBand(bandType) {
+                let b;
+                switch (bandType) {
+                    case 'PageHeader':
+                        b = new report.PageHeader();
+                        break;
+                    case 'ReportTitle':
+                        b = new report.ReportTitle();
+                        break;
+                    case 'DataBand':
+                        b = new report.DataBand();
+                        break;
+                    case 'GroupHeader':
+                        b = new report.GroupHeader();
+                        break;
+                    case 'GroupFooter':
+                        b = new report.GroupFooter();
+                        break;
+                    case 'SummaryBand':
+                        b = new report.SummaryBand();
+                        break;
+                    case 'PageFooter':
+                        b = new report.PageFooter();
+                        break;
+                }
+                b.name = this.getValidName(bandType);
+                this.addBand(b);
+                return b;
+            }
+            getValidName(prefix) {
+                return this.report.getValidName(prefix);
+            }
+            invalidate() {
+                this.invalidateBands();
+            }
+            invalidateBands() {
+                // disable notifications
+                this.destroyGrabHandles();
+                let bands = [];
+                let page = this.page;
+                for (let b of page.bands)
+                    if (b instanceof report.PageHeader) {
+                        bands.push(b);
+                    }
+                for (let b of page.bands)
+                    if (b instanceof report.ReportTitle) {
+                        bands.push(b);
+                    }
+                for (let b of page.bands)
+                    if (b instanceof report.DataBand) {
+                        bands = bands.concat(this._rearrangeBand(b));
+                    }
+                for (let b of page.bands)
+                    if (b instanceof report.SummaryBand) {
+                        bands.push(b);
+                    }
+                for (let b of page.bands)
+                    if (b instanceof report.PageFooter) {
+                        bands.push(b);
+                    }
+                for (let b of page.bands) {
+                    // b.destroyDesigner();
+                    // Array.from(b.objects).forEach(child => child.destroyDesigner());
+                }
+                let y = 0;
+                for (let b of bands) {
+                    // recreate bands designers
+                    b.y = y;
+                    b.redraw();
+                    y += b.totalHeight;
+                }
+                page.bands = bands;
+                page.objects = bands;
+                this.adjustPageHeight();
+            }
+            getDesignerHeight() {
+                let page = this.page;
+                let h = 0;
+                for (let b of page.bands)
+                    h += b.totalHeight;
+                return h;
+            }
+            adjustPageHeight() {
+                this.resize(this.width, this.getDesignerHeight());
+            }
+            _resize() {
+                super._resize();
+                // adjust bands width
+                const page = this.page;
+                for (let b of page.bands) {
+                    b.width = this.width;
+                    b.redraw();
+                }
+            }
+            _rearrangeBand(b) {
+                let bands = [];
+                if (b.header) {
+                    bands.push(b.header);
+                }
+                if (b.groupHeader) {
+                    let g = b.groupHeader;
+                    bands.push(g);
+                    while (g.parent) {
+                        bands.splice(0, 0, g.parentBand);
+                        g = g.parentBand;
+                    }
+                }
+                bands.push(b);
+                // find by child
+                if (b.groupHeader) {
+                    let g = b.groupHeader;
+                    if (g.footer) {
+                        bands.push(g.footer);
+                        while (g.parent) {
+                            bands.push(g.parentBand.footer);
+                            g = g.parentBand;
+                        }
+                    }
+                }
+                if (b.footer) {
+                    bands.push(b.footer);
+                }
+                return bands;
+            }
+            get selectedBand() {
+                return this._selectedBand;
+            }
+            set selectedBand(value) {
+                // toggle selected css class
+                if (this._selectedBand) {
+                    this._selectedBand.bandDesign.$el.classList.remove('selected');
+                }
+                this._selectedBand = value;
+                if (value) {
+                    value.bandDesign.$el.classList.add('selected');
+                    this.selection.push(value);
+                    this.onSelectionChange();
+                }
+            }
+            createGrabHandles(obj) {
+                if (!(obj instanceof report.Band)) {
+                    super.createGrabHandles(obj);
+                }
+            }
+            removeBand(band) {
+                band.bandDesign.remove();
+                this.page.removeBand(band);
+                this.invalidateBands();
+            }
+            onKeyDown(event) {
+                if (this.selectedBand) {
+                    if (event.key === 'Delete' && !event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey) {
+                        this.removeBand(this.selectedBand);
+                    }
+                }
+                else {
+                    super.onKeyDown(event);
+                }
+            }
+            applySelectionBox(rect) {
+                super.applySelectionBox(rect);
+                if (!this.selection.length) {
+                    let selBand;
+                    for (let b of this.page.bands)
+                        if (katrid.drawing.rectInRect(rect, b.bandDesign.$el.getBoundingClientRect())) {
+                            selBand = b;
+                        }
+                    this.selectedBand = selBand;
+                }
+            }
+            onSelectionChange() {
+                super.onSelectionChange();
+                if (!this.selection.length || (this.selection.length === 1 && !(this.selection[0] instanceof report.Band))) {
+                    this.selectedBand = null;
+                }
+            }
+            moveObjectToBand(obj, band) {
+                let ny = obj.clientY - band.clientY;
+                obj.remove();
+                obj.y = ny;
+                obj.redraw();
+                band.addObject(obj);
+            }
+            onSelectionMoved() {
+                super.onSelectionMoved();
+                // check objects moved to another band or band needs to increase the height
+                for (let obj of this.selection) {
+                    if (!obj.parent)
+                        continue;
+                    let py = obj.clientY;
+                    if (!(py >= obj.parent.clientY && py <= (obj.parent.clientY + obj.parent.height))) {
+                        for (let b of this.page.bands)
+                            if (b !== obj.parent) {
+                                if (py >= b.clientY && py <= (b.clientY + b.height)) {
+                                    // object moved
+                                    this.moveObjectToBand(obj, b);
+                                    break;
+                                }
+                            }
+                    }
+                }
+            }
+            toolItemDragOver(evt) {
+                let target = evt.target;
+                if (target.closest('.band-designer'))
+                    evt.preventDefault();
+            }
+            createWidget(widgetName, target, x, y) {
+                let band = katrid.data(target.closest('.band-designer'), 'band');
+                x -= band.x;
+                y -= band.clientY;
+                let obj;
+                switch (widgetName) {
+                    case 'text':
+                        let text = obj = new katrid.drawing.Text();
+                        text.name = this.getValidName('text');
+                        text.text = text.name;
+                        text.x = x;
+                        text.y = y;
+                        band.addObject(text);
+                        obj = text;
+                        break;
+                    case 'image':
+                        const img = obj = new katrid.drawing.Image();
+                        img.name = this.getValidName('image');
+                        img.x = x;
+                        img.y = y;
+                        band.addObject(img);
+                        break;
+                    case 'barcode':
+                        let bc = new katrid.drawing.Barcode();
+                        bc.name = this.getValidName('barcode');
+                        bc.x = x;
+                        bc.y = y;
+                        band.addObject(bc);
+                        obj = bc;
+                        break;
+                }
+                this.setSelection([obj]);
+            }
+        }
+        report.BandDesigner = BandDesigner;
+    })(report = katrid.report || (katrid.report = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../../../design/editors.ts" />
+var katrid;
+(function (katrid) {
+    var report;
+    (function (report) {
+        var ComponentEditor = katrid.design.ComponentEditor;
+        var ComponentProperty = katrid.design.ComponentProperty;
+        var BackgroundProperty = katrid.design.BackgroundProperty;
+        var BooleanProperty = katrid.design.BooleanProperty;
+        var IntegerProperty = katrid.design.IntegerProperty;
+        var SelectProperty = katrid.design.SelectProperty;
+        var SizeProperty = katrid.design.SizeProperty;
+        var StringProperty = katrid.design.StringProperty;
+        var registerComponentEditor = katrid.design.registerComponentEditor;
+        class BandEditor extends ComponentEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new IntegerProperty('height', { caption: 'Height' }), new SelectProperty('autoSize', {
+                    caption: 'Auto Size',
+                    options: {
+                        0: 'None', 1: 'Can shrink', 2: 'Can grow', 3: 'Auto'
+                    }
+                }), new BackgroundProperty('background'), new BooleanProperty('canGrow', { caption: 'Can Grow' }), new BooleanProperty('canShrink', { caption: 'Can Shrink' }));
+            }
+        }
+        report.BandEditor = BandEditor;
+        class DataBandEditor extends BandEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new katrid.design.ComponentProperty('datasource', {
+                    caption: 'Data Source',
+                    onGetValues: (typeEditor) => {
+                        return typeEditor.designer.report.datasources.map(ds => ({ value: ds, text: ds.name }));
+                    },
+                }), new ComponentProperty('parent', {
+                    caption: 'Master Band',
+                    onGetValues: (typeEditor) => typeEditor.targetObject.page.bands
+                        .filter(band => band !== typeEditor.targetObject)
+                        .map(band => ({ value: band, text: band.name })),
+                }));
+            }
+        }
+        report.DataBandEditor = DataBandEditor;
+        class GroupHeaderEditor extends BandEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new StringProperty('expression', { caption: 'Expression' }));
+            }
+        }
+        report.GroupHeaderEditor = GroupHeaderEditor;
+        class PageSizeProperty extends SizeProperty {
+            createEditor(typeEditor) {
+                const editor = super.createEditor(typeEditor);
+                const sel = document.createElement('select');
+                sel.className = 'form-select';
+                sel.innerHTML = `
+      <option></option>
+      <option value="Custom">Custom</option>
+      <option value="Responsive">Responsive</option>
+      <option value="A4">A4</option>
+      <option value="A3">A3</option>
+      <option value="WebSmall">Web Small</option>
+      <option value="WebMedium">Web Medium</option>
+      <option value="WebLarge">Web Large</option>
+      `;
+                let div = document.createElement('div');
+                div.className = 'col-12';
+                div.appendChild(sel);
+                sel.addEventListener('change', () => {
+                    typeEditor.targetObject['pageSize'] = sel.value;
+                });
+                sel.value = typeEditor.targetObject['pageSize'];
+                editor.insertAdjacentElement('afterbegin', div);
+                let selOrientation = document.createElement('select');
+                selOrientation.className = 'form-select';
+                selOrientation.innerHTML = `
+      <option value="0">Portrait</option>
+      <option value="1">Landscape</option>
+      `;
+                selOrientation.value = typeEditor.targetObject['orientation'];
+                selOrientation.addEventListener('change', () => {
+                    typeEditor.targetObject['orientation'] = selOrientation.value;
+                });
+                div.appendChild(selOrientation);
+                return editor;
+            }
+        }
+        class PageEditor extends ComponentEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new PageSizeProperty('size'), new StringProperty('margins', { caption: 'Margins' }));
+            }
+        }
+        report.PageEditor = PageEditor;
+        registerComponentEditor(report.Band, BandEditor);
+        registerComponentEditor(report.DataBand, DataBandEditor);
+        registerComponentEditor(report.GroupHeader, GroupHeaderEditor);
+        registerComponentEditor(katrid.report.BandedPage, PageEditor);
+        //registerComponentEditor(ImageObject, ImageEditor);
+        //registerComponentEditor(BarcodeObject, ImageEditor);
+    })(report = katrid.report || (katrid.report = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var report;
+    (function (report) {
+        class BandedPage extends report.BasePage {
+            constructor() {
+                super(...arguments);
+                this.bands = [];
+            }
+            defaultProps() {
+                super.defaultProps();
+                this._pageSize = 'A4';
+                const { width, height } = katrid.drawing.PageSize.A4;
+                this.width = width;
+                this.height = height;
+            }
+            _createDesigner() {
+                const des = new report.BandDesigner(this);
+                des.loadBands();
+                return des;
+            }
+            addBand(band) {
+                band.page = this;
+                band.parent = this;
+                this.bands.push(band);
+                band.width = this.width;
+            }
+            children() {
+                return this.bands;
+            }
+            *allObjects() {
+                yield* super.allObjects();
+                for (let band of this.bands) {
+                    yield band;
+                }
+            }
+            removeBand(band) {
+                if (this.bands.indexOf(band) > -1) {
+                    this.bands.splice(this.bands.indexOf(band), 1);
+                }
+            }
+            redraw() {
+                this.bands?.forEach(b => b.redraw());
+            }
+            dump() {
+                const d = super.dump();
+                d.bands = this.bands.map(b => b.dump());
+                return d;
+            }
+            load(info) {
+                super.load(info);
+                if (info.bands) {
+                    this.bands = info.bands.map((b) => {
+                        let cls = katrid.report[b.type];
+                        if (!cls)
+                            throw Error('Class not found ' + b.type);
+                        const band = new cls();
+                        band.parent = this;
+                        band.page = this;
+                        band.load(b);
+                        return band;
+                    });
+                }
+            }
+        }
+        report.BandedPage = BandedPage;
+    })(report = katrid.report || (katrid.report = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var BI;
@@ -4471,6 +10010,567 @@ var Katrid;
         BI.ReportPreview = ReportPreview;
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class AlignmentTool {
+            constructor() {
+                this.create();
+            }
+            create() {
+                this.el = document.createElement('div');
+                this.el.className = 'alignment-tool';
+                const tb = new katrid.ui.Toolbar(this.el);
+                // align left
+                let btn = tb.addButton('<i class="fa-duotone fa-objects-align-left"></i>');
+                btn.title = 'Align Left';
+                btn.addEventListener('click', () => this.alignLeft());
+                // align center horizontal
+                btn = tb.addButton('<i class="fa-duotone fa-objects-align-center-horizontal"></i>');
+                btn.title = 'Align Center Horizontal';
+                btn.addEventListener('click', () => this.alignCenterHorizontal());
+                // align right
+                btn = tb.addButton('<i class="fa-duotone fa-objects-align-right"></i>');
+                btn.title = 'Align Right';
+                btn.addEventListener('click', () => this.alignRight());
+                // align top
+                btn = tb.addButton('<i class="fa-duotone fa-objects-align-top"></i>');
+                btn.title = 'Align Top';
+                btn.addEventListener('click', () => this.alignTop());
+                // align center vertical
+                btn = tb.addButton('<i class="fa-duotone fa-objects-align-center-vertical"></i>');
+                btn.title = 'Align Center Vertical';
+                btn.addEventListener('click', () => this.alignCenterVertical());
+                // align bottom
+                btn = tb.addButton('<i class="fa-duotone fa-objects-align-bottom"></i>');
+                btn.title = 'Align Bottom';
+                btn.addEventListener('click', () => this.alignBottom());
+                // // distribute horizontally
+                // btn = tb.addButton('<i class="fa-duotone fa-distribute-spacing-horizontal"></i>');
+                // btn.title = 'Distribute Horizontally';
+                // btn.addEventListener('click', () => this.distributeHorizontally());
+                // // distribute vertically
+                // btn = tb.addButton('<i class="fa-duotone fa-distribute-spacing-vertical"></i>');
+                // btn.title = 'Distribute Vertically';
+                // btn.addEventListener('click', () => this.distributeVertically() );
+            }
+            alignLeft() {
+                if (this.designer.selection.length <= 1)
+                    return;
+                const minX = Math.min(...this.designer.selection.map(s => s.x));
+                this.designer.beginChanges('move');
+                for (const s of this.designer.selection) {
+                    s.designer.moveTo(minX, s.y);
+                }
+                this.designer.endChanges();
+                this.designer.refreshGrabs();
+            }
+            alignCenterHorizontal() {
+                if (this.designer.selection.length <= 1)
+                    return;
+                const midX = Math.min(...this.designer.selection.map(s => s.x + s.width / 2));
+                this.designer.beginChanges('move');
+                for (const s of this.designer.selection) {
+                    s.designer.moveTo(midX - s.width / 2, s.y);
+                }
+                this.designer.endChanges();
+                this.designer.refreshGrabs();
+            }
+            alignRight() {
+                if (this.designer.selection.length <= 1)
+                    return;
+                const maxX = Math.max(...this.designer.selection.map(s => s.x + s.width));
+                this.designer.beginChanges('move');
+                for (const s of this.designer.selection) {
+                    s.designer.moveTo(maxX - s.width, s.y);
+                }
+                this.designer.endChanges();
+                this.designer.refreshGrabs();
+            }
+            alignTop() {
+                if (this.designer.selection.length <= 1)
+                    return;
+                const minY = Math.min(...this.designer.selection.map(s => s.y));
+                this.designer.beginChanges('move');
+                for (const s of this.designer.selection) {
+                    s.designer.moveTo(s.x, minY);
+                }
+                this.designer.endChanges();
+                this.designer.refreshGrabs();
+            }
+            alignCenterVertical() {
+                if (this.designer.selection.length <= 1)
+                    return;
+                const midY = Math.min(...this.designer.selection.map(s => s.y + s.height / 2));
+                this.designer.beginChanges('move');
+                for (const s of this.designer.selection) {
+                    s.designer.moveTo(s.x, midY - s.height / 2);
+                }
+                this.designer.endChanges();
+                this.designer.refreshGrabs();
+            }
+            alignBottom() {
+                if (this.designer.selection.length <= 1)
+                    return;
+                const maxY = Math.max(...this.designer.selection.map(s => s.y + s.height));
+                this.designer.beginChanges('move');
+                for (const s of this.designer.selection) {
+                    s.designer.moveTo(s.x, maxY - s.height);
+                }
+                this.designer.endChanges();
+                this.designer.refreshGrabs();
+            }
+            distributeHorizontally() {
+                // distribute horizontally proportionally
+            }
+            distributeVertically() {
+                // distribute vertically proportionally
+            }
+        }
+        bi.AlignmentTool = AlignmentTool;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class BaseToolWindow {
+            constructor(container) {
+                this.container = container;
+                this.create();
+                if (container) {
+                    container.appendChild(this.el);
+                }
+            }
+            getHeaderTemplate() {
+                return `<div class="tool-window-header"></div><hr>`;
+            }
+            create() {
+                this.el = document.createElement('div');
+                this.el.className = 'tool-window-content';
+                this.el.innerHTML = this.getHeaderTemplate();
+            }
+            hide() {
+                this.el.style.display = 'none';
+            }
+            show() {
+                this.el.style.display = '';
+            }
+        }
+        bi.BaseToolWindow = BaseToolWindow;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+/// <reference path="index.ts" />
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class DataExplorer extends bi.BaseToolWindow {
+            getHeaderTemplate() {
+                return `
+      <div class="tool-window-header">
+        <i class="fa fa-fw fa-database"></i> Data
+      </div>
+      <div>
+          <button type="button" id="btn-new" class="btn btn-light new-datasource">
+            Novo Data Source
+          </button>
+      </div>
+      <hr>
+      `;
+            }
+            create() {
+                super.create();
+                this.el.classList.add('data-explorer');
+                this.table = document.createElement('table');
+                this.table.innerHTML = '<tbody></tbody>';
+                this.el.appendChild(this.table);
+                this.el.querySelector('#btn-new').addEventListener('click', () => {
+                    if (this.onNewDataSource)
+                        this.registerDataSource(this.onNewDataSource());
+                });
+            }
+            registerDataSource(dataSource) {
+                let tr = document.createElement('tr');
+                $(tr).data('datasource', dataSource);
+                tr.className = 'datasource-item tree-item';
+                let td1 = document.createElement('td');
+                let td2 = document.createElement('td');
+                let btnEdit = document.createElement('button');
+                btnEdit.className = 'btn btn-light';
+                btnEdit.addEventListener('dblclick', evt => this.editDataSource($(evt.target.closest('tr')).data('datasource')));
+                btnEdit.addEventListener('click', evt => this.onSelectionChange?.(dataSource));
+                btnEdit.title = 'Double click to edit';
+                btnEdit.innerText = dataSource.name;
+                let btnDelete = document.createElement('button');
+                btnDelete.className = 'btn btn-light';
+                btnDelete.addEventListener('click', evt => {
+                    this.onRemoveDataSource?.(dataSource);
+                    tr.remove();
+                });
+                btnDelete.innerHTML = '<i class="fa fas fa-times"></i>';
+                btnDelete.title = 'Remove Data Source';
+                tr.append(td1, td2);
+                td1.appendChild(btnEdit);
+                td2.append(btnDelete);
+                this.table.tBodies[0].appendChild(tr);
+            }
+            clear() {
+                this.table.tBodies[0].innerHTML = '';
+            }
+        }
+        bi.DataExplorer = DataExplorer;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+/// <reference path="index.ts" />
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        const CONTROL_TAGS = ['INPUT', 'SELECT', 'TEXTAREA'];
+        class ObjectInspector extends bi.BaseToolWindow {
+            getHeaderTemplate() {
+                return '<div class="tool-window-header"><i class="fa fa-fw fa-cog"></i> Properties</div>';
+            }
+            create() {
+                super.create();
+                this.el.classList.add('properties-editor');
+                this.content = document.createElement('div');
+                this.el.appendChild(this.content);
+                this.alignmentTool = new bi.AlignmentTool();
+                this.el.insertAdjacentElement("afterbegin", this.alignmentTool.el);
+                this.el.addEventListener('keydown', this._keyDown);
+            }
+            _keyDown(evt) {
+                if (CONTROL_TAGS.includes(evt.target.tagName)) {
+                    evt.stopPropagation();
+                }
+            }
+            get designer() {
+                return this._designer;
+            }
+            set designer(value) {
+                this._designer = value;
+                this.alignmentTool.designer = value;
+            }
+            setSelection(selection) {
+                this.selection = selection;
+                if (selection.length) {
+                    for (let sel of selection) {
+                        this.editor = this.createComponentEditor(sel);
+                    }
+                }
+                else {
+                    this.content.innerHTML = '';
+                }
+            }
+            getComponentEditor(component) {
+                let typeEditor = katrid.design.getComponentEditor(component.constructor);
+                return new typeEditor(component, this.designer);
+            }
+            createComponentEditor(component) {
+                this.content.innerHTML = '';
+                let editor = this.getComponentEditor(component);
+                this.content.appendChild(editor.createEditor());
+                return editor;
+            }
+            refresh() {
+                this.setSelection(this.selection);
+            }
+        }
+        bi.ObjectInspector = ObjectInspector;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class OutlineExplorer extends bi.BaseToolWindow {
+            getHeaderTemplate() {
+                return `
+        <div class="tool-window-header"><i class="fa fa-fw fa-sitemap"></i> Outline</div>
+        <hr>
+      `;
+            }
+            create() {
+                super.create();
+                this.el.classList.add('outline-explorer');
+                this.treeView = new katrid.ui.TreeView(this.el.appendChild(document.createElement('div')));
+            }
+            objectNotification(obj, event) {
+                switch (event) {
+                    case 'add':
+                        this.addObject(obj);
+                        break;
+                    case 'remove':
+                        this.removeObject(obj);
+                        break;
+                    case 'rename':
+                        this.renameObject(obj);
+                }
+            }
+            clear() {
+                this.treeView.clear();
+            }
+            loadReport(report) {
+                for (const p of report.pages) {
+                    this.addObject(p);
+                }
+            }
+            _findNode(obj) {
+                for (let n of this.treeView.all()) {
+                    if (n.data.object === obj) {
+                        return n;
+                    }
+                }
+            }
+            addObject(obj) {
+                const name = this.getObjectText(obj);
+                let parentNode;
+                // find parent
+                if (obj.parent) {
+                    parentNode = this._findNode(obj.parent);
+                }
+                let n = this.treeView.addItem({ id: obj.id, text: name, object: obj }, parentNode, { onSelect: () => this.selectObject(obj) });
+                const children = obj.children?.();
+                if (children) {
+                    for (const c of children) {
+                        this.addObject(c);
+                    }
+                }
+                return n;
+            }
+            removeObject(obj) {
+                let n = this._findNode(obj);
+                if (n) {
+                    n.remove();
+                }
+            }
+            renameObject(obj) {
+                let n = this._findNode(obj);
+                if (n) {
+                    n.setText(this.getObjectText(obj));
+                }
+            }
+            getObjectText(obj) {
+                return obj.name || `(${obj.constructor.name})`;
+            }
+            selectObject(obj) {
+                this.onSelectItem?.(obj);
+            }
+        }
+        bi.OutlineExplorer = OutlineExplorer;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class PageExplorer extends bi.BaseToolWindow {
+            getHeaderTemplate() {
+                return `<div class="tool-window-header"><i class="fa fa-fw fa-file"></i> Pages</div>
+<div>
+<button class="btn btn-light">New Page</button>
+</div>
+      <hr>`;
+            }
+            create() {
+                super.create();
+                this.el.classList.add('page-explorer');
+            }
+        }
+        bi.PageExplorer = PageExplorer;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class ParamExplorer extends bi.BaseToolWindow {
+            getHeaderTemplate() {
+                return `
+        <div class="tool-window-header"><i class="fa fa-fw fa-database"></i> Parameters</div>
+        <div>
+          <button type="button" id="btn-new-param" class="btn btn-light new-param">
+            Novo Parâmetro
+          </button>
+        </div>
+        <hr>
+      `;
+            }
+            create() {
+                super.create();
+                this.el.classList.add('param-explorer');
+            }
+        }
+        bi.ParamExplorer = ParamExplorer;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class ToolBox extends bi.BaseToolWindow {
+            getHeaderTemplate() {
+                return `
+        <div class="tool-window-header"><i class="fa fa-fw fa-toolbox"></i> Objects</div>
+        <hr>
+      `;
+            }
+            create() {
+                super.create();
+                this.el.classList.add('toolbox');
+                let div = document.createElement('div');
+                div.innerHTML = `
+      <div>
+        <div class="toolbox-menu col-12">
+          <div class="row">
+            <div class="col-4 toolbox-item" data-widget="text">
+              <div>
+                <i class="fa-duotone fa-2x  fa-fw fa-text"></i>
+              </div>
+              <div class="widget-label">
+                ${katrid.i18n.gettext('Text')}
+              </div>
+            </div>
+            <div class="col-4 toolbox-item" data-widget="image">
+              <div>
+                 <i class="fa-duotone fa-2x fa-fw fa-image"></i>
+              </div>
+              <div class="widget-label">
+                ${katrid.i18n.gettext('Image')}
+              </div>
+            </div>
+            <div class="col-4 toolbox-item" data-widget="barcode">
+              <div>
+                 <i class="fa-duotone fa-2x fa-fw fa-barcode"></i>
+              </div>
+              <div class="widget-label">
+                ${katrid.i18n.gettext('Barcode')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="toolbox-header">
+          <i class="fas fa-fw fa-vector-square"></i> Gráficos
+        </div>
+        <div class="toolbox-menu col-12">
+          <div class="row">
+
+            <div class="col-4 toolbox-item" data-widget="bar">
+              <div>
+<i class="fa-duotone fa-2x fa-fw fa-chart-column"></i> 
+             </div>
+              <div class="widget-label">
+                ${katrid.i18n.gettext('Column')}
+              </div>
+            </div>
+
+            <div class="col-4 toolbox-item" data-widget="hbar">
+              <div>
+<i class="fa-duotone fa-2x fa-fw fa-chart-simple"></i> 
+             </div>
+              <div class="widget-label">
+                ${katrid.i18n.gettext('Bar')}
+              </div>
+            </div>
+
+            <div class="col-4 toolbox-item" data-widget="area-chart">
+              <div>
+<i class="fa-duotone fa-2x fa-fw fa-chart-area"></i> 
+             </div>
+              <div class="widget-label">
+                ${katrid.i18n.gettext('Area')}
+              </div>
+            </div>
+
+            <div class="col-4 toolbox-item" data-widget="line-chart">
+              <div>
+<i class="fa-duotone fa-2x fa-fw fa-chart-line-up"></i> 
+             </div>
+              <div class="widget-label">
+                ${katrid.i18n.gettext('Line')}
+              </div>
+            </div>
+
+            <div class="col-4 toolbox-item" data-widget="pie">
+              <div>
+<i class="fa-duotone fa-2x fa-fw fa-chart-pie"></i> 
+             </div>
+              <div class="widget-label">
+                 ${katrid.i18n.gettext('Pie')} 
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+                this.el.append(div);
+                this.el.querySelectorAll('.toolbox-item')
+                    .forEach((el, idx) => {
+                    el.setAttribute('draggable', 'true');
+                    el.addEventListener('dragstart', (evt) => {
+                        evt.dataTransfer.setData('text', el.getAttribute('data-widget'));
+                        // evt.dataTransfer.dropEffect = 'move';
+                    });
+                });
+                this.el.querySelectorAll('.toolbox-item img').forEach(el => el.setAttribute('draggable', 'false'));
+            }
+        }
+        bi.ToolBox = ToolBox;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class ZoomTool {
+            constructor(container, designer) {
+                this.container = container;
+                this.create();
+            }
+            create() {
+                let tb = new katrid.ui.Toolbar(this.container);
+                tb.el.classList.add('floating-toolbar', 'btn-group');
+                tb.el.classList.remove('toolbar-action-buttons');
+                tb.addButton('<i class="fa fa-fw fa-minus-square"></i>').addEventListener('click', () => this.zoomOut());
+                this.buttonReset = tb.addButton('100%');
+                this.buttonReset.addEventListener('click', () => this.zoomReset());
+                tb.addButton('<i class="fa fa-fw fa-plus-square"></i>').addEventListener('click', () => this.zoomIn());
+            }
+            get designer() {
+                return this._designer;
+            }
+            set designer(value) {
+                this._designer = value;
+                if (value) {
+                    this.setZoomText(value.zoom);
+                }
+                else {
+                    this.setZoomText(100);
+                }
+            }
+            setZoomText(value) {
+                this.buttonReset.textContent = `${value}%`;
+            }
+            zoomIn() {
+                this.designer.zoom += 5;
+                this.setZoomText(this.designer.zoom);
+            }
+            zoomOut() {
+                this.designer.zoom -= 5;
+                this.setZoomText(this.designer.zoom);
+            }
+            zoomReset() {
+                this.designer.zoom = 100;
+                this.setZoomText(this.designer.zoom);
+            }
+        }
+        bi.ZoomTool = ZoomTool;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Components;
@@ -4530,9 +10630,9 @@ var Katrid;
         }
     };
     if (Katrid.isMobile)
-        document.body.classList.add('mobile');
+        document?.body?.classList.add('mobile');
     else
-        document.body.classList.add('desktop');
+        document?.body?.classList.add('desktop');
     let initialized = false;
     function init() {
         if (!Katrid.Services.Service.adapter)
@@ -4578,6 +10678,18 @@ var katrid;
         }
     }
     katrid.init = init;
+    katrid.elementDataSymbol = Symbol('data');
+    function data(el, key, value) {
+        if (!key && value === undefined) {
+            return el[katrid.elementDataSymbol];
+        }
+        if (value === undefined) {
+            return el[katrid.elementDataSymbol]?.[key];
+        }
+        el[katrid.elementDataSymbol] ?? (el[katrid.elementDataSymbol] = {});
+        el[katrid.elementDataSymbol][key] = value;
+    }
+    katrid.data = data;
 })(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -7087,6 +13199,754 @@ var katrid;
 })(katrid || (katrid = {}));
 var katrid;
 (function (katrid) {
+    var design;
+    (function (design) {
+        class ClipboardManager {
+            constructor(designer) {
+                this.designer = designer;
+            }
+            async getClipboardData() {
+                let data = await navigator.clipboard.readText();
+                if (data) {
+                    data = JSON.parse(data);
+                    if (data.type === 'selection') {
+                        return data;
+                    }
+                }
+            }
+            prepareCopyData() {
+                const objects = this.designer.selection.map(obj => obj.dump());
+                return JSON.stringify({ type: 'selection', objects });
+            }
+            async copy() {
+                await navigator.clipboard.writeText(this.prepareCopyData());
+            }
+            pasteData(data) {
+                if (data.type !== 'selection') {
+                    console.error('Invalid clipboard data');
+                    return;
+                }
+                this.designer.clearSelection();
+                let objs = [];
+                for (let obj of data.objects) {
+                    // load objects
+                    const lo = this.designer.loadObject(obj);
+                    this.designer.addObject(lo).locked = false;
+                    this.designer.addToSelection(lo);
+                    objs.push(lo);
+                }
+                return objs;
+            }
+            async paste() {
+                const data = await this.getClipboardData();
+                if (data) {
+                    return this.pasteData(data);
+                }
+            }
+        }
+        design.ClipboardManager = ClipboardManager;
+    })(design = katrid.design || (katrid.design = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var design;
+    (function (design) {
+        class GrabHandle {
+            constructor(el) {
+                this.el = el;
+                this.width = 8;
+                this.height = 8;
+            }
+            set left(value) {
+                this.el.setAttribute('x', `${value}`);
+            }
+            set top(value) {
+                this.el.setAttribute('y', `${value}`);
+            }
+            set width(value) {
+                this.el.setAttribute('width', `${value}`);
+            }
+            set height(value) {
+                this.el.setAttribute('height', `${value}`);
+            }
+        }
+        class GrabHandles {
+            constructor(config) {
+                this._dragging = false;
+                this.gridX = 4;
+                this.gridY = 4;
+                this.snapToGrid = false;
+                this.container = config.container;
+                this.target = config.target;
+                this.onObjectResized = config.onObjectResized;
+                this.onObjectResizing = config.onObjectResizing;
+                this.designer = config.designer;
+                this.handles = [];
+                this.createHandles();
+                this.setPosition();
+                if (config.snapToGrid) {
+                    this.gridX = config.gridX;
+                    this.gridY = config.gridY;
+                    this.snapToGrid = true;
+                }
+            }
+            set dragging(value) {
+                this._dragging = value;
+                this.designer.resizing = value;
+            }
+            get dragging() {
+                return this._dragging;
+            }
+            createHandle() {
+                let h = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                h.classList.add('resize-handle');
+                this.handles.push(h);
+                return h;
+            }
+            clear() {
+                for (let handle of this.handles) {
+                    handle.remove();
+                }
+                this.handles = [];
+            }
+            setPosition() {
+                const rect = this.target.getDesignRect();
+                let handle = new GrabHandle(this.bottomLeft);
+                handle.left = rect.left - 3;
+                handle.top = rect.bottom - 5;
+                handle = new GrabHandle(this.middleLeft);
+                handle.left = rect.left - 3;
+                handle.top = rect.bottom - rect.height / 2 - 4;
+                handle = new GrabHandle(this.topLeft);
+                handle.left = rect.left - 3;
+                handle.top = rect.top - 3;
+                handle = new GrabHandle(this.topRight);
+                handle.left = rect.right - 4;
+                handle.top = rect.top - 3;
+                handle = new GrabHandle(this.middleRight);
+                handle.left = rect.right - 4;
+                handle.top = rect.bottom - rect.height / 2 - 4;
+                handle = new GrabHandle(this.bottomRight);
+                handle.left = rect.right - 4;
+                handle.top = rect.bottom - 5;
+                handle = new GrabHandle(this.topCenter);
+                handle.left = rect.right - rect.width / 2 - 4;
+                handle.top = rect.top - 3;
+                handle = new GrabHandle(this.bottomCenter);
+                handle.left = rect.right - rect.width / 2 - 4;
+                handle.top = rect.bottom - 5;
+            }
+            _setGrabHandle() {
+                this.topLeft.addEventListener('pointerdown', (evt) => {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    const targetHandle = evt.target;
+                    let ox = evt.clientX;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid) {
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    }
+                    this.dragging = true;
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = evt.clientY;
+                            let x = evt.clientX;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dx = x - ox;
+                            let dy = y - oy;
+                            if (dx || dy) {
+                                this.applyRect(dx, dy, -dx, -dy);
+                                if (dx)
+                                    ox = x;
+                                if (dy)
+                                    oy = y;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.topRight.addEventListener('pointerdown', (evt) => {
+                    const targetHandle = evt.target;
+                    let ox = evt.clientX;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid) {
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    }
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            let y = evt.clientY;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dx = x - ox;
+                            let dy = y - oy;
+                            if (dx || dy) {
+                                this.applyRect(0, dy, dx, -dy);
+                                if (dx)
+                                    ox = x;
+                                if (dy)
+                                    oy = y;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.setPointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.bottomRight.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    let ox = evt.clientX;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid) {
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    }
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            let y = evt.clientY;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dx = x - ox;
+                            let dy = y - oy;
+                            if (dx || dy) {
+                                this.applyRect(0, 0, dx, dy);
+                                if (dx)
+                                    ox = x;
+                                if (dy)
+                                    oy = y;
+                            }
+                        }
+                    };
+                    let onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.middleLeft.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    let ox = evt.clientX;
+                    if (this.snapToGrid)
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                            }
+                            let dx = x - ox;
+                            if (dx) {
+                                this.applyRect(dx, 0, -dx, 0);
+                                ox = x;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.middleRight.addEventListener('pointerdown', (evt) => {
+                    const targetHandle = evt.target;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    let ox = evt.clientX;
+                    if (this.snapToGrid)
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                    this.dragging = true;
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    let onmousemove = (evt) => {
+                        evt.preventDefault();
+                        evt.stopPropagation();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                            }
+                            let dx = x - ox;
+                            if (dx) {
+                                this.applyRect(0, 0, dx, 0);
+                                ox = x;
+                            }
+                        }
+                    };
+                    let onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.bottomCenter.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid)
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    let onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = evt.clientY;
+                            if (this.snapToGrid) {
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dy = y - oy;
+                            if (dy) {
+                                this.applyRect(0, 0, 0, dy);
+                                oy = y;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.topCenter.addEventListener('pointerdown', (evt) => {
+                    let targetHandle = evt.target;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid)
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = evt.clientY;
+                            if (this.snapToGrid) {
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dy = y - oy;
+                            if (dy) {
+                                this.applyRect(0, dy, 0, -dy);
+                                oy = y;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.bottomLeft.addEventListener('pointerdown', (evt) => {
+                    const targetHandle = evt.target;
+                    let ox = evt.clientX;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid) {
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    }
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            let y = evt.clientY;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dx = x - ox;
+                            let dy = y - oy;
+                            if (dx || dy) {
+                                this.applyRect(dx, 0, -dx, dy);
+                                if (dx)
+                                    ox = x;
+                                if (dy)
+                                    oy = y;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+            }
+            createHandles() {
+                let handle;
+                // bottom-left
+                this.bottomLeft = handle = this.createHandle();
+                handle.classList.add('bottom-left');
+                // middle-left
+                this.middleLeft = handle = this.createHandle();
+                handle.classList.add('middle-left');
+                // top-left
+                this.topLeft = handle = this.createHandle();
+                handle.classList.add('top-left');
+                // top-right
+                this.topRight = handle = this.createHandle();
+                handle.classList.add('top-right');
+                // middle-right
+                this.middleRight = handle = this.createHandle();
+                handle.classList.add('middle-right');
+                // bottom-right
+                this.bottomRight = handle = this.createHandle();
+                handle.classList.add('bottom-right');
+                // top-center
+                this.topCenter = handle = this.createHandle();
+                handle.classList.add('top-center');
+                // bottom-center
+                this.bottomCenter = handle = this.createHandle();
+                handle.classList.add('bottom-center');
+                this.container.append(...this.handles);
+                this.setPosition();
+                this._setGrabHandle();
+                return this;
+            }
+            resized() {
+                if (this.onObjectResized)
+                    this.onObjectResized({ target: this.target });
+            }
+            /** Apply a rect delta to designer selection */
+            applyRect(dx = 0, dy = 0, dw = 0, dh = 0) {
+                // apply zoom factor
+                if (this.designer && this.designer.zoom !== 100) {
+                    const factor = this.designer.zoom / 100;
+                    dx = dx / factor;
+                    dy = dy / factor;
+                    dw = dw / factor;
+                    dh = dh / factor;
+                }
+                if (this.target.designer) {
+                    this.target.designer.designApplyRect(dx, dy, dw, dh);
+                }
+                else {
+                    this.target.x += dx;
+                    this.target.y += dy;
+                    this.target.width += dw;
+                    this.target.height += dh;
+                }
+                this.setPosition();
+                this.onObjectResizing?.({ target: this.target });
+            }
+            destroy() {
+                for (let h of this.handles) {
+                    h.remove();
+                }
+                this.handles = [];
+            }
+        }
+        design.GrabHandles = GrabHandles;
+    })(design = katrid.design || (katrid.design = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../drawing/shapes.ts" />
+/// <reference path="widgets.ts" />
+var katrid;
+(function (katrid) {
+    var design;
+    (function (design) {
+        class TextWidget extends katrid.drawing.BaseWidget {
+            constructor(text) {
+                super();
+                this.text = text;
+            }
+            defaultProps() {
+                super.defaultProps();
+                this.width = 100;
+                this.height = 20;
+            }
+            get font() {
+                if (!this._font)
+                    this._font = { name: 'Helvetica', size: '9pt', color: '#000000' };
+                return this._font;
+            }
+            set font(value) {
+                this._font = value;
+                this.applyStyle();
+            }
+            get hAlign() {
+                return this._hAlign;
+            }
+            set hAlign(value) {
+                this._hAlign = value;
+                this.applyStyle();
+            }
+            get vAlign() {
+                return this._vAlign;
+            }
+            set vAlign(value) {
+                this._vAlign = value;
+                this.applyStyle();
+            }
+            applyStyle() {
+                this.designer.redraw(this);
+            }
+        }
+        design.TextWidget = TextWidget;
+    })(design = katrid.design || (katrid.design = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var design;
+    (function (design) {
+        const DEFAULT_CAPACITY = 100;
+        class UndoManager {
+            constructor(designer) {
+                this.designer = designer;
+                this.enabled = true;
+                this.stack = [];
+                this.index = -1;
+                this.capacity = DEFAULT_CAPACITY;
+            }
+            beginUpdate() {
+                this.enabled = false;
+            }
+            endUpdate() {
+                this.enabled = true;
+            }
+            add(action, data, description) {
+                if (!this.enabled) {
+                    return;
+                }
+                this.stack.splice(this.index + 1);
+                this.stack.push({ action, data, description });
+                this.index++;
+                if (this.stack.length > this.capacity) {
+                    this.stack.shift();
+                }
+            }
+            undo() {
+                try {
+                    this.enabled = false;
+                    if (this.index > -1) {
+                        this.undoEntry(this.stack[this.index]);
+                        if (this._redoEntry) {
+                            this.stack[this.index] = this._redoEntry;
+                            this._redoEntry = null;
+                        }
+                        this.index--;
+                    }
+                }
+                finally {
+                    this.enabled = true;
+                }
+            }
+            redo() {
+                try {
+                    this.enabled = false;
+                    if (this.index < this.stack.length - 1) {
+                        this.index++;
+                        this.redoEntry(this.stack[this.index]);
+                    }
+                }
+                finally {
+                    this.enabled = true;
+                }
+            }
+            resizeSelection(selection) {
+                this.add('resize', selection.map(obj => ({ target: obj, x: obj.x, y: obj.y, w: obj.width, h: obj.height })));
+            }
+            moveSelection(selection) {
+                this.add('move', selection.map(obj => ({ target: obj, x: obj.x, y: obj.y })));
+            }
+            addRedo(redo) {
+                // nested redo
+                if (this._redoEntry) {
+                    this._redoEntry.data.push(redo.data);
+                }
+                else {
+                    this._redoEntry = redo;
+                }
+            }
+            /** Undo or redo move object */
+            undoMoveObject(undoEntry, description) {
+                this.addRedo({
+                    action: 'move',
+                    description,
+                    data: undoEntry.map(entry => ({ target: entry.target, x: entry.target.x, y: entry.target.y })),
+                });
+                for (let entry of undoEntry) {
+                    entry.target.designer.moveTo(entry.x, entry.y);
+                }
+            }
+            undoResizeObject(undoEntry) {
+                this.addRedo({
+                    action: 'resize',
+                    data: undoEntry.map(entry => ({ target: entry.target, x: entry.target.x, y: entry.target.y, w: entry.target.width, h: entry.target.height })),
+                });
+                for (let entry of undoEntry) {
+                    entry.target.designer.setRect(entry.x, entry.y, entry.w, entry.h);
+                }
+            }
+            undoPaste(undoEntry) {
+                for (let entry of undoEntry.reverse()) {
+                    this.undoEntry(entry);
+                }
+            }
+            undoProperty(undoEntry) {
+                for (let entry of undoEntry) {
+                    entry.target[entry.property] = entry.value;
+                    entry.target.redraw();
+                }
+            }
+            undoRemove(undoEntry) {
+                for (let entry of undoEntry) {
+                    if (entry.parent) {
+                        entry.parent.addObject(entry);
+                    }
+                    else {
+                        this.designer.addObject(entry);
+                    }
+                }
+            }
+            undoEntry(entry) {
+                switch (entry.action) {
+                    case 'add':
+                        this.designer.removeObjects(entry.data);
+                        break;
+                    case 'move':
+                        this.undoMoveObject(entry.data, entry.description);
+                        break;
+                    case 'resize':
+                        this.undoResizeObject(entry.data);
+                        break;
+                    case 'paste':
+                        this.undoPaste(entry.data);
+                        break;
+                    case 'property':
+                        this.undoProperty(entry.data);
+                        break;
+                    case 'remove':
+                        this.undoRemove(entry.data);
+                        break;
+                }
+            }
+            redoEntry(entry) {
+                switch (entry.action) {
+                    case 'add':
+                        for (let obj of entry.data) {
+                            this.designer.addObject(obj);
+                        }
+                        break;
+                    case 'move':
+                        this.undoMoveObject(entry.data);
+                        break;
+                    case 'resize':
+                        this.undoResizeObject(entry.data);
+                        break;
+                    case 'paste':
+                        this.redoPaste(entry.data);
+                        break;
+                    case 'property':
+                        this.redoProperty(entry.data);
+                        break;
+                }
+            }
+        }
+        design.UndoManager = UndoManager;
+    })(design = katrid.design || (katrid.design = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
     var ui;
     (function (ui) {
         function createDialogElement(config) {
@@ -7156,6 +14016,130 @@ var katrid;
         }
         ui.confirm = confirm;
     })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        class Barcode extends drawing.BaseWidget {
+            defaultProps() {
+                super.defaultProps();
+                this.height = 50;
+                this.width = 100;
+            }
+            dump() {
+                return Object.assign(super.dump(), {
+                    field: this.field, dataSource: this.datasource?.name, code: this.code,
+                    center: this.center,
+                    barcodeType: this.barcodeType,
+                    width: this.width,
+                    height: this.height,
+                });
+            }
+            load(info) {
+                super.load(info);
+                this.field = info.field;
+                this.code = info.code;
+                this.barcodeType = info.barcodeType;
+            }
+            create() {
+                super.create();
+            }
+            redraw() {
+                super.redraw();
+                this.graphic.clear();
+                this.graphic.rect(0, 0, this.width, this.height);
+                this.graphic.text(4, this.height / 2, 'BARCODE').attr('fill', 'black');
+            }
+        }
+        drawing.Barcode = Barcode;
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
+/// <reference path="text.ts" />
+/// <reference path="image.ts" />
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        var editors;
+        (function (editors) {
+            var FontProperty = katrid.design.FontProperty;
+            var HAlignProperty = katrid.design.HAlignProperty;
+            var VAlignProperty = katrid.design.VAlignProperty;
+            var TextProperty = katrid.design.TextProperty;
+            var BorderProperty = katrid.design.BorderProperty;
+            var BackgroundProperty = katrid.design.BackgroundProperty;
+            var BooleanProperty = katrid.design.BooleanProperty;
+            var DisplayFormatProperty = katrid.design.DisplayFormatProperty;
+            class TextObjectEditor extends katrid.design.WidgetEditor {
+                static defineProperties() {
+                    return [
+                        new FontProperty('font', { caption: 'Font' }),
+                        new HAlignProperty('hAlign', { caption: 'H Alignment' }),
+                        new VAlignProperty('vAlign', { caption: 'V Alignment' }),
+                        new TextProperty('text', { caption: 'Text' }),
+                        new BorderProperty('border', { caption: 'Border' }),
+                        new BackgroundProperty('background'),
+                        new BooleanProperty('wrap', { caption: 'Word wrap' }),
+                        new BooleanProperty('canGrow', { caption: 'Can Grow' }),
+                        new BooleanProperty('allowTags', { caption: 'Allow HTML Tags' }),
+                        new BooleanProperty('allowExpression', { caption: 'Allow Expression' }),
+                        new DisplayFormatProperty('displayFormat'),
+                    ].concat(...super.defineProperties(), new katrid.design.StringProperty('margins', { caption: 'Margins' }));
+                }
+                async showEditor() {
+                    let res = await katrid.bi.showCodeEditor(this.targetObject.text, this.targetObject.allowTags ? 'html' : 'text');
+                    if (res !== false)
+                        this.targetObject.text = res;
+                }
+            }
+            editors.TextObjectEditor = TextObjectEditor;
+            class ImageEditor extends katrid.design.WidgetEditor {
+                static defineProperties() {
+                    return super.defineProperties().concat(new katrid.design.StringProperty('field', { caption: 'Field Name (Expression)' }), new katrid.design.ComponentProperty('datasource', {
+                        caption: 'Data Source',
+                        onGetValues: (typeEditor) => typeEditor.designer.report.datasources.map(ds => ({
+                            value: ds,
+                            text: ds.name
+                        })),
+                    }), new katrid.design.BooleanProperty('center', { caption: 'Center' }));
+                }
+            }
+            editors.ImageEditor = ImageEditor;
+            class BarcodeEditor extends katrid.design.WidgetEditor {
+                static defineProperties() {
+                    return super.defineProperties().concat(new katrid.design.StringProperty('field', { caption: 'Field Name (Expression)' }), new katrid.design.StringProperty('barcodeType', { caption: 'Barcode Type' }), new katrid.design.ComponentProperty('datasource', {
+                        caption: 'Data Source',
+                        onGetValues: (typeEditor) => typeEditor.designer.reportDesigner.report.datasources.map(ds => ({
+                            value: ds,
+                            text: ds.name
+                        })),
+                    }), new katrid.design.BooleanProperty('center', { caption: 'Center' }));
+                }
+            }
+            editors.BarcodeEditor = BarcodeEditor;
+            katrid.design.registerComponentEditor(katrid.drawing.Text, TextObjectEditor);
+            katrid.design.registerComponentEditor(katrid.drawing.Barcode, BarcodeEditor);
+            katrid.design.registerComponentEditor(katrid.drawing.Image, ImageEditor);
+        })(editors = drawing.editors || (drawing.editors = {}));
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        function pointInRect(x, y, rect) {
+            return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        }
+        drawing.pointInRect = pointInRect;
+        function rectInRect(rect1, rect2) {
+            return ((rect2.left >= rect1.left && rect2.left <= rect1.right) || (rect2.right >= rect1.left && rect2.right <= rect1.right) ||
+                (rect1.left >= rect2.left && rect1.left <= rect2.right) || (rect1.right >= rect2.left && rect1.right <= rect2.right)) &&
+                ((rect2.top >= rect1.top && rect2.top <= rect1.bottom) || (rect2.bottom >= rect1.top && rect2.bottom <= rect1.bottom) ||
+                    (rect1.top >= rect2.top && rect1.top <= rect2.bottom) || (rect1.bottom >= rect2.top && rect1.bottom <= rect2.bottom));
+        }
+        drawing.rectInRect = rectInRect;
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
 })(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -7294,6 +14278,13 @@ var Katrid;
         Forms.ContextMenu = ContextMenu;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        ui.ContextMenu = Katrid.Forms.ContextMenu;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -8015,6 +15006,717 @@ var Katrid;
         Forms.View = View;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Reports;
+    (function (Reports) {
+        let _counter = 0;
+        class Params {
+        }
+        Params.Operations = {
+            exact: 'exact',
+            in: 'in',
+            contains: 'contains',
+            startswith: 'startswith',
+            endswith: 'endswith',
+            gt: 'gt',
+            lt: 'lt',
+            between: 'between',
+            isnull: 'isnull'
+        };
+        Params.Labels = null;
+        Params.DefaultOperations = {
+            CharField: Params.Operations.exact,
+            IntegerField: Params.Operations.exact,
+            DateTimeField: Params.Operations.between,
+            DateField: Params.Operations.between,
+            FloatField: Params.Operations.between,
+            DecimalField: Params.Operations.between,
+            ForeignKey: Params.Operations.exact,
+            ModelChoices: Params.Operations.exact,
+            SelectionField: Params.Operations.exact,
+        };
+        Params.TypeOperations = {
+            CharField: [Params.Operations.exact, Params.Operations.in, Params.Operations.contains, Params.Operations.startswith, Params.Operations.endswith, Params.Operations.isnull],
+            IntegerField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+            FloatField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+            DecimalField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+            DateTimeField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+            DateField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+            ForeignKey: [Params.Operations.exact, Params.Operations.in, Params.Operations.isnull],
+            ModelChoices: [Params.Operations.exact, Params.Operations.in, Params.Operations.isnull],
+            SelectionField: [Params.Operations.exact, Params.Operations.isnull],
+        };
+        Params.Widgets = {
+            CharField(param) {
+                return `<div><input id="rep-param-id-${param.id}" v-model="param.value1" type="text" class="form-control"></div>`;
+            },
+            IntegerField(param) {
+                let secondField = '';
+                if (param.operation === 'between') {
+                    secondField = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" type="number" class="form-control"></div>`;
+                }
+                return `<div class="row"><div class="col-sm-6"><input id="rep-param-id-${param.id}" type="number" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+            },
+            DecimalField(param) {
+                let secondField = '';
+                if (param.operation === 'between') {
+                    secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" input-decimal class="form-control"></div>`;
+                }
+                return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" input-decimal v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+            },
+            DateTimeField(param) {
+                let secondField = '';
+                if (param.operation === 'between') {
+                    secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" v-model="param.value2" class="form-control"></div>`;
+                }
+                return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+            },
+            DateField(param) {
+                let secondField = '';
+                if (param.operation === 'between') {
+                    secondField = `<div class="col-6">
+<input-date class="input-group date" v-model="param.value2" date-picker="L">
+<input id="rep-param-id-${param.id}-2" type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
+      <label class="input-group-text btn-calendar"><i class="fa fa-calendar fa-sm"></i></label>
+</input-date>
+</div>`;
+                }
+                return `<div class="col-sm-12 row"><div class="col-6">
+<input-date class="input-group date" v-model="param.value1" date-picker="L">
+<input id="rep-param-id-${param.id}" type="text" class="form-control" inputmode="numeric" autocomplete="off">
+      <label class="input-group-text btn-calendar"><i class="fa fa-calendar fa-sm"></i></label>
+</input-date>
+</div>${secondField}</div>`;
+            },
+            ForeignKey(param) {
+                const serviceName = param.info.field.attr('model') || param.params.model;
+                let multiple = '';
+                if (param.operation === 'in') {
+                    multiple = 'multiple';
+                }
+                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="${serviceName}" field-name="${param.name}" v-model="param.value1" ${multiple}></div>`;
+            },
+            ModelChoices(param) {
+                let multiple = '';
+                if (param.operation === 'in') {
+                    multiple = 'multiple';
+                }
+                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ui.action.report" model-choices="${param.info.modelChoices}" v-model="param.value1" ${multiple}></div>`;
+            },
+            SelectionField(param) {
+                // param.info.choices = param.info.field.data('choices');
+                let multiple = '';
+                let tag = 'select';
+                if (param.operation === 'in') {
+                    tag = 'multiple-tags';
+                    multiple = 'multiple="multiple" class="multiple-tags"';
+                }
+                else
+                    multiple = 'class="form-select"';
+                return `<div><${tag} ${multiple} v-model="param.value1"><option :value="value" v-for="(name, value, index) in param.choices">{{name}}</option></${tag}></div>`;
+            }
+        };
+        Reports.Params = Params;
+        Params.Widgets.StringField = Params.Widgets.CharField;
+        class Param {
+            constructor(info, params) {
+                this.info = info;
+                this.choices = info.choices;
+                this.name = this.info.name;
+                this.params = params;
+                if (params?.info?.fields)
+                    this.field = this.params.info.fields[this.name];
+                this.label = this.info.label || this.params.info.caption;
+                this.static = this.info.param === 'static';
+                this.type = this.info.type || (this.field && this.field.type) || 'CharField';
+                this.defaultOperation = this.info.operation || Params.DefaultOperations[this.type];
+                this.operation = this.defaultOperation;
+                // @operations = @info.operations or Params.TypeOperations[@type]
+                // this.operations = this.getOperations();
+                if (info.options)
+                    this.choices = info.options;
+                this.exclude = this.info.exclude;
+                this.id = ++_counter;
+                this.defaultValue = info.defaultValue;
+                if (info.defaultValue)
+                    try {
+                        this.value1 = eval(info.defaultValue);
+                    }
+                    catch {
+                        console.error('Error evaluating default expression for param:', this.name);
+                    }
+            }
+            setOperation(op, focus) {
+                if (focus == null) {
+                    focus = true;
+                }
+                this.createControls();
+                const el = this.el.find(`#rep-param-id-${this.id}`);
+                if (focus) {
+                    el.focus();
+                }
+            }
+            createControls() {
+                const el = this.el.find(".param-widget");
+                el.empty();
+                let widget = Params.Widgets[this.type](this);
+                widget = $(widget);
+                return el.append(widget);
+            }
+            getOperations() {
+                if (Params.TypeOperations[this.type])
+                    return (Array.from(Params.TypeOperations[this.type]).map((op) => ({ id: op, text: Params.Labels[op] })));
+            }
+            operationTemplate() {
+                const opts = this.getOperations();
+                return `<div class="col-sm-4"><select id="param-op-${this.id}" v-model="param.operation" class="form-select" onchange="$('#param-${this.id}').data('param').change();$('#rep-param-id-${this.id}')[0].focus()">
+  ${opts}
+  </select></div>`;
+            }
+            template() {
+                let operation = '';
+                if (!this.operation)
+                    operation = this.operationTemplate();
+                return `<div id="param-${this.id}" class="row form-group" data-param="${this.name}"><label class="control-label">${this.label}</label>${operation}<div id="param-widget-${this.id}"></div></div>`;
+            }
+            render(container) {
+                this.el = $(this.template());
+                this.el.data('param', this);
+                this.createControls();
+                return container.append(this.el[0]);
+            }
+            dump() {
+                return {
+                    name: this.name,
+                    op: this.operation,
+                    value1: this.value1,
+                    value2: this.value2,
+                    type: this.type,
+                };
+            }
+        }
+        Reports.Param = Param;
+        function createParamsPanel(container, params) {
+            const el = $(`<div class="params-params row">
+<div v-for="param in params" class="col-lg-6 form-group">
+          <div class="col-12">
+            <label class="control-label">{{ param.label }}</label>
+          </div>
+          <div class="col-4" v-if="param.operationsVisible">
+            <select v-model="param.operation" class="form-control" v-on:change="param.setOperation(param.operation)">
+              <option v-for="op in param.operations" :value="op.id">{{ op.text }}</option>
+            </select>
+          </div>
+          <div class="col param-widget">
+          <report-param-widget :param="param"/>
+</div>
+        </div>
+</div>`)[0];
+            const vm = Katrid.createVm({
+                data() {
+                    return {
+                        params
+                    };
+                }
+            });
+            vm.mount(el);
+            if (container)
+                container.append(el);
+            return vm;
+        }
+        Reports.createParamsPanel = createParamsPanel;
+        Katrid.component('report-param-widget', {
+            props: ['param'],
+            render() {
+                let widget = Params.Widgets[this.param.type](this.param);
+                return Vue.compile(widget)(this);
+            },
+            components: Katrid.componentsRegistry,
+            directives: Katrid.directivesRegistry,
+        });
+        class ReportEngine {
+            static load(el) {
+                $('row').each((idx, el) => {
+                    el.addClass('row');
+                });
+                $('column').each((idx, el) => {
+                    el.addClass('col');
+                });
+            }
+        }
+        Reports.ReportEngine = ReportEngine;
+    })(Reports = Katrid.Reports || (Katrid.Reports = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Reports;
+    (function (Reports) {
+        let _counter = 0;
+        Reports.currentReport = {};
+        Reports.currentUserReport = {};
+        class Report {
+            constructor(action) {
+                this.action = action;
+                this.info = this.action.info;
+                Reports.currentReport = this;
+                if ((Reports.Params.Labels == null)) {
+                    Reports.Params.Labels = {
+                        exact: Katrid.i18n.gettext('Is equal'),
+                        in: Katrid.i18n.gettext('Selection'),
+                        contains: Katrid.i18n.gettext('Contains'),
+                        startswith: Katrid.i18n.gettext('Starting with'),
+                        endswith: Katrid.i18n.gettext('Ending with'),
+                        gt: Katrid.i18n.gettext('Greater-than'),
+                        lt: Katrid.i18n.gettext('Less-than'),
+                        between: Katrid.i18n.gettext('Between'),
+                        isnull: Katrid.i18n.gettext('Is Null')
+                    };
+                }
+                this.name = this.info.name;
+                this.id = ++_counter;
+                this.values = {};
+                this.params = [];
+                this.filters = [];
+                this.groupables = [];
+                this.sortables = [];
+                this.totals = [];
+            }
+            telegram() {
+                // Katrid.Reports.Telegram.export(this);
+            }
+            getUserParams() {
+                let report = this;
+                let container = $(report.container);
+                let params = {
+                    data: [],
+                    file: container.find('#id-report-file').val()
+                };
+                let info = [];
+                for (let p of this.params) {
+                    let paramInfo = {};
+                    let val1, val2;
+                    val1 = p.value1;
+                    val2 = p.value2;
+                    if (val1 === '')
+                        val1 = null;
+                    if (val2 === '')
+                        val2 = null;
+                    if (val1 === null)
+                        continue;
+                    if (val1 && val2)
+                        info.push(`${p.label}: [${val1}, ${val2}]`);
+                    else if (val1)
+                        info.push(`${p.label}: ${val1}`);
+                    params.data.push({
+                        name: p.name,
+                        op: p.operation,
+                        value1: val1,
+                        value2: val2,
+                        type: p.type
+                    });
+                }
+                // TODO: optional display params
+                params.displayParams = info.join('\n');
+                let fields = container.find('#report-id-fields').val();
+                params['fields'] = fields;
+                let totals = container.find('#report-id-totals').val();
+                params['totals'] = totals;
+                let sorting = container.find('#report-id-sorting').val();
+                params['sorting'] = sorting;
+                let grouping = container.find('#report-id-grouping').val();
+                params['grouping'] = grouping;
+                return params;
+            }
+            loadFromXml(xml) {
+                let dataTypeDict = {
+                    date: 'DateField',
+                    datetime: 'DateTimeField',
+                };
+                let paras;
+                if (typeof xml === 'string') {
+                    xml = $.parseXML(xml).children[0];
+                }
+                this.action.customizableReport = xml.getAttribute('customizableReport');
+                this.action.advancedOptions = xml.getAttribute('advancedOptions');
+                this.model = xml.getAttribute('model');
+                const fields = [];
+                for (let f of xml.children) {
+                    let tag = f.tagName;
+                    if ((tag !== 'field') && (tag !== 'param'))
+                        continue;
+                    const name = f.getAttribute('name');
+                    let fld;
+                    if (this.info.fields)
+                        fld = this.info.fields[name];
+                    const label = f.getAttribute('label') || f.getAttribute('caption') || (fld && fld.caption) || name;
+                    const groupable = f.getAttribute('groupable');
+                    const sortable = f.getAttribute('sortable');
+                    const total = f.getAttribute('total');
+                    let param = f.getAttribute('param');
+                    if ((tag === 'field') && (!param))
+                        param = 'static';
+                    const required = f.getAttribute('required');
+                    const autoCreate = f.getAttribute('autoCreate') || required || (param === 'static');
+                    const operation = f.getAttribute('operation');
+                    const defaultValue = f.getAttribute('default');
+                    let type = f.getAttribute('type') || $(f).data('type') || (fld && fld.type);
+                    if (type in dataTypeDict)
+                        type = dataTypeDict[type];
+                    let choices = {};
+                    for (let option of f.querySelectorAll('option')) {
+                        choices[option.getAttribute('value')] = option.childNodes[0].textContent;
+                    }
+                    const modelChoices = f.getAttribute('model-choices');
+                    if (!type && modelChoices)
+                        type = 'ModelChoices';
+                    fields.push({
+                        name,
+                        label,
+                        choices,
+                        groupable,
+                        sortable,
+                        total,
+                        param,
+                        required,
+                        operation,
+                        modelChoices,
+                        type,
+                        autoCreate,
+                        defaultValue,
+                        field: f,
+                    });
+                }
+                let params = Array.from(xml.querySelectorAll('param')).map((p) => p.getAttribute('name'));
+                return this.load(fields, params);
+            }
+            saveDialog() {
+                const params = this.getUserParams();
+                const name = window.prompt(Katrid.i18n.gettext('Report name'), Katrid.Reports.currentUserReport.name);
+                if (name) {
+                    Katrid.Reports.currentUserReport.name = name;
+                    $.ajax({
+                        type: 'POST',
+                        url: this.container.find('#report-form').attr('action') + '?save=' + name,
+                        contentType: "application/json; charset=utf-8",
+                        dataType: 'json',
+                        data: JSON.stringify(params)
+                    });
+                }
+                return false;
+            }
+            load(fields, params) {
+                if (!fields)
+                    fields = this.info.fields;
+                if (!params)
+                    params = [];
+                this.fields = fields;
+                // Create params
+                if (this.action.fields)
+                    for (let p of fields) {
+                        this.action.fields[p.name] = p;
+                        if (p.groupable)
+                            this.groupables.push(p);
+                        if (p.sortable)
+                            this.sortables.push(p);
+                        if (p.total)
+                            this.totals.push(p);
+                        if (!p.autoCreate)
+                            p.autoCreate = params.includes(p.name);
+                    }
+            }
+            loadParams() {
+                for (let p of this.fields) {
+                    if (p.autoCreate)
+                        this.addParam(p.name);
+                }
+            }
+            addParam(paramName, value) {
+                let elParams = this.container.querySelector('#params-params');
+                for (let p of this.fields)
+                    if (p.name === paramName) {
+                        let param = new Reports.Param(p, this);
+                        this.params.push(param);
+                        // param.render(elParams);
+                        break;
+                    }
+            }
+            createParams(container) {
+                for (let info of this.fields) {
+                    const p = new Reports.Param(info, this);
+                    this.params.push(p);
+                }
+            }
+            getValues() { }
+            async export(format) {
+                if (format == null)
+                    format = localStorage.katridReportViewer || 'pdf';
+                const params = this.getUserParams();
+                const svc = new Katrid.Services.ModelService('ui.action.report');
+                let res = await svc.post('export_report', { args: [this.info.id], kwargs: { format, params } });
+                console.debug('invoke', res.invoke);
+                if (res.invoke)
+                    for (let [k, v] of Object.entries(res.invoke))
+                        katrid.invoke(k)(v);
+                return false;
+            }
+            preview() {
+                return this.export(localStorage.katridReportViewer);
+            }
+            renderFields() {
+                let p;
+                let el = $('<div></div>');
+                const flds = this.fields.map((p) => `<option value="${p.name}">${p.label}</option>`).join('');
+                const aggs = ((() => {
+                    const result1 = [];
+                    for (p of Array.from(this.fields)) {
+                        if (p.total) {
+                            result1.push(`<option value="${p.name}">${p.label}</option>`);
+                        }
+                    }
+                    return result1;
+                })()).join('');
+                el = $(this.container).find('#report-params');
+                let sel = el.find('#report-id-fields');
+                sel.append($(flds))
+                    .select2({ tags: ((() => {
+                        const result2 = [];
+                        for (let p of Array.from(this.fields))
+                            result2.push({ id: p.name, text: p.label });
+                        return result2;
+                    })()) });
+                if (Katrid.Reports.currentUserReport.params && Katrid.Reports.currentUserReport.params.fields) {
+                    console.log(Katrid.Reports.currentUserReport.params.fields);
+                    sel.select2('val', Katrid.Reports.currentUserReport.params.fields);
+                }
+                //sel.data().select2.updateSelection([{ id: 'vehicle', text: 'Vehicle'}])
+                sel = el.find('#report-id-totals');
+                sel.append(aggs)
+                    .select2({ tags: ((() => {
+                        const result3 = [];
+                        for (let p of Array.from(this.fields)) {
+                            if (p.total) {
+                                result3.push({ id: p.name, text: p.label });
+                            }
+                        }
+                        return result3;
+                    })()) });
+                return el;
+            }
+            renderParams(container) {
+                let p;
+                let el = $('<div></div>');
+                this.elParams = el;
+                let loaded = {};
+                const userParams = Katrid.Reports.currentUserReport.params;
+                if (userParams && userParams.data) {
+                    for (let p of Array.from(userParams.data)) {
+                        loaded[p.name] = true;
+                        this.addParam(p.name, p.value);
+                    }
+                }
+                for (p of Array.from(this.params)) {
+                    if (p.static && !loaded[p.name]) {
+                        $(p.render(el));
+                    }
+                }
+                return container.querySelector('#params-params').append(el[0]);
+            }
+            renderGrouping(container) {
+                const opts = (Array.from(this.groupables).map((p) => `<option value="${p.name}">${p.label}</option>`)).join('');
+                const el = container.find("#params-grouping");
+                const sel = el.find('select').select2();
+                return sel.append(opts)
+                    .select2("container").find("ul.select2-choices").sortable({
+                    containment: 'parent',
+                    start() { return sel.select2("onSortStart"); },
+                    update() { return sel.select2("onSortEnd"); }
+                });
+            }
+            renderSorting(container) {
+                const opts = (Array.from(this.sortables).filter((p) => p.sortable).map((p) => `<option value="${p.name}">${p.label}</option>`)).join('');
+                const el = container.find("#params-sorting");
+                const sel = el.find('select').select2();
+                return sel.append(opts)
+                    .select2("container").find("ul.select2-choices").sortable({
+                    containment: 'parent',
+                    start() { return sel.select2("onSortStart"); },
+                    update() { return sel.select2("onSortEnd"); }
+                });
+            }
+            render(container) {
+                this.container = container;
+                let el = this.renderFields();
+                if (this.sortables.length) {
+                    el = this.renderSorting(container);
+                }
+                else {
+                    $(container).find("#params-sorting").hide();
+                }
+                if (this.groupables.length) {
+                    el = this.renderGrouping(container);
+                }
+                else {
+                    $(container).find("#params-grouping").hide();
+                }
+                return el = this.renderParams(container);
+            }
+        }
+        Reports.Report = Report;
+        function renderDialog(action) {
+            return `
+    <div class="report-dialog">
+      <form id="report-form" method="get" action="/web/reports/report/">
+        <div class="data-heading panel panel-default">
+          <div class="panel-body">
+          <h2>${action.name}</h2>
+          <div class="toolbar toolbar-action-buttons">
+            <button class="btn btn-primary" type="button" v-on:click="report.preview()"><span class="fa fa-print fa-fw"></span> ${Katrid.i18n.gettext('Preview')}</button>
+
+            <div class="btn-group">
+              <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+                      aria-expanded="false">${Katrid.i18n.gettext('Export')} <span class="caret"></span></button>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" v-on:click="Katrid.Reports.Reports.preview()">PDF</a>
+                <a class="dropdown-item" v-on:click="$event.preventDefault();report.telegram();">Telegram</a>
+                <a class="dropdown-item" v-on:click="report.export('docx')">Word</a>
+                <a class="dropdown-item" v-on:click="report.export('xlsx')">Excel</a>
+                <a class="dropdown-item" v-on:click="report.export('pptx')">PowerPoint</a>
+                <a class="dropdown-item" v-on:click="report.export('csv')">CSV</a>
+                <a class="dropdown-item" v-on:click="report.export('txt')">${Katrid.i18n.gettext('Text File')}</a>
+              </div>
+            </div>
+
+            <div class="btn-group">
+              <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+                      aria-expanded="false">${Katrid.i18n.gettext('My reports')} <span class="caret"></span></button>
+              <ul class="dropdown-menu">
+              </ul>
+            </div>
+
+          <div class="pull-right btn-group">
+            <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+                    aria-expanded="false"><i class="fa fa-sliders-h"></i></button>
+            <div class="dropdown-menu">
+              <a class="dropdown-item" v-on:click="report.saveDialog()">${Katrid.i18n.gettext('Save')}</a>
+              <a class="dropdown-item">${Katrid.i18n.gettext('Load')}</a>
+              <div class="dropdown-divider"></div>
+              <h6 class="dropdown-header">Report Viewer</h6>
+              <a class="dropdown-item" onclick="localStorage.setItem('katridReportViewer', 'pdf')">Visualizar em PDF</a>
+              <a class="dropdown-item" onclick="localStorage.setItem('katridReportViewer', 'native')">Visualizador Nativo</a>
+            </div>
+          </div>
+
+          </div>
+        </div>
+        </div>
+        <div class="col-sm-12">
+          <table class="col-sm-12" style="margin-top: 20px; display:none;">
+            <tr>
+              <td colspan="2" style="padding-top: 8px;">
+                <label>${Katrid.i18n.gettext('My reports')}</label>
+
+                <select class="form-control" v-on:change="userReportChanged(userReport.id)" v-model="userReport.id">
+                    <option value=""></option>
+                    <option v-for="rep in userReports" :value="rep.id">{{ rep.name }}</option>
+                </select>
+              </td>
+            </tr>
+          </table>
+        </div>
+      <div id="report-params">
+      <div id="params-fields" class="col-sm-12 form-group" v-if="customizableReport">
+        <div class="checkbox"><label><input type="checkbox" v-model="paramsAdvancedOptions"> ${Katrid.i18n.gettext('Advanced options')}</label></div>
+        <div v-show="paramsAdvancedOptions">
+          <div class="form-group">
+            <label>${Katrid.i18n.gettext('Printable Fields')}</label>
+            <input type="hidden" id="report-id-fields"/>
+          </div>
+          <div class="form-group">
+            <label>${Katrid.i18n.gettext('Totalizing Fields')}</label>
+            <input type="hidden" id="report-id-totals"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="clearfix"></div>
+
+      </div>
+        <div v-if="advancedOptions">
+        <div id="params-sorting" class="col-sm-12 form-group">
+          <label class="control-label">${Katrid.i18n.gettext('Sorting')}</label>
+          <select multiple id="report-id-sorting"></select>
+        </div>
+
+        <div id="params-grouping" class="col-sm-12 form-group">
+          <label class="control-label">${Katrid.i18n.gettext('Grouping')}</label>
+          <select multiple id="report-id-grouping"></select>
+        </div>
+        <hr>
+        <table class="col-sm-12">
+          <tr>
+            <td class="col-sm-4">
+              <select class="form-control" v-model="newParam">
+                <option value="">--- ${Katrid.i18n.gettext('FILTERS')} ---</option>
+                <option v-for="field in report.fields" :value="field.name">{{ field.label }}</option>
+              </select>
+            </td>
+            <td class="col-sm-8">
+              <button
+                  class="btn btn-outline-secondary" type="button"
+                  v-on:click="report.addParam(newParam)">
+                <i class="fa fa-plus fa-fw"></i> ${Katrid.i18n.gettext('Add Parameter')}
+              </button>
+            </td>
+          </tr>
+        </table>
+        <div class="clearfix"></div>
+        <hr>
+      </div>
+      <div id="params-params" class="params-params margin-top-8 row">
+        <div v-for="param in report.params" class="col-lg-6 form-group">
+          <div class="col-12">
+            <label class="control-label">{{ param.label }}</label>
+          </div>
+          <div class="col-4" v-if="param.operationsVisible">
+            <select v-model="param.operation" class="form-control" ng-change="param.setOperation(param.operation)">
+              <option v-for="op in param.operations" :value="op.id">{{ op.text }}</option>
+            </select>
+          </div>
+          <div class="col param-widget">
+          <report-param-widget :param="param"/>
+</div>
+        </div>
+      </div>
+      </form>
+    </div>
+    `;
+        }
+        Reports.renderDialog = renderDialog;
+    })(Reports = Katrid.Reports || (Katrid.Reports = {}));
+})(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class PreparedPage {
+            load(metadata) {
+                this.metadata = metadata;
+            }
+        }
+        class MetaDocument {
+            load(metadata) {
+                this.type = metadata.type;
+                this.pages = metadata.pages.map(p => {
+                    let page = new PreparedPage();
+                    page.load(p);
+                    return page;
+                });
+            }
+        }
+        bi.MetaDocument = MetaDocument;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -9949,6 +17651,10 @@ var Katrid;
     else
         Katrid.i18n.gettext = s => s;
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    katrid.i18n = Katrid.i18n;
+})(katrid || (katrid = {}));
 /// <reference path="../../../utils/i18n.ts"/>
 var Katrid;
 (function (Katrid) {
@@ -13229,717 +20935,6 @@ var katrid;
 })(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
-    var Reports;
-    (function (Reports) {
-        let _counter = 0;
-        class Params {
-        }
-        Params.Operations = {
-            exact: 'exact',
-            in: 'in',
-            contains: 'contains',
-            startswith: 'startswith',
-            endswith: 'endswith',
-            gt: 'gt',
-            lt: 'lt',
-            between: 'between',
-            isnull: 'isnull'
-        };
-        Params.Labels = null;
-        Params.DefaultOperations = {
-            CharField: Params.Operations.exact,
-            IntegerField: Params.Operations.exact,
-            DateTimeField: Params.Operations.between,
-            DateField: Params.Operations.between,
-            FloatField: Params.Operations.between,
-            DecimalField: Params.Operations.between,
-            ForeignKey: Params.Operations.exact,
-            ModelChoices: Params.Operations.exact,
-            SelectionField: Params.Operations.exact,
-        };
-        Params.TypeOperations = {
-            CharField: [Params.Operations.exact, Params.Operations.in, Params.Operations.contains, Params.Operations.startswith, Params.Operations.endswith, Params.Operations.isnull],
-            IntegerField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
-            FloatField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
-            DecimalField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
-            DateTimeField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
-            DateField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
-            ForeignKey: [Params.Operations.exact, Params.Operations.in, Params.Operations.isnull],
-            ModelChoices: [Params.Operations.exact, Params.Operations.in, Params.Operations.isnull],
-            SelectionField: [Params.Operations.exact, Params.Operations.isnull],
-        };
-        Params.Widgets = {
-            CharField(param) {
-                return `<div><input id="rep-param-id-${param.id}" v-model="param.value1" type="text" class="form-control"></div>`;
-            },
-            IntegerField(param) {
-                let secondField = '';
-                if (param.operation === 'between') {
-                    secondField = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" type="number" class="form-control"></div>`;
-                }
-                return `<div class="row"><div class="col-sm-6"><input id="rep-param-id-${param.id}" type="number" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
-            },
-            DecimalField(param) {
-                let secondField = '';
-                if (param.operation === 'between') {
-                    secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" input-decimal class="form-control"></div>`;
-                }
-                return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" input-decimal v-model="param.value1" class="form-control"></div>${secondField}</div>`;
-            },
-            DateTimeField(param) {
-                let secondField = '';
-                if (param.operation === 'between') {
-                    secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" v-model="param.value2" class="form-control"></div>`;
-                }
-                return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
-            },
-            DateField(param) {
-                let secondField = '';
-                if (param.operation === 'between') {
-                    secondField = `<div class="col-6">
-<input-date class="input-group date" v-model="param.value2" date-picker="L">
-<input id="rep-param-id-${param.id}-2" type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
-      <label class="input-group-text btn-calendar"><i class="fa fa-calendar fa-sm"></i></label>
-</input-date>
-</div>`;
-                }
-                return `<div class="col-sm-12 row"><div class="col-6">
-<input-date class="input-group date" v-model="param.value1" date-picker="L">
-<input id="rep-param-id-${param.id}" type="text" class="form-control" inputmode="numeric" autocomplete="off">
-      <label class="input-group-text btn-calendar"><i class="fa fa-calendar fa-sm"></i></label>
-</input-date>
-</div>${secondField}</div>`;
-            },
-            ForeignKey(param) {
-                const serviceName = param.info.field.attr('model') || param.params.model;
-                let multiple = '';
-                if (param.operation === 'in') {
-                    multiple = 'multiple';
-                }
-                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="${serviceName}" field-name="${param.name}" v-model="param.value1" ${multiple}></div>`;
-            },
-            ModelChoices(param) {
-                let multiple = '';
-                if (param.operation === 'in') {
-                    multiple = 'multiple';
-                }
-                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ui.action.report" model-choices="${param.info.modelChoices}" v-model="param.value1" ${multiple}></div>`;
-            },
-            SelectionField(param) {
-                // param.info.choices = param.info.field.data('choices');
-                let multiple = '';
-                let tag = 'select';
-                if (param.operation === 'in') {
-                    tag = 'multiple-tags';
-                    multiple = 'multiple="multiple" class="multiple-tags"';
-                }
-                else
-                    multiple = 'class="form-select"';
-                return `<div><${tag} ${multiple} v-model="param.value1"><option :value="value" v-for="(name, value, index) in param.choices">{{name}}</option></${tag}></div>`;
-            }
-        };
-        Reports.Params = Params;
-        Params.Widgets.StringField = Params.Widgets.CharField;
-        class Param {
-            constructor(info, params) {
-                this.info = info;
-                this.choices = info.choices;
-                this.name = this.info.name;
-                this.params = params;
-                if (params?.info?.fields)
-                    this.field = this.params.info.fields[this.name];
-                this.label = this.info.label || this.params.info.caption;
-                this.static = this.info.param === 'static';
-                this.type = this.info.type || (this.field && this.field.type) || 'CharField';
-                this.defaultOperation = this.info.operation || Params.DefaultOperations[this.type];
-                this.operation = this.defaultOperation;
-                // @operations = @info.operations or Params.TypeOperations[@type]
-                // this.operations = this.getOperations();
-                if (info.options)
-                    this.choices = info.options;
-                this.exclude = this.info.exclude;
-                this.id = ++_counter;
-                this.defaultValue = info.defaultValue;
-                if (info.defaultValue)
-                    try {
-                        this.value1 = eval(info.defaultValue);
-                    }
-                    catch {
-                        console.error('Error evaluating default expression for param:', this.name);
-                    }
-            }
-            setOperation(op, focus) {
-                if (focus == null) {
-                    focus = true;
-                }
-                this.createControls();
-                const el = this.el.find(`#rep-param-id-${this.id}`);
-                if (focus) {
-                    el.focus();
-                }
-            }
-            createControls() {
-                const el = this.el.find(".param-widget");
-                el.empty();
-                let widget = Params.Widgets[this.type](this);
-                widget = $(widget);
-                return el.append(widget);
-            }
-            getOperations() {
-                if (Params.TypeOperations[this.type])
-                    return (Array.from(Params.TypeOperations[this.type]).map((op) => ({ id: op, text: Params.Labels[op] })));
-            }
-            operationTemplate() {
-                const opts = this.getOperations();
-                return `<div class="col-sm-4"><select id="param-op-${this.id}" v-model="param.operation" class="form-select" onchange="$('#param-${this.id}').data('param').change();$('#rep-param-id-${this.id}')[0].focus()">
-  ${opts}
-  </select></div>`;
-            }
-            template() {
-                let operation = '';
-                if (!this.operation)
-                    operation = this.operationTemplate();
-                return `<div id="param-${this.id}" class="row form-group" data-param="${this.name}"><label class="control-label">${this.label}</label>${operation}<div id="param-widget-${this.id}"></div></div>`;
-            }
-            render(container) {
-                this.el = $(this.template());
-                this.el.data('param', this);
-                this.createControls();
-                return container.append(this.el[0]);
-            }
-            dump() {
-                return {
-                    name: this.name,
-                    op: this.operation,
-                    value1: this.value1,
-                    value2: this.value2,
-                    type: this.type,
-                };
-            }
-        }
-        Reports.Param = Param;
-        function createParamsPanel(container, params) {
-            const el = $(`<div class="params-params row">
-<div v-for="param in params" class="col-lg-6 form-group">
-          <div class="col-12">
-            <label class="control-label">{{ param.label }}</label>
-          </div>
-          <div class="col-4" v-if="param.operationsVisible">
-            <select v-model="param.operation" class="form-control" v-on:change="param.setOperation(param.operation)">
-              <option v-for="op in param.operations" :value="op.id">{{ op.text }}</option>
-            </select>
-          </div>
-          <div class="col param-widget">
-          <report-param-widget :param="param"/>
-</div>
-        </div>
-</div>`)[0];
-            const vm = Katrid.createVm({
-                data() {
-                    return {
-                        params
-                    };
-                }
-            });
-            vm.mount(el);
-            if (container)
-                container.append(el);
-            return vm;
-        }
-        Reports.createParamsPanel = createParamsPanel;
-        Katrid.component('report-param-widget', {
-            props: ['param'],
-            render() {
-                let widget = Params.Widgets[this.param.type](this.param);
-                return Vue.compile(widget)(this);
-            },
-            components: Katrid.componentsRegistry,
-            directives: Katrid.directivesRegistry,
-        });
-        class ReportEngine {
-            static load(el) {
-                $('row').each((idx, el) => {
-                    el.addClass('row');
-                });
-                $('column').each((idx, el) => {
-                    el.addClass('col');
-                });
-            }
-        }
-        Reports.ReportEngine = ReportEngine;
-    })(Reports = Katrid.Reports || (Katrid.Reports = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Reports;
-    (function (Reports) {
-        let _counter = 0;
-        Reports.currentReport = {};
-        Reports.currentUserReport = {};
-        class Report {
-            constructor(action) {
-                this.action = action;
-                this.info = this.action.info;
-                Reports.currentReport = this;
-                if ((Reports.Params.Labels == null)) {
-                    Reports.Params.Labels = {
-                        exact: Katrid.i18n.gettext('Is equal'),
-                        in: Katrid.i18n.gettext('Selection'),
-                        contains: Katrid.i18n.gettext('Contains'),
-                        startswith: Katrid.i18n.gettext('Starting with'),
-                        endswith: Katrid.i18n.gettext('Ending with'),
-                        gt: Katrid.i18n.gettext('Greater-than'),
-                        lt: Katrid.i18n.gettext('Less-than'),
-                        between: Katrid.i18n.gettext('Between'),
-                        isnull: Katrid.i18n.gettext('Is Null')
-                    };
-                }
-                this.name = this.info.name;
-                this.id = ++_counter;
-                this.values = {};
-                this.params = [];
-                this.filters = [];
-                this.groupables = [];
-                this.sortables = [];
-                this.totals = [];
-            }
-            telegram() {
-                // Katrid.Reports.Telegram.export(this);
-            }
-            getUserParams() {
-                let report = this;
-                let container = $(report.container);
-                let params = {
-                    data: [],
-                    file: container.find('#id-report-file').val()
-                };
-                let info = [];
-                for (let p of this.params) {
-                    let paramInfo = {};
-                    let val1, val2;
-                    val1 = p.value1;
-                    val2 = p.value2;
-                    if (val1 === '')
-                        val1 = null;
-                    if (val2 === '')
-                        val2 = null;
-                    if (val1 === null)
-                        continue;
-                    if (val1 && val2)
-                        info.push(`${p.label}: [${val1}, ${val2}]`);
-                    else if (val1)
-                        info.push(`${p.label}: ${val1}`);
-                    params.data.push({
-                        name: p.name,
-                        op: p.operation,
-                        value1: val1,
-                        value2: val2,
-                        type: p.type
-                    });
-                }
-                // TODO: optional display params
-                params.displayParams = info.join('\n');
-                let fields = container.find('#report-id-fields').val();
-                params['fields'] = fields;
-                let totals = container.find('#report-id-totals').val();
-                params['totals'] = totals;
-                let sorting = container.find('#report-id-sorting').val();
-                params['sorting'] = sorting;
-                let grouping = container.find('#report-id-grouping').val();
-                params['grouping'] = grouping;
-                return params;
-            }
-            loadFromXml(xml) {
-                let dataTypeDict = {
-                    date: 'DateField',
-                    datetime: 'DateTimeField',
-                };
-                let paras;
-                if (typeof xml === 'string') {
-                    xml = $.parseXML(xml).children[0];
-                }
-                this.action.customizableReport = xml.getAttribute('customizableReport');
-                this.action.advancedOptions = xml.getAttribute('advancedOptions');
-                this.model = xml.getAttribute('model');
-                const fields = [];
-                for (let f of xml.children) {
-                    let tag = f.tagName;
-                    if ((tag !== 'field') && (tag !== 'param'))
-                        continue;
-                    const name = f.getAttribute('name');
-                    let fld;
-                    if (this.info.fields)
-                        fld = this.info.fields[name];
-                    const label = f.getAttribute('label') || f.getAttribute('caption') || (fld && fld.caption) || name;
-                    const groupable = f.getAttribute('groupable');
-                    const sortable = f.getAttribute('sortable');
-                    const total = f.getAttribute('total');
-                    let param = f.getAttribute('param');
-                    if ((tag === 'field') && (!param))
-                        param = 'static';
-                    const required = f.getAttribute('required');
-                    const autoCreate = f.getAttribute('autoCreate') || required || (param === 'static');
-                    const operation = f.getAttribute('operation');
-                    const defaultValue = f.getAttribute('default');
-                    let type = f.getAttribute('type') || $(f).data('type') || (fld && fld.type);
-                    if (type in dataTypeDict)
-                        type = dataTypeDict[type];
-                    let choices = {};
-                    for (let option of f.querySelectorAll('option')) {
-                        choices[option.getAttribute('value')] = option.childNodes[0].textContent;
-                    }
-                    const modelChoices = f.getAttribute('model-choices');
-                    if (!type && modelChoices)
-                        type = 'ModelChoices';
-                    fields.push({
-                        name,
-                        label,
-                        choices,
-                        groupable,
-                        sortable,
-                        total,
-                        param,
-                        required,
-                        operation,
-                        modelChoices,
-                        type,
-                        autoCreate,
-                        defaultValue,
-                        field: f,
-                    });
-                }
-                let params = Array.from(xml.querySelectorAll('param')).map((p) => p.getAttribute('name'));
-                return this.load(fields, params);
-            }
-            saveDialog() {
-                const params = this.getUserParams();
-                const name = window.prompt(Katrid.i18n.gettext('Report name'), Katrid.Reports.currentUserReport.name);
-                if (name) {
-                    Katrid.Reports.currentUserReport.name = name;
-                    $.ajax({
-                        type: 'POST',
-                        url: this.container.find('#report-form').attr('action') + '?save=' + name,
-                        contentType: "application/json; charset=utf-8",
-                        dataType: 'json',
-                        data: JSON.stringify(params)
-                    });
-                }
-                return false;
-            }
-            load(fields, params) {
-                if (!fields)
-                    fields = this.info.fields;
-                if (!params)
-                    params = [];
-                this.fields = fields;
-                // Create params
-                if (this.action.fields)
-                    for (let p of fields) {
-                        this.action.fields[p.name] = p;
-                        if (p.groupable)
-                            this.groupables.push(p);
-                        if (p.sortable)
-                            this.sortables.push(p);
-                        if (p.total)
-                            this.totals.push(p);
-                        if (!p.autoCreate)
-                            p.autoCreate = params.includes(p.name);
-                    }
-            }
-            loadParams() {
-                for (let p of this.fields) {
-                    if (p.autoCreate)
-                        this.addParam(p.name);
-                }
-            }
-            addParam(paramName, value) {
-                let elParams = this.container.querySelector('#params-params');
-                for (let p of this.fields)
-                    if (p.name === paramName) {
-                        let param = new Reports.Param(p, this);
-                        this.params.push(param);
-                        // param.render(elParams);
-                        break;
-                    }
-            }
-            createParams(container) {
-                for (let info of this.fields) {
-                    const p = new Reports.Param(info, this);
-                    this.params.push(p);
-                }
-            }
-            getValues() { }
-            async export(format) {
-                if (format == null)
-                    format = localStorage.katridReportViewer || 'pdf';
-                const params = this.getUserParams();
-                const svc = new Katrid.Services.ModelService('ui.action.report');
-                let res = await svc.post('export_report', { args: [this.info.id], kwargs: { format, params } });
-                console.debug('invoke', res.invoke);
-                if (res.invoke)
-                    for (let [k, v] of Object.entries(res.invoke))
-                        katrid.invoke(k)(v);
-                return false;
-            }
-            preview() {
-                return this.export(localStorage.katridReportViewer);
-            }
-            renderFields() {
-                let p;
-                let el = $('<div></div>');
-                const flds = this.fields.map((p) => `<option value="${p.name}">${p.label}</option>`).join('');
-                const aggs = ((() => {
-                    const result1 = [];
-                    for (p of Array.from(this.fields)) {
-                        if (p.total) {
-                            result1.push(`<option value="${p.name}">${p.label}</option>`);
-                        }
-                    }
-                    return result1;
-                })()).join('');
-                el = $(this.container).find('#report-params');
-                let sel = el.find('#report-id-fields');
-                sel.append($(flds))
-                    .select2({ tags: ((() => {
-                        const result2 = [];
-                        for (let p of Array.from(this.fields))
-                            result2.push({ id: p.name, text: p.label });
-                        return result2;
-                    })()) });
-                if (Katrid.Reports.currentUserReport.params && Katrid.Reports.currentUserReport.params.fields) {
-                    console.log(Katrid.Reports.currentUserReport.params.fields);
-                    sel.select2('val', Katrid.Reports.currentUserReport.params.fields);
-                }
-                //sel.data().select2.updateSelection([{ id: 'vehicle', text: 'Vehicle'}])
-                sel = el.find('#report-id-totals');
-                sel.append(aggs)
-                    .select2({ tags: ((() => {
-                        const result3 = [];
-                        for (let p of Array.from(this.fields)) {
-                            if (p.total) {
-                                result3.push({ id: p.name, text: p.label });
-                            }
-                        }
-                        return result3;
-                    })()) });
-                return el;
-            }
-            renderParams(container) {
-                let p;
-                let el = $('<div></div>');
-                this.elParams = el;
-                let loaded = {};
-                const userParams = Katrid.Reports.currentUserReport.params;
-                if (userParams && userParams.data) {
-                    for (let p of Array.from(userParams.data)) {
-                        loaded[p.name] = true;
-                        this.addParam(p.name, p.value);
-                    }
-                }
-                for (p of Array.from(this.params)) {
-                    if (p.static && !loaded[p.name]) {
-                        $(p.render(el));
-                    }
-                }
-                return container.querySelector('#params-params').append(el[0]);
-            }
-            renderGrouping(container) {
-                const opts = (Array.from(this.groupables).map((p) => `<option value="${p.name}">${p.label}</option>`)).join('');
-                const el = container.find("#params-grouping");
-                const sel = el.find('select').select2();
-                return sel.append(opts)
-                    .select2("container").find("ul.select2-choices").sortable({
-                    containment: 'parent',
-                    start() { return sel.select2("onSortStart"); },
-                    update() { return sel.select2("onSortEnd"); }
-                });
-            }
-            renderSorting(container) {
-                const opts = (Array.from(this.sortables).filter((p) => p.sortable).map((p) => `<option value="${p.name}">${p.label}</option>`)).join('');
-                const el = container.find("#params-sorting");
-                const sel = el.find('select').select2();
-                return sel.append(opts)
-                    .select2("container").find("ul.select2-choices").sortable({
-                    containment: 'parent',
-                    start() { return sel.select2("onSortStart"); },
-                    update() { return sel.select2("onSortEnd"); }
-                });
-            }
-            render(container) {
-                this.container = container;
-                let el = this.renderFields();
-                if (this.sortables.length) {
-                    el = this.renderSorting(container);
-                }
-                else {
-                    $(container).find("#params-sorting").hide();
-                }
-                if (this.groupables.length) {
-                    el = this.renderGrouping(container);
-                }
-                else {
-                    $(container).find("#params-grouping").hide();
-                }
-                return el = this.renderParams(container);
-            }
-        }
-        Reports.Report = Report;
-        function renderDialog(action) {
-            return `
-    <div class="report-dialog">
-      <form id="report-form" method="get" action="/web/reports/report/">
-        <div class="data-heading panel panel-default">
-          <div class="panel-body">
-          <h2>${action.name}</h2>
-          <div class="toolbar toolbar-action-buttons">
-            <button class="btn btn-primary" type="button" v-on:click="report.preview()"><span class="fa fa-print fa-fw"></span> ${Katrid.i18n.gettext('Preview')}</button>
-
-            <div class="btn-group">
-              <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
-                      aria-expanded="false">${Katrid.i18n.gettext('Export')} <span class="caret"></span></button>
-              <div class="dropdown-menu">
-                <a class="dropdown-item" v-on:click="Katrid.Reports.Reports.preview()">PDF</a>
-                <a class="dropdown-item" v-on:click="$event.preventDefault();report.telegram();">Telegram</a>
-                <a class="dropdown-item" v-on:click="report.export('docx')">Word</a>
-                <a class="dropdown-item" v-on:click="report.export('xlsx')">Excel</a>
-                <a class="dropdown-item" v-on:click="report.export('pptx')">PowerPoint</a>
-                <a class="dropdown-item" v-on:click="report.export('csv')">CSV</a>
-                <a class="dropdown-item" v-on:click="report.export('txt')">${Katrid.i18n.gettext('Text File')}</a>
-              </div>
-            </div>
-
-            <div class="btn-group">
-              <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
-                      aria-expanded="false">${Katrid.i18n.gettext('My reports')} <span class="caret"></span></button>
-              <ul class="dropdown-menu">
-              </ul>
-            </div>
-
-          <div class="pull-right btn-group">
-            <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
-                    aria-expanded="false"><i class="fa fa-sliders-h"></i></button>
-            <div class="dropdown-menu">
-              <a class="dropdown-item" v-on:click="report.saveDialog()">${Katrid.i18n.gettext('Save')}</a>
-              <a class="dropdown-item">${Katrid.i18n.gettext('Load')}</a>
-              <div class="dropdown-divider"></div>
-              <h6 class="dropdown-header">Report Viewer</h6>
-              <a class="dropdown-item" onclick="localStorage.setItem('katridReportViewer', 'pdf')">Visualizar em PDF</a>
-              <a class="dropdown-item" onclick="localStorage.setItem('katridReportViewer', 'native')">Visualizador Nativo</a>
-            </div>
-          </div>
-
-          </div>
-        </div>
-        </div>
-        <div class="col-sm-12">
-          <table class="col-sm-12" style="margin-top: 20px; display:none;">
-            <tr>
-              <td colspan="2" style="padding-top: 8px;">
-                <label>${Katrid.i18n.gettext('My reports')}</label>
-
-                <select class="form-control" v-on:change="userReportChanged(userReport.id)" v-model="userReport.id">
-                    <option value=""></option>
-                    <option v-for="rep in userReports" :value="rep.id">{{ rep.name }}</option>
-                </select>
-              </td>
-            </tr>
-          </table>
-        </div>
-      <div id="report-params">
-      <div id="params-fields" class="col-sm-12 form-group" v-if="customizableReport">
-        <div class="checkbox"><label><input type="checkbox" v-model="paramsAdvancedOptions"> ${Katrid.i18n.gettext('Advanced options')}</label></div>
-        <div v-show="paramsAdvancedOptions">
-          <div class="form-group">
-            <label>${Katrid.i18n.gettext('Printable Fields')}</label>
-            <input type="hidden" id="report-id-fields"/>
-          </div>
-          <div class="form-group">
-            <label>${Katrid.i18n.gettext('Totalizing Fields')}</label>
-            <input type="hidden" id="report-id-totals"/>
-          </div>
-        </div>
-      </div>
-
-      <div class="clearfix"></div>
-
-      </div>
-        <div v-if="advancedOptions">
-        <div id="params-sorting" class="col-sm-12 form-group">
-          <label class="control-label">${Katrid.i18n.gettext('Sorting')}</label>
-          <select multiple id="report-id-sorting"></select>
-        </div>
-
-        <div id="params-grouping" class="col-sm-12 form-group">
-          <label class="control-label">${Katrid.i18n.gettext('Grouping')}</label>
-          <select multiple id="report-id-grouping"></select>
-        </div>
-        <hr>
-        <table class="col-sm-12">
-          <tr>
-            <td class="col-sm-4">
-              <select class="form-control" v-model="newParam">
-                <option value="">--- ${Katrid.i18n.gettext('FILTERS')} ---</option>
-                <option v-for="field in report.fields" :value="field.name">{{ field.label }}</option>
-              </select>
-            </td>
-            <td class="col-sm-8">
-              <button
-                  class="btn btn-outline-secondary" type="button"
-                  v-on:click="report.addParam(newParam)">
-                <i class="fa fa-plus fa-fw"></i> ${Katrid.i18n.gettext('Add Parameter')}
-              </button>
-            </td>
-          </tr>
-        </table>
-        <div class="clearfix"></div>
-        <hr>
-      </div>
-      <div id="params-params" class="params-params margin-top-8 row">
-        <div v-for="param in report.params" class="col-lg-6 form-group">
-          <div class="col-12">
-            <label class="control-label">{{ param.label }}</label>
-          </div>
-          <div class="col-4" v-if="param.operationsVisible">
-            <select v-model="param.operation" class="form-control" ng-change="param.setOperation(param.operation)">
-              <option v-for="op in param.operations" :value="op.id">{{ op.text }}</option>
-            </select>
-          </div>
-          <div class="col param-widget">
-          <report-param-widget :param="param"/>
-</div>
-        </div>
-      </div>
-      </form>
-    </div>
-    `;
-        }
-        Reports.renderDialog = renderDialog;
-    })(Reports = Katrid.Reports || (Katrid.Reports = {}));
-})(Katrid || (Katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class PreparedPage {
-            load(metadata) {
-                this.metadata = metadata;
-            }
-        }
-        class MetaDocument {
-            load(metadata) {
-                this.type = metadata.type;
-                this.pages = metadata.pages.map(p => {
-                    let page = new PreparedPage();
-                    page.load(p);
-                    return page;
-                });
-            }
-        }
-        bi.MetaDocument = MetaDocument;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var Katrid;
-(function (Katrid) {
     var Services;
     (function (Services) {
         class BaseAdapter {
@@ -14150,8 +21145,8 @@ var Katrid;
             static all() {
                 return (new Query()).rpc('list_all');
             }
-            getMetadata() {
-                return this.rpc('get_metadata', [this.id]);
+            getMetadata(devInfo = false) {
+                return this.rpc('get_metadata', [this.id], { dev_info: devInfo });
             }
             execute(config) {
                 return this.rpc('execute', [this.id], { params: config.params });
@@ -14164,9 +21159,11 @@ var Katrid;
         class Actions extends ModelService {
             static load(action) {
                 let svc = new ModelService('ui.action');
-                return svc.post('load', { args: [action], kwargs: {
+                return svc.post('load', {
+                    args: [action], kwargs: {
                         context: Katrid.app.context
-                    } });
+                    }
+                });
             }
             static onExecuteAction(action, actionType, context) {
                 let svc = new ModelService(actionType);
@@ -15399,10 +22396,79 @@ var katrid;
     var ui;
     (function (ui) {
         class Toolbar {
-            constructor(config) {
+            constructor(container) {
+                this.container = container;
+                this._vertical = false;
+                this.create();
+                if (container) {
+                    container.appendChild(this.el);
+                }
+            }
+            create() {
+                this.el = document.createElement('div');
+                this.el.className = 'toolbar';
+            }
+            addButton(text) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-secondary tool-button';
+                if (typeof text === 'string') {
+                    btn.innerHTML = text;
+                }
+                else {
+                    if (text.iconClass) {
+                        const icon = document.createElement('i');
+                        icon.className = text.iconClass;
+                        icon.classList.add('icon');
+                        btn.appendChild(icon);
+                    }
+                    if (text.text) {
+                        btn.append(text.text);
+                    }
+                    if (text.onClick) {
+                        btn.addEventListener('click', text.onClick);
+                    }
+                }
+                this.el.appendChild(btn);
+                return btn;
+            }
+            addSeparator() {
+                const sep = document.createElement('div');
+                sep.className = 'separator';
+                this.el.appendChild(sep);
+            }
+            addGroup() {
+                return new ToolButtonGroup(this);
+            }
+            get vertical() {
+                return this._vertical;
+            }
+            set vertical(value) {
+                this._vertical = value;
+                if (value) {
+                    this.el.classList.add('vertical');
+                }
+                else {
+                    this.el.classList.remove('vertical');
+                }
             }
         }
         ui.Toolbar = Toolbar;
+        class ToolButtonGroup {
+            constructor(toolbar) {
+                this.toolbar = toolbar;
+                this.create();
+            }
+            create() {
+                this.el = document.createElement('div');
+                this.el.className = 'btn-group';
+                this.toolbar.el.appendChild(this.el);
+            }
+            addButton(text) {
+                return this.el.appendChild(this.toolbar.addButton(text));
+            }
+        }
+        ui.ToolButtonGroup = ToolButtonGroup;
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
 var Katrid;
@@ -15481,8 +22547,8 @@ var katrid;
 (function (katrid) {
     var ui;
     (function (ui) {
-        const DEFAULT_EXPAND_CLASS = 'fa-caret-right';
-        const DEFAULT_COLLAPSE_CLASS = 'fa-caret-down';
+        const DEFAULT_EXPAND_CLASS = 'fa-chevron-right';
+        const DEFAULT_COLLAPSE_CLASS = 'fa-chevron-down';
         class Component {
             get el() {
                 return this._el;
@@ -15496,10 +22562,10 @@ var katrid;
             }
         }
         ui.Component = Component;
-        class TreeNode extends Component {
-            constructor(treeView, item) {
-                super();
+        class TreeNode {
+            constructor(treeView, item, options) {
                 this.treeView = treeView;
+                this.options = options;
                 this._selected = false;
                 this._expanded = false;
                 this._level = 0;
@@ -15511,7 +22577,7 @@ var katrid;
                     this.data = item;
                     el = document.createElement('li');
                     el.classList.add('tree-node');
-                    let a = document.createElement('a');
+                    let a = document.createElement('div');
                     a.addEventListener('mousedown', (evt) => {
                         evt.preventDefault();
                         this.treeView.el.focus();
@@ -15519,11 +22585,16 @@ var katrid;
                     a.addEventListener('click', () => this.select());
                     a.addEventListener('dblclick', (evt) => {
                         evt.preventDefault();
-                        this.expanded = !this.expanded;
+                        if (!this._expanded) {
+                            this.expand();
+                        }
+                        else {
+                            this.collapse();
+                        }
                     });
                     // children elements
                     this._ul = document.createElement('ul');
-                    a.classList.add('tree-item');
+                    a.className = 'tree-item';
                     el.appendChild(a);
                     el.appendChild(this._ul);
                     this.el = el;
@@ -15536,16 +22607,33 @@ var katrid;
                         evt.preventDefault();
                         this.expanded = !this.expanded;
                     });
+                    if (options?.onContextMenu) {
+                        a.addEventListener('contextmenu', (evt) => {
+                            evt.preventDefault();
+                            evt.stopPropagation();
+                            this.select();
+                            options.onContextMenu(this, evt);
+                        });
+                    }
                     this._exp.classList.add('fa', 'fa-fw');
                     a.appendChild(this._exp);
                     // icon element
-                    if (Katrid.isString(item.icon)) {
+                    if (typeof item.icon === 'string') {
                         this._iconElement = document.createElement('span');
-                        this._iconElement.classList.add('icon', 'fa', 'fa-fw');
-                        this._iconElement.classList.add(item.icon);
+                        this._iconElement.className = 'icon ' + item.icon;
                         a.appendChild(this._iconElement);
                     }
-                    a.appendChild(document.createTextNode(item.text));
+                    else if (typeof options?.icons?.default === 'string') {
+                        this._iconElement = document.createElement('span');
+                        this._iconElement.className = 'icon ' + options.icons.default;
+                        a.appendChild(this._iconElement);
+                    }
+                    let txt = document.createElement('span');
+                    txt.innerText = item.text;
+                    a.appendChild(txt);
+                    if (options?.checkbox) {
+                        this.createCheckbox();
+                    }
                 }
             }
             get children() {
@@ -15553,12 +22641,96 @@ var katrid;
             }
             select() {
                 this.treeView.selection = [this];
+                this.options?.onSelect?.(this);
+                return this;
             }
             collapse() {
-                this.expanded = false;
+                if (this._expanded) {
+                    this.options?.onCollapse?.(this);
+                    this.expanded = false;
+                }
             }
-            expand() {
-                this.expanded = true;
+            createCheckbox() {
+                const label = document.createElement('label');
+                label.className = 'checkbox checkbox-inline';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'checkbox';
+                cb.addEventListener('change', (evt) => {
+                    evt.stopPropagation();
+                    this.checked = cb.checked;
+                });
+                // label.appendChild(cb);
+                // label.appendChild(document.createElement('i'));
+                this.checkbox = cb;
+                this._a.insertBefore(cb, this._exp.nextElementSibling);
+            }
+            setCheckAll(value) {
+                this.setChecked(value);
+                if (this.children.length) {
+                    for (let node of this.children) {
+                        node.setCheckAll(value);
+                    }
+                }
+            }
+            setText(value) {
+                this._a.querySelector('span:last-child').textContent = value;
+            }
+            setChecked(value) {
+                this._checked = value;
+                if (typeof value === 'string') {
+                    this.checkbox.indeterminate = true;
+                    this.checkbox.checked = null;
+                }
+                else {
+                    this.checkbox.indeterminate = false;
+                    this.checkbox.checked = value;
+                }
+            }
+            get checked() {
+                return this._checked;
+            }
+            set checked(value) {
+                this.setCheckAll(value === true);
+                this._parent?.updateCheckboxState();
+            }
+            updateCheckboxState() {
+                let anyChecked = false;
+                let anyUnchecked = false;
+                let newState = false;
+                for (let node of this.children) {
+                    if (node._checked === true) {
+                        anyChecked = true;
+                        if (anyUnchecked) {
+                            newState = 'indeterminate';
+                            break;
+                        }
+                    }
+                    else if (!node._checked) {
+                        anyUnchecked = true;
+                        if (anyChecked) {
+                            newState = 'indeterminate';
+                            break;
+                        }
+                    }
+                    else if (node._checked === 'indeterminate') {
+                        newState = 'indeterminate';
+                        break;
+                    }
+                }
+                if (!newState && !anyUnchecked) {
+                    newState = true;
+                }
+                this.setChecked(newState);
+                this._parent?.updateCheckboxState();
+            }
+            async expand() {
+                if (!this._expanded && this._canExpand) {
+                    await this.options?.onExpand?.(this);
+                    if (this.children?.length) {
+                        this.expanded = true;
+                    }
+                }
             }
             get expanded() {
                 return this._expanded;
@@ -15592,28 +22764,43 @@ var katrid;
             }
             get nextSibling() {
                 let nodes;
-                if (this._parent)
+                if (this._parent) {
                     nodes = this._parent.children;
-                else
+                }
+                else {
                     nodes = this.treeView.nodes;
+                }
                 return nodes[this.index + 1];
             }
             get previous() {
                 let p = this.previousSibling;
-                if (p && p._expanded && p.children && p.children.length)
-                    return p.last;
-                if (this._parent)
+                if (p) {
+                    while (p._expanded && p.children?.length) {
+                        p = p.last;
+                    }
+                    return p;
+                }
+                if (this._parent) {
                     return this._parent;
+                }
                 return p;
             }
             get next() {
-                if (this._expanded && this.children.length)
+                if (this._expanded && this.children.length) {
                     return this.first;
+                }
                 let n = this.nextSibling;
-                if (n && n._expanded && n.children && n.children.length)
-                    return n.first;
-                else if (this._parent)
-                    return this._parent.nextSibling;
+                if (n) {
+                    return n;
+                }
+                let p = this._parent;
+                while (p) {
+                    let ns = p.nextSibling;
+                    if (ns) {
+                        return ns;
+                    }
+                    p = p._parent;
+                }
                 return n;
             }
             get first() {
@@ -15639,50 +22826,61 @@ var katrid;
             }
             set parent(value) {
                 // remove node from its parent
-                if (this._parent)
-                    this._parent.remove(this);
+                if (this._parent) {
+                    this.remove();
+                }
                 this._parent = value;
                 // add node onto new parent
-                if (value)
-                    value.add(this);
+                if (value) {
+                    value._addNode(this);
+                }
             }
-            add(node) {
+            _addNode(node) {
                 this.children.push(node);
                 this._ul.appendChild(node.el);
                 this.update();
                 node.calcLevel();
             }
-            remove(node) {
+            addNode(node) {
+                node.parent = this;
+                return node;
+            }
+            addItem(item, options) {
+                return this.addNode(new TreeNode(this.treeView, item, options || this.options));
+            }
+            remove() {
+                if (this._parent) {
+                    this._parent.removeNode(this);
+                }
+                this.el.remove();
+            }
+            removeNode(node) {
                 this.children.splice(this.children.indexOf(node), 1);
                 this.update();
-                node.calcLevel();
             }
             calcLevel() {
-                this.level = this._parent.level + 1;
+                if (this._parent)
+                    this.level = this._parent.level + 1;
+                else
+                    this.level = 0;
             }
             update() {
-                if (this._canExpand && this.children.length)
+                if (this._canExpand && this.children.length) {
+                    this._exp.className = 'fa fa-fw';
                     this._exp.classList.add(DEFAULT_EXPAND_CLASS);
-                else
-                    this._exp.classList.remove(DEFAULT_COLLAPSE_CLASS);
+                }
+                else {
+                    this.el.classList.remove('expanded');
+                    this._exp.className = 'fa-regular fa-fw';
+                }
             }
             get level() {
                 return this._level;
             }
             set level(value) {
-                console.log('set level', value, this._level);
                 if (value !== this._level) {
-                    for (let c of this.el.querySelectorAll('.indent'))
-                        c.parentNode.removeChild(c);
-                    let delta = value - this._level;
                     this._level = value;
-                    for (let n of this.all())
-                        n.level -= delta;
-                    for (let c = 0; c < this._level; c++) {
-                        let indent = document.createElement('span');
-                        indent.classList.add('indent');
-                        this._a.prepend(indent);
-                    }
+                    this._a.style.paddingLeft = `${(value + 1) * 15}px`;
                 }
             }
             *all() {
@@ -15695,20 +22893,22 @@ var katrid;
         }
         ui.TreeNode = TreeNode;
         class TreeView {
-            constructor(cfg) {
+            constructor(el, options) {
+                this.options = options;
                 this._selection = [];
-                this.el = cfg.dom;
+                this._striped = false;
+                this.el = el;
                 this.nodes = [];
-                if (cfg.items)
-                    this.addNodes(cfg.items);
                 this.el.classList.add('tree-view');
                 this.el.tabIndex = 0;
-                this.el.addEventListener('keydown', (evt) => {
-                    console.log('key down;');
+                this._ul = document.createElement('ul');
+                this.el.append(this._ul);
+                this.el.addEventListener('keydown', async (evt) => {
                     let n;
+                    if (evt.shiftKey)
+                        return;
                     switch (evt.key) {
                         case 'ArrowDown':
-                            console.log('arrow down;;');
                             this.next();
                             break;
                         case 'ArrowUp':
@@ -15717,27 +22917,34 @@ var katrid;
                         case 'ArrowRight':
                             n = this.currentNode;
                             if (n && n.children.length) {
-                                if (n.expanded)
-                                    n.next.select();
-                                else
-                                    n.expand();
+                                await n.expand();
+                                n.next.select();
                             }
-                            else
+                            else {
                                 this.next();
+                            }
                             break;
                         case 'ArrowLeft':
                             n = this.currentNode;
-                            if (n && n.children.length) {
+                            if (n) {
                                 if (n.expanded)
                                     n.collapse();
-                                else
-                                    n.previous.select();
+                                else if (!n.parent?.select())
+                                    n.previousSibling?.select();
                             }
                             else
-                                this.previous();
+                                this.firstNode.select();
+                            break;
+                        case ' ':
+                            if (this.currentNode?.checkbox) {
+                                this.currentNode.checked = !this.currentNode.checked;
+                            }
                             break;
                     }
                 });
+                if (Array.isArray(options?.data)) {
+                    this.addNodes(options);
+                }
             }
             get selection() {
                 return this._selection;
@@ -15765,9 +22972,7 @@ var katrid;
             previous() {
                 let curNode = this.currentNode;
                 if (curNode) {
-                    let n = curNode.previous;
-                    if (n)
-                        n.select();
+                    curNode.previous?.select();
                 }
                 else
                     this.lastNode.select();
@@ -15775,39 +22980,77 @@ var katrid;
             next() {
                 let curNode = this.currentNode;
                 if (curNode) {
-                    let n = curNode.next;
-                    if (n)
-                        n.select();
+                    curNode.next?.select();
                 }
-                else
+                else {
                     this.firstNode.select();
+                }
             }
             addNodes(nodes, parent = null) {
-                for (let node of nodes) {
-                    let item = this.addNode(node, parent);
-                    if (node.children)
-                        this.addNodes(node.children, item);
+                let data = nodes.data;
+                if (!Array.isArray(nodes.data)) {
+                    data = [nodes.data];
+                }
+                for (const node of data) {
+                    let item = this.addItem(node, parent, nodes.options);
+                    if (node.children) {
+                        this.addNodes({ data: node.children, options: nodes.options }, item);
+                    }
                 }
             }
-            addNode(item, parent) {
-                let r;
-                if (item instanceof HTMLElement) { }
-                else if (typeof item === 'string')
+            addItem(item, parent, options) {
+                if (typeof item === 'string')
                     item = { text: item };
-                console.log(item);
-                r = new TreeNode(this, item);
-                if (parent)
+                const r = new TreeNode(this, item, options || this.options?.options);
+                if (parent) {
                     r.parent = parent;
+                }
                 else {
                     this.nodes.push(r);
-                    console.log(r.el);
-                    this.el.appendChild(r.el);
+                    this._ul.appendChild(r.el);
                 }
                 return r;
             }
+            *all() {
+                for (let n of this.nodes) {
+                    yield n;
+                    yield* n.all();
+                }
+            }
             get currentNode() {
-                if (this.selection.length)
+                if (this.selection.length) {
                     return this.selection[this.selection.length - 1];
+                }
+            }
+            collapseAll() {
+                for (let node of this.nodes) {
+                    node.collapse();
+                }
+            }
+            expandAll() {
+                for (let node of this.nodes) {
+                    node.expand();
+                }
+            }
+            get striped() {
+                return this._striped;
+            }
+            set striped(value) {
+                this._striped = value;
+                if (value) {
+                    this.el.classList.add('striped');
+                    // TODO custom node height
+                    this._ul.style.backgroundSize = 'auto 50px';
+                }
+                else {
+                    this.el.classList.remove('striped');
+                }
+            }
+            update() {
+            }
+            clear() {
+                this._ul.innerHTML = '';
+                this.nodes = [];
             }
         }
         ui.TreeView = TreeView;
@@ -15869,6 +23112,306 @@ var katrid;
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
 var kui = katrid.ui;
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class Alerts {
+            static success(msg) {
+                return katrid.ui.Toast.success({ message: msg });
+            }
+            static warning(msg) {
+                return katrid.ui.Toast.warning({ message: msg });
+            }
+            static warn(msg) {
+                return katrid.ui.Toast.warning({ message: msg });
+            }
+            static info(msg) {
+                return katrid.ui.Toast.info({ message: msg });
+            }
+            static error(msg) {
+                return katrid.ui.Toast.danger({ message: msg });
+            }
+        }
+        ui.Alerts = Alerts;
+        function createButtons(container, config) {
+            for (const btn of config.buttons) {
+                if (typeof btn === 'string') {
+                    const button = document.createElement('button');
+                    button.classList.add('btn');
+                    button.classList.add('btn-secondary');
+                    switch (btn) {
+                        case 'ok':
+                            button.classList.add('btn-primary');
+                            button.textContent = katrid.i18n.gettext('OK');
+                            break;
+                        case 'cancel':
+                            button.textContent = katrid.i18n.gettext('Cancel');
+                            break;
+                        case 'yes':
+                            button.textContent = katrid.i18n.gettext('Yes');
+                            break;
+                        case 'no':
+                            button.textContent = katrid.i18n.gettext('No');
+                            break;
+                        case 'close':
+                            button.textContent = katrid.i18n.gettext('Close');
+                            break;
+                        default:
+                            button.textContent = katrid.i18n.gettext(btn);
+                    }
+                    button.addEventListener('click', evt => {
+                        container.closest('dialog').close();
+                        container.dispatchEvent(new CustomEvent('dialog-button-click', { detail: { button: btn } }));
+                    });
+                    container.appendChild(button);
+                }
+            }
+        }
+        function createDialogElement(config) {
+            const dialog = document.createElement('dialog');
+            dialog.className = 'dialog';
+            if (config.title) {
+                dialog.innerHTML = `<header class="dialog-header">${config.title}</header>`;
+            }
+            const div = document.createElement('div');
+            div.className = 'dialog-body';
+            if (config.content) {
+                div.innerHTML = config.content;
+            }
+            dialog.appendChild(div);
+            // footer
+            const footer = document.createElement('footer');
+            footer.className = 'dialog-footer';
+            if (config.buttons) {
+                createButtons(footer, config);
+            }
+            dialog.appendChild(footer);
+            return dialog;
+        }
+        ui.createDialogElement = createDialogElement;
+        class ExceptionDialog {
+            static show(title, msg, traceback) {
+                let modal = document.createElement('div');
+                modal.classList.add('modal');
+                modal.tabIndex = -1;
+                modal.setAttribute('role', 'dialog');
+                modal.innerHTML = `<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger"><i class="fa fa-fw fa-bug text-danger"></i> ${title}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+      ${msg || ''}
+      </div>
+      <div class="modal-footer">
+        <button type="button" name="btn-cancel" class="btn btn-outline-secondary" data-bs-dismiss="modal">${katrid.i18n.gettext('Close')}</button>
+      </div>
+    </div>
+  </div>`;
+                //$(modal).modal();
+            }
+            static showValidationError(title, msg, model, errors) {
+                // format errors to html
+                let errorHtml = '';
+                for (const [k, error] of Object.entries(errors)) {
+                    errorHtml +=
+                        '<li>' +
+                            `<h6>${model.fields[k].caption}</h6>` +
+                            '<ul>';
+                    for (const msg of error) {
+                        errorHtml += `<li class="help-block">${msg.message}</li>`;
+                    }
+                    errorHtml += '</ul></li>';
+                }
+                return errorHtml;
+            }
+        }
+        ui.ExceptionDialog = ExceptionDialog;
+        function createModal(title, content, buttons) {
+            let modal = document.createElement('div');
+            modal.classList.add('modal');
+            modal.tabIndex = -1;
+            // modal.setAttribute('role', 'dialog');
+            let buttonsTempl = `
+        <button type="button" name="btn-ok" class="btn btn-primary">OK</button>
+        <button type="button" name="btn-cancel" class="btn btn-secondary" data-bs-dismiss="modal">${katrid.i18n.gettext('Cancel')}</button>
+    `;
+            if (buttons) {
+                buttonsTempl = '';
+                for (let button of buttons) {
+                    if (typeof button === 'string')
+                        buttonsTempl += getButtonFromName(button);
+                }
+            }
+            modal.innerHTML = `<div class="modal-dialog modal-xl modal-fullscreen-md-down" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">${title}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+      ${content || ''}
+      </div>
+      <div class="modal-footer">
+      ${buttonsTempl}
+      </div>
+    </div>
+  </div>`;
+            return modal;
+        }
+        ui.createModal = createModal;
+        function createDialog(title, content, buttons) {
+            const dlg = createModal(title, content, buttons);
+            const modal = new bootstrap.Modal(dlg);
+            dlg.addEventListener('hidden.bs.modal', evt => {
+                dlg.remove();
+                modal.dispose();
+            });
+            return modal;
+        }
+        ui.createDialog = createDialog;
+        let DialogResult;
+        (function (DialogResult) {
+            DialogResult["ok"] = "ok";
+            DialogResult["cancel"] = "cancel";
+            DialogResult["yes"] = "yes";
+            DialogResult["no"] = "no";
+            DialogResult["close"] = "close";
+        })(DialogResult = ui.DialogResult || (ui.DialogResult = {}));
+        function getButtonFromName(buttonName) {
+            let button = `<button type="button" class="btn btn-outline-secondary">`;
+            switch (buttonName) {
+                case DialogResult.close:
+                    button += katrid.i18n.gettext('Close');
+                    break;
+                case DialogResult.cancel:
+                    button += katrid.i18n.gettext('Cancel');
+                    break;
+                case DialogResult.yes:
+                    button += katrid.i18n.gettext('Yes');
+                    break;
+                case DialogResult.no:
+                    button += katrid.i18n.gettext('No');
+                    break;
+                case DialogResult.ok:
+                    button += katrid.i18n.gettext('OK');
+                    break;
+                default:
+                    button += katrid.i18n.gettext(buttonName);
+                    break;
+            }
+            button += '</button>';
+            return button;
+        }
+        class Dialog {
+            constructor(config) {
+                this.dialog = createDialogElement(config);
+                this.dialogPromise = new Promise((resolve, reject) => {
+                    this.resolve = resolve;
+                    this.reject = reject;
+                    this.dialog.addEventListener('close', () => {
+                        this.resolve(this.result);
+                    });
+                });
+            }
+            async showModal() {
+                document.body.append(this.dialog);
+                this.dialog.showModal();
+                return this.dialogPromise;
+            }
+            close() {
+                this.dialog.close();
+            }
+        }
+        ui.Dialog = Dialog;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class Toast {
+            static createElement(config) {
+                if (!this._container) {
+                    let container = document.createElement('div');
+                    container.classList.add('toast-container', 'position-fixed', 'bottom-0', 'end-0', 'p-3');
+                    document.body.append(container);
+                    this._container = container;
+                }
+                let div = document.createElement('div');
+                div.classList.add('toast');
+                if (config.classList)
+                    div.classList.add(...config.classList);
+                div.innerHTML = `<div class="d-flex"><div class="toast-body">${config.message}</div></div>`;
+                if ((config.canClose === undefined) || config.canClose)
+                    div.querySelector('.d-flex').append(katrid.ui.html('<button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>')[0]);
+                this._container.append(div);
+                return div;
+            }
+            static show(config) {
+                let el = this.createElement(config);
+                const toast = new bootstrap.Toast(el);
+                toast.show();
+                el.addEventListener('hidden.bs.toast', () => el.remove());
+                return toast;
+            }
+            static danger(message) {
+                message.classList = ['text-bg-danger', 'toast-dark'];
+                return this.show(message);
+            }
+            static success(message) {
+                message.classList = ['text-bg-success', 'toast-dark'];
+                return this.show(message);
+            }
+            static info(message) {
+                message.classList = ['text-bg-info'];
+                return this.show(message);
+            }
+            static warning(message) {
+                message.classList = ['text-bg-warning'];
+                return this.show(message);
+            }
+        }
+        ui.Toast = Toast;
+        function showMessage(message) {
+            return Toast.show({ message });
+        }
+        ui.showMessage = showMessage;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        let waitDialog;
+        function showWaitDialog(config) {
+            let msg;
+            if (typeof config === 'string') {
+                msg = katrid.i18n.gettext('Please wait...');
+            }
+            waitDialog ?? (waitDialog = ui.createDialogElement({ message: msg }));
+            waitDialog.showModal();
+        }
+        ui.showWaitDialog = showWaitDialog;
+        function closeWaitDialog() {
+            waitDialog?.close();
+        }
+        ui.closeWaitDialog = closeWaitDialog;
+        class WaitDialog {
+            static show(msg) {
+                // $('#loading-msg').show();
+                showWaitDialog(msg);
+            }
+            static hide() {
+                // $('#loading-msg').hide();
+                closeWaitDialog();
+            }
+        }
+        ui.WaitDialog = WaitDialog;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     function isString(obj) {
