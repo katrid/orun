@@ -9116,8 +9116,8 @@ var katrid;
                 prefix = prefix[0].toLowerCase() + prefix.slice(1);
                 while (true) {
                     n++;
-                    let found = false;
                     let newName = prefix + n;
+                    let found = false;
                     for (let obj of Array.from(this.getObjects())) {
                         if (obj.name === newName) {
                             found = true;
@@ -9142,9 +9142,9 @@ var katrid;
                     yield ds;
                 for (let p of this.pages) {
                     yield p;
-                    for (let obj of p.allObjects()) {
-                        yield obj;
-                    }
+                    yield* p.allObjects();
+                    // yield obj;
+                    // }
                 }
             }
             newPage(type) {
@@ -9231,6 +9231,8 @@ var katrid;
                 this.height = 40;
                 this.width = 400;
             }
+            onRemoveNotification(obj) {
+            }
             getDesignRect() {
                 return new DOMRect(this.x, this.y, this.width, this.height + this._headerHeight + this._sizerHeight);
             }
@@ -9298,7 +9300,7 @@ var katrid;
                 // menu.add('Config Bands...', () => console.log('config bands'));
                 menu.add('Delete', () => {
                     this.destroyDesigner();
-                    this.pageDesigner.invalidate();
+                    this.pageDesigner.invalidateBands();
                 });
                 if (this instanceof DataBand) {
                     menu.add('Add Group', () => this.createGroup());
@@ -9306,14 +9308,14 @@ var katrid;
                         const band = new HeaderBand();
                         band.name = this.pageDesigner.getValidName('header');
                         this.header = band;
-                        band.parent = this;
+                        band.parentBand = this;
                         designer.addBand(band);
                     });
                     menu.add('Add Footer', () => {
                         const band = new FooterBand();
                         band.name = this.pageDesigner.getValidName('footer');
                         this.footer = band;
-                        band.parent = this;
+                        band.parentBand = this;
                         designer.addBand(band);
                     });
                     menu.add('Add Detail', () => {
@@ -9343,8 +9345,8 @@ var katrid;
                     groupHeader.parentBand = band.groupHeader;
                 }
                 groupHeader.dataBand = band;
-                band.groupHeader = groupHeader;
                 this.pageDesigner.addBand(groupHeader);
+                band.groupHeader = groupHeader;
                 groupHeader.footer = new GroupFooter();
                 groupHeader.footer.name = this.pageDesigner.getValidName('groupFooter');
                 groupHeader.footer.header = groupHeader;
@@ -9433,6 +9435,24 @@ var katrid;
                     this.report.addLoadCallback(() => this.onLoad(info));
                 }
             }
+            onRemoveNotification(obj) {
+                super.onRemoveNotification(obj);
+                if (obj === this._datasource) {
+                    this._datasource = null;
+                }
+                else if (obj === this.header) {
+                    this.header = null;
+                }
+                else if (obj === this.groupHeader) {
+                    if (this.groupHeader.parentBand) {
+                        this.groupHeader = this.groupHeader.parentBand;
+                        this.groupHeader.dataBand = this;
+                    }
+                    else {
+                        this.groupHeader = null;
+                    }
+                }
+            }
             dump() {
                 let d = super.dump();
                 if (this._datasource)
@@ -9478,8 +9498,8 @@ var katrid;
         class HeaderBand extends Band {
             remove() {
                 super.remove();
-                if (this.parent)
-                    this.parent.header = null;
+                if (this.parentBand)
+                    this.parentBand.header = null;
             }
         }
         HeaderBand.type = 'HeaderBand';
@@ -9487,8 +9507,8 @@ var katrid;
         class FooterBand extends Band {
             remove() {
                 super.remove();
-                if (this.parent)
-                    this.parent.footer = null;
+                if (this.parentBand)
+                    this.parentBand.footer = null;
             }
         }
         FooterBand.type = 'FooterBand';
@@ -9496,18 +9516,21 @@ var katrid;
         class GroupHeader extends Band {
             remove() {
                 super.remove();
-                if (this.footer)
+                if (this.footer) {
                     this.footer.destroyDesigner();
+                }
             }
-            onRemoveObjectNotification(obj) {
-                super.onRemoveObjectNotification(obj);
-                if (obj === this.footer)
+            onRemoveNotification(obj) {
+                if (obj === this.footer) {
                     this.remove();
-                else if (obj === this.parent) {
-                    if (this.parent.parent)
-                        this.parent = this.parent.parent;
-                    else
-                        this.parent = null;
+                }
+                else if (obj === this.parentBand) {
+                    if (this.parentBand.parentBand) {
+                        this.parentBand = this.parentBand.parentBand;
+                    }
+                    else {
+                        this.parentBand = null;
+                    }
                 }
             }
             dump() {
@@ -9541,6 +9564,7 @@ var katrid;
         class GroupFooter extends Band {
             remove() {
                 super.remove();
+                console.debug('remove', this);
                 if (this.header) {
                     this.header.remove();
                 }
@@ -9736,9 +9760,8 @@ var katrid;
             }
             _rearrangeBand(b) {
                 let bands = [];
-                if (b.header) {
+                if (b.header)
                     bands.push(b.header);
-                }
                 if (b.groupHeader) {
                     let g = b.groupHeader;
                     bands.push(g);
@@ -9759,9 +9782,8 @@ var katrid;
                         }
                     }
                 }
-                if (b.footer) {
+                if (b.footer)
                     bands.push(b.footer);
-                }
                 return bands;
             }
             get selectedBand() {
@@ -10045,15 +10067,19 @@ var katrid;
                 return this.bands;
             }
             *allObjects() {
-                yield* super.allObjects();
                 for (let band of this.bands) {
                     yield band;
+                    for (let obj of band.objects) {
+                        yield obj;
+                    }
                 }
             }
             removeBand(band) {
                 if (this.bands.indexOf(band) > -1) {
                     this.bands.splice(this.bands.indexOf(band), 1);
                 }
+                // notify bands
+                this.bands.forEach(b => b.onRemoveNotification(band));
             }
             redraw() {
                 this.bands?.forEach(b => b.redraw());
