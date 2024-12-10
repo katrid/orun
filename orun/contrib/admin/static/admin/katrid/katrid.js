@@ -2639,9 +2639,45 @@ var katrid;
         drawing.Text = Text;
     })(drawing = katrid.drawing || (katrid.drawing = {}));
 })(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        class Barcode extends drawing.BaseWidget {
+            defaultProps() {
+                super.defaultProps();
+                this.height = 50;
+                this.width = 100;
+            }
+            dump() {
+                return Object.assign(super.dump(), {
+                    field: this.field, dataSource: this.datasource?.name, code: this.code,
+                    center: this.center,
+                    barcodeType: this.barcodeType,
+                    width: this.width,
+                    height: this.height,
+                });
+            }
+            load(info) {
+                super.load(info);
+                this.field = info.field;
+                this.code = info.code;
+                this.barcodeType = info.barcodeType;
+            }
+            redraw() {
+                super.redraw();
+                this.graphic.clear();
+                this.graphic.rect(0, 0, this.width, this.height);
+                this.graphic.text(4, this.height / 2, 'BARCODE').attr('fill', 'black');
+            }
+        }
+        drawing.Barcode = Barcode;
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
 /// <reference path="../drawing/shapes.ts" />
 /// <reference path="../drawing/image.ts" />
 /// <reference path="../drawing/text.ts" />
+/// <reference path="../drawing/barcode.ts" />
 var katrid;
 (function (katrid) {
     var bi;
@@ -4430,7 +4466,10 @@ var katrid;
         }
         class DataSourceProperty extends SelectProperty {
             getValues(typeEditor) {
-                return appStudio.dataSources.map((obj, idx) => ({ value: idx, text: obj.name }));
+                return typeEditor.designer.report.datasources.map(ds => ({
+                    value: ds,
+                    text: ds.name
+                }));
             }
             getValue(typeEditor) {
                 let target = typeEditor.targetObject;
@@ -4461,11 +4500,6 @@ var katrid;
             }
         }
         class LineChartEditor extends BarChartEditor {
-        }
-        class GridEditor extends WidgetEditor {
-            async showEditor() {
-                this.targetObject.code = await showCodeEditor(this.targetObject.code, 'javascript');
-            }
         }
         async function showCodeEditor(value = null, lang = 'javascript', previewType = 'table') {
             let codeEditor;
@@ -4659,8 +4693,62 @@ var katrid;
         bi.DataSource = DataSource;
     })(bi = katrid.bi || (katrid.bi = {}));
 })(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        class BaseGrid extends drawing.BaseWidget {
+            defaultProps() {
+                super.defaultProps();
+                this.height = 100;
+                this.width = 200;
+            }
+            create() {
+                this.graphic = drawing.g({ transform: `translate(${this.x},${this.y})` });
+                let fobj = drawing.draw('foreignObject', { x: 0, y: 0, width: this.width, height: this.height });
+                const div = this._div = document.createElement('div');
+                div.className = 'grid';
+                this.gridElement = document.createElement('table');
+                div.append(this.gridElement);
+                fobj.$el.append(div);
+                this.foreignObject = fobj.$el;
+                this.graphic.append(fobj);
+                this.element = this.graphic.$el;
+                this.createTable();
+            }
+            createTable() {
+                const thead = this.gridElement.createTHead();
+                let tr = thead.appendChild(document.createElement('tr'));
+                let th = tr.appendChild(document.createElement('th'));
+                th.innerText = 'Column 1';
+                th.style.cursor = 'pointer';
+                th.addEventListener('click', () => console.debug('th click'));
+                tr.appendChild(document.createElement('th')).innerText = 'Column 2';
+                tr.appendChild(document.createElement('th')).innerText = 'Column 3';
+            }
+        }
+        drawing.BaseGrid = BaseGrid;
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
+/// <reference path="../drawing/grid.ts" />
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class Grid extends katrid.drawing.BaseGrid {
+            dump() {
+                const d = super.dump();
+                d.datasource = this.datasource?.name;
+                return d;
+            }
+        }
+        bi.Grid = Grid;
+        katrid.bi.componentRegistry.Grid = Grid;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
 /// <reference path="../design/editors.ts" />
 /// <reference path="bi/datasource.ts" />
+/// <reference path="grid.ts" />
 var katrid;
 (function (katrid) {
     var bi;
@@ -4681,7 +4769,14 @@ var katrid;
             }
         }
         bi.DataSourceEditor = DataSourceEditor;
+        class GridEditor extends katrid.design.WidgetEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new katrid.design.DataSourceProperty('datasource', { caption: 'Data Source' }));
+            }
+        }
+        bi.GridEditor = GridEditor;
         katrid.design.registerComponentEditor(katrid.bi.DataSource, DataSourceEditor);
+        katrid.design.registerComponentEditor(katrid.bi.Grid, GridEditor);
     })(bi = katrid.bi || (katrid.bi = {}));
 })(katrid || (katrid = {}));
 var katrid;
@@ -9270,6 +9365,8 @@ var katrid;
             getDesignRect() {
                 return new DOMRect(this.x, this.y, this.width, this.height + this._headerHeight + this._sizerHeight);
             }
+            reorderBy(d) {
+            }
             get clientY() {
                 return this.y + this._headerHeight;
             }
@@ -9291,6 +9388,13 @@ var katrid;
                     this.objects.push(obj);
                     obj.parent = this;
                     return this.appendToDesigner(obj);
+                }
+            }
+            validateHeight() {
+                const minHeight = this.getMinHeight();
+                if (this.height < minHeight) {
+                    this.height = minHeight;
+                    this.pageDesigner.invalidateBands();
                 }
             }
             dump() {
@@ -9395,13 +9499,16 @@ var katrid;
                 this.sizer = sizer;
                 return sizer;
             }
+            getMinHeight() {
+                return Math.max(...this.objects.map(o => o.y + o.height), 0);
+            }
             _sizerMouseDown(event) {
                 this._resizing = true;
                 event.target.setPointerCapture(event.pointerId);
                 this._dy = event.offsetY;
                 event.stopPropagation();
                 event.preventDefault();
-                this._minHeight = Math.max(...this.objects.map(o => o.y + o.height), 0);
+                this._minHeight = this.getMinHeight();
                 // create temp sizer
                 // let tempSizer = katrid.drawing.rect(this.x, this.y + this._headerHeight + this.height, this.width, this._sizerHeight, {class: 'band-sizer'});
                 // this._tempSizer = tempSizer;
@@ -9855,8 +9962,34 @@ var katrid;
             }
             onKeyDown(event) {
                 if (this.selectedBand && event.key !== 'c' && event.key !== 'v' && event.key !== 'x' && event.key !== 'z') {
-                    if (event.key === 'Delete' && !event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey) {
-                        this.removeBand(this.selectedBand);
+                    switch (event.key) {
+                        case 'Delete':
+                            if (!event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey) {
+                                this.removeBand(this.selectedBand);
+                            }
+                            event.preventDefault();
+                            event.stopPropagation();
+                            break;
+                        case 'ArrowUp':
+                            if (event.shiftKey) {
+                                this.selectedBand.sizerMoveBy(-this.gridY);
+                            }
+                            else if (!event.ctrlKey) {
+                                this.selectedBand.reorderBy(-1);
+                            }
+                            event.preventDefault();
+                            event.stopPropagation();
+                            break;
+                        case 'ArrowDown':
+                            if (event.shiftKey) {
+                                this.selectedBand.sizerMoveBy(this.gridY);
+                            }
+                            else if (!event.ctrlKey) {
+                                this.selectedBand.reorderBy(-1);
+                            }
+                            event.preventDefault();
+                            event.stopPropagation();
+                            break;
                     }
                 }
                 else {
@@ -9915,40 +10048,19 @@ var katrid;
                 let band = katrid.data(target.closest('.band-designer'), 'band');
                 x -= band.x;
                 y -= band.clientY;
-                let obj;
+                let cls = katrid.bi.componentRegistry[widgetName];
+                let obj = new cls();
+                obj.name = this.getValidName(widgetName);
+                obj.x = x;
+                obj.y = y;
                 switch (widgetName) {
                     case 'text':
-                        let text = obj = new katrid.drawing.Text();
-                        text.name = this.getValidName('text');
+                        let text = obj;
                         text.text = text.name;
-                        text.x = x;
-                        text.y = y;
-                        band.addObject(text);
-                        obj = text;
-                        break;
-                    case 'image':
-                        const img = obj = new katrid.drawing.Image();
-                        img.name = this.getValidName('image');
-                        img.x = x;
-                        img.y = y;
-                        band.addObject(img);
-                        break;
-                    case 'barcode':
-                        let bc = new katrid.drawing.Barcode();
-                        bc.name = this.getValidName('barcode');
-                        bc.x = x;
-                        bc.y = y;
-                        band.addObject(bc);
-                        obj = bc;
-                        break;
-                    case 'subreport':
-                        obj = new katrid.bi.componentRegistry['SubReport']();
-                        obj.name = this.getValidName('subReport');
-                        obj.x = x;
-                        obj.y = y;
-                        band.addObject(obj);
                         break;
                 }
+                band.addObject(obj);
+                band.validateHeight();
                 this.setSelection([obj]);
             }
             pasteObject(obj) {
@@ -10774,6 +10886,15 @@ var katrid;
               </div>
               <div class="widget-label">
                 ${katrid.i18n.gettext('Image')}
+              </div>
+            </div>
+
+            <div class="col-4 toolbox-item" data-widget="Grid">
+              <div>
+                 <i class="fa-duotone fa-regular fa-2x fa-fw fa-table"></i>
+              </div>
+              <div class="widget-label">
+                ${katrid.i18n.gettext('Grid')}
               </div>
             </div>
 
@@ -14380,41 +14501,6 @@ var katrid;
         }
         ui.confirm = confirm;
     })(ui = katrid.ui || (katrid.ui = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        class Barcode extends drawing.BaseWidget {
-            defaultProps() {
-                super.defaultProps();
-                this.height = 50;
-                this.width = 100;
-            }
-            dump() {
-                return Object.assign(super.dump(), {
-                    field: this.field, dataSource: this.datasource?.name, code: this.code,
-                    center: this.center,
-                    barcodeType: this.barcodeType,
-                    width: this.width,
-                    height: this.height,
-                });
-            }
-            load(info) {
-                super.load(info);
-                this.field = info.field;
-                this.code = info.code;
-                this.barcodeType = info.barcodeType;
-            }
-            redraw() {
-                super.redraw();
-                this.graphic.clear();
-                this.graphic.rect(0, 0, this.width, this.height);
-                this.graphic.text(4, this.height / 2, 'BARCODE').attr('fill', 'black');
-            }
-        }
-        drawing.Barcode = Barcode;
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
 })(katrid || (katrid = {}));
 /// <reference path="text.ts" />
 /// <reference path="image.ts" />
