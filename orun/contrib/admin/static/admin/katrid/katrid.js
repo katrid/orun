@@ -2036,16 +2036,8 @@ var katrid;
                     let codeEditor = monaco.editor.create(dom, {
                         language,
                         automaticLayout: true,
+                        value: code,
                     });
-                    setTimeout(() => {
-                        codeEditor.layout();
-                    });
-                    if (language) {
-                        monaco.editor.setModelLanguage(codeEditor.getModel(), language);
-                    }
-                    if (code) {
-                        codeEditor.getModel().setValue(code);
-                    }
                     resolve(codeEditor);
                 });
             });
@@ -2054,7 +2046,7 @@ var katrid;
         async function showCodeEditor(code, lang) {
             let div = document.createElement('div');
             div.className = 'code-editor';
-            let dlg = new kui.Dialog({ title: 'Code Editor', buttons: ['ok', 'cancel'] });
+            let dlg = new katrid.ui.Dialog({ title: 'Code Editor', buttons: ['ok', 'cancel'] });
             dlg.dialog.classList.add('code-editor-dialog');
             const ed = await createCodeEditor(div, code, lang);
             dlg.dialog.querySelector('.dialog-body').appendChild(div);
@@ -2062,11 +2054,13 @@ var katrid;
                 monaco.editor.getModels().forEach(m => m.dispose());
                 dlg.dialog.remove();
             });
-            const modal = dlg.showModal();
-            setTimeout(() => {
-                ed.layout();
-            }, 1000);
-            return modal;
+            let modal = await dlg.showModal();
+            if (modal === 'ok') {
+                return ed.getModel().getValue();
+            }
+            else {
+                return false;
+            }
         }
         bi.showCodeEditor = showCodeEditor;
     })(bi = katrid.bi || (katrid.bi = {}));
@@ -5282,6 +5276,9 @@ var katrid;
                     this.undoManager.endUpdate();
                 }
             }
+            pasteObject(obj) {
+                return this.addObject(obj);
+            }
             undo() {
                 this.undoManager.undo();
                 this.updateGrabs();
@@ -7629,6 +7626,7 @@ var katrid;
                 this.rightNav.className = 'tool-window data-tool-window';
                 this.inspector = new bi.ObjectInspector(this.rightNav);
                 this.paramExplorer = new bi.ParamExplorer(this.rightNav);
+                this.paramExplorer.reportEditor = this;
                 this.paramExplorer.hide();
                 tb = new katrid.ui.Toolbar(this.rightNav);
                 tb.vertical = true;
@@ -7655,12 +7653,61 @@ var katrid;
                 tb.addButton({
                     text: katrid.i18n.gettext('Preview'),
                     iconClass: 'fa-regular fa-fw fa-file-pdf',
-                }).addEventListener('click', () => this.preview());
+                }).addEventListener('click', () => this.preview(Boolean(this.report.params)));
                 container.appendChild(div);
                 return tb;
             }
-            preview() {
-                console.debug('preview');
+            async showParamsDialog() {
+                const params = this.report.params;
+                if (params) {
+                    const xml = jQuery.parseXML(params);
+                    // prepare params
+                    let code = '';
+                    let cached = this.report.cache.params || {};
+                    const info = {};
+                    for (let param of xml.querySelector('params').children) {
+                        let paramName = param.getAttribute('name');
+                        let paramLabel = param.getAttribute('label');
+                        let paramType = param.getAttribute('type') || 'StringField';
+                        info[paramName] = { label: paramLabel, type: paramType };
+                        code += `${paramName}: ${cached[paramName] || 'null'}    # ${paramLabel} (${paramType})\n`;
+                    }
+                    const res = await katrid.bi.showCodeEditor(code.trimEnd(), 'yaml');
+                    if (res === false) {
+                        return false;
+                    }
+                    else {
+                        const values = jsyaml.load(res);
+                        const displayParams = {};
+                        // prepare params
+                        for (let [k, v] of Object.entries(values)) {
+                            if (v != null) {
+                                if (info[k].type === 'DateField')
+                                    values[k] = moment.utc(v).format('YYYY-MM-DD');
+                            }
+                        }
+                        this.report.cache.params = values;
+                        return { values, info };
+                    }
+                }
+            }
+            /**
+             * Prepare and preview the report
+             * @param showParams Show params dialog before preview
+             * @returns
+             */
+            async preview(showParams = false) {
+                let params;
+                if (showParams) {
+                    params = await this.showParamsDialog();
+                    if (params === false)
+                        return;
+                }
+                const model = new Katrid.Services.ModelService('ui.action.report');
+                const res = await model.rpc('preview', [JSON.stringify(this.report.dump()), {
+                        values: params?.values,
+                        info: params?.info
+                    }]);
             }
             activatePage(page) {
                 if (this._page) {
@@ -7807,7 +7854,12 @@ var katrid;
             }
             async openFile() {
                 // TODO check if report is modified as ask to save before
-                [this.fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Reptile Report (*.json)', accept: { 'application/json': ['.json'] } }] });
+                [this.fileHandle] = await window.showOpenFilePicker({
+                    types: [{
+                            description: 'Reptile Report (*.json)',
+                            accept: { 'application/json': ['.json'] }
+                        }]
+                });
                 this.clean();
                 const file = await this.fileHandle.getFile();
                 const contents = await file.text();
@@ -7815,12 +7867,21 @@ var katrid;
             }
             async saveFile() {
                 if (!this.fileHandle) {
-                    this.fileHandle = await window.showSaveFilePicker({ types: [{ description: 'Reptile Report (*.json)', accept: { 'application/json': ['.json'] } }] });
+                    this.fileHandle = await window.showSaveFilePicker({
+                        types: [{
+                                description: 'Reptile Report (*.json)',
+                                accept: { 'application/json': ['.json'] }
+                            }]
+                    });
                 }
                 const file = await this.fileHandle.createWritable();
                 const blob = new Blob([JSON.stringify(this.report.dump())], { type: 'application/json' });
                 await file.write(blob);
                 await file.close();
+            }
+            setParams(params) {
+                this.report.params = params;
+                this.setModified();
             }
         }
         bi.ReportEditor = ReportEditor;
@@ -8998,6 +9059,7 @@ var katrid;
                 this.datasources = [];
                 this.loading = false;
                 this.onLoadCallbacks = [];
+                this.cache = {};
                 // default report type
                 this.reportType = pageType;
             }
@@ -9097,6 +9159,7 @@ var katrid;
                 this.clear();
                 try {
                     this.loading = true;
+                    this.params = data.report.params;
                     this.datasources = data.report.datasources.map((ds) => this.loadDataSource(ds));
                     this.pages = data.report.pages.map((p, i) => this.loadPage(p));
                     // notify pending objects operations
@@ -9159,7 +9222,7 @@ var katrid;
                 if (!this.objects.includes(obj)) {
                     this.objects.push(obj);
                     obj.parent = this;
-                    this.appendToDesigner(obj);
+                    return this.appendToDesigner(obj);
                 }
             }
             dump() {
@@ -9169,10 +9232,11 @@ var katrid;
                 return d;
             }
             appendToDesigner(obj) {
-                // check if is designing
+                // check if designing
                 if (this.pageDesigner) {
-                    this.pageDesigner.addObject(obj);
+                    const des = this.pageDesigner.addObject(obj);
                     this.elBand.append(obj.graphic);
+                    return des;
                 }
             }
             getHeaderCaption() {
@@ -9694,7 +9758,7 @@ var katrid;
                 this.invalidateBands();
             }
             onKeyDown(event) {
-                if (this.selectedBand) {
+                if (this.selectedBand && event.key !== 'c' && event.key !== 'v' && event.key !== 'x' && event.key !== 'z') {
                     if (event.key === 'Delete' && !event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey) {
                         this.removeBand(this.selectedBand);
                     }
@@ -9783,6 +9847,17 @@ var katrid;
                         break;
                 }
                 this.setSelection([obj]);
+            }
+            pasteObject(obj) {
+                if (this._selectedBand) {
+                    // paste onto selected band
+                    return this._selectedBand.addObject(obj);
+                }
+                else {
+                    // paste onto first band
+                    const page = this.page;
+                    return page.bands[0].addObject(obj);
+                }
             }
         }
         report.BandDesigner = BandDesigner;
@@ -10193,13 +10268,13 @@ var katrid;
             }
             registerDataSource(dataSource) {
                 let tr = document.createElement('tr');
-                $(tr).data('datasource', dataSource);
+                katrid.data(tr, 'datasource', dataSource);
                 tr.className = 'datasource-item tree-item';
                 let td1 = document.createElement('td');
                 let td2 = document.createElement('td');
                 let btnEdit = document.createElement('button');
                 btnEdit.className = 'btn btn-light';
-                btnEdit.addEventListener('dblclick', evt => this.editDataSource($(evt.target.closest('tr')).data('datasource')));
+                btnEdit.addEventListener('dblclick', evt => this.editDataSource(katrid.data(evt.target.closest('tr'), 'datasource')));
                 btnEdit.addEventListener('click', evt => this.onSelectionChange?.(dataSource));
                 btnEdit.title = 'Double click to edit';
                 btnEdit.innerText = dataSource.name;
@@ -10215,6 +10290,79 @@ var katrid;
                 td1.appendChild(btnEdit);
                 td2.append(btnDelete);
                 this.table.tBodies[0].appendChild(tr);
+            }
+            saveDataSource(datasource, name, sql) {
+                datasource.name = name;
+                datasource.sql = sql;
+                for (const tr of this.table.tBodies[0].querySelectorAll('tr')) {
+                    if (katrid.data(tr, 'datasource') === datasource) {
+                        tr.querySelector('button').innerText = name;
+                        break;
+                    }
+                }
+            }
+            async editDataSource(datasource) {
+                let dlg = await this.createDataSourceDialog({ name: datasource.name, sql: datasource.sql });
+                dlg.name.value = datasource.name;
+                dlg.btnOk.addEventListener('click', evt => {
+                    this.saveDataSource(datasource, dlg.name.value, dlg.codeEditor.getValue());
+                });
+            }
+            async createDataSourceDialog(opts) {
+                let templ = `
+      <div class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Data Source</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+        <div class="row">
+          <div class="form-group col-6">
+            <label for="id-name">Connection</label>
+            <select class="form-select"><option>(Default)</option></select>
+          </div>
+          <div class="form-group col-6">
+            <label for="id-name">Name</label>
+            <input id="id-name" class="form-control" v-model="dataSourceDialog_name" name="name" value="${opts?.name || ''}"/>
+          </div>
+</div>
+          <div class="form-group">
+            <label for="id-command">SQL Query</label>
+            <div class="code-editor" name="commandText"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+              type="button"
+              class="btn btn-outline-secondary btn-ok"
+              data-bs-dismiss="modal"
+              >
+            OK
+          </button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+      `;
+                let dlg = $(templ)[0];
+                dlg.addEventListener('hidden.bs.modal', () => {
+                    modal.dispose();
+                    dlg.remove();
+                });
+                let domCode = dlg.querySelector('.code-editor');
+                let codeEditor = await bi.createCodeEditor(domCode, opts?.sql || 'select col from tablename', 'sql');
+                let modal = new bootstrap.Modal(dlg);
+                modal.show();
+                return {
+                    dlg,
+                    modal,
+                    btnOk: dlg.querySelector('.btn-ok'),
+                    name: dlg.querySelector('input[name=name]'),
+                    codeEditor,
+                };
             }
             clear() {
                 this.table.tBodies[0].innerHTML = '';
@@ -10395,6 +10543,9 @@ var katrid;
           <button type="button" id="btn-new-param" class="btn btn-light new-param">
             Novo Parâmetro
           </button>
+          <button type="button" id="btn-edit-params" class="btn btn-light new-param">
+            Params Editor
+          </button>
         </div>
         <hr>
       `;
@@ -10402,6 +10553,12 @@ var katrid;
             create() {
                 super.create();
                 this.el.classList.add('param-explorer');
+                this.el.querySelector('#btn-edit-params').addEventListener('click', async () => {
+                    const params = await katrid.bi.showCodeEditor(this.reportEditor.report.params, 'xml');
+                    if (params !== false) {
+                        this.reportEditor.setParams(params);
+                    }
+                });
             }
         }
         bi.ParamExplorer = ParamExplorer;
@@ -13226,15 +13383,15 @@ var katrid;
                     console.error('Invalid clipboard data');
                     return;
                 }
-                this.designer.clearSelection();
                 let objs = [];
                 for (let obj of data.objects) {
                     // load objects
                     const lo = this.designer.loadObject(obj);
-                    this.designer.addObject(lo).locked = false;
+                    this.designer.pasteObject(lo).locked = false;
                     this.designer.addToSelection(lo);
                     objs.push(lo);
                 }
+                this.designer.clearSelection();
                 return objs;
             }
             async paste() {
@@ -14089,8 +14246,9 @@ var katrid;
                 }
                 async showEditor() {
                     let res = await katrid.bi.showCodeEditor(this.targetObject.text, this.targetObject.allowTags ? 'html' : 'text');
-                    if (res !== false)
+                    if (res !== false) {
                         this.targetObject.text = res;
+                    }
                 }
             }
             editors.TextObjectEditor = TextObjectEditor;
@@ -23161,7 +23319,7 @@ var katrid;
                             button.textContent = katrid.i18n.gettext(btn);
                     }
                     button.addEventListener('click', evt => {
-                        container.closest('dialog').close();
+                        container.closest('dialog').close(btn);
                         container.dispatchEvent(new CustomEvent('dialog-button-click', { detail: { button: btn } }));
                     });
                     container.appendChild(button);
@@ -23311,8 +23469,8 @@ var katrid;
                 this.dialogPromise = new Promise((resolve, reject) => {
                     this.resolve = resolve;
                     this.reject = reject;
-                    this.dialog.addEventListener('close', () => {
-                        this.resolve(this.result);
+                    this.dialog.addEventListener('close', (evt) => {
+                        this.resolve(this.dialog.returnValue);
                     });
                 });
             }
