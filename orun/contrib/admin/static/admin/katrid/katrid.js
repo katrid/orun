@@ -9941,6 +9941,13 @@ var katrid;
                         band.addObject(bc);
                         obj = bc;
                         break;
+                    case 'subreport':
+                        obj = new katrid.bi.componentRegistry['SubReport']();
+                        obj.name = this.getValidName('subReport');
+                        obj.x = x;
+                        obj.y = y;
+                        band.addObject(obj);
+                        break;
                 }
                 this.setSelection([obj]);
             }
@@ -9992,6 +9999,7 @@ var katrid;
         var SelectProperty = katrid.design.SelectProperty;
         var SizeProperty = katrid.design.SizeProperty;
         var StringProperty = katrid.design.StringProperty;
+        var WidgetEditor = katrid.design.WidgetEditor;
         var registerComponentEditor = katrid.design.registerComponentEditor;
         var HeightProperty = katrid.design.HeightProperty;
         class BandEditor extends ComponentEditor {
@@ -10070,10 +10078,14 @@ var katrid;
             }
         }
         report.PageEditor = PageEditor;
+        class SubReportEditor extends WidgetEditor {
+        }
+        report.SubReportEditor = SubReportEditor;
         registerComponentEditor(report.Band, BandEditor);
         registerComponentEditor(report.DataBand, DataBandEditor);
         registerComponentEditor(report.GroupHeader, GroupHeaderEditor);
         registerComponentEditor(katrid.report.BandedPage, PageEditor);
+        registerComponentEditor(report.SubReport, SubReportEditor);
         //registerComponentEditor(ImageObject, ImageEditor);
         //registerComponentEditor(BarcodeObject, ImageEditor);
     })(report = katrid.report || (katrid.report = {}));
@@ -10148,6 +10160,40 @@ var katrid;
             }
         }
         report.BandedPage = BandedPage;
+    })(report = katrid.report || (katrid.report = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var report;
+    (function (report) {
+        var BaseWidget = katrid.drawing.BaseWidget;
+        class SubReport extends BaseWidget {
+            defaultProps() {
+                super.defaultProps();
+                this.width = 200;
+                this.height = 20;
+            }
+            get page() {
+                return this._page;
+            }
+            set page(value) {
+                this._page = value;
+            }
+            dump() {
+                const d = super.dump();
+                d.page = this.page?.name;
+                return d;
+            }
+            redraw() {
+                super.redraw();
+                this.graphic.clear();
+                this.graphic.rect(0, 0, this.width, this.height);
+                this.graphic.text(4, this.height / 2, this.name).attr('fill', 'black');
+            }
+        }
+        report.SubReport = SubReport;
+        katrid.bi.componentRegistry.SubReport = SubReport;
+        katrid.bi.componentRegistry.subreport = SubReport;
     })(report = katrid.report || (katrid.report = {}));
 })(katrid || (katrid = {}));
 var Katrid;
@@ -10730,6 +10776,7 @@ var katrid;
                 ${katrid.i18n.gettext('Image')}
               </div>
             </div>
+
             <div class="col-4 toolbox-item" data-widget="barcode">
               <div>
                  <i class="fa-duotone fa-2x fa-fw fa-barcode"></i>
@@ -10738,6 +10785,16 @@ var katrid;
                 ${katrid.i18n.gettext('Barcode')}
               </div>
             </div>
+
+            <div class="col-4 toolbox-item" data-widget="subreport">
+              <div>
+                <i class="fa-duotone fa-thin fa-2x fa-fw fa-file"></i>
+             </div>
+              <div class="widget-label">
+                ${katrid.i18n.gettext('Sub-Report')}
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -10749,7 +10806,7 @@ var katrid;
 
             <div class="col-4 toolbox-item" data-widget="bar">
               <div>
-<i class="fa-duotone fa-2x fa-fw fa-chart-column"></i> 
+<i class="fa-duotone fa-2x fa-fw fa-chart-column"></i>
              </div>
               <div class="widget-label">
                 ${katrid.i18n.gettext('Column')}
@@ -10758,7 +10815,7 @@ var katrid;
 
             <div class="col-4 toolbox-item" data-widget="hbar">
               <div>
-<i class="fa-duotone fa-2x fa-fw fa-chart-simple"></i> 
+<i class="fa-duotone fa-2x fa-fw fa-chart-simple"></i>
              </div>
               <div class="widget-label">
                 ${katrid.i18n.gettext('Bar')}
@@ -10767,7 +10824,7 @@ var katrid;
 
             <div class="col-4 toolbox-item" data-widget="area-chart">
               <div>
-<i class="fa-duotone fa-2x fa-fw fa-chart-area"></i> 
+<i class="fa-duotone fa-2x fa-fw fa-chart-area"></i>
              </div>
               <div class="widget-label">
                 ${katrid.i18n.gettext('Area')}
@@ -10776,7 +10833,7 @@ var katrid;
 
             <div class="col-4 toolbox-item" data-widget="line-chart">
               <div>
-<i class="fa-duotone fa-2x fa-fw fa-chart-line-up"></i> 
+<i class="fa-duotone fa-2x fa-fw fa-chart-line-up"></i>
              </div>
               <div class="widget-label">
                 ${katrid.i18n.gettext('Line')}
@@ -10785,10 +10842,10 @@ var katrid;
 
             <div class="col-4 toolbox-item" data-widget="pie">
               <div>
-<i class="fa-duotone fa-2x fa-fw fa-chart-pie"></i> 
+<i class="fa-duotone fa-2x fa-fw fa-chart-pie"></i>
              </div>
               <div class="widget-label">
-                 ${katrid.i18n.gettext('Pie')} 
+                 ${katrid.i18n.gettext('Pie')}
               </div>
             </div>
           </div>
@@ -14348,9 +14405,6 @@ var katrid;
                 this.field = info.field;
                 this.code = info.code;
                 this.barcodeType = info.barcodeType;
-            }
-            create() {
-                super.create();
             }
             redraw() {
                 super.redraw();
