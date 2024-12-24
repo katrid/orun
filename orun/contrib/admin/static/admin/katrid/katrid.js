@@ -33,7 +33,6 @@ var katrid;
 var Katrid;
 (function (Katrid) {
     Katrid.$hashId = 0;
-    // Web Components
     Katrid.customElementsRegistry = {};
     function define(name, constructor, options) {
         Katrid.customElementsRegistry[name] = { constructor, options };
@@ -89,10 +88,8 @@ var katrid;
     class localStorage {
         static setItem(key, value) {
             if (katrid.mobile.isApp)
-                // save to android
                 katrid.mobile.writeStringToFile(key, value);
             else
-                // save to browser
                 window.localStorage.setItem(key, value);
         }
         static getItem(key) {
@@ -102,9 +99,6 @@ var katrid;
         }
     }
     katrid.localStorage = localStorage;
-    /**
-     * Local key/value storage (using IndexedDB)
-     */
     const LOCAL_DATA_KEY = '_LOCAL_DATA';
     class localData {
         constructor(dbName, version) {
@@ -167,7 +161,6 @@ var katrid;
             getElement() {
                 if (!this.element) {
                     this.element = this.createElement();
-                    // prepare element for the first time usage
                     this._prepareElement(this.element);
                 }
                 return this.element;
@@ -220,7 +213,6 @@ var katrid;
                 this.actionViewer = this.element.querySelector('.action-manager');
                 this.render(this.element);
                 katrid.ui.app = this;
-                //katrid.init();
                 this.ready();
             }
             get title() {
@@ -234,7 +226,6 @@ var katrid;
                 return Vue.nextTick();
             }
             registerAction(actionId, action) {
-                // register a builtin action
                 this.actions[actionId] = action;
             }
             render(el) {
@@ -279,7 +270,6 @@ var katrid;
         ui.BaseApplication = BaseApplication;
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
-/// <reference path="apps/base.ts" />
 var katrid;
 (function (katrid) {
     var pwa;
@@ -287,7 +277,6 @@ var katrid;
         class Application extends katrid.ui.BaseApplication {
             prepareElement(el) {
                 super.prepareElement(el);
-                // auto create view model
                 this.vm = Katrid.createVm(this.defineComponent()).mount(el);
             }
             defineData() {
@@ -312,6 +301,7 @@ var Katrid;
     (function (Actions) {
         Actions.registry = {};
         class Action {
+            static { this._context = {}; }
             constructor(config) {
                 this.state = null;
                 this.config = config;
@@ -352,10 +342,8 @@ var Katrid;
             destroy() {
                 this.app.actionManager.removeAction(this);
                 if (this.element)
-                    // check if there's an element
                     this.element.remove();
                 else
-                    // or clear the container
                     this.container.innerHTML = '';
             }
             get id() {
@@ -363,7 +351,6 @@ var Katrid;
                     return this.config.id;
                 return this.info?.id;
             }
-            /** Action context contains the contextual data to be sent to a RPC server */
             get context() {
                 if (!this._context) {
                     if (Katrid.isString(this.config.context))
@@ -372,8 +359,6 @@ var Katrid;
                         this._context = this.config.context;
                     else
                         this._context = {};
-                    // get query string context
-                    // load default values on query string
                     let searchParams = window.location.href.split('#', 2)[1];
                     if (searchParams) {
                         const urlParams = new URLSearchParams(searchParams);
@@ -461,15 +446,14 @@ var Katrid;
                 }
             }
         }
-        Action._context = {};
         Actions.Action = Action;
         class UrlAction extends Action {
+            static { this.actionType = 'ir.action.url'; }
             constructor(info) {
                 super(info);
                 window.location.href = info.url;
             }
         }
-        UrlAction.actionType = 'ir.action.url';
         function goto(actionId, config, reset = false) {
             let params = { action: actionId };
             if (config)
@@ -485,6 +469,8 @@ var Katrid;
     var Actions;
     (function (Actions) {
         class Homepage extends Actions.Action {
+            static { this.actionType = 'ui.action.homepage'; }
+            static { this.hooks = []; }
             get content() {
                 return this.info['content'];
             }
@@ -503,8 +489,6 @@ var Katrid;
                 home.render();
             }
         }
-        Homepage.actionType = 'ui.action.homepage';
-        Homepage.hooks = [];
         Actions.Homepage = Homepage;
         class HomepageView {
             constructor() {
@@ -562,7 +546,6 @@ var Katrid;
             }
         }
         Actions.HomepageView = HomepageView;
-        // Katrid.define('homepage-view', HomepageElement);
         Katrid.Actions.registry[Homepage.actionType] = Homepage;
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
@@ -570,21 +553,15 @@ var Katrid;
 (function (Katrid) {
     var Actions;
     (function (Actions) {
-        /**
-         * ActionManager is useful be used to navigate between a stack of actions
-         * @constructor
-         */
         class ActionManager extends HTMLElement {
             constructor() {
                 super();
-                /** Stack of nested actions */
                 this.actions = [];
                 this.currentAction = null;
                 this.mainAction = null;
                 this.$cachedActions = {};
                 this._navbarVisible = true;
             }
-            /** Current/visible action */
             get action() {
                 return this._action;
             }
@@ -647,28 +624,22 @@ var Katrid;
             }
             async onHashChange(params, reset) {
                 let actionId = params.action;
-                // check if action has changed
                 let oldAction, action;
                 action = oldAction = this.currentAction;
                 let oldActionId;
                 if (oldAction)
                     oldActionId = oldAction.info.id;
-                // clear action manager history
                 if (reset) {
                     this.reset();
                     if (this.action)
                         this.action.destroy();
                     this.action = null;
                 }
-                // check if there's a cached action
                 if (actionId in this.$cachedActions) {
                     let actionInfo = this.$cachedActions[actionId];
                     action = new Katrid.Actions.registry[actionInfo.type](actionInfo, params);
-                    // this.addAction(action);
                 }
                 else if (!actionId && params.model && (!action || (action.params && (action.params.model !== params.model)))) {
-                    // action auto detection
-                    // get a virtual window action
                     let svc = new Katrid.Services.ModelService(params.model);
                     let actionInfo = await svc.rpc('admin_get_formview_action', [params.id]);
                     action = new Katrid.Actions.registry[actionInfo.type](actionInfo);
@@ -681,13 +652,10 @@ var Katrid;
                         action = new Katrid.Actions.registry[actionInfo.type]({ info: actionInfo }, params);
                 }
                 await action.renderTo(this);
-                // await action.execute();
                 await action.onHashChange(params);
                 return action;
             }
-            /** Add an action to the stack */
             addAction(action) {
-                // clear the dom container
                 this.empty();
                 this.actions.push(action);
                 this.action = action;
@@ -730,8 +698,8 @@ var Katrid;
             default: [/action/, /view_type/, /menu_id/, /model/, /default_.+/, /filter/],
         };
         Actions.DEFAULT_VIEWS = ['list', 'form'];
-        /** WindowAction should be used to display and manipulate data records of a model */
         class WindowAction extends Katrid.Actions.Action {
+            static { this.actionType = 'ui.action.window'; }
             constructor(config, location) {
                 super(config);
                 this._loadDataCallbacks = [];
@@ -761,7 +729,6 @@ var Katrid;
                             v.records = config.records;
                 }
                 else if (config.views) {
-                    // initialize views
                     for (let [k, view] of Object.entries(config.views))
                         if (view instanceof Katrid.Forms.ModelView)
                             this._cachedViews[k] = view;
@@ -778,13 +745,6 @@ var Katrid;
                     else
                         this.viewModes = Object.keys(this.views);
                 }
-                // else
-                // this._cachedViews = {};
-                // this.model = config.model;
-                // if (!this.model && config.info.model)
-                //   this.model = new Katrid.Services.ModelService(config.info.model);
-                // if (config.views)
-                //   this.views = config.views;
             }
             createSearchView() {
                 if (this._cachedViews.search) {
@@ -803,8 +763,6 @@ var Katrid;
                 }
             }
             async onHashChange(params) {
-                // normalize hash
-                // return;
                 let invalidate = false;
                 let loadRecord = (this.params && (this.params.id !== params.id));
                 this.params = {};
@@ -821,7 +779,6 @@ var Katrid;
                     allowedParams = ALLOWED_PARAMS['default'];
                 Object.assign(this.params, params);
                 let validParams = [];
-                // view type form accepts id param
                 for (let k of Object.keys(this.params)) {
                     let f = false;
                     for (let p of allowedParams)
@@ -833,7 +790,6 @@ var Katrid;
                     else
                         validParams.push(k);
                 }
-                // invalidate hash location
                 if (invalidate) {
                     let oldParams = this.params;
                     this.params = {};
@@ -842,19 +798,15 @@ var Katrid;
                         if (param !== undefined)
                             this.params[k] = param;
                     }
-                    // the action param is not required if empty
                     if (!this.params.action)
                         delete this.params.action;
                     let url = this.makeUrl(this.viewMode);
-                    // redirect to new params
                     history.replaceState(null, null, url);
                 }
-                // apply params
                 let viewType = this.params.view_type;
                 if (viewType === this.viewType)
                     await this.view.onHashChange(params);
                 else {
-                    // this.viewType = viewType;
                     await this.showView(viewType);
                 }
             }
@@ -916,18 +868,12 @@ var Katrid;
                 }
             }
             async showView(mode, params = null) {
-                // store the last searchable view
-                // console.log(this.params.viewType, this.viewType);
                 let oldView = this.view;
                 this.viewMode = mode;
                 if (mode in this._cachedViews) {
                     this.view = this._cachedViews[mode];
-                    // this.el = this.view.actionView;
-                    // this.container.append(this.view.actionView);
-                    // this.view.renderTo(this.el);
                 }
                 else {
-                    // load from view from viewsInfo
                     this.viewInfo = this.views[mode];
                     this.view = new Katrid.Forms.Views.registry[mode](Object.assign({
                         action: this,
@@ -937,10 +883,8 @@ var Katrid;
                         await this.view.loadPendingViews();
                     else
                         this.lastSearchMode = mode;
-                    // this.view.container = this.actionManager;
                     this.view.renderTo(this.container);
                     this._cachedViews[Object.getPrototypeOf(this.view).constructor.viewType] = this.view;
-                    // this.el = this.view.actionView;
                 }
                 this.view.ready();
                 if (this.view instanceof Katrid.Forms.RecordCollectionView) {
@@ -948,15 +892,11 @@ var Katrid;
                     this.lastUrl = location.hash;
                 }
                 if (this.element) {
-                    // remove the old view from action-view element
                     if (this.element.children.length)
                         this.element.removeChild(this.element.children[0]);
-                    // render the new view
                     this.view.renderTo(this.element);
-                    // create the search view
                     if (!this.searchView && !(this.viewModes.length === 1 && this.viewModes[0] == 'form'))
                         this.createSearchView();
-                    // set search view to current view
                     if (this.view instanceof Katrid.Forms.RecordCollectionView)
                         this.view.searchView = this.searchView;
                     if (oldView && (this.view !== oldView))
@@ -995,7 +935,6 @@ var Katrid;
                     return this.selection.length;
             }
             async copyTo(configId) {
-                // TODO test this method
                 if (this.scope.recordId) {
                     let svc = new Katrid.Services.ModelService('ui.copy.to');
                     let res = await svc.rpc('copy_to', [configId, this.scope.recordId]);
@@ -1003,12 +942,9 @@ var Katrid;
                     let views = await model.getViewInfo({ view_type: 'form' });
                     let scope = this.scope.$new(true);
                     let wnd = new Katrid.Forms.Dialogs.Window({ scope, view: views, model, defaultValues: res.value });
-                    // wnd.createNew();
                 }
             }
             makeUrl(viewType) {
-                // get the default view mode
-                // TODO: the url must be generated by view
                 if (!viewType)
                     viewType = this.viewMode;
                 let search = {};
@@ -1051,18 +987,11 @@ var Katrid;
             }
             set viewType(value) {
                 if (value !== this._viewType) {
-                    // invalidate the current record id
-                    // if (value !== 'form')
-                    //   this.dataSource.recordId = null;
-                    // destroy children fields
-                    // this.dataSource.destroyChildren();
                     this._viewType = value;
-                    // this.app.$location.search('view_type', value);
                 }
                 return;
             }
             searchText(q) {
-                // return this.location.search('q', q);
             }
             _prepareParams(params) {
                 let r = {};
@@ -1142,7 +1071,6 @@ var Katrid;
                 Object.assign(ctx, this.context);
                 if (evt.target.hasAttribute('data-binding-params')) {
                     let bindingParams = evt.target.getAttribute('data-binding-params');
-                    // TODO replace by katrid eval api function
                     const fn = new Function('__ctx__', `with (__ctx__) { return ${bindingParams} }`);
                     const params = fn.call(this, this.view.vm);
                     ctx.bindingParams = params;
@@ -1153,7 +1081,6 @@ var Katrid;
                 if (res.tag === 'refresh')
                     this.view.refresh();
                 else if (res.tag == 'new') {
-                    // check if we need to invoke a nested action
                     if (res.action) {
                         let action = await Katrid.Actions.goto(res.action, { view_type: 'form' });
                         await action.view.insert(res.values);
@@ -1162,7 +1089,6 @@ var Katrid;
                         this.view.datasource.insert(true, res.values);
                 }
                 else if (res.invoke) {
-                    // invoke js function/class/object
                     for (let [k, v] of Object.entries(res.invoke))
                         katrid.invoke(k)(v);
                 }
@@ -1252,12 +1178,7 @@ var Katrid;
                 }
             }
             markStar(record) {
-                // TODO mark as favorite
             }
-            // filterByField(field: string, value: any) {
-            //   this.searchView.clear();
-            //   this.addFilter(field, [value]);
-            // }
             addFilter(field, value) {
                 let f = this.view.fields[field];
                 if ((f instanceof Katrid.Data.DateTimeField) && (typeof value === 'string'))
@@ -1322,12 +1243,10 @@ var Katrid;
                 }
             }
         }
-        WindowAction.actionType = 'ui.action.window';
         Actions.WindowAction = WindowAction;
         async function gotoNewRecord(config) {
             let actionId = config.actionId;
             let action = await Katrid.Actions.goto(actionId, { view_type: 'list' }, true);
-            // TODO replace by await
             setTimeout(() => {
                 console.log('goto', config.values);
                 action.view.vm.insert(config.values);
@@ -1360,13 +1279,42 @@ var Katrid;
     }
     Katrid.WebComponent = WebComponent;
 })(Katrid || (Katrid = {}));
-var kjs = katrid;
-/// <reference path="../core/components.ts"/>
+var katrid;
+(function (katrid) {
+    class Collection {
+        constructor() {
+            this.items = [];
+        }
+        add(item) {
+            this.items.push(item);
+            this.notify('add', item);
+        }
+        dump() {
+        }
+        remove(item) {
+            const index = this.items.indexOf(item);
+            if (index >= 0) {
+                this.items.splice(index, 1);
+            }
+            this.notify('remove', item);
+        }
+        clear() {
+            this.items = [];
+        }
+    }
+    katrid.Collection = Collection;
+    class OwnedCollection extends Collection {
+        constructor(owner) {
+            super();
+            this.owner = owner;
+        }
+    }
+    katrid.OwnedCollection = OwnedCollection;
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Actions;
     (function (Actions) {
-        /** Represents the navigation element */
         class ActionNavbar extends Katrid.WebComponent {
             create() {
                 super.create();
@@ -1394,12 +1342,12 @@ var Katrid;
         Katrid.define('action-navbar', ActionNavbar);
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="actions.ts"/>
 var Katrid;
 (function (Katrid) {
     var Actions;
     (function (Actions) {
         class ReportAction extends Katrid.Actions.Action {
+            static { this.actionType = 'ui.action.report'; }
             static async dispatchBindingAction(parent, action) {
                 let format = localStorage.katridReportViewer || 'pdf';
                 let sel = parent.selection;
@@ -1434,7 +1382,6 @@ var Katrid;
                     this.userReport.params = res.result;
                 }
                 else {
-                    // Katrid.core.setContent(, this.scope);
                 }
                 location.hash = '#/app/?' + $.param(params);
                 this.renderParams();
@@ -1477,7 +1424,6 @@ var Katrid;
                 return vm;
             }
         }
-        ReportAction.actionType = 'ui.action.report';
         Actions.ReportAction = ReportAction;
         Katrid.Actions.registry[ReportAction.actionType] = ReportAction;
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
@@ -1487,11 +1433,10 @@ var Katrid;
     var Actions;
     (function (Actions) {
         class ViewAction extends Actions.Action {
-            // template: string;
+            static { this.actionType = 'ui.action.view'; }
             constructor(config) {
                 super(config);
                 if (config.info?.template) {
-                    // this.template = config.info.template;
                     this.view = new Katrid.Forms.BaseView({ template: config.info.template });
                 }
             }
@@ -1508,7 +1453,6 @@ var Katrid;
                     content = res.content;
                     viewType = res.type;
                 }
-                // check if content is json
                 if (content.startsWith('{')) {
                     if (viewType === 'dashboard') {
                         let dashboard = document.createElement('dashboard-view');
@@ -1526,7 +1470,6 @@ var Katrid;
                     this.view.renderTo(this.element);
             }
         }
-        ViewAction.actionType = 'ui.action.view';
         Actions.ViewAction = ViewAction;
         Actions.registry[ViewAction.actionType] = ViewAction;
         Actions.registry['ViewAction'] = ViewAction;
@@ -1567,7 +1510,6 @@ var Katrid;
                     return { panels: Array.from(this.element.querySelectorAll('portlet-panel')).map(el => el.dump()) };
                 }
                 async save() {
-                    // save user custom layout to the server
                     let svc = new Katrid.Services.ModelService('ui.action.homepage');
                     let data = this.dump();
                     await svc.rpc('save_layout', [[this.actionId], JSON.stringify(data)]);
@@ -1855,7 +1797,6 @@ var Katrid;
                 render() {
                     super.render();
                     let href = '#' + this.actionId;
-                    // let href = Katrid.webApp.formatActionHref(this.actionId);
                     let btnNew = document.createElement('a');
                     btnNew.innerText = Katrid.i18n.gettext('Create');
                     btnNew.classList.add('btn', 'btn-light');
@@ -1935,9 +1876,6 @@ var Katrid;
             Katrid.define('portlet-panel', PortletPanel);
             Katrid.define('portlet-editor', PortletEditor);
             Katrid.define('portlet-create-new', CreateNew);
-            // Katrid.define('portlet-model-window-action', PortletModelWindowAction);
-            // Katrid.define('portlet-goto-list', GotoList);
-            // Katrid.define('portlet-goto-report', GotoReport);
             Portlets.registry = {
                 ModelAction: ModelActionPortlet,
             };
@@ -1976,15 +1914,11 @@ var katrid;
 (function (katrid) {
     var admin;
     (function (admin) {
-        /**
-         * Consume the response messages
-         */
         class ResponseMessagesProcessor {
             constructor(response) {
                 this.response = response;
             }
             process(content) {
-                // display messages from server-side
                 const msgs = content['katrid.admin.ResponseMessagesProcessor'];
                 if (Array.isArray(msgs)) {
                     for (let msg of msgs)
@@ -2002,20 +1936,12 @@ var katrid;
     var bi;
     (function (bi) {
         function newPlot(el, data, layout, config) {
-            // create new plotly plot
             if (!layout)
                 layout = {};
             if (!('hovermode' in layout))
                 layout['hovermode'] = 'closest';
-            // define the default layout separator
             if (!layout.separators)
                 layout.separators = Katrid.i18n.formats.DECIMAL_SEPARATOR + Katrid.i18n.formats.THOUSAND_SEPARATOR;
-            // if (!layout.colorway)
-            //   layout.colorway = [
-            //     '#86AED1', '#FF99A9', '#A1DE93',
-            //     '#CAC3F7', '#FEE0CC', '#F47C7C', '#88CEFB', '#FBB4C9', '#AFF1F1', '#8DD1F1', '#B3C8C8', '#FCE2C2',
-            //     '#6CB2D1', '#b3c8c8', '#f3cec9', '#64E987', '#cd7eaf', '#a262a9', '#6f4d96', '#4F9EC4', '#3d3b72', '#182844'
-            //   ];
             if (!config)
                 config = {};
             if (!('responsive' in config))
@@ -2025,7 +1951,6 @@ var katrid;
         bi.newPlot = newPlot;
     })(bi = katrid.bi || (katrid.bi = {}));
 })(katrid || (katrid = {}));
-/// <reference path="../../node_modules/monaco-editor/monaco.d.ts" />
 var katrid;
 (function (katrid) {
     var bi;
@@ -2081,7 +2006,6 @@ var katrid;
             }
             drawDesign(parent) {
                 this.draw = this.target.drawDesign(parent);
-                // design event handlers
                 if (!this._pointerDownHandler) {
                     this._pointerDownHandler = (event) => this.designMouseDown(event);
                     this._pointerMoveHandler = (event) => this.designMouseMove(event);
@@ -2132,11 +2056,9 @@ var katrid;
             update(widget) {
                 widget.redraw();
             }
-            /** Directly move selected object */
             designMove(ox, oy) {
                 this.designer?.moveSelectionBy(ox, oy);
             }
-            /** Apply rect to target object */
             applyRect(dx, dy, dw, dh) {
                 this.target.x += dx;
                 this.target.y += dy;
@@ -2144,7 +2066,6 @@ var katrid;
                 this.target.height += dh;
                 this.update(this.target);
             }
-            /** Apply rect delta to designer selection */
             designApplyRect(dx, dy, dw, dh) {
                 this.designer.applyRectToSelection(dx, dy, dw, dh);
             }
@@ -2174,7 +2095,6 @@ var katrid;
                     else {
                         this.designer.selectObject(this.target);
                     }
-                    // display guidelines
                     this.designer.createGuidelines();
                 }
             }
@@ -2182,7 +2102,6 @@ var katrid;
                 if (this.dragging) {
                     event.preventDefault();
                     event.stopPropagation();
-                    // snap to grid
                     let x = event.clientX;
                     let y = event.clientY;
                     if (this.designer.snapToGrid && !event.ctrlKey) {
@@ -2223,7 +2142,6 @@ var katrid;
                 this.designer.dragging = this.dragging = false;
                 event.target.releasePointerCapture(event.pointerId);
                 event.stopPropagation();
-                // clear auto guidelines
                 this.designer.clearGuidelines();
                 this._mouseUp();
                 this.moved = false;
@@ -2232,7 +2150,6 @@ var katrid;
         design.WidgetDesigner = WidgetDesigner;
     })(design = katrid.design || (katrid.design = {}));
 })(katrid || (katrid = {}));
-/// <reference path="../design/widgets.ts" />
 var katrid;
 (function (katrid) {
     var drawing;
@@ -2336,7 +2253,6 @@ var katrid;
             children() {
                 return this.objects;
             }
-            /** Load children objects */
             loadObjects(data) {
                 for (const o of data.objects) {
                     let cls = this.getClassByName(o.type);
@@ -2432,7 +2348,6 @@ var katrid;
         drawing.Image = Image;
     })(drawing = katrid.drawing || (katrid.drawing = {}));
 })(katrid || (katrid = {}));
-/// <reference path="shapes.ts" />
 var katrid;
 (function (katrid) {
     var drawing;
@@ -2674,10 +2589,6 @@ var katrid;
         drawing.Barcode = Barcode;
     })(drawing = katrid.drawing || (katrid.drawing = {}));
 })(katrid || (katrid = {}));
-/// <reference path="../drawing/shapes.ts" />
-/// <reference path="../drawing/image.ts" />
-/// <reference path="../drawing/text.ts" />
-/// <reference path="../drawing/barcode.ts" />
 var katrid;
 (function (katrid) {
     var bi;
@@ -2725,7 +2636,6 @@ var katrid;
                     let res = await Katrid.Services.Service.$post('/bi/studio/query/', { query: this.commandText });
                     this.data = res.data;
                 }
-                // apply data to binding widgets
                 for (let widget of this.widgets)
                     widget.dataNotification(this);
             }
@@ -2748,7 +2658,6 @@ var katrid;
         bi._DataSource = _DataSource;
     })(bi = katrid.bi || (katrid.bi = {}));
 })(katrid || (katrid = {}));
-/// <reference path="base.ts"/>
 var katrid;
 (function (katrid) {
     var bi;
@@ -2777,7 +2686,6 @@ var katrid;
             activate() {
                 if (this._documentKeyDown)
                     document.removeEventListener('keydown', this._documentKeyDown);
-                // hook keydown events
                 this._documentKeyDown = (event) => this.onKeyDown(event);
                 document.addEventListener('keydown', this._documentKeyDown);
                 this.container.append(this.el);
@@ -2798,28 +2706,24 @@ var katrid;
                     if (event.shiftKey) {
                         switch (event.key) {
                             case 'ArrowDown':
-                                // increase height
                                 if (event.ctrlKey)
                                     this.resizeSelectionBy(0, 1);
                                 else
                                     this.resizeSelectionBy(0, 1);
                                 break;
                             case 'ArrowUp':
-                                // decrease height
                                 if (event.ctrlKey)
                                     this.resizeSelectionBy(0, -1);
                                 else
                                     this.resizeSelectionBy(0, -1);
                                 break;
                             case 'ArrowLeft':
-                                // decrease height
                                 if (event.ctrlKey)
                                     this.resizeSelectionBy(-1, 0);
                                 else
                                     this.resizeSelectionBy(-1, 0);
                                 break;
                             case 'ArrowRight':
-                                // decrease height
                                 if (event.ctrlKey)
                                     this.resizeSelectionBy(1, 0);
                                 else
@@ -2832,7 +2736,6 @@ var katrid;
                     else {
                         switch (event.key) {
                             case 'ArrowDown':
-                                // move selection down
                                 if (event.ctrlKey)
                                     this.moveSelectionBy(0, -1 * this.gridY);
                                 else
@@ -2840,7 +2743,6 @@ var katrid;
                                 this._tempGuidelines();
                                 break;
                             case 'ArrowUp':
-                                // move selection up
                                 if (event.ctrlKey)
                                     this.moveSelectionBy(0, 1 * this.gridY);
                                 else
@@ -2848,7 +2750,6 @@ var katrid;
                                 this._tempGuidelines();
                                 break;
                             case 'ArrowLeft':
-                                // move selection left
                                 if (event.ctrlKey)
                                     this.moveSelectionBy(1 * this.gridX, 0);
                                 else
@@ -2856,7 +2757,6 @@ var katrid;
                                 this._tempGuidelines();
                                 break;
                             case 'ArrowRight':
-                                // move selection right
                                 if (event.ctrlKey)
                                     this.moveSelectionBy(-1 * this.gridX, 0);
                                 else
@@ -2864,7 +2764,6 @@ var katrid;
                                 this._tempGuidelines();
                                 break;
                             case 'Delete':
-                                // delete selection
                                 this.deleteSelection();
                                 break;
                             default:
@@ -2921,15 +2820,12 @@ var katrid;
                     onObjectResizing: () => obj.onDesignResizing(),
                     onObjectResized: () => obj.onDesignResized(),
                     snapToGrid: false,
-                    // gridX: this.gridX,
-                    // gridY: this.gridY,
                 });
                 this.grabs.push(grabs);
             }
             createElement(widgetName, target, x, y) {
             }
             selectObject(obj) {
-                // clear selection if object is not already selected
                 if (!this.selection.includes(obj))
                     this.clearSelection();
                 this.addToSelection(obj);
@@ -2944,7 +2840,6 @@ var katrid;
             moveSelectionBy(deltaX, deltaY) {
                 for (let obj of this.selection) {
                     obj.designMoveBy(deltaX, deltaY);
-                    // detect visual guidelines
                 }
                 for (let grabs of this.grabs)
                     grabs.setPosition();
@@ -3023,12 +2918,8 @@ var katrid;
                 this.gridX = 0;
                 this.gridY = 0;
                 this.snapToGrid = false;
-                // init object drag
-                // this.dragObject = new DragObject(el, designer.surface);
                 this.container = config.container;
                 this.target = config.target;
-                // if (!config.container)
-                //   this.container = (this.target as SVGElement).parentElement;
                 this.onObjectResized = config.onObjectResized;
                 this.onObjectResizing = config.onObjectResizing;
                 this.handles = [];
@@ -3053,8 +2944,6 @@ var katrid;
             }
             setPosition() {
                 const rect = this.target.getDesignRect();
-                // const rect1 = this.designer.surface.getBoundingClientRect();
-                // const rect = new DOMRect(r.left - rect1.left, r.top - rect1.top, r.width, r.height);
                 let handle = new GrabHandle(this.bottomLeft);
                 handle.left = rect.left - 3;
                 handle.top = rect.bottom - 5;
@@ -3110,7 +2999,6 @@ var katrid;
                             if (x || y) {
                                 y = _y - y;
                                 x = _x - x;
-                                // el.css({ left: pos.left - x, top: pos.top - y });
                                 el.left = pos.left - x;
                                 el.top = pos.top - y;
                                 el.height = h + y;
@@ -3163,7 +3051,6 @@ var katrid;
                             if (x || y) {
                                 y = _y - y;
                                 x = _x - x;
-                                // el.css({ left: pos.left, top: pos.top - y });
                                 el.left = pos.left;
                                 el.top = pos.top - y;
                                 el.height = h + y;
@@ -3454,35 +3341,27 @@ var katrid;
             }
             createHandles() {
                 let handle;
-                // bottom-left
                 this.bottomLeft = handle = this.createHandle();
                 handle.classList.add('bottom-left');
                 this.container.append(handle);
-                // middle-left
                 this.middleLeft = handle = this.createHandle();
                 handle.classList.add('middle-left');
                 this.container.append(handle);
-                // top-left
                 this.topLeft = handle = this.createHandle();
                 handle.classList.add('top-left');
                 this.container.append(handle);
-                // top-right
                 this.topRight = handle = this.createHandle();
                 handle.classList.add('top-right');
                 this.container.append(handle);
-                // middle-right
                 this.middleRight = handle = this.createHandle();
                 handle.classList.add('middle-right');
                 this.container.append(handle);
-                // bottom-right
                 this.bottomRight = handle = this.createHandle();
                 handle.classList.add('bottom-right');
                 this.container.append(handle);
-                // top-center
                 this.topCenter = handle = this.createHandle();
                 handle.classList.add('top-center');
                 this.container.append(handle);
-                // bottom-center
                 this.bottomCenter = handle = this.createHandle();
                 handle.classList.add('bottom-center');
                 this.container.append(handle);
@@ -3534,7 +3413,6 @@ var katrid;
                 this.workspace.className = 'katrid-studio workspace';
                 this.el = document.createElement('div');
                 this.el.className = 'katrid-report-designer workspace-area';
-                // create tabset
                 const tabset = document.createElement('div');
                 tabset.className = 'tabset';
                 const nav = document.createElement('ul');
@@ -3547,7 +3425,6 @@ var katrid;
                 this.workspace.append(this.el);
                 this.toolWindow = new katrid.bi.ToolWindow(this, this.workspace);
                 this.container.classList.add('report-designer');
-                // toolbox
                 this.createDragEvents();
                 document.querySelectorAll('.toolbox-item')
                     .forEach((el, idx) => {
@@ -3555,7 +3432,6 @@ var katrid;
                     el.addEventListener('dragstart', (evt) => {
                         this.page.clearSelection();
                         evt.dataTransfer.setData('text', el.getAttribute('data-widget'));
-                        // evt.dataTransfer.dropEffect = 'move';
                     });
                 });
                 document.querySelectorAll('.toolbox-item img').forEach(el => el.setAttribute('draggable', 'false'));
@@ -3563,7 +3439,6 @@ var katrid;
                 this.propertiesEditor = new katrid.bi.ObjectInspector(this, el);
             }
             onSelectionChange(selection) {
-                // set component editor
                 if (selection)
                     this.propertiesEditor.setSelection(selection);
                 else
@@ -3595,7 +3470,6 @@ var katrid;
                 this.clear();
                 if (reportType === 'banded') {
                     const rep = new BandedReport();
-                    // todo replace by a template
                     rep.newPage();
                     this.loadReport(rep);
                     return rep;
@@ -3613,9 +3487,6 @@ var katrid;
             set report(value) {
                 this._report = value;
             }
-            /**
-             * Active page designer
-             */
             get page() {
                 return this._page;
             }
@@ -3637,7 +3508,6 @@ var katrid;
                 const params = this.report.params;
                 if (params) {
                     const xml = jQuery.parseXML(params);
-                    // prepare params
                     let code = '';
                     let cached = this.report.cache.params || {};
                     const info = {};
@@ -3652,7 +3522,6 @@ var katrid;
                     if (res !== false) {
                         const values = jsyaml.load(res);
                         const displayParams = {};
-                        // prepare params
                         for (let [k, v] of Object.entries(values)) {
                             if (v != null) {
                                 if (info[k].type === 'DateField')
@@ -3664,11 +3533,6 @@ var katrid;
                     }
                 }
             }
-            /**
-             * Prepare and preview the report
-             * @param showParams Show params dialog before preview
-             * @returns
-             */
             async preview(showParams = false) {
                 let params;
                 if (showParams) {
@@ -3683,18 +3547,14 @@ var katrid;
                 this.clear();
                 this._report = report;
                 this._datasources = report.datasources;
-                // load data sources
                 for (let ds of this._datasources)
                     this.toolWindow.registerDataSource(ds);
-                // load each page
                 for (let page of report.pages)
                     this.pages.push(this.createPageDesigner(page));
-                // goto to first page
                 if (this.pages.length)
                     this.page = this.pages[0];
             }
             createPageDesigner(page) {
-                // create a PageDesigner instance for a given Page
                 const el = document.createElement('div');
                 el.className = 'page-designer';
                 return page.createDesigner(el, this);
@@ -3730,10 +3590,6 @@ var katrid;
             dump() {
                 return this._report.dump();
             }
-            /**
-             * Load report by json structure
-             * @param structure Report structure
-             */
             load(structure, filename) {
                 this.clear();
                 let rep;
@@ -3820,7 +3676,6 @@ var katrid;
         })(VAlign = drawing.VAlign || (drawing.VAlign = {}));
     })(drawing = katrid.drawing || (katrid.drawing = {}));
 })(katrid || (katrid = {}));
-/// <reference path="../drawing/graphics.ts" />
 var katrid;
 (function (katrid) {
     var design;
@@ -3828,6 +3683,7 @@ var katrid;
         var HAlign = katrid.drawing.HAlign;
         var VAlign = katrid.drawing.VAlign;
         class PropertyEditor {
+            static { this.tag = 'input'; }
             constructor(name, config) {
                 this.name = name;
                 this.config = config;
@@ -3886,7 +3742,6 @@ var katrid;
                 typeEditor.targetObject[this.name] = value;
             }
         }
-        PropertyEditor.tag = 'input';
         design.PropertyEditor = PropertyEditor;
         class StringProperty extends PropertyEditor {
             createInput(typeEditor) {
@@ -3900,8 +3755,8 @@ var katrid;
         }
         design.NameStringProperty = NameStringProperty;
         class TextProperty extends StringProperty {
+            static { this.tag = 'textarea'; }
         }
-        TextProperty.tag = 'textarea';
         design.TextProperty = TextProperty;
         class IntegerProperty extends PropertyEditor {
             createInput(typeEditor) {
@@ -3945,7 +3800,6 @@ var katrid;
                 if (val.color)
                     bgColor.value = val.color;
                 else
-                    // TODO - transparent color
                     bgColor.value = '#FFFFFF';
                 bgColor.addEventListener('change', () => {
                     val.color = bgColor.value;
@@ -4202,6 +4056,7 @@ var katrid;
         }
         design.DisplayFormatProperty = DisplayFormatProperty;
         class SelectProperty extends StringProperty {
+            static { this.tag = 'select'; }
             getValues(typeEditor) {
                 if (this.config.options) {
                     if (Array.isArray(this.config.options))
@@ -4229,7 +4084,6 @@ var katrid;
             selectItem(typeEditor, index) {
             }
         }
-        SelectProperty.tag = 'select';
         design.SelectProperty = SelectProperty;
         class ComponentProperty extends SelectProperty {
             constructor(name, config) {
@@ -4283,7 +4137,7 @@ var katrid;
                 div.className = 'col-6';
                 let igroup = createInputGroup('x');
                 let input = igroup.querySelector('input');
-                input.value = loc.x;
+                input.value = loc?.x;
                 input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
                     x: parseInt(evt.target.value),
                     y: loc.y
@@ -4298,7 +4152,7 @@ var katrid;
                     x: loc.x,
                     y: parseInt(evt.target.value),
                 }));
-                input.value = loc.y;
+                input.value = loc?.y;
                 div.append(igroup);
                 editor.append(div);
                 return editor;
@@ -4373,17 +4227,14 @@ var katrid;
         design.SizeProperty = SizeProperty;
         let componentEditorRegistry = [];
         function findComponentEditor(type) {
-            // find by exact type
             for (let reg of componentEditorRegistry)
                 if (reg.type === type)
                     return reg;
-            // find by sub class
             for (let i = componentEditorRegistry.length - 1; i >= 0; i--) {
                 let reg = componentEditorRegistry[i];
                 if (reg.type && type.prototype instanceof reg.type)
                     return reg;
             }
-            // find default editor
             for (let reg of componentEditorRegistry) {
                 if (reg.type === undefined)
                     return reg;
@@ -4415,9 +4266,6 @@ var katrid;
             return ComponentEditor;
         }
         design.getComponentEditor = getComponentEditor;
-        /**
-         * Basic component editor
-         */
         class ComponentEditor {
             constructor(comp, designer) {
                 this.designer = designer;
@@ -4431,7 +4279,6 @@ var katrid;
                 return editor;
             }
             showEditor() {
-                // show component editor dialog
             }
             static registerPropertyEditor(propName, editor) {
                 this.properties[propName] = editor;
@@ -4441,7 +4288,6 @@ var katrid;
                     new StringProperty('name', { placeholder: 'Object Name' }),
                 ];
             }
-            /** Set a property value and update the designer */
             setPropValue(proName, value) {
                 this.targetObject[proName] = value;
                 this.designer.updateSelectedObjects();
@@ -4618,12 +4464,6 @@ var katrid;
             }
             return config;
         }
-        // Katrid.bi.registerComponentEditor(Katrid.bi.PieChart.type, PieChartEditor);
-        // Katrid.Enterprise.BI.registerComponentEditor(DonutChartWidget.name, DonutChartEditor);
-        // Katrid.Enterprise.BI.registerComponentEditor(BarChartWidget.name, BarChartEditor);
-        // Katrid.Enterprise.BI.registerComponentEditor(LineChartWidget.name, LineChartEditor);
-        // Katrid.Enterprise.BI.registerComponentEditor(TextWidget.name, TextEditor);
-        // Katrid.Enterprise.BI.registerComponentEditor(GridWidget.name, GridEditor);
         async function createCodeEditor(dom, value = null, lang = 'javascript', previewType = 'table') {
             return new Promise((resolve, reject) => {
                 requirejs(['vs/editor/editor.main'], function () {
@@ -4648,9 +4488,38 @@ var katrid;
 (function (katrid) {
     var bi;
     (function (bi) {
+        class Field {
+            constructor() {
+                this.calculated = false;
+                this.client = false;
+            }
+        }
+        bi.Field = Field;
         class DataSource {
             constructor(name) {
                 this.name = name;
+                this._dataStored = true;
+            }
+            dump() {
+                return {
+                    name: this.name,
+                    master: this.master?.name,
+                    data: this._dataStored ? this.data : undefined,
+                };
+            }
+            load(info) {
+                this.name = info.name;
+                this.data = info.data;
+                if (info.master) {
+                    this.report.addLoadCallback(() => this.master = this.report.findObject(info.master));
+                }
+            }
+        }
+        bi.DataSource = DataSource;
+        class SqlDataSource extends DataSource {
+            constructor() {
+                super(...arguments);
+                this._dataStored = false;
             }
             get sql() {
                 return this._sql;
@@ -4658,30 +4527,19 @@ var katrid;
             set sql(value) {
                 this._sql = value;
                 if (this._sql && this.connection) {
-                    // refresh data
                     this.read();
                 }
             }
             dump() {
-                return {
-                    name: this.name,
-                    sql: this.sql,
-                    master: this.master?.name,
-                };
+                const d = super.dump();
+                d.sql = this._sql;
+                return d;
             }
             load(info) {
-                this.name = info.name;
-                this.sql = info.sql;
-                if (info.master) {
-                    this.report.addLoadCallback(() => this.master = this.report.findObject(info.master));
-                }
+                super.load(info);
+                this._sql = info.sql;
             }
-            /**
-             * Return data from connection
-             * @returns Promise<any>
-             */
             async read() {
-                console.log('read data');
                 this.fields = null;
                 const model = new Katrid.Services.ModelService('ui.action.report');
                 const res = await model.rpc('exec_sql', [this._sql, {}], {});
@@ -4690,14 +4548,53 @@ var katrid;
                 return res;
             }
         }
-        bi.DataSource = DataSource;
+        bi.SqlDataSource = SqlDataSource;
+        class ORMDataSource extends DataSource {
+            constructor() {
+                super(...arguments);
+                this._dataStored = false;
+            }
+            dump() {
+                const d = super.dump();
+                d.model = this.model;
+                d.domain = this.domain;
+                d.selectFields = this.selectFields;
+                d.where = this.where;
+                return d;
+            }
+            load(info) {
+                super.load(info);
+                this.model = info.model;
+                this.domain = info.domain;
+                this.selectFields = info.selectFields;
+                this.where = info.where;
+            }
+            async read() {
+                const model = new Katrid.Services.ModelService(this.model);
+                const res = await model.rpc('search', [this.domain, this.selectFields], {});
+                this.data = res.data;
+                this.fields = res.fields;
+                return res;
+            }
+        }
+        bi.ORMDataSource = ORMDataSource;
     })(bi = katrid.bi || (katrid.bi = {}));
 })(katrid || (katrid = {}));
 var katrid;
 (function (katrid) {
     var drawing;
     (function (drawing) {
+        class BaseColumn {
+            dump() {
+                return { expression: this.expression, caption: this.caption };
+            }
+        }
+        drawing.BaseColumn = BaseColumn;
         class BaseGrid extends drawing.BaseWidget {
+            constructor() {
+                super(...arguments);
+                this.columns = [];
+            }
             defaultProps() {
                 super.defaultProps();
                 this.height = 100;
@@ -4722,15 +4619,23 @@ var katrid;
                 let th = tr.appendChild(document.createElement('th'));
                 th.innerText = 'Column 1';
                 th.style.cursor = 'pointer';
-                th.addEventListener('click', () => console.debug('th click'));
+                th.addEventListener('click', (event) => {
+                    this.thClick(event.target);
+                });
                 tr.appendChild(document.createElement('th')).innerText = 'Column 2';
                 tr.appendChild(document.createElement('th')).innerText = 'Column 3';
+            }
+            thClick(th) {
+            }
+            dump() {
+                const d = super.dump();
+                d.columns = this.columns.map(c => c.dump());
+                return d;
             }
         }
         drawing.BaseGrid = BaseGrid;
     })(drawing = katrid.drawing || (katrid.drawing = {}));
 })(katrid || (katrid = {}));
-/// <reference path="../drawing/grid.ts" />
 var katrid;
 (function (katrid) {
     var bi;
@@ -4746,971 +4651,6 @@ var katrid;
         katrid.bi.componentRegistry.Grid = Grid;
     })(bi = katrid.bi || (katrid.bi = {}));
 })(katrid || (katrid = {}));
-/// <reference path="../design/editors.ts" />
-/// <reference path="bi/datasource.ts" />
-/// <reference path="grid.ts" />
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        var ComponentEditor = katrid.design.ComponentEditor;
-        class DataSourceEditor extends ComponentEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new katrid.design.ComponentProperty('master', {
-                    caption: 'Master Source',
-                    onGetValues: (typeEditor) => {
-                        let res = [];
-                        for (let ds of typeEditor.designer.report.datasources)
-                            if (typeEditor.targetObject !== ds)
-                                res.push({ value: ds, text: ds.name });
-                        return res;
-                    }
-                }), new katrid.design.TextProperty('sql', { caption: 'SQL' }));
-            }
-        }
-        bi.DataSourceEditor = DataSourceEditor;
-        class GridEditor extends katrid.design.WidgetEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new katrid.design.DataSourceProperty('datasource', { caption: 'Data Source' }));
-            }
-        }
-        bi.GridEditor = GridEditor;
-        katrid.design.registerComponentEditor(katrid.bi.DataSource, DataSourceEditor);
-        katrid.design.registerComponentEditor(katrid.bi.Grid, GridEditor);
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        drawing.NS = 'http://www.w3.org/2000/svg';
-        class Graphic {
-            constructor(tag, attrs) {
-                this.$el = typeof tag === 'string' ? document.createElementNS(drawing.NS, tag) : tag;
-                if (attrs) {
-                    for (const [key, value] of Object.entries(attrs)) {
-                        this.$el.setAttribute(key, attrs[key].toString());
-                    }
-                }
-            }
-            path(attrs) {
-                const path = draw('path', { ...attrs });
-                this.append(path);
-            }
-            rect(x, y, width, height) {
-                const rect = draw('rect', { x, y, width, height });
-                this.append(rect);
-                return rect;
-            }
-            beginPath(attrs) {
-                if (attrs === undefined)
-                    attrs = { d: '' };
-                this._path = new Graphic('path', attrs);
-                this.append(this._path);
-                // initialize the d path attribute
-                this._d = '';
-                return this._path;
-            }
-            moveTo(x, y) {
-                this._d += ` M${x} ${y}`;
-                this._path.attr('d', this._d);
-                return this;
-            }
-            lineTo(x, y) {
-                this._d += ` L${x} ${y}`;
-                this._path.attr('d', this._d);
-                return this;
-            }
-            closePath() {
-                this._path.attr('d', this._path.attr('d') + ' Z');
-                return this;
-            }
-            text(x, y, text, attrs) {
-                const textObject = draw('text', { x, y, ...attrs });
-                textObject.$el.textContent = text;
-                this.append(textObject);
-                return textObject;
-            }
-            line(x1, y1, x2, y2, attrs) {
-                const line = draw('line', { x1, y1, x2, y2, ...attrs });
-                this.append(line);
-                return line;
-            }
-            image(x, y, width, height, src) {
-                const image = draw('image', { x, y, width, height });
-                this.append(image);
-                return image;
-            }
-            attr(name, value) {
-                if (typeof name === 'string') {
-                    if (value === undefined) {
-                        return this.$el.getAttribute(name);
-                    }
-                    this.$el.setAttribute(name, value.toString());
-                }
-                else {
-                    for (let [k, v] of Object.entries(name)) {
-                        this.$el.setAttribute(k, v.toString());
-                    }
-                }
-                return this;
-            }
-            clear() {
-                this.$el.innerHTML = '';
-                return this;
-            }
-            append(obj) {
-                this.$el.appendChild(obj.$el);
-            }
-            parent() {
-                return new Graphic(this.$el.parentNode);
-            }
-            translate(x, y) {
-                this.attr('transform', `translate(${x},${y})`);
-            }
-            remove() {
-                this.$el.remove();
-            }
-        }
-        drawing.Graphic = Graphic;
-        function svg(el) {
-            return new Graphic(el);
-        }
-        drawing.svg = svg;
-        class Draw extends Graphic {
-        }
-        drawing.Draw = Draw;
-        function draw(tag, attrs) {
-            return new Graphic(tag, attrs);
-        }
-        drawing.draw = draw;
-        function rect(x, y, width, height, attrs) {
-            return new Graphic('rect', { x, y, width, height, ...attrs });
-        }
-        drawing.rect = rect;
-        function g(attrs) {
-            return new Graphic('g', attrs);
-        }
-        drawing.g = g;
-        class SVG extends Draw {
-            constructor(width, height) {
-                super('svg');
-                this.width = width;
-                this.height = height;
-            }
-            get width() {
-                return this._width;
-            }
-            set width(value) {
-                this._width = value;
-                this.$el.setAttribute('width', value.toString());
-            }
-            get height() {
-                return this._height;
-            }
-            set height(value) {
-                this._height = value;
-                this.$el.setAttribute('height', value.toString());
-            }
-        }
-        drawing.SVG = SVG;
-        class Canvas extends SVG {
-            constructor(width = 500, height = 500) {
-                super(width, height);
-            }
-            appendTo(parent) {
-                this.container = parent;
-                parent.appendChild(this.$el);
-            }
-        }
-        drawing.Canvas = Canvas;
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
-})(katrid || (katrid = {}));
-/// <reference path="../drawing/svg.ts" />
-var katrid;
-(function (katrid) {
-    var design;
-    (function (design) {
-        const isMac = navigator['userAgentData']?.platform === 'macOS';
-        design.GUIDELINE_DELAY = 1000;
-        class DesignSurface extends katrid.drawing.Canvas {
-            constructor(width = 500, height = 500) {
-                super(width, height);
-                this.dragging = false;
-                this.snapToGrid = false;
-                this.gridX = 4;
-                this.gridY = 4;
-                this.showGrid = false;
-                this.showGuidelines = false;
-                this._loading = false;
-                this._active = false;
-                this.resizing = false;
-                this._zoom = 100;
-                // TODO: implement selection box as separate class
-                this.selectionBox = true;
-                this.draggingSelectionBox = false;
-                this._dx = 0;
-                this._dy = 0;
-                this._bx = 0;
-                this._by = 0;
-                this._bw = 0;
-                this._bh = 0;
-                this.selection = [];
-                this.grabs = [];
-                this.guidelines = [];
-                this.objects = [];
-                this.$el.classList.add('design-surface');
-                this.undoManager = new design.UndoManager(this);
-                this.clipboardManager = new design.ClipboardManager(this);
-                this.defaultProps();
-                this.workspace = this.$el;
-                // surface events
-                this.create();
-            }
-            defaultProps() {
-            }
-            get loading() {
-                return this._loading;
-            }
-            set loading(value) {
-                this.undoManager.enabled = !value;
-                this._loading = value;
-            }
-            /** Stop record undo entries */
-            beginChanges(action) {
-                switch (action) {
-                    case 'move':
-                        this.undoManager.moveSelection(this.selection);
-                        break;
-                }
-                this.undoManager.beginUpdate();
-            }
-            /** Resume record undo entries */
-            endChanges() {
-                this.undoManager.endUpdate();
-            }
-            create() {
-                this.$el.addEventListener('pointerdown', (event) => this.onPointerDown(event));
-                this.$el.addEventListener('pointerup', (event) => this.onPointerUp(event));
-                this.$el.addEventListener('mousemove', (event) => this.onMouseMove(event));
-                this.$el.addEventListener('contextmenu', (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    this.showContextMenu(event.clientX, event.clientY);
-                });
-                this.createDragEvents();
-            }
-            activate() {
-                if (this._active)
-                    return;
-                this._active = true;
-                if (this._keyDownHandler) {
-                    document.removeEventListener('keydown', this._keyDownHandler);
-                }
-                // hook keydown events
-                this._keyDownHandler = (event) => this.onKeyDown(event);
-                document.addEventListener('keydown', this._keyDownHandler);
-            }
-            createSelectionBox(x, y, width, height) {
-                this._selBox = katrid.drawing.draw('rect', { x, y, width, height, class: 'selection-box' });
-                this.append(this._selBox);
-            }
-            deactivate() {
-                if (!this._active)
-                    return;
-                this._active = false;
-                this.clearSelection();
-                document.removeEventListener('keydown', this._keyDownHandler);
-                this._keyDownHandler = null;
-                this.$el.remove();
-            }
-            onKeyDown(event) {
-                let ctrlKey = event.ctrlKey;
-                let altKey = event.altKey;
-                // invert ctrl and alt if mac os
-                if (isMac) {
-                    ctrlKey = altKey;
-                    altKey = false;
-                }
-                if ((!isMac && ctrlKey) || (isMac && event.metaKey && !ctrlKey)) {
-                    if (event.key === 'z') {
-                        event.preventDefault();
-                        // undo
-                        this.undo();
-                        return;
-                    }
-                    else if (event.key === 'c') {
-                        event.preventDefault();
-                        this.copy();
-                        return;
-                    }
-                    else if (event.key === 'v') {
-                        event.preventDefault();
-                        this.paste();
-                        return;
-                    }
-                    else if (event.key === 'x') {
-                        event.preventDefault();
-                        this.cut();
-                    }
-                    else if ((isMac && event.key === 'Z') || (!isMac && event.key === 'y')) {
-                        event.preventDefault();
-                        // redo
-                        this.redo();
-                        return;
-                    }
-                }
-                if (this.selection?.length && !altKey) {
-                    if (event.shiftKey) {
-                        switch (event.key) {
-                            case 'ArrowDown':
-                                event.preventDefault();
-                                // increase height
-                                if (ctrlKey)
-                                    this.resizeSelectionBy(0, 1);
-                                else
-                                    this.resizeSelectionBy(0, this.gridY || 1);
-                                break;
-                            case 'ArrowUp':
-                                event.preventDefault();
-                                // decrease height
-                                if (ctrlKey)
-                                    this.resizeSelectionBy(0, -1);
-                                else
-                                    this.resizeSelectionBy(0, -this.gridY || -1);
-                                break;
-                            case 'ArrowLeft':
-                                event.preventDefault();
-                                // decrease height
-                                if (ctrlKey)
-                                    this.resizeSelectionBy(-1, 0);
-                                else
-                                    this.designer.refre;
-                                this.resizeSelectionBy(-this.gridX || -1, 0);
-                                break;
-                            case 'ArrowRight':
-                                event.preventDefault();
-                                // decrease height
-                                if (ctrlKey)
-                                    this.resizeSelectionBy(1, 0);
-                                else
-                                    this.resizeSelectionBy(this.gridX || 1, 0);
-                                break;
-                        }
-                    }
-                    else {
-                        switch (event.key) {
-                            case 'ArrowDown':
-                                event.preventDefault();
-                                // move selection down
-                                if (ctrlKey)
-                                    this.moveSelectionBy(0, this.gridY || 1);
-                                else
-                                    this.moveSelectionBy(0, 1);
-                                this._tempGuidelines();
-                                break;
-                            case 'ArrowUp':
-                                event.preventDefault();
-                                // move selection up
-                                if (ctrlKey)
-                                    this.moveSelectionBy(0, -1 * this.gridY || 1);
-                                else
-                                    this.moveSelectionBy(0, -1);
-                                this._tempGuidelines();
-                                break;
-                            case 'ArrowLeft':
-                                event.preventDefault();
-                                // move selection left
-                                if (ctrlKey)
-                                    this.moveSelectionBy(-this.gridX || -1, 0);
-                                else
-                                    this.moveSelectionBy(-1, 0);
-                                this._tempGuidelines();
-                                break;
-                            case 'ArrowRight':
-                                // move selection right
-                                event.preventDefault();
-                                if (ctrlKey)
-                                    this.moveSelectionBy(this.gridX || 1, 0);
-                                else
-                                    this.moveSelectionBy(1, 0);
-                                this._tempGuidelines();
-                                break;
-                            case 'Delete':
-                                event.preventDefault();
-                                // delete selection
-                                this.deleteSelection();
-                                break;
-                        }
-                    }
-                }
-            }
-            applyRectToSelection(dx, dy, dw, dh) {
-                if (dx || dy || dw || dh) {
-                    // save current position
-                    this.undoManager.resizeSelection(this.selection);
-                    for (let obj of this.selection) {
-                        obj.designer.applyRect(dx, dy, dw, dh);
-                    }
-                    this.updateGrabs();
-                }
-            }
-            updateSelectedObjects() {
-                for (let obj of this.selection) {
-                    obj.redraw();
-                }
-                this.updateGrabs();
-            }
-            updateGrabs() {
-                if (!this.resizing) {
-                    this.destroyGrabHandles();
-                    for (let obj of this.selection) {
-                        this.createGrabHandles(obj);
-                    }
-                }
-                for (let grabs of this.grabs) {
-                    grabs.setPosition();
-                }
-            }
-            refreshGrabs() {
-                for (let grabs of this.grabs) {
-                    grabs.setPosition();
-                }
-            }
-            resizeSelectionBy(dw, dh) {
-                this.applyRectToSelection(0, 0, dw, dh);
-            }
-            addObject(obj) {
-                if (this.objects.includes(obj)) {
-                    return obj.designer;
-                }
-                this.objects.push(obj);
-                const designer = this.getDesigner(obj);
-                this.addDesigner(designer);
-                this.undoManager.add('add', [obj]);
-                if (this.onNotification) {
-                    this.onNotification(obj, 'add');
-                }
-                return obj.designer;
-            }
-            addDesigner(designer) {
-                this.append(designer.drawDesign(this));
-            }
-            setSelection(objs) {
-                this.clearSelection();
-                for (let obj of objs) {
-                    this.addToSelection(obj);
-                }
-            }
-            clearSelection() {
-                this.destroyGrabHandles();
-                this.selection = [];
-                this.onSelectionChange();
-            }
-            createGrabHandles(obj) {
-                const grabs = new design.GrabHandles({
-                    container: this.workspace || this.container,
-                    target: obj,
-                    onObjectResizing: () => obj.designer.onDesignResizing?.(),
-                    onObjectResized: () => obj.designer.onDesignResized?.(),
-                    snapToGrid: this.snapToGrid,
-                    designer: this,
-                    gridX: this.gridX,
-                    gridY: this.gridY,
-                });
-                this.grabs.push(grabs);
-            }
-            destroyGrabHandles(obj) {
-                if (this.resizing)
-                    return;
-                for (let gh of Array.from(this.grabs))
-                    if (!obj || (gh.target === obj)) {
-                        gh.destroy();
-                        this.grabs.splice(this.grabs.indexOf(gh), 1);
-                    }
-            }
-            applySelectionBox(rect) {
-                this.clearSelection();
-                for (let obj of this.objects) {
-                    if (katrid.drawing.rectInRect(obj.element.getBoundingClientRect(), rect))
-                        this.addToSelection(obj);
-                }
-            }
-            invalidate() {
-            }
-            getValidName(name) {
-                return;
-            }
-            getDesigner(widget) {
-                if (!widget.designer) {
-                    widget.designer = new design.WidgetDesigner(widget, this);
-                }
-                return widget.designer;
-            }
-            removeFromSelection(obj) {
-                if (this.selection.includes(obj)) {
-                    this.destroyGrabHandles(obj);
-                    this.selection.splice(this.selection.indexOf(obj), 1);
-                }
-            }
-            onSelectionChange() {
-            }
-            addToSelection(obj) {
-                if (!this.selection.includes(obj)) {
-                    this.selection.push(obj);
-                    this.createGrabHandles(obj);
-                }
-                this.onSelectionChange();
-            }
-            selectObject(obj) {
-                // clear selection if object is not already selected
-                if (!this.selection.includes(obj))
-                    this.clearSelection();
-                this.addToSelection(obj);
-            }
-            toggleSelection(obj) {
-                if (this.selection.includes(obj)) {
-                    this.removeFromSelection(obj);
-                }
-                else {
-                    this.addToSelection(obj);
-                }
-            }
-            moveSelectionBy(dx, dy) {
-                // apply zoom factor
-                if (this._zoom !== 100) {
-                    dx = dx / (this._zoom / 100);
-                    dy = dy / (this._zoom / 100);
-                }
-                if (this.selection.length) {
-                    this.undoManager.moveSelection(this.selection);
-                    for (let obj of this.selection) {
-                        obj.designer.moveBy(dx, dy);
-                        // detect visual guidelines
-                    }
-                }
-                for (let grabs of this.grabs)
-                    grabs.setPosition();
-            }
-            onSelectionMoved() {
-            }
-            _createGuideline(x1, y1, x2, y2) {
-                // TODO add guidelines css
-                const line = this.line(x1, y1, x2, y2, { class: 'guideline' });
-                this.guidelines.push(line.$el);
-                this.append(line);
-            }
-            createGuidelines() {
-                if (!this.resizing) {
-                    this.destroyGrabHandles();
-                }
-                for (let obj of this.selection)
-                    for (let comp of this.objects) {
-                        if (comp !== obj) {
-                            let compRect = comp.designer.getDesignRect();
-                            let rect = obj.getDesignRect();
-                            if (rect.right === compRect.right)
-                                this._createGuideline(rect.right, rect.top, compRect.right, compRect.bottom);
-                            if (rect.left === compRect.left)
-                                this._createGuideline(rect.left, rect.top, compRect.left, compRect.bottom);
-                            if (rect.right === compRect.left)
-                                this._createGuideline(rect.right, rect.top, compRect.left, compRect.bottom);
-                            if (rect.left === compRect.right)
-                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.bottom);
-                            if (rect.top === compRect.top)
-                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.top);
-                            if (rect.bottom === compRect.top)
-                                this._createGuideline(rect.left, rect.bottom, compRect.right, compRect.top);
-                            if (rect.top === compRect.bottom)
-                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.bottom);
-                            if (rect.bottom === compRect.bottom)
-                                this._createGuideline(rect.left, rect.bottom, compRect.right, compRect.bottom);
-                        }
-                    }
-            }
-            clearGuidelines() {
-                this.updateGrabs();
-                for (let line of this.guidelines) {
-                    line.remove();
-                }
-                this.guidelines = [];
-            }
-            /** Load object from json data */
-            loadObject(obj) {
-                if (obj.type === 'Text') {
-                    const o = new katrid.drawing.Text();
-                    o.load(obj);
-                    return o;
-                }
-                if (obj.type === 'Rectangle') {
-                    const o = new katrid.drawing.Rectangle();
-                    o.load(obj);
-                    return o;
-                }
-            }
-            removeObject(obj) {
-                this._removeObjects([obj]);
-            }
-            deleteSelection() {
-                const sel = this.selection.length;
-                this._removeObjects(this.selection, `Delete ${sel} objects`);
-                this.grabs = [];
-                this.selection = [];
-                this.onSelectionChange();
-            }
-            _removeObjects(objs, description) {
-                this.undoManager.add('remove', [...objs], description);
-                if (this.onNotification) {
-                    objs.forEach(obj => this.onNotification(obj, 'remove'));
-                }
-                for (let obj of objs) {
-                    // remove from selection
-                    if (this.selection.includes(obj)) {
-                        this.destroyGrabHandles(obj);
-                        this.selection.splice(this.selection.indexOf(obj), 1);
-                    }
-                    // remove from objects
-                    if (this.objects.includes(obj)) {
-                        this.objects.splice(this.objects.indexOf(obj), 1);
-                        obj.remove();
-                    }
-                }
-                // object notification
-                this.updateGrabs();
-            }
-            removeObjects(objs) {
-                this._removeObjects(objs);
-            }
-            async cut() {
-                await this.clipboardManager.copy();
-                this._removeObjects(this.selection);
-            }
-            copy() {
-                if (this.selection.length) {
-                    console.debug('copy', this.selection);
-                    return this.clipboardManager.copy();
-                }
-            }
-            async paste() {
-                try {
-                    this.undoManager.beginUpdate();
-                    const objs = await this.clipboardManager.paste();
-                    this.undoManager.endUpdate();
-                    this.undoManager.add('add', objs);
-                }
-                finally {
-                    this.undoManager.endUpdate();
-                }
-            }
-            pasteObject(obj) {
-                return this.addObject(obj);
-            }
-            undo() {
-                this.undoManager.undo();
-                this.updateGrabs();
-            }
-            redo() {
-                this.undoManager.redo();
-            }
-            resize(width, height) {
-                this.width = width;
-                this.height = height;
-                this._resize();
-            }
-            /** The designer height is relative to page type */
-            getDesignerHeight() {
-                return this.height;
-            }
-            _resize() {
-                let w = this.width;
-                let h = this.getDesignerHeight();
-                if (this._zoom !== 100) {
-                    w = w * (this._zoom / 100);
-                    h = h * (this._zoom / 100);
-                }
-                this.attr('width', w.toString());
-                this.attr('height', h.toString());
-                this.attr('viewBox', `0 0 ${this.width} ${this.getDesignerHeight()}`);
-            }
-            get zoom() {
-                return this._zoom;
-            }
-            set zoom(value) {
-                this._zoom = value;
-                this._resize();
-            }
-            _tempGuidelines() {
-                this.clearGuidelines();
-                this.createGuidelines();
-                clearTimeout(this._resizingTimeout);
-                this._resizingTimeout = setTimeout(() => this.clearGuidelines(), design.GUIDELINE_DELAY);
-            }
-            onPointerDown(event) {
-                event.stopPropagation();
-                this.clearSelection();
-                if (this.selectionBox && event.button === 0) {
-                    this.draggingSelectionBox = true;
-                    const r = this.$el.getBoundingClientRect();
-                    this._dx = event.clientX - r.left;
-                    this._dy = event.clientY - r.top;
-                    this._bx = this._by = this._bw = this._bh = 0;
-                    this.createSelectionBox(this._dx, this._dy, 0, 0);
-                }
-                if (!this.selection.length && event.button === 0)
-                    this.$el.setPointerCapture(event.pointerId);
-            }
-            onMouseMove(event) {
-                if (this.draggingSelectionBox) {
-                    event.preventDefault();
-                    let x = this._dx;
-                    let y = this._dy;
-                    const r = this.$el.getBoundingClientRect();
-                    let w = event.clientX - this._dx - r.left;
-                    let h = event.clientY - this._dy - r.top;
-                    if (w < 0) {
-                        x += w;
-                        w = Math.abs(w);
-                    }
-                    if (h < 0) {
-                        y += h;
-                        h = Math.abs(h);
-                    }
-                    this.updateSelectionBox(x, y, w, h);
-                }
-            }
-            onPointerUp(event) {
-                if (!this.resizing) {
-                    this.clearGuidelines();
-                }
-                if (this.draggingSelectionBox) {
-                    this.draggingSelectionBox = false;
-                    this.$el.releasePointerCapture(event.pointerId);
-                    this._onPointerUp();
-                    this.destroySelectionBox();
-                    this.refreshSelection();
-                }
-            }
-            _onPointerUp() {
-                this.applySelectionBox(this._selBox.$el.getBoundingClientRect());
-            }
-            refreshSelection() {
-            }
-            destroySelectionBox() {
-                this._selBox.remove();
-            }
-            updateSelectionBox(x, y, width, height) {
-                this._selBox.attr({ x, y, width, height });
-                this._bx = x;
-                this._by = y;
-                this._bw = width;
-                this._bh = height;
-            }
-            widgetDoubleClick(widget, event) {
-                event.preventDefault();
-                event.stopPropagation();
-                this.executeEditor(widget);
-            }
-            executeEditor(widget) {
-                let editorCls = design.getComponentEditor(widget.target.constructor);
-                const editor = new editorCls(widget.target, this);
-                editor.showEditor();
-            }
-            toolItemDragOver(evt) {
-            }
-            createDragEvents() {
-                this.$el.addEventListener('dragover', (evt) => {
-                    this.toolItemDragOver(evt);
-                });
-                this.$el.addEventListener('drop', (evt) => {
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    this.toolItemDrop(evt.dataTransfer.getData('text'), evt);
-                });
-            }
-            toolItemDrop(widget, evt) {
-                this.createWidget(widget, evt.target, evt.offsetX, evt.offsetY);
-            }
-            createWidget(widgetName, target, x, y) {
-            }
-        }
-        design.DesignSurface = DesignSurface;
-    })(design = katrid.design || (katrid.design = {}));
-})(katrid || (katrid = {}));
-/// <reference path="surface.ts" />
-var katrid;
-(function (katrid) {
-    var design;
-    (function (design) {
-        class PageDesigner extends katrid.design.DesignSurface {
-            constructor(page) {
-                super();
-                this.page = page;
-            }
-            get page() {
-                return this._page;
-            }
-            get report() {
-                return this.page.report;
-            }
-            set page(value) {
-                this._page = value;
-                if (value && value.width > 0) {
-                    this.width = value.width;
-                }
-                if (value && value.height > 0) {
-                    this.height = value.height;
-                }
-            }
-            showConfigWizard() {
-            }
-            hideConfigWizard() {
-            }
-            onConfigClick(event) {
-            }
-        }
-        design.PageDesigner = PageDesigner;
-    })(design = katrid.design || (katrid.design = {}));
-})(katrid || (katrid = {}));
-/// <reference path="../design/page.ts" />
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class PageDesigner extends katrid.design.PageDesigner {
-            activate() {
-                super.activate();
-                this.reportDesigner.activatePage(this.page);
-            }
-            onSelectionChange() {
-                super.onSelectionChange();
-                this.reportDesigner.onSelectionChanged(this.selection);
-            }
-        }
-        bi.PageDesigner = PageDesigner;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        class BasePage {
-            constructor() {
-                this.objects = [];
-                this.loading = false;
-                this.defaultProps();
-            }
-            get isEmpty() {
-                return this.objects?.length === 0;
-            }
-            defaultProps() {
-                // infinite size
-                this.width = -1;
-                this.height = -1;
-            }
-            get size() {
-                return { width: this.width, height: this.height };
-            }
-            set size(value) {
-                this.width = value.width;
-                this.height = value.height;
-                // check common page size
-                if (this._pageSize && this._pageSize !== 'Custom') {
-                    const pageSize = drawing.PageSize[this._pageSize];
-                    if (pageSize.width !== value.width || pageSize.height !== value.height) {
-                        this._pageSize = 'Custom';
-                    }
-                }
-                if (this.designer) {
-                    this.designer.resize(value.width, value.height);
-                }
-            }
-            get pageSize() {
-                return this._pageSize;
-            }
-            set pageSize(value) {
-                this._pageSize = value;
-                if (value) {
-                    const val = drawing.PageSize[value];
-                    this.width = val.width;
-                    this.height = val.height;
-                    if (this.designer) {
-                        this.designer.resize(val.width, val.height);
-                    }
-                }
-            }
-            get orientation() {
-                this._orientation ?? (this._orientation = drawing.PageOrientation.Portrait);
-                return this._orientation;
-            }
-            set orientation(value) {
-                if (value === this._orientation) {
-                    return;
-                }
-                if (value !== this._orientation) {
-                    // invert size
-                    const { height, width } = this.size;
-                    this.width = height;
-                    this.height = width;
-                    // designer notification
-                    if (this.designer) {
-                        this.designer.resize(this.width, this.height);
-                    }
-                }
-                this._orientation = value;
-            }
-            dump() {
-                return {
-                    name: this.name,
-                    height: this.height,
-                    width: this.width,
-                    pageSize: this._pageSize,
-                    orientation: this._orientation,
-                };
-            }
-            *allObjects() {
-                for (let obj of this.objects) {
-                    yield obj;
-                }
-            }
-            children() {
-                return this.objects;
-            }
-            load(data) {
-                this.name = data.name;
-                this.width = data.width;
-                this.height = data.height;
-                this._pageSize = data.pageSize;
-                this._orientation = data.orientation;
-            }
-            onLoad(info) {
-            }
-            _createDesigner() {
-                return new katrid.design.PageDesigner(this);
-            }
-            createDesigner() {
-                try {
-                    this.loading = true;
-                    this.designer = this._createDesigner();
-                    return this.designer;
-                }
-                finally {
-                    this.loading = false;
-                }
-            }
-        }
-        drawing.BasePage = BasePage;
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
-})(katrid || (katrid = {}));
-/// <reference path="../drawing/page.ts" />
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class BasePage extends katrid.drawing.BasePage {
-        }
-        bi.BasePage = BasePage;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Core;
@@ -5720,7 +4660,6 @@ var Katrid;
                 this.config = config;
                 this.plugins = [];
                 Katrid.app = this;
-                // setup the adapter
                 if (config.adapter)
                     Katrid.Services.Service.adapter = config.adapter;
                 else
@@ -5742,7 +4681,6 @@ var Katrid;
                 this.element.innerHTML = '';
                 this.element.append(view);
             }
-            /** User information */
             get userInfo() {
                 return this._userInfo;
             }
@@ -5776,7 +4714,6 @@ var Katrid;
                     loadingMsg.hide();
                     overlay.hide();
                 });
-                // TODO replace jquery ajax by fetch api
                 $(document).ajaxStart(function () {
                     loadingTimeout = setTimeout(() => loadingMsg.show(), 400);
                     overlayTimeout = setTimeout(() => {
@@ -5976,7 +4913,6 @@ var Katrid;
             set currentMenu(value) {
                 this._currentMenu = value;
                 if (value) {
-                    // $('#current-module h3').text(value.name);
                     $(`app-header > .dropdown[data-menu-id]`).hide();
                     $(`app-header > .dropdown[data-menu-id="${value.id}"]`).show();
                     $(`app-header .navbar-menu-group[data-parent-id]`).hide();
@@ -6015,14 +4951,12 @@ var Katrid;
                     };
                 }
                 if (url.startsWith('#/action/')) {
-                    // direct action execution
                     let res = await Katrid.Services.Service.$fetch('/web' + url.substring(1, url.length), null, null).then(res => res.json());
                     await this.actionManager.execAction(res);
                 }
                 else if (('action' in params) || ('model' in params))
                     await this.actionManager.onHashChange(params, reset);
                 else if ((!('action' in params)) && ('menu_id' in params)) {
-                    // find first visible action
                     let actionItem = document.querySelector('app-header .navbar-menu-group[data-parent-id="' + params.menu_id + '"] .menu-item-action[href]');
                     if (actionItem) {
                         let child = actionItem.parentElement.querySelector('a.dropdown-item[href]');
@@ -6073,189 +5007,6 @@ var katrid;
 (function (katrid) {
     katrid.core = Katrid.Core;
 })(katrid || (katrid = {}));
-/// <reference path="app.ts"/>
-var Katrid;
-(function (Katrid) {
-    var Core;
-    (function (Core) {
-        class Plugin {
-            constructor(app) {
-                this.app = app;
-            }
-            hashChange(url) {
-                return false;
-            }
-        }
-        Core.Plugin = Plugin;
-        class Plugins extends Array {
-            start(app) {
-                for (let plugin of this)
-                    app.plugins.push(new plugin(app));
-            }
-        }
-        Core.plugins = new Plugins();
-        function registerPlugin(cls) {
-            Core.plugins.push(cls);
-        }
-        Core.registerPlugin = registerPlugin;
-    })(Core = Katrid.Core || (Katrid.Core = {}));
-})(Katrid || (Katrid = {}));
-/// <reference path="../core/plugin.ts"/>
-var Katrid;
-(function (Katrid) {
-    var BI;
-    (function (BI) {
-        let QueryEditorPlugin = class QueryEditorPlugin extends Katrid.Core.Plugin {
-            hashChange(url) {
-                if (url.startsWith('#/query-viewer/')) {
-                    this.execute();
-                    return true;
-                }
-            }
-            async execute() {
-                let queryViewer = document.createElement('query-viewer');
-                queryViewer.className = 'content-container';
-                this.app.setView(queryViewer);
-            }
-        };
-        QueryEditorPlugin = __decorate([
-            Katrid.Core.registerPlugin
-        ], QueryEditorPlugin);
-        class QueryManager {
-            constructor(app) {
-                this.app = app;
-                this.app = app;
-                // this.$scope = app.$scope.$new();
-                this.$scope.queryChange = (query) => this.queryChange(query);
-                this.$scope.search = {};
-                let me = this;
-                this.action = this.$scope.action = {
-                    context: {},
-                    views: {},
-                    async saveSearch(search) {
-                        let svc = new Katrid.Services.ModelService('ui.filter');
-                        let data = {};
-                        Object.assign(data, search);
-                        data.query = me.$scope.query.id;
-                        if (search.name === null) {
-                            search.name = prompt('Query name', 'current query namne');
-                            search.is_default = false;
-                            search.is_shared = true;
-                        }
-                        if (search.name)
-                            await svc.write([data]);
-                    },
-                    setSearchParams(params) {
-                        me.$scope.search.params = params;
-                        me.refresh(me.query);
-                    },
-                    switchView(viewType) {
-                        console.log('set view type', viewType);
-                    },
-                    orderBy(field) {
-                        if (me.$scope.ordering === field)
-                            me.$scope.reverse = !me.$scope.reverse;
-                        else {
-                            me.$scope.ordering = field;
-                            me.$scope.reverse = false;
-                        }
-                    }
-                };
-            }
-            getFilter(field) {
-                if (field.type === 'DateField')
-                    return "|date:'shortDate'";
-                else if (field.type === 'DateTimeField')
-                    return "|date:'short'";
-                else if (field.type === 'IntegerField')
-                    return "|number:0";
-                return "";
-            }
-            getSearchView(query) {
-                let s;
-                if (query.params)
-                    s = query.params;
-                else {
-                    s = `<search>`;
-                    for (let f of query.fields)
-                        s += `<field name="${f.name}"/>`;
-                    s += '</search>';
-                }
-                // prepare fields to view
-                let fields = {};
-                for (let f of query.fields)
-                    fields[f.name] = Katrid.Data.Fields.Field.fromInfo(f);
-                this.fields = fields;
-                return { content: s, fields };
-            }
-            async queryChange(query) {
-                this.$scope.search = {
-                    viewMoreButtons: true,
-                };
-                this.query = query;
-                let res = await this.refresh(query);
-                // render the result on table
-                // transform result to list of objects
-                query.fields = res.fields;
-                this.action.search = this.getSearchView(query);
-                this.action.fieldList = Object.values(this.fields);
-                this.$scope.action.views.search = this.$scope.action.search;
-                this.renderSearch();
-                this.renderTable(res);
-                this.$scope.$apply();
-            }
-            async refresh(query) {
-                let res = await Katrid.Services.Query.read({ id: query.id, details: true, params: this.$scope.search.params });
-                for (let f of res.fields)
-                    f.filter = this.getFilter(f);
-                let _toObject = (fields, values) => {
-                    let r = {}, i = 0;
-                    for (let f of fields) {
-                        r[f.name] = values[i];
-                        i++;
-                    }
-                    return r;
-                };
-                this.$scope.records = res.data.map(row => _toObject(res.fields, row));
-                this.$scope.$apply();
-                return res;
-            }
-            renderSearch() {
-                // let el = this.app.getTemplate('query.manager.search.jinja2');
-                // el = Katrid.Core.$compile(el)(this.$scope);
-                // this.$element.find('#query-search-view').html(el);
-            }
-            async render() {
-                let templ = document.createElement('query-editor');
-                templ = Katrid.Core.$compile(templ)(this.$scope);
-                this.$element = templ;
-                let queries = await Katrid.Services.Query.all();
-                this.$scope.queries = queries.data;
-                // this.app.$element.html(templ);
-                this.$scope.$apply();
-            }
-            renderTable(data) {
-                // let templ = this.app.getTemplate('query.manager.table.jinja2', {
-                //   self: this, query: this.$scope.query, records: this.records, fields: Object.values(this.fields),
-                // });
-                // templ = Katrid.Core.$compile(templ)(this.$scope);
-                // initColumn(templ);
-                // this.$element.find('#query-manager-result').html(templ);
-            }
-        }
-        function initColumn(table) {
-            // $('.checkbox-menu').sortable();
-        }
-        function reorder(index1, index2) {
-            $('table tr').each(function () {
-                var tr = $(this);
-                var td1 = tr.find(`td:eq(${index1})`);
-                var td2 = tr.find(`td:eq(${index2})`);
-                td1.detach().insertAfter(td2);
-            });
-        }
-    })(BI = Katrid.BI || (Katrid.BI = {}));
-})(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -6311,7 +5062,6 @@ var Katrid;
                     methods: {},
                     computed,
                     created() {
-                        // load `created` event listeners
                         for (let def of me._readyEventListeners)
                             if (def.created)
                                 def.created.call(this);
@@ -6407,7 +5157,6 @@ var Katrid;
                     footer.append(b);
                 return templ;
             }
-            /** Create vue View Model instance */
             createVm(el) {
                 let component = this.createComponent();
                 if (this.scripts) {
@@ -6427,7 +5176,6 @@ var Katrid;
                 }
                 let vm = Katrid.createVm(component).mount(el);
                 this.vm = vm;
-                // let vForm = el.querySelector('.v-form') as any;
                 return vm;
             }
             beforeRender(templ) {
@@ -6448,7 +5196,6 @@ var Katrid;
                     this.createVm(this.element);
                 if (this.container) {
                     this.container.append(this.element);
-                    // dispatch ready event listeners
                     if (this._readyEventListeners) {
                         for (let event of this._readyEventListeners)
                             if (event.ready)
@@ -6460,7 +5207,6 @@ var Katrid;
             closeDialog() {
                 this._modal.hide();
             }
-            /** Render the view content into a container */
             renderTo(container) {
                 this.container = container;
                 this.render();
@@ -6513,20 +5259,17 @@ var Katrid;
         Forms.searchModes = ['table', 'card'];
         Forms.registry = {};
         class ModelView extends Forms.BaseView {
-            // protected _modifiedRecords: any[];
             constructor(info) {
                 super(info);
                 this.pendingOperation = 0;
                 this._active = false;
             }
-            /** Create views instances based on template strings */
             static fromTemplate(action, model, template) {
                 return new Katrid.Forms.Views.registry[this.viewType]({ action, model, template });
             }
             static createViewModeButton(container) {
             }
             async deleteSelection(sel) {
-                // auto apply destroyed records
                 if ((((sel.length === 1) && confirm(Katrid.i18n.gettext('Confirm delete record?'))) ||
                     ((sel.length > 1) && confirm(Katrid.i18n.gettext('Confirm delete records?')))) && sel) {
                     let res = await this.datasource.delete(sel.map(rec => rec.id));
@@ -6551,14 +5294,12 @@ var Katrid;
                         this.model.allFields = info.action.model.fields;
                 }
                 else if (info.fields) {
-                    // Create the model based on specified fields
                     this.model = new Katrid.Data.Model({ fields: info.fields, name: this.action?.modelName });
                 }
                 else if (viewInfo?.fields || viewInfo?.info?.fields) {
                     this.model = new Katrid.Data.Model({ name: viewInfo.info.name, fields: viewInfo.fields || viewInfo.info.fields });
                 }
                 this.fields = this.model.fields;
-                // init the datasource
                 this.datasource = new Katrid.Data.DataSource({
                     model: this.model, context: this.action?.context, domain: this.action?.config?.domain,
                     fields: this.fields,
@@ -6637,16 +5378,8 @@ var Katrid;
                 }
             }
             async ready() {
-                // if (this.action.dataSource && (this.action.recordIndex >= 0)) {
-                //   this.dataSource._records = this.action.dataSource.records;
-                //   this.dataSource.recordIndex = this.action.recordIndex;
-                // } else if (this.action.params?.id && !this.dataSource.inserting)
-                //   this.dataSource.get(this.action.params.id);
-                // else if (!this.dataSource.inserting)
-                //   this.dataSource.insert();
             }
             refresh() {
-                // this.dataSource.get(this.dataSource.recordId);
                 this.datasource.refresh();
             }
             _search(options) {
@@ -6673,9 +5406,6 @@ var Katrid;
                 let headerEl = container.querySelector('header');
                 Forms.compileButtons(container);
                 if (headerEl) {
-                    // let statusField = headerEl.querySelector('field[name=status]');
-                    // if (statusField)
-                    //   statusField.setAttribute('status-field', 'status-field');
                     headerEl.remove();
                     this._mergeHeader(parent, headerEl);
                 }
@@ -6788,13 +5518,11 @@ var Katrid;
                 return el;
             }
             domTemplate() {
-                // auto create view
                 if (!this.template && !this.html)
                     return this.autoCreateView();
                 return super.domTemplate();
             }
             beforeRender(template) {
-                // save and remove the original header to add it to content-scroll later
                 let header = template.querySelector(':scope > header');
                 Forms.compileButtons(template);
                 if (header)
@@ -6813,28 +5541,21 @@ var Katrid;
                     actionView.append(this.createToolbar());
                 if (actions)
                     actionView.append(actions);
-                // merge header
                 let newHeader = document.createElement('div');
                 newHeader.className = 'content-container-heading';
                 if (header)
                     this._mergeHeader(newHeader, header);
-                // viewContent.append(newHeader);
                 let content = document.createElement('div');
                 content.className = 'content no-padding';
                 content.append(newHeader);
                 content.append(templ);
                 viewContent.append(content);
                 actionView.append(viewContent);
-                // viewContent.append(content);
-                // viewContent.append(templ);
                 return actionView;
             }
             renderTemplate(template) {
                 return template;
             }
-            // protected createElement() {
-            //   return this.domTemplate();
-            // }
             createToolbar() {
                 let el = document.createElement('div');
                 el.className = 'toolbar';
@@ -6876,14 +5597,12 @@ var Katrid;
                 this.datasource.orderBy = value;
             }
             async getSelectedIds() {
-                // get id list based on search filter params
                 if (this.vm.allSelectionFilter)
                     return this.model.service.listId({ where: this._lastSearch, limit: 99999 });
                 else
                     return this.vm.selection.map(obj => obj.id);
             }
             async callSubAction(action, selection) {
-                // auto detect selection
                 if (!selection)
                     selection = await this.getSelectedIds();
                 if (selection?.length)
@@ -6968,7 +5687,6 @@ var Katrid;
                 this._invalidateSelection();
             }
             setSearchView(searchView) {
-                // render the search view
                 if (this.element) {
                     let div = this.element.querySelector('.search-view-area');
                     if (div) {
@@ -6991,7 +5709,6 @@ var Katrid;
             }
             async groupBy(data) {
                 this.vm.records = this.vm.groups;
-                // console.log(data);
             }
             async applyGroups(groups, params) {
                 let res = await this.datasource.groupBy(groups, params);
@@ -6999,17 +5716,12 @@ var Katrid;
             }
             _addRecordsToGroup(index, list) {
             }
-            /**
-             * Expands a group
-             */
             async expandGroup(group) {
                 group.$expanded = true;
                 let idx = this.vm.groups.indexOf(group);
                 console.log(group);
-                // check if data is cached
                 let children = group.$children;
                 if (!children) {
-                    // load from adapter api
                     await this.datasource.expandGroup(idx, group);
                 }
                 else {
@@ -7017,9 +5729,6 @@ var Katrid;
                     this.vm.groups = [...groups.slice(0, idx + 1), ...children, ...groups.slice(idx + 1)];
                 }
             }
-            /**
-             * Expands all groups
-             */
             expandAll() {
                 for (let g of this.vm.groups) {
                     if (g.$hasChildren && !g.$expanded) {
@@ -7027,17 +5736,11 @@ var Katrid;
                     }
                 }
             }
-            /**
-             * Collapses all groups
-             */
             collapseAll() {
                 for (let g of this.vm.groups)
                     if (g.$hasChildren && g.$expanded)
                         this.collapseGroup(g);
             }
-            /**
-             * Collapses a group
-             */
             collapseGroup(group) {
                 let idx = this.vm.groups.indexOf(group);
                 let groups = this.vm.groups;
@@ -7102,7 +5805,6 @@ var Katrid;
                 btnXls.setAttribute('v-on:click', "download({format: 'xlsx'})");
                 parent.append(btnXls);
                 if (this.config?.toolbar?.print) {
-                    // print
                     let btnPrint = document.createElement('div');
                     btnPrint.classList.add('btn-group');
                     btnPrint.innerHTML = `<button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" name="print" data-bs-toggle="dropdown" aria-haspopup="true">
@@ -7121,7 +5823,6 @@ var Katrid;
                     }
                     parent.append(btnPrint);
                 }
-                // refresh
                 let btnRefresh = document.createElement('button');
                 btnRefresh.type = 'button';
                 btnRefresh.classList.add('btn', 'toolbtn');
@@ -7130,7 +5831,6 @@ var Katrid;
                 btnRefresh.setAttribute('v-on:click', 'refresh()');
                 parent.append(btnRefresh);
                 this.createSelectionInfo(parent);
-                // actions
                 let btnActions = document.createElement('div');
                 btnActions.classList.add('btn-group');
                 btnActions.innerHTML = `<div class="dropdown">
@@ -7172,8 +5872,6 @@ var Katrid;
                         $(el).data('bs.modal', null);
                         el.remove();
                     });
-                    // if (options?.edit)
-                    //   this.vm.dataSource.edit();
                 });
             }
             async ready() {
@@ -7212,9 +5910,123 @@ var Katrid;
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="../core/app.ts"/>
-/// <reference path="../forms/index.ts"/>
-/// <reference path="../forms/model.ts"/>
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        class BasePage {
+            constructor() {
+                this.objects = [];
+                this.loading = false;
+                this.defaultProps();
+            }
+            get isEmpty() {
+                return this.objects?.length === 0;
+            }
+            defaultProps() {
+                this.width = -1;
+                this.height = -1;
+            }
+            get size() {
+                return { width: this.width, height: this.height };
+            }
+            set size(value) {
+                this.width = value.width;
+                this.height = value.height;
+                if (this._pageSize && this._pageSize !== 'Custom') {
+                    const pageSize = drawing.PageSize[this._pageSize];
+                    if (pageSize.width !== value.width || pageSize.height !== value.height) {
+                        this._pageSize = 'Custom';
+                    }
+                }
+                if (this.designer) {
+                    this.designer.resize(value.width, value.height);
+                }
+            }
+            get pageSize() {
+                return this._pageSize;
+            }
+            set pageSize(value) {
+                this._pageSize = value;
+                if (value) {
+                    const val = drawing.PageSize[value];
+                    this.width = val.width;
+                    this.height = val.height;
+                    if (this.designer) {
+                        this.designer.resize(val.width, val.height);
+                    }
+                }
+            }
+            get orientation() {
+                this._orientation ??= drawing.PageOrientation.Portrait;
+                return this._orientation;
+            }
+            set orientation(value) {
+                if (value === this._orientation) {
+                    return;
+                }
+                if (value !== this._orientation) {
+                    const { height, width } = this.size;
+                    this.width = height;
+                    this.height = width;
+                    if (this.designer) {
+                        this.designer.resize(this.width, this.height);
+                    }
+                }
+                this._orientation = value;
+            }
+            dump() {
+                return {
+                    name: this.name,
+                    height: this.height,
+                    width: this.width,
+                    pageSize: this._pageSize,
+                    orientation: this._orientation,
+                };
+            }
+            *allObjects() {
+                for (let obj of this.objects) {
+                    yield obj;
+                }
+            }
+            children() {
+                return this.objects;
+            }
+            load(data) {
+                this.name = data.name;
+                this.width = data.width;
+                this.height = data.height;
+                this._pageSize = data.pageSize;
+                this._orientation = data.orientation;
+            }
+            onLoad(info) {
+            }
+            _createDesigner() {
+                return new katrid.design.PageDesigner(this);
+            }
+            createDesigner() {
+                try {
+                    this.loading = true;
+                    this.designer = this._createDesigner();
+                    return this.designer;
+                }
+                finally {
+                    this.loading = false;
+                }
+            }
+        }
+        drawing.BasePage = BasePage;
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class BasePage extends katrid.drawing.BasePage {
+        }
+        bi.BasePage = BasePage;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var BI;
@@ -7226,6 +6038,7 @@ var Katrid;
                 this.searchViewVisible = true;
                 this._loadedRows = 0;
             }
+            static { this.viewType = 'query'; }
             get queryId() {
                 return this._queryId;
             }
@@ -7237,21 +6050,8 @@ var Katrid;
             }
             async queryChange(query) {
                 $(this).empty();
-                // this.searchView = <SearchViewElement>document.createElement('search-view');
-                // this.searchView.addEventListener('searchUpdate', () => {
-                //   this.refresh(query, this.searchView.getParams());
-                // })
-                // this.append(this.searchView);
                 let container = document.createElement('div');
                 container.classList.add('table-responsive');
-                // let res = await this.refreshQuery(query);
-                // render the result on table
-                // transform result to list of objects
-                // this.action.search = this.getSearchView(query);
-                // this.$scope.action.views.search = this.$scope.action.search;
-                // this.renderSearch();
-                // this.renderTable(res);
-                // this.$scope.$apply();
             }
             async refreshQuery(query, params) {
                 this._loadedRows = 0;
@@ -7293,7 +6093,6 @@ var Katrid;
                 if (fixed)
                     table.classList.add('table-fixed');
                 table.addEventListener('contextmenu', evt => this.contextMenu(evt));
-                // this.searchView.render();
             }
             evalTotal(col, values) {
                 let val = 0;
@@ -7316,7 +6115,6 @@ var Katrid;
                 const tbody = this.table.tBodies.item(0);
                 const tr = document.createElement('tr');
                 let th = document.createElement('th');
-                // find the first total column index
                 let colIndex = this.columns.length;
                 for (let col of this.columns)
                     if (col.total) {
@@ -7441,14 +6239,10 @@ var Katrid;
             contextMenu(evt) {
                 evt.stopPropagation();
                 evt.preventDefault();
-                // create context menu
                 let menu = new Katrid.Forms.ContextMenu();
                 menu.add('<i class="fa fa-fw fa-copy"></i> ' + Katrid.i18n.gettext('Copy'), () => this.copyToClipboard());
                 menu.add('<i class="fa fa-fw fa-copy"></i> ' + Katrid.i18n.gettext('Copy with formatting'), () => this.copyToClipboard(true));
                 menu.add('<i class="fa fa-fw fa-download"></i> ' + Katrid.i18n.gettext('Export'), () => this.export());
-                // menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => this.filterByFieldContent(td, rec));
-                // menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteRow());
-                // menu.add('Arquivar', this.copyClick);
                 menu.show(evt.pageX, evt.pageY);
             }
             async copyToClipboard(formatting = false) {
@@ -7489,7 +6283,6 @@ var Katrid;
                 this.element.remove();
             }
         }
-        QueryView.viewType = 'query';
         BI.QueryView = QueryView;
         class Column {
             constructor(info) {
@@ -7505,14 +6298,1170 @@ var Katrid;
         }
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="../core/app.ts"/>
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class QueryView extends Katrid.BI.QueryView {
+        }
+        bi.QueryView = QueryView;
+        class QueryPage extends bi.BasePage {
+            constructor() {
+                super(...arguments);
+                this.userCanCustomize = false;
+            }
+            _createDesigner() {
+                return new bi.QueryPageDesigner(this);
+            }
+            dump() {
+                const d = super.dump();
+                d.datasource = this.datasource?.name;
+                d.userCanCustomize = this.userCanCustomize;
+                d.title = this.title;
+                d.model = this.model;
+                return d;
+            }
+            load(d) {
+                super.load(d);
+                this.userCanCustomize = d.userCanCustomize;
+                this.title = d.title;
+                this.model = d.model;
+            }
+            get model() {
+                return this._model;
+            }
+            set model(value) {
+                this._model = value;
+                if (this.modelService?.name !== value) {
+                    this.setModelService(new Katrid.Services.ModelService(value));
+                }
+            }
+            async setModelService(service) {
+                this.modelService = service;
+                const fields = await this.modelService.getFieldsInfo({ view_type: 'list' });
+                this.createQueryView(fields);
+            }
+            createQueryView(fields) {
+                this.queryView = new QueryView({ fields });
+                this.queryView.metadata = { template: {} };
+                if (this.designer) {
+                    this.queryView.container = this.designer.getElement();
+                    this.queryView.ready().then(() => {
+                        console.debug(this.queryView.element);
+                    });
+                }
+            }
+            get datasource() {
+                return this._datasource;
+            }
+            set datasource(value) {
+                this._datasource = value;
+            }
+        }
+        bi.QueryPage = QueryPage;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        var ComponentEditor = katrid.design.ComponentEditor;
+        class DataSourceEditor extends ComponentEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new katrid.design.ComponentProperty('master', {
+                    caption: 'Master Source',
+                    onGetValues: (typeEditor) => {
+                        let res = [];
+                        for (let ds of typeEditor.designer.report.datasources)
+                            if (typeEditor.targetObject !== ds)
+                                res.push({ value: ds, text: ds.name });
+                        return res;
+                    }
+                }), new katrid.design.TextProperty('sql', { caption: 'SQL' }));
+            }
+        }
+        bi.DataSourceEditor = DataSourceEditor;
+        class GridEditor extends katrid.design.WidgetEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new katrid.design.DataSourceProperty('datasource', { caption: 'Data Source' }));
+            }
+        }
+        bi.GridEditor = GridEditor;
+        class QueryPageEditor extends katrid.design.ComponentEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new katrid.design.StringProperty('model', { caption: 'Data Model' }), new katrid.design.DataSourceProperty('datasource', { caption: 'Data Source' }), new katrid.design.BooleanProperty('userCanCustomize', { caption: 'User Can Customize' }), new katrid.design.StringProperty('title', { caption: 'Page Title' }), new katrid.design.TextProperty('description', { caption: 'Description' }));
+            }
+        }
+        bi.QueryPageEditor = QueryPageEditor;
+        katrid.design.registerComponentEditor(katrid.bi.DataSource, DataSourceEditor);
+        katrid.design.registerComponentEditor(katrid.bi.Grid, GridEditor);
+        katrid.design.registerComponentEditor(katrid.bi.QueryPage, QueryPageEditor);
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var drawing;
+    (function (drawing) {
+        drawing.NS = 'http://www.w3.org/2000/svg';
+        class Graphic {
+            constructor(tag, attrs) {
+                this.$el = typeof tag === 'string' ? document.createElementNS(drawing.NS, tag) : tag;
+                if (attrs) {
+                    for (const [key, value] of Object.entries(attrs)) {
+                        this.$el.setAttribute(key, attrs[key].toString());
+                    }
+                }
+            }
+            path(attrs) {
+                const path = draw('path', { ...attrs });
+                this.append(path);
+            }
+            rect(x, y, width, height) {
+                const rect = draw('rect', { x, y, width, height });
+                this.append(rect);
+                return rect;
+            }
+            beginPath(attrs) {
+                if (attrs === undefined)
+                    attrs = { d: '' };
+                this._path = new Graphic('path', attrs);
+                this.append(this._path);
+                this._d = '';
+                return this._path;
+            }
+            moveTo(x, y) {
+                this._d += ` M${x} ${y}`;
+                this._path.attr('d', this._d);
+                return this;
+            }
+            lineTo(x, y) {
+                this._d += ` L${x} ${y}`;
+                this._path.attr('d', this._d);
+                return this;
+            }
+            closePath() {
+                this._path.attr('d', this._path.attr('d') + ' Z');
+                return this;
+            }
+            text(x, y, text, attrs) {
+                const textObject = draw('text', { x, y, ...attrs });
+                textObject.$el.textContent = text;
+                this.append(textObject);
+                return textObject;
+            }
+            line(x1, y1, x2, y2, attrs) {
+                const line = draw('line', { x1, y1, x2, y2, ...attrs });
+                this.append(line);
+                return line;
+            }
+            image(x, y, width, height, src) {
+                const image = draw('image', { x, y, width, height });
+                this.append(image);
+                return image;
+            }
+            attr(name, value) {
+                if (typeof name === 'string') {
+                    if (value === undefined) {
+                        return this.$el.getAttribute(name);
+                    }
+                    this.$el.setAttribute(name, value.toString());
+                }
+                else {
+                    for (let [k, v] of Object.entries(name)) {
+                        this.$el.setAttribute(k, v.toString());
+                    }
+                }
+                return this;
+            }
+            clear() {
+                this.$el.innerHTML = '';
+                return this;
+            }
+            append(obj) {
+                this.$el.appendChild(obj.$el);
+            }
+            parent() {
+                return new Graphic(this.$el.parentNode);
+            }
+            translate(x, y) {
+                this.attr('transform', `translate(${x},${y})`);
+            }
+            remove() {
+                this.$el.remove();
+            }
+        }
+        drawing.Graphic = Graphic;
+        function svg(el) {
+            return new Graphic(el);
+        }
+        drawing.svg = svg;
+        class Draw extends Graphic {
+        }
+        drawing.Draw = Draw;
+        function draw(tag, attrs) {
+            return new Graphic(tag, attrs);
+        }
+        drawing.draw = draw;
+        function rect(x, y, width, height, attrs) {
+            return new Graphic('rect', { x, y, width, height, ...attrs });
+        }
+        drawing.rect = rect;
+        function g(attrs) {
+            return new Graphic('g', attrs);
+        }
+        drawing.g = g;
+        class SVG extends Draw {
+            constructor(width, height) {
+                super('svg');
+                this.width = width;
+                this.height = height;
+            }
+            get width() {
+                return this._width;
+            }
+            set width(value) {
+                this._width = value;
+                this.$el.setAttribute('width', value.toString());
+            }
+            get height() {
+                return this._height;
+            }
+            set height(value) {
+                this._height = value;
+                this.$el.setAttribute('height', value.toString());
+            }
+        }
+        drawing.SVG = SVG;
+        class Canvas extends SVG {
+            constructor(width = 500, height = 500) {
+                super(width, height);
+            }
+            appendTo(parent) {
+                this.container = parent;
+                parent.appendChild(this.$el);
+            }
+        }
+        drawing.Canvas = Canvas;
+    })(drawing = katrid.drawing || (katrid.drawing = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var design;
+    (function (design) {
+        const isMac = navigator['userAgentData']?.platform === 'macOS';
+        design.GUIDELINE_DELAY = 1000;
+        class DesignSurface extends katrid.drawing.Canvas {
+            constructor(width = 500, height = 500) {
+                super(width, height);
+                this.dragging = false;
+                this.snapToGrid = false;
+                this.gridX = 4;
+                this.gridY = 4;
+                this.showGrid = false;
+                this.showGuidelines = false;
+                this._loading = false;
+                this._active = false;
+                this.eventsDisabled = false;
+                this.resizing = false;
+                this._zoom = 100;
+                this.selectionBox = true;
+                this.draggingSelectionBox = false;
+                this._dx = 0;
+                this._dy = 0;
+                this._bx = 0;
+                this._by = 0;
+                this._bw = 0;
+                this._bh = 0;
+                this.selection = [];
+                this.grabs = [];
+                this.guidelines = [];
+                this.objects = [];
+                this.$el.classList.add('design-surface');
+                this.undoManager = new design.UndoManager(this);
+                this.clipboardManager = new design.ClipboardManager(this);
+                this.defaultProps();
+                this.workspace = this.$el;
+                this.create();
+            }
+            defaultProps() {
+            }
+            get loading() {
+                return this._loading;
+            }
+            set loading(value) {
+                this.undoManager.enabled = !value;
+                this._loading = value;
+            }
+            beginChanges(action) {
+                switch (action) {
+                    case 'move':
+                        this.undoManager.moveSelection(this.selection);
+                        break;
+                }
+                this.undoManager.beginUpdate();
+            }
+            endChanges() {
+                this.undoManager.endUpdate();
+            }
+            create() {
+                this.$el.addEventListener('pointerdown', (event) => this.onPointerDown(event));
+                this.$el.addEventListener('pointerup', (event) => this.onPointerUp(event));
+                this.$el.addEventListener('mousemove', (event) => this.onMouseMove(event));
+                this.$el.addEventListener('contextmenu', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.showContextMenu(event.clientX, event.clientY);
+                });
+                this.createDragEvents();
+            }
+            enableEvents() {
+                this.eventsDisabled = false;
+            }
+            disableEvents() {
+                this.eventsDisabled = true;
+            }
+            activate() {
+                if (this._active) {
+                    return;
+                }
+                this._active = true;
+                if (this._keyDownHandler) {
+                    document.removeEventListener('keydown', this._keyDownHandler);
+                }
+                this._keyDownHandler = (event) => this.onKeyDown(event);
+                document.addEventListener('keydown', this._keyDownHandler);
+            }
+            createSelectionBox(x, y, width, height) {
+                this._selBox = katrid.drawing.draw('rect', { x, y, width, height, class: 'selection-box' });
+                this.append(this._selBox);
+            }
+            deactivate() {
+                if (!this._active) {
+                    return;
+                }
+                this._active = false;
+                this.clearSelection();
+                document.removeEventListener('keydown', this._keyDownHandler);
+                this._keyDownHandler = null;
+                this.$el.remove();
+            }
+            onKeyDown(event) {
+                if (this.eventsDisabled) {
+                    return;
+                }
+                let ctrlKey = event.ctrlKey;
+                let altKey = event.altKey;
+                if (isMac) {
+                    ctrlKey = altKey;
+                    altKey = false;
+                }
+                if ((!isMac && ctrlKey) || (isMac && event.metaKey && !ctrlKey)) {
+                    if (event.key === 'z') {
+                        event.preventDefault();
+                        this.undo();
+                        return;
+                    }
+                    else if (event.key === 'c') {
+                        event.preventDefault();
+                        this.copy();
+                        return;
+                    }
+                    else if (event.key === 'v') {
+                        event.preventDefault();
+                        this.paste();
+                        return;
+                    }
+                    else if (event.key === 'x') {
+                        event.preventDefault();
+                        this.cut();
+                    }
+                    else if ((isMac && event.key === 'Z') || (!isMac && event.key === 'y')) {
+                        event.preventDefault();
+                        this.redo();
+                        return;
+                    }
+                }
+                if (this.selection?.length && !altKey) {
+                    if (event.shiftKey) {
+                        switch (event.key) {
+                            case 'ArrowDown':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(0, 1);
+                                else
+                                    this.resizeSelectionBy(0, this.gridY || 1);
+                                break;
+                            case 'ArrowUp':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(0, -1);
+                                else
+                                    this.resizeSelectionBy(0, -this.gridY || -1);
+                                break;
+                            case 'ArrowLeft':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(-1, 0);
+                                else
+                                    this.designer.refre;
+                                this.resizeSelectionBy(-this.gridX || -1, 0);
+                                break;
+                            case 'ArrowRight':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(1, 0);
+                                else
+                                    this.resizeSelectionBy(this.gridX || 1, 0);
+                                break;
+                        }
+                    }
+                    else {
+                        switch (event.key) {
+                            case 'ArrowDown':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.moveSelectionBy(0, this.gridY || 1);
+                                else
+                                    this.moveSelectionBy(0, 1);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowUp':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.moveSelectionBy(0, -1 * this.gridY || 1);
+                                else
+                                    this.moveSelectionBy(0, -1);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowLeft':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.moveSelectionBy(-this.gridX || -1, 0);
+                                else
+                                    this.moveSelectionBy(-1, 0);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowRight':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.moveSelectionBy(this.gridX || 1, 0);
+                                else
+                                    this.moveSelectionBy(1, 0);
+                                this._tempGuidelines();
+                                break;
+                            case 'Delete':
+                                event.preventDefault();
+                                this.deleteSelection();
+                                break;
+                        }
+                    }
+                }
+            }
+            applyRectToSelection(dx, dy, dw, dh) {
+                if (dx || dy || dw || dh) {
+                    this.undoManager.resizeSelection(this.selection);
+                    for (let obj of this.selection) {
+                        obj.designer.applyRect(dx, dy, dw, dh);
+                    }
+                    this.updateGrabs();
+                }
+            }
+            updateSelectedObjects() {
+                for (let obj of this.selection) {
+                    obj.redraw();
+                }
+                this.updateGrabs();
+            }
+            updateGrabs() {
+                if (!this.resizing) {
+                    this.destroyGrabHandles();
+                    for (let obj of this.selection) {
+                        this.createGrabHandles(obj);
+                    }
+                }
+                for (let grabs of this.grabs) {
+                    grabs.setPosition();
+                }
+            }
+            refreshGrabs() {
+                for (let grabs of this.grabs) {
+                    grabs.setPosition();
+                }
+            }
+            resizeSelectionBy(dw, dh) {
+                this.applyRectToSelection(0, 0, dw, dh);
+            }
+            addObject(obj) {
+                if (this.objects.includes(obj)) {
+                    return obj.designer;
+                }
+                this.objects.push(obj);
+                const designer = this.getDesigner(obj);
+                this.addDesigner(designer);
+                this.undoManager.add('add', [obj]);
+                if (this.onNotification) {
+                    this.onNotification(obj, 'add');
+                }
+                return obj.designer;
+            }
+            addDesigner(designer) {
+                this.append(designer.drawDesign(this));
+            }
+            setSelection(objs) {
+                this.clearSelection();
+                for (let obj of objs) {
+                    this.addToSelection(obj);
+                }
+            }
+            clearSelection() {
+                this.destroyGrabHandles();
+                this.selection = [];
+                this.onSelectionChange();
+            }
+            createGrabHandles(obj) {
+                const grabs = new design.GrabHandles({
+                    container: this.workspace || this.container,
+                    target: obj,
+                    onObjectResizing: () => obj.designer.onDesignResizing?.(),
+                    onObjectResized: () => obj.designer.onDesignResized?.(),
+                    snapToGrid: this.snapToGrid,
+                    designer: this,
+                    gridX: this.gridX,
+                    gridY: this.gridY,
+                });
+                this.grabs.push(grabs);
+            }
+            destroyGrabHandles(obj) {
+                if (this.resizing)
+                    return;
+                for (let gh of Array.from(this.grabs))
+                    if (!obj || (gh.target === obj)) {
+                        gh.destroy();
+                        this.grabs.splice(this.grabs.indexOf(gh), 1);
+                    }
+            }
+            applySelectionBox(rect) {
+                this.clearSelection();
+                for (let obj of this.objects) {
+                    if (katrid.drawing.rectInRect(obj.element.getBoundingClientRect(), rect))
+                        this.addToSelection(obj);
+                }
+            }
+            invalidate() {
+            }
+            getValidName(name) {
+                return;
+            }
+            getDesigner(widget) {
+                if (!widget.designer) {
+                    widget.designer = new design.WidgetDesigner(widget, this);
+                }
+                return widget.designer;
+            }
+            removeFromSelection(obj) {
+                if (this.selection.includes(obj)) {
+                    this.destroyGrabHandles(obj);
+                    this.selection.splice(this.selection.indexOf(obj), 1);
+                }
+            }
+            onSelectionChange() {
+            }
+            addToSelection(obj) {
+                if (!this.selection.includes(obj)) {
+                    this.selection.push(obj);
+                    this.createGrabHandles(obj);
+                }
+                this.onSelectionChange();
+            }
+            selectObject(obj) {
+                if (!this.selection.includes(obj))
+                    this.clearSelection();
+                this.addToSelection(obj);
+            }
+            toggleSelection(obj) {
+                if (this.selection.includes(obj)) {
+                    this.removeFromSelection(obj);
+                }
+                else {
+                    this.addToSelection(obj);
+                }
+            }
+            moveSelectionBy(dx, dy) {
+                if (this._zoom !== 100) {
+                    dx = dx / (this._zoom / 100);
+                    dy = dy / (this._zoom / 100);
+                }
+                if (this.selection.length) {
+                    this.undoManager.moveSelection(this.selection);
+                    for (let obj of this.selection) {
+                        obj.designer.moveBy(dx, dy);
+                    }
+                }
+                for (let grabs of this.grabs)
+                    grabs.setPosition();
+            }
+            onSelectionMoved() {
+            }
+            _createGuideline(x1, y1, x2, y2) {
+                const line = this.line(x1, y1, x2, y2, { class: 'guideline' });
+                this.guidelines.push(line.$el);
+                this.append(line);
+            }
+            createGuidelines() {
+                if (!this.resizing) {
+                    this.destroyGrabHandles();
+                }
+                for (let obj of this.selection)
+                    for (let comp of this.objects) {
+                        if (comp !== obj) {
+                            let compRect = comp.designer.getDesignRect();
+                            let rect = obj.getDesignRect();
+                            if (rect.right === compRect.right)
+                                this._createGuideline(rect.right, rect.top, compRect.right, compRect.bottom);
+                            if (rect.left === compRect.left)
+                                this._createGuideline(rect.left, rect.top, compRect.left, compRect.bottom);
+                            if (rect.right === compRect.left)
+                                this._createGuideline(rect.right, rect.top, compRect.left, compRect.bottom);
+                            if (rect.left === compRect.right)
+                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.bottom);
+                            if (rect.top === compRect.top)
+                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.top);
+                            if (rect.bottom === compRect.top)
+                                this._createGuideline(rect.left, rect.bottom, compRect.right, compRect.top);
+                            if (rect.top === compRect.bottom)
+                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.bottom);
+                            if (rect.bottom === compRect.bottom)
+                                this._createGuideline(rect.left, rect.bottom, compRect.right, compRect.bottom);
+                        }
+                    }
+            }
+            clearGuidelines() {
+                this.updateGrabs();
+                for (let line of this.guidelines) {
+                    line.remove();
+                }
+                this.guidelines = [];
+            }
+            loadObject(obj) {
+                if (obj.type === 'Text') {
+                    const o = new katrid.drawing.Text();
+                    o.load(obj);
+                    return o;
+                }
+                if (obj.type === 'Rectangle') {
+                    const o = new katrid.drawing.Rectangle();
+                    o.load(obj);
+                    return o;
+                }
+            }
+            removeObject(obj) {
+                this._removeObjects([obj]);
+            }
+            deleteSelection() {
+                const sel = this.selection.length;
+                this._removeObjects(this.selection, `Delete ${sel} objects`);
+                this.grabs = [];
+                this.selection = [];
+                this.onSelectionChange();
+            }
+            _removeObjects(objs, description) {
+                this.undoManager.add('remove', [...objs], description);
+                if (this.onNotification) {
+                    objs.forEach(obj => this.onNotification(obj, 'remove'));
+                }
+                for (let obj of objs) {
+                    if (this.selection.includes(obj)) {
+                        this.destroyGrabHandles(obj);
+                        this.selection.splice(this.selection.indexOf(obj), 1);
+                    }
+                    if (this.objects.includes(obj)) {
+                        this.objects.splice(this.objects.indexOf(obj), 1);
+                        obj.remove();
+                    }
+                }
+                this.updateGrabs();
+            }
+            removeObjects(objs) {
+                this._removeObjects(objs);
+            }
+            async cut() {
+                await this.clipboardManager.copy();
+                this._removeObjects(this.selection);
+            }
+            copy() {
+                if (this.selection.length) {
+                    console.debug('copy', this.selection);
+                    return this.clipboardManager.copy();
+                }
+            }
+            async paste() {
+                try {
+                    this.undoManager.beginUpdate();
+                    const objs = await this.clipboardManager.paste();
+                    this.undoManager.endUpdate();
+                    this.undoManager.add('add', objs);
+                }
+                finally {
+                    this.undoManager.endUpdate();
+                }
+            }
+            pasteObject(obj) {
+                return this.addObject(obj);
+            }
+            undo() {
+                this.undoManager.undo();
+                this.updateGrabs();
+            }
+            redo() {
+                this.undoManager.redo();
+            }
+            resize(width, height) {
+                this.width = width;
+                this.height = height;
+                this._resize();
+            }
+            getDesignerHeight() {
+                return this.height;
+            }
+            _resize() {
+                let w = this.width;
+                let h = this.getDesignerHeight();
+                if (this._zoom !== 100) {
+                    w = w * (this._zoom / 100);
+                    h = h * (this._zoom / 100);
+                }
+                this.attr('width', w.toString());
+                this.attr('height', h.toString());
+                this.attr('viewBox', `0 0 ${this.width} ${this.getDesignerHeight()}`);
+            }
+            get zoom() {
+                return this._zoom;
+            }
+            set zoom(value) {
+                this._zoom = value;
+                this._resize();
+            }
+            _tempGuidelines() {
+                this.clearGuidelines();
+                this.createGuidelines();
+                clearTimeout(this._resizingTimeout);
+                this._resizingTimeout = setTimeout(() => this.clearGuidelines(), design.GUIDELINE_DELAY);
+            }
+            onPointerDown(event) {
+                if (this.eventsDisabled) {
+                    return;
+                }
+                event.stopPropagation();
+                this.clearSelection();
+                if (this.selectionBox && event.button === 0) {
+                    this.draggingSelectionBox = true;
+                    const r = this.$el.getBoundingClientRect();
+                    this._dx = event.clientX - r.left;
+                    this._dy = event.clientY - r.top;
+                    this._bx = this._by = this._bw = this._bh = 0;
+                    this.createSelectionBox(this._dx, this._dy, 0, 0);
+                }
+                if (!this.selection.length && event.button === 0)
+                    this.$el.setPointerCapture(event.pointerId);
+            }
+            onMouseMove(event) {
+                if (this.eventsDisabled) {
+                    return;
+                }
+                if (this.draggingSelectionBox) {
+                    event.preventDefault();
+                    let x = this._dx;
+                    let y = this._dy;
+                    const r = this.$el.getBoundingClientRect();
+                    let w = event.clientX - this._dx - r.left;
+                    let h = event.clientY - this._dy - r.top;
+                    if (w < 0) {
+                        x += w;
+                        w = Math.abs(w);
+                    }
+                    if (h < 0) {
+                        y += h;
+                        h = Math.abs(h);
+                    }
+                    this.updateSelectionBox(x, y, w, h);
+                }
+            }
+            onPointerUp(event) {
+                if (this.eventsDisabled) {
+                    return;
+                }
+                if (!this.resizing) {
+                    this.clearGuidelines();
+                }
+                if (this.draggingSelectionBox) {
+                    this.draggingSelectionBox = false;
+                    this.$el.releasePointerCapture(event.pointerId);
+                    this._onPointerUp();
+                    this.destroySelectionBox();
+                    this.refreshSelection();
+                }
+            }
+            _onPointerUp() {
+                this.applySelectionBox(this._selBox.$el.getBoundingClientRect());
+            }
+            refreshSelection() {
+            }
+            destroySelectionBox() {
+                this._selBox.remove();
+            }
+            updateSelectionBox(x, y, width, height) {
+                this._selBox.attr({ x, y, width, height });
+                this._bx = x;
+                this._by = y;
+                this._bw = width;
+                this._bh = height;
+            }
+            widgetDoubleClick(widget, event) {
+                event.preventDefault();
+                event.stopPropagation();
+                this.executeEditor(widget);
+            }
+            executeEditor(widget) {
+                let editorCls = design.getComponentEditor(widget.target.constructor);
+                const editor = new editorCls(widget.target, this);
+                editor.showEditor();
+            }
+            toolItemDragOver(evt) {
+            }
+            createDragEvents() {
+                this.$el.addEventListener('dragover', (evt) => {
+                    this.toolItemDragOver(evt);
+                });
+                this.$el.addEventListener('drop', (evt) => {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    this.toolItemDrop(evt.dataTransfer.getData('text'), evt);
+                });
+            }
+            toolItemDrop(widget, evt) {
+                this.createWidget(widget, evt.target, evt.offsetX, evt.offsetY);
+            }
+            createWidget(widgetName, target, x, y) {
+            }
+            getElement() {
+                return this.$el;
+            }
+        }
+        design.DesignSurface = DesignSurface;
+    })(design = katrid.design || (katrid.design = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var design;
+    (function (design) {
+        class PageDesigner extends katrid.design.DesignSurface {
+            constructor(page) {
+                super();
+                this.page = page;
+            }
+            get page() {
+                return this._page;
+            }
+            get report() {
+                return this.page.report;
+            }
+            set page(value) {
+                this._page = value;
+                if (value && value.width > 0) {
+                    this.width = value.width;
+                }
+                if (value && value.height > 0) {
+                    this.height = value.height;
+                }
+            }
+            showConfigWizard() {
+            }
+            hideConfigWizard() {
+            }
+            onConfigClick(event) {
+            }
+            getElement() {
+                return this.$el;
+            }
+        }
+        design.PageDesigner = PageDesigner;
+    })(design = katrid.design || (katrid.design = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class PageDesigner extends katrid.design.PageDesigner {
+            activate() {
+                super.activate();
+                this.reportDesigner.activatePage(this.page);
+            }
+            onSelectionChange() {
+                super.onSelectionChange();
+                this.reportDesigner.onSelectionChanged(this.selection);
+            }
+        }
+        bi.PageDesigner = PageDesigner;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class PivotTable {
+            constructor(container) {
+                this.create();
+                container?.append(this.el);
+            }
+            create() {
+                this.el = document.createElement('div');
+                this.createTable();
+            }
+            createTable() {
+                this.table = document.createElement('table');
+                this.el.append(this.table);
+                this.table.createTHead();
+                this.table.createTBody();
+            }
+            get cols() {
+                return this._cols;
+            }
+            set cols(value) {
+                this._cols = value;
+                this.update();
+            }
+            get rows() {
+                return this._rows;
+            }
+            set rows(value) {
+                this._rows = value;
+                this.update();
+            }
+            update() {
+                this.table.remove();
+                this.createTable();
+                this.loadData();
+            }
+            setData(data) {
+                this.data = data;
+                if (data) {
+                    this.loadData();
+                }
+            }
+            loadData() {
+                if (this._rows?.length) {
+                    this.rowPivot = katrid.utils.pivot(this.data, this._rows[0]);
+                }
+                if (this._cols?.length) {
+                    this.colPivot = katrid.utils.pivot(this.data, this._cols[0]);
+                }
+                let tr1 = document.createElement('tr');
+                this.table.tBodies[0].append(tr1);
+                tr1.appendChild(document.createElement('td'));
+                if (this.colPivot) {
+                    for (const col of this.colPivot) {
+                        let td = document.createElement('td');
+                        td.innerText = col.key;
+                        tr1.append(td);
+                    }
+                }
+                if (this.rowPivot)
+                    for (const row of this.rowPivot) {
+                        let tr = document.createElement('tr');
+                        this.table.tBodies[0].append(tr);
+                        let td = document.createElement('td');
+                        td.innerText = row.key;
+                        tr.append(td);
+                    }
+            }
+        }
+        bi.PivotTable = PivotTable;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Core;
+    (function (Core) {
+        class Plugin {
+            constructor(app) {
+                this.app = app;
+            }
+            hashChange(url) {
+                return false;
+            }
+        }
+        Core.Plugin = Plugin;
+        class Plugins extends Array {
+            start(app) {
+                for (let plugin of this)
+                    app.plugins.push(new plugin(app));
+            }
+        }
+        Core.plugins = new Plugins();
+        function registerPlugin(cls) {
+            Core.plugins.push(cls);
+        }
+        Core.registerPlugin = registerPlugin;
+    })(Core = Katrid.Core || (Katrid.Core = {}));
+})(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
     var BI;
     (function (BI) {
-        class QueryViewer extends Katrid.WebComponent {
+        let QueryEditorPlugin = class QueryEditorPlugin extends Katrid.Core.Plugin {
+            hashChange(url) {
+                if (url.startsWith('#/query-viewer/')) {
+                    this.execute();
+                    return true;
+                }
+            }
+            async execute() {
+                let queryViewer = document.createElement('query-viewer');
+                queryViewer.className = 'content-container';
+                this.app.setView(queryViewer);
+            }
+        };
+        QueryEditorPlugin = __decorate([
+            Katrid.Core.registerPlugin
+        ], QueryEditorPlugin);
+        class QueryManager {
+            constructor(app) {
+                this.app = app;
+                this.app = app;
+                this.$scope.queryChange = (query) => this.queryChange(query);
+                this.$scope.search = {};
+                let me = this;
+                this.action = this.$scope.action = {
+                    context: {},
+                    views: {},
+                    async saveSearch(search) {
+                        let svc = new Katrid.Services.ModelService('ui.filter');
+                        let data = {};
+                        Object.assign(data, search);
+                        data.query = me.$scope.query.id;
+                        if (search.name === null) {
+                            search.name = prompt('Query name', 'current query namne');
+                            search.is_default = false;
+                            search.is_shared = true;
+                        }
+                        if (search.name)
+                            await svc.write([data]);
+                    },
+                    setSearchParams(params) {
+                        me.$scope.search.params = params;
+                        me.refresh(me.query);
+                    },
+                    switchView(viewType) {
+                        console.log('set view type', viewType);
+                    },
+                    orderBy(field) {
+                        if (me.$scope.ordering === field)
+                            me.$scope.reverse = !me.$scope.reverse;
+                        else {
+                            me.$scope.ordering = field;
+                            me.$scope.reverse = false;
+                        }
+                    }
+                };
+            }
+            getFilter(field) {
+                if (field.type === 'DateField')
+                    return "|date:'shortDate'";
+                else if (field.type === 'DateTimeField')
+                    return "|date:'short'";
+                else if (field.type === 'IntegerField')
+                    return "|number:0";
+                return "";
+            }
+            getSearchView(query) {
+                let s;
+                if (query.params)
+                    s = query.params;
+                else {
+                    s = `<search>`;
+                    for (let f of query.fields)
+                        s += `<field name="${f.name}"/>`;
+                    s += '</search>';
+                }
+                let fields = {};
+                for (let f of query.fields)
+                    fields[f.name] = Katrid.Data.Fields.Field.fromInfo(f);
+                this.fields = fields;
+                return { content: s, fields };
+            }
+            async queryChange(query) {
+                this.$scope.search = {
+                    viewMoreButtons: true,
+                };
+                this.query = query;
+                let res = await this.refresh(query);
+                query.fields = res.fields;
+                this.action.search = this.getSearchView(query);
+                this.action.fieldList = Object.values(this.fields);
+                this.$scope.action.views.search = this.$scope.action.search;
+                this.renderSearch();
+                this.renderTable(res);
+                this.$scope.$apply();
+            }
+            async refresh(query) {
+                let res = await Katrid.Services.Query.read({ id: query.id, details: true, params: this.$scope.search.params });
+                for (let f of res.fields)
+                    f.filter = this.getFilter(f);
+                let _toObject = (fields, values) => {
+                    let r = {}, i = 0;
+                    for (let f of fields) {
+                        r[f.name] = values[i];
+                        i++;
+                    }
+                    return r;
+                };
+                this.$scope.records = res.data.map(row => _toObject(res.fields, row));
+                this.$scope.$apply();
+                return res;
+            }
+            renderSearch() {
+            }
+            async render() {
+                let templ = document.createElement('query-editor');
+                templ = Katrid.Core.$compile(templ)(this.$scope);
+                this.$element = templ;
+                let queries = await Katrid.Services.Query.all();
+                this.$scope.queries = queries.data;
+                this.$scope.$apply();
+            }
+            renderTable(data) {
+            }
+        }
+        function initColumn(table) {
+        }
+        function reorder(index1, index2) {
+            $('table tr').each(function () {
+                var tr = $(this);
+                var td1 = tr.find(`td:eq(${index1})`);
+                var td2 = tr.find(`td:eq(${index2})`);
+                td1.detach().insertAfter(td2);
+            });
+        }
+    })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var BI;
+    (function (BI) {
+        class QueryViewerElement extends Katrid.WebComponent {
             create() {
-                this.innerHTML = `
+                this.queryViewer = new QueryViewer(this);
+            }
+        }
+        BI.QueryViewerElement = QueryViewerElement;
+        class QueryViewer {
+            constructor(el) {
+                this.el = el;
+                this.create();
+            }
+            create() {
+                this.el.className = 'query-viewer';
+                this.el.innerHTML = `
         <div class="col-12 px-2"><h4 class="text-muted">Visualizador de Consultas</h4></div>
         <div class="row px-3">
           <div class="col-2 overflow-auto" id="query-viewer-treeview" style="max-height: 85vh"></div>
@@ -7522,7 +7471,7 @@ var Katrid;
                 this.load();
             }
             async load() {
-                this.container = this.querySelector('.query-view');
+                this.container = this.el.querySelector('.query-view');
                 let res = await Katrid.Services.Query.all();
                 if (res.data) {
                     for (let item of res.data) {
@@ -7534,18 +7483,6 @@ var Katrid;
                             this.metadata = res;
                             let fields = res.fields;
                             const params = res.params;
-                            // this.searchView.fields = this.fields = Katrid.Data.Fields.fromArray(res.fields);
-                            // for (let f of res.fields)
-                            // f.filter = this.getFilter(f);
-                            // let _toObject = (fields, values) => {
-                            //   let r = {},
-                            //     i = 0;
-                            //   for (let f of fields) {
-                            //     r[f.name] = values[i];
-                            //     i++;
-                            //   }
-                            //   return r;
-                            // };
                             this.params = null;
                             if (params) {
                                 this.createParamsPanel(params);
@@ -7558,23 +7495,8 @@ var Katrid;
                             }
                         };
                     }
-                    ;
                     let treeView = new Katrid.WebComponent.TreeView(res.data, 'query-viewer-treeview');
                     await treeView.makeTreeView();
-                    // group items
-                    // let cats = {};
-                    // res.data.forEach(obj => (cats[obj.category] = cats[obj.category] || []).push(obj))
-                    // for (let [k, v] of Object.entries(cats)) {
-                    //   let g: any = document.createElement('optgroup');
-                    //   g.label = k;
-                    //   for (let q of <any>v) {
-                    //     let opt = document.createElement('option');
-                    //     opt.innerText = q.name;
-                    //     opt.value = q.id;
-                    //     g.append(opt);
-                    //   }
-                    //   // sel.append(g);
-                    // }
                 }
             }
             createParamsPanel(params) {
@@ -7613,8 +7535,9 @@ var Katrid;
                 this.container.append(div);
             }
             async applyParams() {
-                if (this.queryView)
+                if (this.queryView) {
                     this.queryView.destroy();
+                }
                 const params = this.params.map(p => p.dump());
                 const res = await this.query.execute({ params });
                 if (res.data && res.fields) {
@@ -7622,10 +7545,8 @@ var Katrid;
                     qv.searchViewVisible = false;
                     qv.ready();
                     $(this.btnPrint).show();
-                    // $(this.btnExport).show();
                 }
                 else if (res.filename && res.content) {
-                    // create a download file
                     const a = document.createElement('a');
                     const blob = new Blob([res.content], { type: 'text/json' });
                     a.href = URL.createObjectURL(blob);
@@ -7648,9 +7569,16 @@ var Katrid;
             }
         }
         BI.QueryViewer = QueryViewer;
-        Katrid.define('query-viewer', QueryViewer);
+        Katrid.define('query-viewer', QueryViewerElement);
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        bi.QueryViewer = Katrid.BI.QueryViewer;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
 var katrid;
 (function (katrid) {
     var bi;
@@ -7669,7 +7597,6 @@ var katrid;
             onSelectionChanged(selection) {
                 this.inspector.setSelection(selection);
             }
-            /** Receives a notification if an object is added, removed or renamed */
             objectNotification(obj, event) {
                 this.outlineExplorer.objectNotification(obj, event);
             }
@@ -7695,13 +7622,10 @@ var katrid;
                 header.querySelector('.back').addEventListener('click', () => this.close());
                 header.className = 'report-editor-header';
                 this.el.appendChild(header);
-                // toolbar
                 this.createToolbar(this.el);
-                // editor
                 let elEditor = document.createElement('div');
                 elEditor.className = 'report-editor';
                 this.el.appendChild(elEditor);
-                // left side toolbar
                 this.leftNav = document.createElement('div');
                 elEditor.appendChild(this.leftNav);
                 this.leftNav.className = 'tool-window left-side';
@@ -7710,11 +7634,9 @@ var katrid;
                 let btn = tb.addButton('<i class="fa-duotone fa-2x fa-fw fa-tools"></i>');
                 btn.title = katrid.i18n.gettext('Tool Box');
                 btn.addEventListener('click', () => this.showToolBox());
-                // data source button
                 btn = tb.addButton('<i class="fa-duotone fa-2x fa-database"></i>');
                 btn.title = katrid.i18n.gettext('Data Sources');
                 btn.addEventListener('click', () => this.showDataExplorer());
-                // outline button
                 btn = tb.addButton('<i class="fa-duotone fa-2x fa-fw fa-sitemap">');
                 btn.title = katrid.i18n.gettext('Outline');
                 btn.addEventListener('click', () => this.showOutlineExplorer());
@@ -7726,25 +7648,30 @@ var katrid;
                 this.pageExplorer.hide();
                 this.dataExplorer = new bi.DataExplorer(this.leftNav);
                 this.dataExplorer.onRemoveDataSource = ds => this.report.removeDataSource(ds);
-                this.dataExplorer.onNewDataSource = () => new katrid.bi.DataSource(this.report.getValidName('datasource'));
+                this.dataExplorer.onNewDataSource = () => {
+                    const ds = new katrid.bi.SqlDataSource(this.report.getValidName('datasource'));
+                    this.report.datasources.push(ds);
+                    return ds;
+                };
                 this.dataExplorer.onSelectionChange = ds => this.onSelectionChanged(ds ? [ds] : undefined);
                 this.dataExplorer.hide();
                 this.outlineExplorer = new bi.OutlineExplorer(this.leftNav);
                 this.outlineExplorer.hide();
                 this.outlineExplorer.onSelectItem = (obj) => this.onSelectionChanged([obj]);
                 this.toolBox = new bi.ToolBox(this.leftNav);
-                // container
                 let div = document.createElement('div');
                 div.className = 'report-container';
                 elEditor.appendChild(div);
-                // create floating toolbar
                 this.zoomTool = new bi.ZoomTool(div);
-                // workspace
                 let workspace = document.createElement('div');
                 workspace.className = 'workspace';
                 let designer = document.createElement('div');
                 designer.className = 'designer';
                 designer.addEventListener('pointerdown', evt => {
+                    if (this.page.eventsDisabled) {
+                        return;
+                    }
+                    Katrid.Forms.ContextMenu.closeAll();
                     evt.stopPropagation();
                     evt.preventDefault();
                     this.page?.clearSelection();
@@ -7764,15 +7691,12 @@ var katrid;
                 tb = new katrid.ui.Toolbar(this.rightNav);
                 tb.vertical = true;
                 elEditor.appendChild(this.rightNav);
-                // config button
                 btn = tb.addButton('<i class="fa-duotone fa-solid fa-cog"></i>');
                 btn.title = katrid.i18n.gettext('Config page');
                 btn.addEventListener('click', (evt) => this.configCurrentPage(evt));
-                // properties button
                 btn = tb.addButton('<i class="fa-duotone fa-solid fa-square-list"></i>');
                 btn.title = katrid.i18n.gettext('Properties');
                 btn.addEventListener('click', () => this.showPropertiesEditor());
-                // parameters button
                 btn = tb.addButton('<i class="fa-solid fa-list"></i>');
                 btn.title = katrid.i18n.gettext('Parameters');
                 btn.addEventListener('click', () => this.showParamExplorer());
@@ -7780,11 +7704,13 @@ var katrid;
             createToolbar(container) {
                 let div = document.createElement('div');
                 div.className = 'main-toolbar';
-                // main buttons
                 let tb = new katrid.ui.Toolbar(div);
+                let btn = tb.addButton('<i class="fa-duotone fa-solid fa-2x fa-file"></i>');
+                btn.id = 'btn-new-report';
+                btn.title = katrid.i18n.gettext('New report');
+                btn.addEventListener('click', () => this.newReportWizard());
                 tb.addButton('<i class="fa-duotone fa-solid fa-2x fa-floppy-disk"></i>').addEventListener('click', () => this.save());
                 tb.addButton('<i class="fa-duotone fa-solid fa-2x fa-folder-open"></i>').addEventListener('click', () => this.openFile());
-                // preview buttons
                 tb = new katrid.ui.Toolbar(div);
                 tb.el.style.flex = '0 0 auto';
                 tb.addButton({
@@ -7798,7 +7724,6 @@ var katrid;
                 const params = this.report.params;
                 if (params) {
                     const xml = jQuery.parseXML(params);
-                    // prepare params
                     let code = '';
                     let cached = this.report.cache.params || {};
                     const info = {};
@@ -7816,7 +7741,6 @@ var katrid;
                     else {
                         const values = jsyaml.load(res);
                         const displayParams = {};
-                        // prepare params
                         for (let [k, v] of Object.entries(values)) {
                             if (v != null) {
                                 if (info[k].type === 'DateField')
@@ -7828,11 +7752,6 @@ var katrid;
                     }
                 }
             }
-            /**
-             * Prepare and preview the report
-             * @param showParams Show params dialog before preview
-             * @returns
-             */
             async preview(showParams = false) {
                 let params;
                 if (showParams) {
@@ -7853,10 +7772,9 @@ var katrid;
                 this._page = page.designer;
                 this._page.onNotification = (obj, event) => this.objectNotification(obj, event);
                 this.workspaceElement.innerHTML = '';
-                this.workspaceElement.appendChild(page.designer.$el);
+                this.workspaceElement.appendChild(page.designer.getElement());
                 this.inspector.designer = page.designer;
                 this.zoomTool.designer = page.designer;
-                // if page is empty, show configuration wizard
                 if (page.isEmpty) {
                     this._page.showConfigWizard();
                 }
@@ -7905,11 +7823,9 @@ var katrid;
                     this.loading = true;
                     this.reportName = report.name;
                     this.dataExplorer.clear();
-                    // load data sources
                     for (const ds of report.datasources) {
                         this.dataExplorer.registerDataSource(ds);
                     }
-                    // load pages
                     for (const page of report.pages) {
                         const pageDesign = this.addPage(page);
                     }
@@ -7931,20 +7847,35 @@ var katrid;
                         this.onSave(this.report.dump());
                     }
                     else {
-                        // save as
                         this.saveFile();
                     }
                 }
             }
             close() {
-                // back to manager when available
                 this.el.remove();
                 this.onDestroy?.();
             }
+            newReportWizard() {
+                const menu = new katrid.ui.ContextMenu();
+                menu.add(katrid.i18n.gettext('Query View'), () => {
+                    const rep = this.newReport(katrid.report.PageType.Query);
+                    this.newPage(katrid.report.PageType.Query);
+                });
+                menu.add(katrid.i18n.gettext('Banded Report'), () => {
+                    const rep = this.newReport(katrid.report.PageType.Banded);
+                    this.newPage();
+                    this.page.newBand('ReportTitle');
+                    this.page.newBand('DataBand');
+                    this.page.newBand('PageFooter');
+                });
+                const rect = this.el.querySelector('#btn-new-report').getBoundingClientRect();
+                menu.show(rect.right, rect.bottom);
+            }
             newReport(repType = katrid.report.PageType.Banded) {
                 const rep = new katrid.report.Report(repType);
-                this.report = rep;
+                rep.name = 'No name';
                 this.clean();
+                this.report = rep;
                 return rep;
             }
             clean() {
@@ -7972,10 +7903,10 @@ var katrid;
             setModified() {
                 this.modified = true;
             }
-            newPage(type) {
+            newPage(type, name) {
                 this.setModified();
-                const page = this.report.newPage(type);
-                page.name = this.report.getValidName('page');
+                const page = this.report.newPage(type || this.report.reportType);
+                page.name = this.report.getValidName(name || 'page');
                 const d = this.addPage(page);
                 d.activate();
                 return d;
@@ -8009,7 +7940,6 @@ var katrid;
                 this.report = rep;
             }
             async openFile() {
-                // TODO check if report is modified as ask to save before
                 [this.fileHandle] = await window.showOpenFilePicker({
                     types: [{
                             description: 'Reptile Report (*.json)',
@@ -8126,12 +8056,11 @@ var katrid;
                 });
             }
             async load() {
-                var _a;
                 const res = await Katrid.Services.Query.all();
                 this.reportCatalog = res.data;
                 let categories = {};
                 for (const rep of res.data) {
-                    const cat = categories[_a = rep.category] ?? (categories[_a] = []);
+                    const cat = categories[rep.category] ??= [];
                     cat.push({ id: rep.id, text: rep.name, isReport: true });
                 }
                 let nodes = Object.entries(categories).map(([k, cat]) => ({
@@ -8141,14 +8070,11 @@ var katrid;
                 this.treeView.addNodes({ data: nodes });
             }
             hide() {
-                // hide explorer
                 this.el.style.display = 'none';
-                // hide app-header
                 document.querySelector('app-header').style.display = 'none';
             }
             show() {
                 this.el.style.display = '';
-                // hide app-header
                 document.querySelector('app-header').style.display = '';
             }
             async editReport(data) {
@@ -8156,7 +8082,6 @@ var katrid;
                 editor.onDestroy = () => {
                     this.show();
                 };
-                // get report metadata
                 const repService = new Katrid.Services.Query(data.id);
                 const metadata = await repService.getMetadata(true);
                 editor.report = katrid.report.Report.fromMetadata(metadata);
@@ -8172,334 +8097,6 @@ var katrid;
         }
     })(bi = katrid.bi || (katrid.bi = {}));
 })(katrid || (katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Services;
-    (function (Services) {
-        // bypass the fetch function
-        let $fetch = window.fetch;
-        // !important keep orginal fetch accessible
-        window['$fetch'] = $fetch;
-        window.fetch = function () {
-            let ajaxStart = new CustomEvent('ajax.start', { detail: document, bubbles: true, cancelable: false });
-            let ajaxStop = new CustomEvent('ajax.stop', { detail: document, bubbles: true, cancelable: false });
-            // Pass the supplied arguments to the real fetch function
-            let promise = $fetch.apply(this, arguments);
-            // Trigger the fetchStart event
-            document.dispatchEvent(ajaxStart);
-            promise.finally(() => {
-                document.dispatchEvent(ajaxStop);
-            });
-            return promise;
-        };
-        class Service {
-            constructor(name) {
-                this.name = name;
-            }
-            static $fetch(url, config, params = null) {
-                return this.adapter.$fetch(url, config, params);
-            }
-            static $post(url, data, params) {
-                return this.adapter.$fetch(url, {
-                    method: 'POST',
-                    credentials: "same-origin",
-                    body: JSON.stringify(data),
-                    headers: {
-                        'content-type': 'application/json',
-                    }
-                }, params)
-                    .then(res => res.json());
-            }
-            get(name, params) {
-                // Using http protocol
-                const methName = this.name ? this.name + '/' : '';
-                const rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
-                return $.get(rpcName, params);
-            }
-            post(name, data, params, config, context) {
-                // if (!context && Katrid.app)
-                //   context = Katrid.app.context;
-                if (!data)
-                    data = {};
-                if (context)
-                    data.context = context;
-                data = {
-                    method: name,
-                    params: data,
-                };
-                if (!config)
-                    config = {};
-                Object.assign(config, {
-                    method: 'POST',
-                    body: JSON.stringify(data),
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                    },
-                });
-                const methName = this.name ? this.name + '/' : '';
-                let rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
-                if (params) {
-                    rpcName += `?${$.param(params)}`;
-                }
-                return new Promise((resolve, reject) => {
-                    Service.adapter.$fetch(rpcName, config)
-                        .then(async (response) => {
-                        let contentType = response.headers.get('Content-Type');
-                        if (response.status === 500) {
-                            let res = await response.json();
-                            // show server error
-                            Katrid.Forms.Dialogs.ExceptionDialog.show(`Server Error 500`, res.error);
-                            return reject(res);
-                        }
-                        let res;
-                        if (contentType === 'application/json')
-                            res = await response.json();
-                        else
-                            return downloadBytes(response);
-                        if (res.error) {
-                            if ('message' in res.error)
-                                Katrid.Forms.Dialogs.Alerts.error(res.error.message);
-                            else if ('messages' in res.error)
-                                Katrid.Forms.Dialogs.Alerts.error(res.error.messages.join('<br>'));
-                            else
-                                Katrid.Forms.Dialogs.Alerts.error(res.error);
-                            reject(res.error);
-                        }
-                        else {
-                            // response processors
-                            for (let processor of katrid.admin.responseMiddleware)
-                                (new processor(response)).process(res);
-                            if (res.result) {
-                                let result = res.result;
-                                if (Array.isArray(result) && (result.length === 1))
-                                    result = result[0];
-                                let messages;
-                                if (result.messages)
-                                    messages = result.messages;
-                                else
-                                    messages = [];
-                                if (result.message) {
-                                    if (result.message.info)
-                                        messages.push({ type: 'info', message: result.message.info });
-                                    else
-                                        messages.push(result.message);
-                                }
-                                else if (result.warn)
-                                    messages.push({ type: 'warn', message: result.warn });
-                                else if (result.error) {
-                                    if (typeof result.error === 'string')
-                                        messages.push({ type: 'error', message: result.error });
-                                    else
-                                        messages.push({ type: 'error', message: result.error.message });
-                                }
-                                messages.forEach(function (msg) {
-                                    if (Katrid.isString(msg))
-                                        Katrid.Forms.Dialogs.Alerts.success(msg);
-                                    else if (msg.type === 'warn')
-                                        Katrid.Forms.Dialogs.Alerts.warn(msg.message);
-                                    else if (msg.type === 'info')
-                                        Katrid.Forms.Dialogs.Alerts.info(msg.message);
-                                    else if ((msg.type === 'error') || (msg.type === 'danger'))
-                                        Katrid.Forms.Dialogs.Alerts.error(msg.message);
-                                    else if (msg.type === 'toast')
-                                        Katrid.Forms.Dialogs.toast(msg.message);
-                                    else if (msg.type === 'alert')
-                                        Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
-                                });
-                                if (result) {
-                                    // open a document
-                                    if (result.$open || result.open)
-                                        window.open(result.$open || result.open);
-                                    // download a file
-                                    if (result.download) {
-                                        let a = document.createElement('a');
-                                        a.href = result.download;
-                                        a.target = '_blank';
-                                        a.click();
-                                        return;
-                                    }
-                                }
-                                resolve(result);
-                            }
-                            else
-                                resolve(res);
-                        }
-                    })
-                        .catch(res => {
-                        console.log('error', res);
-                        reject(res);
-                    });
-                });
-            }
-        }
-        Service.url = '/api/rpc/';
-        Services.Service = Service;
-        class Data extends Service {
-            static get url() {
-                return '/web/data/';
-            }
-            ;
-            /**
-             * Reorder/reindex a collection of records
-             * @param model
-             * @param ids
-             * @param field
-             * @param offset
-             */
-            reorder(model, ids, field = 'sequence', offset = 0) {
-                return this.post('reorder', { args: [model, ids, field, offset] });
-            }
-        }
-        Services.Data = Data;
-        /**
-         * Represents the attachments services api
-         */
-        class Attachments {
-            static delete(id) {
-                let svc = new Katrid.Services.ModelService('content.attachment');
-                svc.delete(id);
-            }
-            static upload(file, config) {
-                return new Promise((resolve, reject) => {
-                    let data = new FormData();
-                    data.append('model', config.model.name);
-                    data.append('id', config.recordId);
-                    for (let f of file.files)
-                        data.append('attachment', f, f.name);
-                    return $.ajax({
-                        url: '/web/content/upload/',
-                        type: 'POST',
-                        data: data,
-                        processData: false,
-                        contentType: false
-                    })
-                        .done((res) => {
-                        resolve(res);
-                    });
-                });
-            }
-        }
-        Services.Attachments = Attachments;
-        class Auth extends Service {
-            static login(username, password) {
-                return this.$post('/web/login/', { username: username, password: password });
-            }
-        }
-        class Upload {
-            static callWithFiles(config) {
-                let { model, method, file, vm, data } = config;
-                let form = new FormData();
-                let files = file.files;
-                if (files.length === 1)
-                    form.append('files', file.files[0]);
-                else
-                    files.map(f => form.append('files[]', f));
-                let url = `/web/file/upload/${model.name}/${method}/`;
-                // pass active record id
-                if (vm?.record?.id)
-                    form.append('id', vm.record.id);
-                console.debug('data', data);
-                if (data) {
-                    Object.entries(data).map(([k, v]) => {
-                        form.append(k, v);
-                        console.debug(k, v);
-                    });
-                }
-                // try to detect the current datasource to be refreshed if needed
-                return Service.$fetch(url, {
-                    url,
-                    method: 'POST',
-                    body: form,
-                }).then(res => res.json());
-            }
-            static sendFile(config) {
-                let { model, method, file, vm } = config;
-                let form = new FormData();
-                let files = file.files;
-                if (files.length === 1)
-                    form.append('files', file.files[0]);
-                else
-                    files.map(f => form.append('files[]', f));
-                let url = `/web/file/upload/${model.name}/${method}/`;
-                // pass active record id
-                if (vm?.record?.id)
-                    form.append('id', vm.record.id);
-                // try to detect the current datasource to be refreshed if needed
-                let dataSource = vm?.dataSource;
-                $.ajax({
-                    url: url,
-                    data: form,
-                    processData: false,
-                    contentType: false,
-                    type: 'POST',
-                    success: (data) => {
-                        if (dataSource)
-                            dataSource.refresh();
-                        Katrid.Forms.Dialogs.Alerts.success('Operação realizada com sucesso.');
-                    }
-                });
-            }
-            static uploadTo(url, file) {
-                let form = new FormData();
-                form.append('files', file.files[0]);
-                return $.ajax({
-                    url: url,
-                    data: form,
-                    processData: false,
-                    contentType: false,
-                    type: 'POST',
-                    success: (data) => {
-                        Katrid.Forms.Dialogs.Alerts.success('Arquivo enviado com sucesso!');
-                    }
-                });
-            }
-        }
-        Services.Upload = Upload;
-        Services.data = new Data('');
-        function post(url, data) {
-            // post json data to server
-            return fetch(url, {
-                method: 'POST',
-                body: JSON.stringify(data),
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-            }).then(res => res.json());
-        }
-        Services.post = post;
-        async function downloadBytes(res) {
-            let bytes = await res.blob();
-            let contentType = res.headers.get('Content-Type');
-            let name = res.headers.get('Content-Disposition');
-            let url = URL.createObjectURL(bytes);
-            if (name?.includes('filename='))
-                name = name.split('filename=', 2)[1];
-            // a.download = name;
-            if (contentType.indexOf('pdf') > -1) {
-                // Open a new window and write the PDF viewer into it
-                let viewer = window.open('/pdf-viewer/pdf/web/viewer.html');
-                viewer.addEventListener('load', async () => {
-                    await viewer.PDFViewerApplication.open({ url, originalUrl: name });
-                    URL.revokeObjectURL(url);
-                });
-            }
-            else {
-                let a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.target = '_blank';
-                a.download = name;
-                document.body.append(a);
-                a.click();
-                a.remove();
-                URL.revokeObjectURL(url);
-            }
-        }
-    })(Services = Katrid.Services || (Katrid.Services = {}));
-})(Katrid || (Katrid = {}));
-/// <reference path="../services/services.ts"/>
 var Katrid;
 (function (Katrid) {
     var BI;
@@ -8566,7 +8163,6 @@ var Katrid;
                     tr.append(th);
                 }
                 let tbody = table.createTBody();
-                // render rows
                 for (let row of data.data) {
                     let tr = document.createElement('tr');
                     for (let f of fields) {
@@ -8627,7 +8223,319 @@ var Katrid;
         Katrid.define('table-widget', TableWidgetElement);
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="../datasource.ts" />
+var Katrid;
+(function (Katrid) {
+    var Services;
+    (function (Services) {
+        let $fetch = window.fetch;
+        window['$fetch'] = $fetch;
+        window.fetch = function () {
+            let ajaxStart = new CustomEvent('ajax.start', { detail: document, bubbles: true, cancelable: false });
+            let ajaxStop = new CustomEvent('ajax.stop', { detail: document, bubbles: true, cancelable: false });
+            let promise = $fetch.apply(this, arguments);
+            document.dispatchEvent(ajaxStart);
+            promise.finally(() => {
+                document.dispatchEvent(ajaxStop);
+            });
+            return promise;
+        };
+        class Service {
+            static { this.url = '/api/rpc/'; }
+            constructor(name) {
+                this.name = name;
+            }
+            static $fetch(url, config, params = null) {
+                return this.adapter.$fetch(url, config, params);
+            }
+            static $post(url, data, params) {
+                return this.adapter.$fetch(url, {
+                    method: 'POST',
+                    credentials: "same-origin",
+                    body: JSON.stringify(data),
+                    headers: {
+                        'content-type': 'application/json',
+                    }
+                }, params)
+                    .then(res => res.json());
+            }
+            get(name, params) {
+                const methName = this.name ? this.name + '/' : '';
+                const rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
+                return $.get(rpcName, params);
+            }
+            post(name, data, params, config, context) {
+                if (!data)
+                    data = {};
+                if (context)
+                    data.context = context;
+                data = {
+                    method: name,
+                    params: data,
+                };
+                if (!config)
+                    config = {};
+                Object.assign(config, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const methName = this.name ? this.name + '/' : '';
+                let rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
+                if (params) {
+                    rpcName += `?${$.param(params)}`;
+                }
+                return new Promise((resolve, reject) => {
+                    Service.adapter.$fetch(rpcName, config)
+                        .then(async (response) => {
+                        let contentType = response.headers.get('Content-Type');
+                        if (response.status === 500) {
+                            let res = await response.json();
+                            Katrid.Forms.Dialogs.ExceptionDialog.show(`Server Error 500`, res.error);
+                            return reject(res);
+                        }
+                        let res;
+                        if (contentType === 'application/json')
+                            res = await response.json();
+                        else
+                            return downloadBytes(response);
+                        if (res.error) {
+                            if ('message' in res.error)
+                                Katrid.Forms.Dialogs.Alerts.error(res.error.message);
+                            else if ('messages' in res.error)
+                                Katrid.Forms.Dialogs.Alerts.error(res.error.messages.join('<br>'));
+                            else
+                                Katrid.Forms.Dialogs.Alerts.error(res.error);
+                            reject(res.error);
+                        }
+                        else {
+                            for (let processor of katrid.admin.responseMiddleware)
+                                (new processor(response)).process(res);
+                            if (res.result) {
+                                let result = res.result;
+                                if (Array.isArray(result) && (result.length === 1))
+                                    result = result[0];
+                                let messages;
+                                if (result.messages)
+                                    messages = result.messages;
+                                else
+                                    messages = [];
+                                if (result.message) {
+                                    if (result.message.info)
+                                        messages.push({ type: 'info', message: result.message.info });
+                                    else
+                                        messages.push(result.message);
+                                }
+                                else if (result.warn)
+                                    messages.push({ type: 'warn', message: result.warn });
+                                else if (result.error) {
+                                    if (typeof result.error === 'string')
+                                        messages.push({ type: 'error', message: result.error });
+                                    else
+                                        messages.push({ type: 'error', message: result.error.message });
+                                }
+                                messages.forEach(function (msg) {
+                                    if (Katrid.isString(msg))
+                                        Katrid.Forms.Dialogs.Alerts.success(msg);
+                                    else if (msg.type === 'warn')
+                                        Katrid.Forms.Dialogs.Alerts.warn(msg.message);
+                                    else if (msg.type === 'info')
+                                        Katrid.Forms.Dialogs.Alerts.info(msg.message);
+                                    else if ((msg.type === 'error') || (msg.type === 'danger'))
+                                        Katrid.Forms.Dialogs.Alerts.error(msg.message);
+                                    else if (msg.type === 'toast')
+                                        Katrid.Forms.Dialogs.toast(msg.message);
+                                    else if (msg.type === 'alert')
+                                        Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
+                                });
+                                if (result) {
+                                    if (result.$open || result.open)
+                                        window.open(result.$open || result.open);
+                                    if (result.download) {
+                                        let a = document.createElement('a');
+                                        a.href = result.download;
+                                        a.target = '_blank';
+                                        a.click();
+                                        return;
+                                    }
+                                }
+                                resolve(result);
+                            }
+                            else
+                                resolve(res);
+                        }
+                    })
+                        .catch(res => {
+                        console.log('error', res);
+                        reject(res);
+                    });
+                });
+            }
+        }
+        Services.Service = Service;
+        class Data extends Service {
+            static get url() {
+                return '/web/data/';
+            }
+            ;
+            reorder(model, ids, field = 'sequence', offset = 0) {
+                return this.post('reorder', { args: [model, ids, field, offset] });
+            }
+        }
+        Services.Data = Data;
+        class Attachments {
+            static delete(id) {
+                let svc = new Katrid.Services.ModelService('content.attachment');
+                svc.delete(id);
+            }
+            static upload(file, config) {
+                return new Promise((resolve, reject) => {
+                    let data = new FormData();
+                    data.append('model', config.model.name);
+                    data.append('id', config.recordId);
+                    for (let f of file.files)
+                        data.append('attachment', f, f.name);
+                    return $.ajax({
+                        url: '/web/content/upload/',
+                        type: 'POST',
+                        data: data,
+                        processData: false,
+                        contentType: false
+                    })
+                        .done((res) => {
+                        resolve(res);
+                    });
+                });
+            }
+        }
+        Services.Attachments = Attachments;
+        class Auth extends Service {
+            static login(username, password) {
+                return this.$post('/web/login/', { username: username, password: password });
+            }
+        }
+        class Upload {
+            static callWithFiles(config) {
+                let { model, method, file, vm, data } = config;
+                let form = new FormData();
+                let files = file.files;
+                if (files.length === 1)
+                    form.append('files', file.files[0]);
+                else
+                    files.map(f => form.append('files[]', f));
+                let url = `/web/file/upload/${model.name}/${method}/`;
+                if (vm?.record?.id)
+                    form.append('id', vm.record.id);
+                console.debug('data', data);
+                if (data) {
+                    Object.entries(data).map(([k, v]) => {
+                        form.append(k, v);
+                        console.debug(k, v);
+                    });
+                }
+                return Service.$fetch(url, {
+                    url,
+                    method: 'POST',
+                    body: form,
+                }).then(res => res.json());
+            }
+            static sendFile(config) {
+                let { model, method, file, vm } = config;
+                let form = new FormData();
+                let files = file.files;
+                if (files.length === 1)
+                    form.append('files', file.files[0]);
+                else
+                    files.map(f => form.append('files[]', f));
+                let url = `/web/file/upload/${model.name}/${method}/`;
+                if (vm?.record?.id)
+                    form.append('id', vm.record.id);
+                let dataSource = vm?.dataSource;
+                $.ajax({
+                    url: url,
+                    data: form,
+                    processData: false,
+                    contentType: false,
+                    type: 'POST',
+                    success: (data) => {
+                        if (dataSource)
+                            dataSource.refresh();
+                        Katrid.Forms.Dialogs.Alerts.success('Operação realizada com sucesso.');
+                    }
+                });
+            }
+            static uploadTo(url, file) {
+                let form = new FormData();
+                form.append('files', file.files[0]);
+                return $.ajax({
+                    url: url,
+                    data: form,
+                    processData: false,
+                    contentType: false,
+                    type: 'POST',
+                    success: (data) => {
+                        Katrid.Forms.Dialogs.Alerts.success('Arquivo enviado com sucesso!');
+                    }
+                });
+            }
+        }
+        Services.Upload = Upload;
+        Services.data = new Data('');
+        function post(url, data) {
+            return fetch(url, {
+                method: 'POST',
+                body: JSON.stringify(data),
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+            }).then(res => res.json());
+        }
+        Services.post = post;
+        async function downloadBytes(res) {
+            let bytes = await res.blob();
+            let contentType = res.headers.get('Content-Type');
+            let name = res.headers.get('Content-Disposition');
+            let url = URL.createObjectURL(bytes);
+            if (name?.includes('filename='))
+                name = name.split('filename=', 2)[1];
+            if (contentType.indexOf('pdf') > -1) {
+                let viewer = window.open('/pdf-viewer/pdf/web/viewer.html');
+                viewer.addEventListener('load', async () => {
+                    await viewer.PDFViewerApplication.open({ url, originalUrl: name });
+                    URL.revokeObjectURL(url);
+                });
+            }
+            else {
+                let a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.target = '_blank';
+                a.download = name;
+                document.body.append(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            }
+        }
+    })(Services = Katrid.Services || (Katrid.Services = {}));
+})(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class TableWidget extends katrid.drawing.BaseWidget {
+            dump() {
+                const d = super.dump();
+                d.datasource = this.datasource?.name;
+                return d;
+            }
+        }
+        bi.TableWidget = TableWidget;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
 var katrid;
 (function (katrid) {
     var bi;
@@ -8757,7 +8665,6 @@ var katrid;
         bi.DataToolWindow = DataToolWindow;
     })(bi = katrid.bi || (katrid.bi = {}));
 })(katrid || (katrid = {}));
-/// <reference path="datasource.ts" />
 var katrid;
 (function (katrid) {
     var bi;
@@ -8923,7 +8830,44 @@ var katrid;
         bi.ToolWindow = ToolWindow;
     })(bi = katrid.bi || (katrid.bi = {}));
 })(katrid || (katrid = {}));
-/// <reference path="../../drawing/shapes.ts" />
+var katrid;
+(function (katrid) {
+    var bi;
+    (function (bi) {
+        class QueryPageDesigner extends katrid.bi.PageDesigner {
+            get page() {
+                return super.page;
+            }
+            set page(value) {
+                super.page = value;
+            }
+            get queryView() {
+                return this.page.queryView;
+            }
+            create() {
+                this.pageContainer = document.createElement('div');
+                this.pageContainer.className = 'query-page-editor';
+                this.pageContainer.addEventListener('click', () => {
+                    console.debug('edit table');
+                });
+                this.createEmptyPage();
+            }
+            createEmptyPage() {
+                this.elEmptyPage = document.createElement('div');
+                this.elEmptyPage.className = 'empty-page';
+                this.elEmptyPage.innerHTML = '<h3>Select a data source or data model</h3>';
+                this.pageContainer.appendChild(this.elEmptyPage);
+                let btn = document.createElement('button');
+                btn.className = 'btn btn-primary';
+                btn.textContent = 'Add Query';
+            }
+            getElement() {
+                return this.pageContainer;
+            }
+        }
+        bi.QueryPageDesigner = QueryPageDesigner;
+    })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
 var katrid;
 (function (katrid) {
     var report;
@@ -8954,7 +8898,6 @@ var katrid;
                 this.workspace.className = 'katrid-studio workspace';
                 this.el = document.createElement('div');
                 this.el.className = 'katrid-report-designer workspace-area';
-                // create tabset
                 const tabset = document.createElement('div');
                 tabset.className = 'tabset';
                 const nav = document.createElement('ul');
@@ -8967,7 +8910,6 @@ var katrid;
                 this.workspace.append(this.el);
                 this.toolWindow = new katrid.bi.ToolWindow(this, this.workspace);
                 this.container.classList.add('report-designer');
-                // toolbox
                 this.createDragEvents();
                 document.querySelectorAll('.toolbox-item')
                     .forEach((el, idx) => {
@@ -8975,7 +8917,6 @@ var katrid;
                     el.addEventListener('dragstart', (evt) => {
                         this.page.clearSelection();
                         evt.dataTransfer.setData('text', el.getAttribute('data-widget'));
-                        // evt.dataTransfer.dropEffect = 'move';
                     });
                 });
                 document.querySelectorAll('.toolbox-item img').forEach(el => el.setAttribute('draggable', 'false'));
@@ -8983,7 +8924,6 @@ var katrid;
                 this.propertiesEditor = new katrid.bi.ObjectInspector(this, el);
             }
             onSelectionChange(selection) {
-                // set component editor
                 if (selection)
                     this.propertiesEditor.setSelection(selection);
                 else
@@ -9043,7 +8983,6 @@ var katrid;
             }
             newReport() {
                 const rep = new report_1.Report();
-                // todo replace by a template
                 rep.newPage();
                 this.loadReport(rep);
                 return rep;
@@ -9054,15 +8993,11 @@ var katrid;
             set report(value) {
                 this._report = value;
             }
-            /**
-             * Active page designer
-             */
             get page() {
                 return this._page;
             }
             set page(value) {
                 if (value !== this._page) {
-                    // toggle page designer activation
                     if (this._page)
                         this._page.deactivate();
                     this._page = value;
@@ -9074,7 +9009,6 @@ var katrid;
             }
             getValidName(prefix) {
                 let n = 0;
-                // normalize prefix
                 prefix = prefix[0].toLowerCase() + prefix.slice(1);
                 while (true) {
                     n++;
@@ -9093,13 +9027,10 @@ var katrid;
                 this.clear();
                 this._report = report;
                 this._datasources = report.datasources;
-                // load data sources
                 for (let ds of this._datasources)
                     this.toolWindow.registerDataSource(ds);
-                // load each page
                 for (let page of report.pages)
                     this.pages.push(this.addPage(page));
-                // goto to first page
                 if (this.pages.length)
                     this.page = this.pages[0];
             }
@@ -9134,10 +9065,6 @@ var katrid;
             dump() {
                 return this._report.dump();
             }
-            /**
-             * Load report by json structure
-             * @param info Report structure
-             */
             load(info, filename) {
                 this.clear();
                 const rep = new report_1.Report();
@@ -9190,7 +9117,6 @@ var katrid;
         report_1.ReportDesigner = ReportDesigner;
     })(report = katrid.report || (katrid.report = {}));
 })(katrid || (katrid = {}));
-/// <reference path="../../drawing/page.ts" />
 var katrid;
 (function (katrid) {
     var report;
@@ -9207,20 +9133,18 @@ var katrid;
         let PageType;
         (function (PageType) {
             PageType["Banded"] = "banded";
+            PageType["Query"] = "query";
             PageType["Dashboard"] = "dashboard";
             PageType["Document"] = "document";
             PageType["Spreadsheet"] = "spreadsheet";
-            PageType["Metadata"] = "metadata";
         })(PageType = report.PageType || (report.PageType = {}));
         class Report {
-            //designer: ReportDesigner;
             constructor(pageType = PageType.Banded) {
                 this.pages = [];
                 this.datasources = [];
                 this.loading = false;
                 this.onLoadCallbacks = [];
                 this.cache = {};
-                // default report type
                 this.reportType = pageType;
             }
             static fromMetadata(metadata) {
@@ -9240,7 +9164,6 @@ var katrid;
             }
             getValidName(prefix) {
                 let n = 0;
-                // normalize prefix
                 prefix = prefix[0].toLowerCase() + prefix.slice(1);
                 while (true) {
                     n++;
@@ -9262,24 +9185,23 @@ var katrid;
                         return obj;
                     }
             }
-            /**
-             * Iter over all report objects
-             */
             *getObjects() {
-                for (let ds of this.datasources)
+                for (let ds of this.datasources) {
                     yield ds;
+                }
                 for (let p of this.pages) {
                     yield p;
                     yield* p.allObjects();
-                    // yield obj;
-                    // }
                 }
             }
             newPage(type) {
-                type ?? (type = PageType.Banded);
+                type ??= PageType.Banded;
                 let page;
                 if (type === PageType.Banded) {
                     page = new report.BandedPage();
+                }
+                else {
+                    page = new katrid.bi.QueryPage();
                 }
                 this.addPage(page);
                 return page;
@@ -9299,7 +9221,6 @@ var katrid;
             }
             loadPage(pageInfo) {
                 if (!pageInfo.pageType || pageInfo.pageType === PageType.Banded) {
-                    // const p = new BasePage();
                     const p = new report.BandedPage();
                     p.report = this;
                     p.load(pageInfo);
@@ -9322,7 +9243,6 @@ var katrid;
                     this.params = data.report.params;
                     this.datasources = data.report.datasources.map((ds) => this.loadDataSource(ds));
                     this.pages = data.report.pages.map((p, i) => this.loadPage(p));
-                    // notify pending objects operations
                     for (const cb of this.onLoadCallbacks) {
                         cb(this);
                     }
@@ -9355,6 +9275,8 @@ var katrid;
             }
             defaultProps() {
                 super.defaultProps();
+                this.canGrow = false;
+                this.canShrink = false;
                 this.objects = [];
                 this._headerHeight = 20;
                 this.height = 40;
@@ -9404,7 +9326,6 @@ var katrid;
                 return d;
             }
             appendToDesigner(obj) {
-                // check if designing
                 if (this.pageDesigner) {
                     const des = this.pageDesigner.addObject(obj);
                     this.elBand.append(obj.graphic);
@@ -9414,8 +9335,8 @@ var katrid;
             getHeaderCaption() {
                 return this.name + ': ' + this.getType();
             }
-            createDesigner() {
-                this.pageDesigner ?? (this.pageDesigner = this.page.designer);
+            _createDesigner() {
+                this.pageDesigner ??= this.page.designer;
                 let bandDraw = katrid.drawing.g({ class: 'band-designer', transform: `translate(${this.x}, ${this.y})` });
                 const header = this._header = katrid.drawing.g({
                     transform: `translate(${this.x}, ${this.y})`,
@@ -9427,19 +9348,52 @@ var katrid;
                 this._rect = this.elBand.rect(0, 0, this.width, this.height);
                 this._rect.attr('fill', 'url(#grid)');
                 let canvas = this.page.designer;
-                // canvas.append(sizer);
                 bandDraw.append(header);
                 bandDraw.append(this.elBand);
                 bandDraw.append(this.createSizer(bandDraw));
                 this.bandDesign = bandDraw;
                 this.pageDesigner.append(bandDraw);
                 const designer = this.page.designer;
-                let menu = new katrid.ui.ContextMenu();
-                // menu.add('Config Bands...', () => console.log('config bands'));
-                menu.add('Delete', () => {
-                    this.destroyDesigner();
-                    this.pageDesigner.invalidateBands();
+                let menu = this.createDesignerContextMenu(designer);
+                this.graphic.$el.addEventListener('contextmenu', (event) => {
+                    this.pageDesigner.selection = [];
+                    event.stopPropagation();
+                    event.preventDefault();
+                    menu.show(event.pageX, event.pageY);
                 });
+                for (let obj of this.objects) {
+                    obj.drawDesign(canvas);
+                }
+            }
+            createDesigner() {
+                this._createDesigner();
+                this.redraw();
+            }
+            createGroup() {
+                const band = this;
+                const groupHeader = new GroupHeader();
+                groupHeader.name = this.pageDesigner.getValidName('groupHeader');
+                if (band.groupHeader) {
+                    groupHeader.parentBand = band.groupHeader;
+                }
+                groupHeader.dataBand = band;
+                this.pageDesigner.addBand(groupHeader);
+                band.groupHeader = groupHeader;
+                groupHeader.footer = new GroupFooter();
+                groupHeader.footer.name = this.pageDesigner.getValidName('groupFooter');
+                groupHeader.footer.header = groupHeader;
+                this.pageDesigner.addBand(groupHeader.footer);
+            }
+            createSizer(bandDesigner) {
+                let sizer = katrid.drawing.rect(this.x, this._headerHeight + this.height, this.width, this._sizerHeight, { class: 'band-sizer' });
+                sizer.$el.addEventListener('pointerdown', event => this._sizerMouseDown(event));
+                sizer.$el.addEventListener('pointerup', event => this._sizerMouseUp(event));
+                sizer.$el.addEventListener('pointermove', event => this._sizerMouseMove(event));
+                this.sizer = sizer;
+                return sizer;
+            }
+            createDesignerContextMenu(designer) {
+                const menu = new katrid.ui.ContextMenu();
                 if (this instanceof DataBand) {
                     menu.add('Add Group', () => this.createGroup());
                     menu.add('Add Header', () => {
@@ -9462,42 +9416,13 @@ var katrid;
                         band.parent = this;
                         designer.addBand(band);
                     });
+                    menu.addSeparator();
                 }
-                this.graphic.$el.addEventListener('contextmenu', (event) => {
-                    this.pageDesigner.selection = [];
-                    // this.designer.onSelectionChange([this._getBandDesigner()]);
-                    event.stopPropagation();
-                    event.preventDefault();
-                    menu.show(event.pageX, event.pageY);
+                menu.add('Delete', () => {
+                    this.destroyDesigner();
+                    this.pageDesigner.invalidateBands();
                 });
-                for (let obj of this.objects) {
-                    obj.drawDesign(canvas);
-                }
-                this.redraw();
-            }
-            createGroup() {
-                const band = this;
-                const groupHeader = new GroupHeader();
-                groupHeader.name = this.pageDesigner.getValidName('groupHeader');
-                if (band.groupHeader) {
-                    groupHeader.parentBand = band.groupHeader;
-                }
-                groupHeader.dataBand = band;
-                this.pageDesigner.addBand(groupHeader);
-                band.groupHeader = groupHeader;
-                groupHeader.footer = new GroupFooter();
-                groupHeader.footer.name = this.pageDesigner.getValidName('groupFooter');
-                groupHeader.footer.header = groupHeader;
-                this.pageDesigner.addBand(groupHeader.footer);
-            }
-            createSizer(bandDesigner) {
-                // sizer
-                let sizer = katrid.drawing.rect(this.x, this._headerHeight + this.height, this.width, this._sizerHeight, { class: 'band-sizer' });
-                sizer.$el.addEventListener('pointerdown', event => this._sizerMouseDown(event));
-                sizer.$el.addEventListener('pointerup', event => this._sizerMouseUp(event));
-                sizer.$el.addEventListener('pointermove', event => this._sizerMouseMove(event));
-                this.sizer = sizer;
-                return sizer;
+                return menu;
             }
             getMinHeight() {
                 return Math.max(...this.objects.map(o => o.y + o.height), 0);
@@ -9509,10 +9434,6 @@ var katrid;
                 event.stopPropagation();
                 event.preventDefault();
                 this._minHeight = this.getMinHeight();
-                // create temp sizer
-                // let tempSizer = katrid.drawing.rect(this.x, this.y + this._headerHeight + this.height, this.width, this._sizerHeight, {class: 'band-sizer'});
-                // this._tempSizer = tempSizer;
-                // this.bandDesign.append(tempSizer);
                 this.redraw();
             }
             _sizerMouseMove(event) {
@@ -9530,14 +9451,12 @@ var katrid;
                 if (this.height < this._minHeight) {
                     this.height = this._minHeight;
                 }
-                // reorder bands
                 this.pageDesigner.invalidateBands();
             }
             sizerMoveBy(dy) {
                 if (this.pageDesigner?.zoom !== 100) {
                     dy = dy / (this.pageDesigner.zoom / 100);
                 }
-                // apply new size to band
                 if (this.height + dy < this._minHeight) {
                     return false;
                 }
@@ -9563,7 +9482,6 @@ var katrid;
                 this._header.text(10, this._headerHeight - 6, this.getHeaderCaption(), { fill: 'white' });
             }
             getClassByName(name) {
-                // try to find on registry
                 let cls = katrid.bi.componentRegistry[name];
                 if (cls)
                     return cls;
@@ -9572,6 +9490,7 @@ var katrid;
         }
         report.Band = Band;
         class DataBand extends Band {
+            static { this.type = 'DataBand'; }
             get datasource() {
                 return this._datasource;
             }
@@ -9630,39 +9549,39 @@ var katrid;
                     this.parentBand = rep.findObject(info.parent);
             }
         }
-        DataBand.type = 'DataBand';
         report.DataBand = DataBand;
         class PageHeader extends Band {
+            static { this.type = 'PageHeader'; }
         }
-        PageHeader.type = 'PageHeader';
         report.PageHeader = PageHeader;
         class PageFooter extends Band {
+            static { this.type = 'PageFooter'; }
         }
-        PageFooter.type = 'PageFooter';
         report.PageFooter = PageFooter;
         class ReportTitle extends Band {
+            static { this.type = 'ReportTitle'; }
         }
-        ReportTitle.type = 'ReportTitle';
         report.ReportTitle = ReportTitle;
         class HeaderBand extends Band {
+            static { this.type = 'HeaderBand'; }
             remove() {
                 super.remove();
                 if (this.parentBand)
                     this.parentBand.header = null;
             }
         }
-        HeaderBand.type = 'HeaderBand';
         report.HeaderBand = HeaderBand;
         class FooterBand extends Band {
+            static { this.type = 'FooterBand'; }
             remove() {
                 super.remove();
                 if (this.parentBand)
                     this.parentBand.footer = null;
             }
         }
-        FooterBand.type = 'FooterBand';
         report.FooterBand = FooterBand;
         class GroupHeader extends Band {
+            static { this.type = 'GroupHeader'; }
             remove() {
                 super.remove();
                 if (this.footer) {
@@ -9708,9 +9627,9 @@ var katrid;
                 }
             }
         }
-        GroupHeader.type = 'GroupHeader';
         report.GroupHeader = GroupHeader;
         class GroupFooter extends Band {
+            static { this.type = 'GroupFooter'; }
             remove() {
                 super.remove();
                 console.debug('remove', this);
@@ -9730,23 +9649,19 @@ var katrid;
                 }
             }
         }
-        GroupFooter.type = 'GroupFooter';
         report.GroupFooter = GroupFooter;
         class SummaryBand extends Band {
+            static { this.type = 'SummaryBand'; }
         }
-        SummaryBand.type = 'SummaryBand';
         report.SummaryBand = SummaryBand;
     })(report = katrid.report || (katrid.report = {}));
 })(katrid || (katrid = {}));
-/// <reference path="bands.ts" />
-/// <reference path="../../../design/page.ts" />
 var katrid;
 (function (katrid) {
     var report;
     (function (report) {
         class BandedObjectDesigner extends katrid.design.WidgetDesigner {
             _mouseUp() {
-                // check objects moved to another band or band needs to increase the height
                 if (this.moved) {
                     for (let obj of this.designer.selection) {
                         const py = this.pageY;
@@ -9754,7 +9669,6 @@ var katrid;
                             for (let b of this.page.bands)
                                 if (b !== obj.parent) {
                                     if (py >= b.clientY && py <= (b.clientY + b.height)) {
-                                        // object moved
                                         this.moveToParent(b);
                                     }
                                 }
@@ -9788,7 +9702,6 @@ var katrid;
                 try {
                     this.loading = true;
                     for (const b of this.page.bands) {
-                        // load band
                         this.addBand(b);
                     }
                 }
@@ -9837,6 +9750,9 @@ var katrid;
                     case 'PageFooter':
                         b = new report.PageFooter();
                         break;
+                    case 'TableBand':
+                        b = new report.TableBand();
+                        break;
                 }
                 b.name = this.getValidName(bandType);
                 this.addBand(b);
@@ -9849,7 +9765,6 @@ var katrid;
                 this.invalidateBands();
             }
             invalidateBands() {
-                // disable notifications
                 this.destroyGrabHandles();
                 let bands = [];
                 let page = this.page;
@@ -9866,7 +9781,7 @@ var katrid;
                         bands = bands.concat(this._rearrangeBand(b));
                     }
                 for (let b of page.bands)
-                    if (b instanceof report.SummaryBand) {
+                    if ((b instanceof report.SummaryBand) || (b instanceof report.TableBand)) {
                         bands.push(b);
                     }
                 for (let b of page.bands)
@@ -9874,12 +9789,9 @@ var katrid;
                         bands.push(b);
                     }
                 for (let b of page.bands) {
-                    // b.destroyDesigner();
-                    // Array.from(b.objects).forEach(child => child.destroyDesigner());
                 }
                 let y = 0;
                 for (let b of bands) {
-                    // recreate bands designers
                     b.y = y;
                     b.redraw();
                     y += b.totalHeight;
@@ -9900,7 +9812,6 @@ var katrid;
             }
             _resize() {
                 super._resize();
-                // adjust bands width
                 const page = this.page;
                 for (let b of page.bands) {
                     b.width = this.width;
@@ -9920,7 +9831,6 @@ var katrid;
                     }
                 }
                 bands.push(b);
-                // find by child
                 if (b.groupHeader) {
                     let g = b.groupHeader;
                     if (g.footer) {
@@ -9939,7 +9849,6 @@ var katrid;
                 return this._selectedBand;
             }
             set selectedBand(value) {
-                // toggle selected css class
                 if (this._selectedBand) {
                     this._selectedBand.bandDesign.$el.classList.remove('selected');
                 }
@@ -10022,7 +9931,6 @@ var katrid;
             }
             onSelectionMoved() {
                 super.onSelectionMoved();
-                // check objects moved to another band or band needs to increase the height
                 for (let obj of this.selection) {
                     if (!obj.parent)
                         continue;
@@ -10031,7 +9939,6 @@ var katrid;
                         for (let b of this.page.bands)
                             if (b !== obj.parent) {
                                 if (py >= b.clientY && py <= (b.clientY + b.height)) {
-                                    // object moved
                                     this.moveObjectToBand(obj, b);
                                     break;
                                 }
@@ -10053,10 +9960,14 @@ var katrid;
                 obj.name = this.getValidName(widgetName);
                 obj.x = x;
                 obj.y = y;
-                switch (widgetName) {
+                switch (widgetName.toLowerCase()) {
                     case 'text':
                         let text = obj;
                         text.text = text.name;
+                        break;
+                    case 'subreport':
+                        let subreport = obj;
+                        subreport.page = this.reportDesigner.newPage(this.report.reportType, subreport.name).page;
                         break;
                 }
                 band.addObject(obj);
@@ -10065,11 +9976,9 @@ var katrid;
             }
             pasteObject(obj) {
                 if (this._selectedBand) {
-                    // paste onto selected band
                     return this._selectedBand.addObject(obj);
                 }
                 else {
-                    // paste onto first band
                     const page = this.page;
                     return page.bands[0].addObject(obj);
                 }
@@ -10090,6 +9999,7 @@ var katrid;
                 const menu = new katrid.ui.ContextMenu();
                 menu.add('Add Report Title', () => this.newBand('ReportTitle'));
                 menu.add('Add Data Band', () => this.newBand('DataBand'));
+                menu.add('Add Table Band', () => this.newBand('TableBand'));
                 menu.add('Add Page Header', () => this.newBand('PageHeader'));
                 menu.add('Add Page Footer', () => this.newBand('PageFooter'));
                 menu.add('Add Summary', () => this.newBand('SummaryBand'));
@@ -10099,7 +10009,166 @@ var katrid;
         report.BandDesigner = BandDesigner;
     })(report = katrid.report || (katrid.report = {}));
 })(katrid || (katrid = {}));
-/// <reference path="../../../design/editors.ts" />
+var katrid;
+(function (katrid) {
+    var report;
+    (function (report) {
+        class TableBand extends report.Band {
+            constructor() {
+                super(...arguments);
+                this.headerVisible = true;
+                this.footerVisible = true;
+            }
+            static { this.type = 'TableBand'; }
+            defaultProps() {
+                super.defaultProps();
+                this.canGrow = true;
+                this.canShrink = true;
+                this.height = 100;
+            }
+            get datasource() {
+                return this._datasource;
+            }
+            set datasource(value) {
+                this._datasource = value;
+            }
+            load(info) {
+                super.load(info);
+                this.headerVisible = info.headerVisible;
+                this.footerVisible = info.footerVisible;
+                if (info.datasource || info.groupHeader || info.header || info.footer || info.parent) {
+                    this.report.addLoadCallback(() => this.onLoad(info));
+                }
+            }
+            onLoad(info) {
+                const rep = this.report;
+                if (info.datasource)
+                    this._datasource = rep.findObject(info.datasource);
+            }
+            dump() {
+                let d = super.dump();
+                if (this._datasource)
+                    d.datasource = this._datasource.name;
+                d.headerVisible = this.headerVisible;
+                d.footerVisible = this.footerVisible;
+                return d;
+            }
+            _createDesigner() {
+                super._createDesigner();
+                this.table = document.createElement('table');
+                this.table.className = 'table table-sm table-striped table-bordered';
+                this.table.innerHTML = `
+      <thead>
+      <tr><th>Column 1</th><th>Column 2</th></tr>
+      </thead>
+      <tbody>
+      <tr><td>1</td><td>2</td></tr>
+      </tbody>
+      `;
+                this.table.querySelector('td').addEventListener('dblclick', evt => console.debug('dbl click'));
+                let foreign = katrid.drawing.draw('foreignObject', { x: 0, y: 0, width: this.width, height: this.height });
+                foreign.$el.append(this.table);
+                this.elBand.append(foreign);
+            }
+            createDesignerContextMenu(designer) {
+                const menu = new Katrid.Forms.ContextMenu();
+                menu.add('Table Editor', event => {
+                    this.showTableEditor(event);
+                });
+                menu.add('Columns...', () => {
+                    this.selectColumns();
+                });
+                menu.add('Group by...', () => {
+                    this.destroyDesigner();
+                    this.pageDesigner.invalidateBands();
+                });
+                menu.addSeparator();
+                menu.add('Delete', () => {
+                    this.destroyDesigner();
+                    this.pageDesigner.invalidateBands();
+                });
+                return menu;
+            }
+            createOutlineContextMenu() {
+                const menu = new Katrid.Forms.ContextMenu();
+            }
+            redraw() {
+                super.redraw();
+                this.table.parentElement.style.width = this.width + 'px';
+                this.table.parentElement.style.height = this.height + 'px';
+            }
+            showTableEditor(evt) {
+                new TableEditor(this.pageDesigner, this.table).showEditorToolbar();
+            }
+            selectColumns() {
+                console.error('Not implemented');
+            }
+            selectColumn(col) {
+            }
+        }
+        report.TableBand = TableBand;
+        function createTextToolbarEditor() {
+            const tb = new katrid.ui.Toolbar();
+            tb.addButton({ iconClass: 'fa fa-bold', onClick: () => { } });
+            tb.addButton({ iconClass: 'fa fa-italic', onClick: () => { } });
+            tb.addButton({ iconClass: 'fa fa-underline', onClick: () => { } });
+            return tb;
+        }
+        class Table {
+            constructor() {
+                this.allowCellSelection = true;
+                this.allowRangeSelection = true;
+            }
+            create() {
+                this.table = document.createElement('table');
+                this.table.className = 'table table-sm table-striped table-bordered';
+            }
+            addRow(data) {
+                const tr = document.createElement('tr');
+                this.table.appendChild(tr);
+                if (Array.isArray(data)) {
+                    for (const col of data) {
+                        const td = document.createElement('td');
+                        td.textContent = col;
+                        tr.appendChild(td);
+                    }
+                }
+                return tr;
+            }
+        }
+        class TableEditor {
+            constructor(designer, table) {
+                this.designer = designer;
+                this.table = table;
+                designer.disableEvents();
+            }
+            activate() {
+                const cellPointerDown = evt => this.cellMouseDown(evt);
+                this.table.querySelectorAll('td').forEach(td => td.addEventListener('pointerdown', cellPointerDown));
+            }
+            cellMouseDown(evt) {
+                evt.stopPropagation();
+                evt.preventDefault();
+                const cell = evt.target;
+                cell.classList.add('selected');
+            }
+            showEditorToolbar() {
+                const rect = this.table.getBoundingClientRect();
+                const tb = createTextToolbarEditor();
+                document.body.appendChild(tb.el);
+                tb.showFloating(rect.left, rect.bottom + 10);
+                document.addEventListener('pointerdown', () => {
+                    tb.el.remove();
+                    this.destroy();
+                }, { once: true });
+                this.activate();
+            }
+            destroy() {
+                this.designer.enableEvents();
+            }
+        }
+    })(report = katrid.report || (katrid.report = {}));
+})(katrid || (katrid = {}));
 var katrid;
 (function (katrid) {
     var report;
@@ -10193,13 +10262,29 @@ var katrid;
         class SubReportEditor extends WidgetEditor {
         }
         report.SubReportEditor = SubReportEditor;
+        class TableBandEditor extends BandEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new katrid.design.DataSourceProperty('datasource', {
+                    caption: 'Data Source',
+                }), new katrid.design.TextProperty('columns'));
+            }
+        }
+        report.TableBandEditor = TableBandEditor;
         registerComponentEditor(report.Band, BandEditor);
         registerComponentEditor(report.DataBand, DataBandEditor);
+        registerComponentEditor(report.TableBand, TableBandEditor);
         registerComponentEditor(report.GroupHeader, GroupHeaderEditor);
         registerComponentEditor(katrid.report.BandedPage, PageEditor);
         registerComponentEditor(report.SubReport, SubReportEditor);
-        //registerComponentEditor(ImageObject, ImageEditor);
-        //registerComponentEditor(BarcodeObject, ImageEditor);
+    })(report = katrid.report || (katrid.report = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var report;
+    (function (report) {
+        class GridBand extends report.Band {
+        }
+        report.GridBand = GridBand;
     })(report = katrid.report || (katrid.report = {}));
 })(katrid || (katrid = {}));
 var katrid;
@@ -10244,7 +10329,6 @@ var katrid;
                 if (this.bands.indexOf(band) > -1) {
                     this.bands.splice(this.bands.indexOf(band), 1);
                 }
-                // notify bands
                 this.bands.forEach(b => b.onRemoveNotification(band));
             }
             redraw() {
@@ -10376,38 +10460,24 @@ var katrid;
                 this.el = document.createElement('div');
                 this.el.className = 'alignment-tool';
                 const tb = new katrid.ui.Toolbar(this.el);
-                // align left
                 let btn = tb.addButton('<i class="fa-duotone fa-objects-align-left"></i>');
                 btn.title = 'Align Left';
                 btn.addEventListener('click', () => this.alignLeft());
-                // align center horizontal
                 btn = tb.addButton('<i class="fa-duotone fa-objects-align-center-horizontal"></i>');
                 btn.title = 'Align Center Horizontal';
                 btn.addEventListener('click', () => this.alignCenterHorizontal());
-                // align right
                 btn = tb.addButton('<i class="fa-duotone fa-objects-align-right"></i>');
                 btn.title = 'Align Right';
                 btn.addEventListener('click', () => this.alignRight());
-                // align top
                 btn = tb.addButton('<i class="fa-duotone fa-objects-align-top"></i>');
                 btn.title = 'Align Top';
                 btn.addEventListener('click', () => this.alignTop());
-                // align center vertical
                 btn = tb.addButton('<i class="fa-duotone fa-objects-align-center-vertical"></i>');
                 btn.title = 'Align Center Vertical';
                 btn.addEventListener('click', () => this.alignCenterVertical());
-                // align bottom
                 btn = tb.addButton('<i class="fa-duotone fa-objects-align-bottom"></i>');
                 btn.title = 'Align Bottom';
                 btn.addEventListener('click', () => this.alignBottom());
-                // // distribute horizontally
-                // btn = tb.addButton('<i class="fa-duotone fa-distribute-spacing-horizontal"></i>');
-                // btn.title = 'Distribute Horizontally';
-                // btn.addEventListener('click', () => this.distributeHorizontally());
-                // // distribute vertically
-                // btn = tb.addButton('<i class="fa-duotone fa-distribute-spacing-vertical"></i>');
-                // btn.title = 'Distribute Vertically';
-                // btn.addEventListener('click', () => this.distributeVertically() );
             }
             alignLeft() {
                 if (this.designer.selection.length <= 1)
@@ -10476,10 +10546,8 @@ var katrid;
                 this.designer.refreshGrabs();
             }
             distributeHorizontally() {
-                // distribute horizontally proportionally
             }
             distributeVertically() {
-                // distribute vertically proportionally
             }
         }
         bi.AlignmentTool = AlignmentTool;
@@ -10515,7 +10583,6 @@ var katrid;
         bi.BaseToolWindow = BaseToolWindow;
     })(bi = katrid.bi || (katrid.bi = {}));
 })(katrid || (katrid = {}));
-/// <reference path="index.ts" />
 var katrid;
 (function (katrid) {
     var bi;
@@ -10537,45 +10604,30 @@ var katrid;
             create() {
                 super.create();
                 this.el.classList.add('data-explorer');
-                this.table = document.createElement('table');
-                this.table.innerHTML = '<tbody></tbody>';
+                this.table = document.createElement('div');
+                this.tv = new katrid.ui.TreeView(this.table, {
+                    options: {
+                        onDblClick: item => this.editDataSource(item.data.target),
+                        onSelect: item => this.onSelectionChange?.(item.data.target),
+                        onContextMenu: (item, evt) => this.nodeContextMenu(item, evt),
+                    }
+                });
                 this.el.appendChild(this.table);
                 this.el.querySelector('#btn-new').addEventListener('click', () => {
-                    if (this.onNewDataSource)
+                    if (this.onNewDataSource) {
                         this.registerDataSource(this.onNewDataSource());
+                    }
                 });
             }
-            registerDataSource(dataSource) {
-                let tr = document.createElement('tr');
-                katrid.data(tr, 'datasource', dataSource);
-                tr.className = 'datasource-item tree-item';
-                let td1 = document.createElement('td');
-                let td2 = document.createElement('td');
-                let btnEdit = document.createElement('button');
-                btnEdit.className = 'btn btn-light';
-                btnEdit.addEventListener('dblclick', evt => this.editDataSource(katrid.data(evt.target.closest('tr'), 'datasource')));
-                btnEdit.addEventListener('click', evt => this.onSelectionChange?.(dataSource));
-                btnEdit.title = 'Double click to edit';
-                btnEdit.innerText = dataSource.name;
-                let btnDelete = document.createElement('button');
-                btnDelete.className = 'btn btn-light';
-                btnDelete.addEventListener('click', evt => {
-                    this.onRemoveDataSource?.(dataSource);
-                    tr.remove();
-                });
-                btnDelete.innerHTML = '<i class="fa fas fa-times"></i>';
-                btnDelete.title = 'Remove Data Source';
-                tr.append(td1, td2);
-                td1.appendChild(btnEdit);
-                td2.append(btnDelete);
-                this.table.tBodies[0].appendChild(tr);
+            registerDataSource(datasource) {
+                this.tv.addItem({ text: datasource.name, target: datasource, title: 'Double click to edit' });
             }
             saveDataSource(datasource, name, sql) {
                 datasource.name = name;
                 datasource.sql = sql;
-                for (const tr of this.table.tBodies[0].querySelectorAll('tr')) {
+                for (const tr of this.tv.nodes) {
                     if (katrid.data(tr, 'datasource') === datasource) {
-                        tr.querySelector('button').innerText = name;
+                        tr.setText(name);
                         break;
                     }
                 }
@@ -10644,13 +10696,21 @@ var katrid;
                 };
             }
             clear() {
-                this.table.tBodies[0].innerHTML = '';
+                this.tv.clear();
+            }
+            nodeContextMenu(node, evt) {
+                let menu = new katrid.ui.ContextMenu();
+                menu.add('Edit', () => this.editDataSource(node.data.target));
+                menu.add('Delete', () => {
+                    this.onRemoveDataSource?.(node.data.target);
+                    node.remove();
+                });
+                menu.show(evt.clientX, evt.clientY);
             }
         }
         bi.DataExplorer = DataExplorer;
     })(bi = katrid.bi || (katrid.bi = {}));
 })(katrid || (katrid = {}));
-/// <reference path="index.ts" />
 var katrid;
 (function (katrid) {
     var bi;
@@ -10755,7 +10815,6 @@ var katrid;
             addObject(obj) {
                 const name = this.getObjectText(obj);
                 let parentNode;
-                // find parent
                 if (obj.parent) {
                     parentNode = this._findNode(obj.parent);
                 }
@@ -10979,7 +11038,6 @@ var katrid;
                     el.setAttribute('draggable', 'true');
                     el.addEventListener('dragstart', (evt) => {
                         evt.dataTransfer.setData('text', el.getAttribute('data-widget'));
-                        // evt.dataTransfer.dropEffect = 'move';
                     });
                 });
                 this.el.querySelectorAll('.toolbox-item img').forEach(el => el.setAttribute('draggable', 'false'));
@@ -11065,7 +11123,6 @@ var katrid;
         exceptions.ValidationError = ValidationError;
     })(exceptions = katrid.exceptions || (katrid.exceptions = {}));
 })(katrid || (katrid = {}));
-// initialize the katrid namespace
 var Katrid;
 (function (Katrid) {
     Katrid.isMobile = (() => {
@@ -11079,7 +11136,6 @@ var Katrid;
     Katrid.settings = {
         additionalModules: [],
         server: '',
-        // Katrid Framework UI Settings
         ui: {
             isMobile: Katrid.isMobile,
             dateInputMask: true,
@@ -11105,7 +11161,6 @@ var Katrid;
             Katrid.Services.Service.adapter = new Katrid.Services.FetchAdapter();
         if (!initialized) {
             initialized = true;
-            // register custom elements
             for (let [tag, entry] of Object.entries(Katrid.customElementsRegistry))
                 customElements.define(tag, entry.constructor, entry.options);
         }
@@ -11138,7 +11193,6 @@ var katrid;
     function init() {
         if (!initialized) {
             initialized = true;
-            // register custom elements
             for (let [tag, entry] of Object.entries(Katrid.customElementsRegistry))
                 customElements.define(tag, entry.constructor, entry.options);
         }
@@ -11152,7 +11206,7 @@ var katrid;
         if (value === undefined) {
             return el[katrid.elementDataSymbol]?.[key];
         }
-        el[katrid.elementDataSymbol] ?? (el[katrid.elementDataSymbol] = {});
+        el[katrid.elementDataSymbol] ??= {};
         el[katrid.elementDataSymbol][key] = value;
     }
     katrid.data = data;
@@ -11179,7 +11233,6 @@ var Katrid;
                 this._pendingPromises = [];
                 this.readonly = false;
                 this.$modifiedRecords = [];
-                // this.onFieldChange = this.onFieldChange.bind(this);
                 this.model = config.model;
                 this.field = config.field;
                 this._recordIndex = 0;
@@ -11206,15 +11259,11 @@ var Katrid;
                 this._pendingChanges = false;
                 if (!this.action?.recordId)
                     this.recordId = null;
-                // this.scope.$fieldLog = {};
                 this._records = [];
                 this.vm = config.vm;
                 this.domain = config.domain;
                 this.context = config.context;
             }
-            /**
-             * Create a new record
-             */
             create(data) {
                 return this.model.create(data, this);
             }
@@ -11274,9 +11323,6 @@ var Katrid;
                 if (editing)
                     return this.refreshRecord();
                 return;
-                // else if (this.action)
-                //   (<Katrid.Actions.WindowAction>this.action).switchView('list');
-                // this.scope.$emit('afterCancel', this);
             }
             _createRecord(obj) {
                 return this.model.fromObject(obj, this);
@@ -11315,11 +11361,9 @@ var Katrid;
                 let r;
                 if (data === undefined)
                     data = true;
-                // refresh all records
                 if (data === true)
                     r = this.search({ where: this._params, page: this._page, order: this.orderBy });
                 else if (data) {
-                    // Refresh current record
                     r = this.get(data[0]);
                 }
                 else if (this.record && this.record.id) {
@@ -11360,7 +11404,6 @@ var Katrid;
                             else {
                                 this.offset = 1;
                             }
-                            // this.scope.$apply(() => {
                             if (res.count != null)
                                 this.recordCount = res.count;
                             let data = res.data;
@@ -11369,23 +11412,18 @@ var Katrid;
                                 this.records = data;
                             else
                                 this.records = data.map((obj) => this._createRecord(obj));
-                            // list view uses only groups
-                            //this.scope.groups = this._records;
-                            // this.scope.records = this._records;
                             if (this.pageIndex === 1) {
                                 this.offsetLimit = this._records.length;
                             }
                             else {
                                 this.offsetLimit = (this.offset + this._records.length) - 1;
                             }
-                            // });
                             return resolve(res);
                         })
                             .finally(() => {
                             this.pendingRequest = false;
                         });
                     };
-                    // add pending abort controller
                     this._pendingPromises.push(controller);
                     timeout = 0;
                     if (((this.requestInterval > 0) || timeout) && (timeout !== false))
@@ -11465,7 +11503,6 @@ var Katrid;
                             this.state = DataSourceState.browsing;
                         });
                     };
-                    // add pending abort controller
                     this._pendingPromises.push(controller);
                     timeout = 0;
                     if (((this.requestInterval > 0) || timeout) && (timeout !== false))
@@ -11512,7 +11549,6 @@ var Katrid;
                     params[groupName] = paramValue;
                     r.$level = index;
                     r.$hasChildren = true;
-                    // add group object to list
                     rows.push(r);
                 }
                 return rows;
@@ -11566,7 +11602,6 @@ var Katrid;
                     for (let attr in data) {
                         let v = data[attr];
                         obj[attr] = v;
-                        //record[attr] = v;
                     }
                     this.modifiedData = ds;
                     this.masterSource.scope.form.$setDirty();
@@ -11579,7 +11614,6 @@ var Katrid;
                     valid.showError();
                     throw Error('Validation error');
                 }
-                // Save pending children
                 for (let child of this.children)
                     if (child.changing) {
                         child.flush();
@@ -11590,8 +11624,6 @@ var Katrid;
                         this.uploading++;
                         return this.model.service.write([data])
                             .then((res) => {
-                            // if (this.action && this.action.viewType && (this.action.viewType === 'form'))
-                            //   this.action.changeUrl('id', res[0]);
                             this._pendingChanges = false;
                             this.state = DataSourceState.browsing;
                             if (Array.isArray(res) && (res.length === 1))
@@ -11610,7 +11642,6 @@ var Katrid;
                                 for (let fld of Object.keys(error.messages)) {
                                     const msgs = error.messages[fld];
                                     let field;
-                                    // check qualified field name
                                     if (fld.indexOf('.') > -1) {
                                         let sfld = fld.split('.');
                                         let subField = sfld[1];
@@ -11623,8 +11654,6 @@ var Katrid;
                                         field = this.scope.view.fields[fld];
                                     if (!field || !field.name)
                                         continue;
-                                    // elfield = el.find(`.form-field[name="${field.name}"]`);
-                                    // elfield.addClass('ng-invalid ng-touched');
                                     s += `<strong>${field.caption}</strong><ul>`;
                                     for (let msg of msgs) {
                                         s += `<li>${msg}</li>`;
@@ -11751,15 +11780,12 @@ var Katrid;
                 this.record = rec;
                 this._records = oldRecs;
                 let res;
-                // clear nested data
                 for (let child of this.children)
                     child.vm.records = [];
-                // check if load defaults is needed
                 if (loadDefaults) {
                     if (!kwargs)
                         kwargs = {};
                     kwargs.context = this.context;
-                    // load default fields values with optional kwargs
                     let controller = new AbortController();
                     this._pendingPromises.push(controller);
                     res = await this.model.service.getDefaults(kwargs, { signal: controller.signal });
@@ -11778,7 +11804,6 @@ var Katrid;
                     Object.assign(defaults, res);
                 if (defaultValues)
                     Object.assign(defaults, defaultValues);
-                // eval functions values
                 for (let [k, v] of Object.entries(defaults))
                     if (typeof v === "function") {
                         v = v(defaults, this);
@@ -11816,7 +11841,6 @@ var Katrid;
                 return this.fields[fieldName];
             }
             set state(state) {
-                // Clear modified fields information
                 let changing = this.changing;
                 this._modifiedFields = [];
                 this._state = state;
@@ -11828,8 +11852,6 @@ var Katrid;
                     this.stateChangeCallback(state);
                 if (changing && this.$form?.dirty)
                     this.$form.reset();
-                // if (this.scope)
-                // this.scope.$emit('dataStateChange', this);
             }
             get browsing() {
                 return this._state === DataSourceState.browsing;
@@ -11848,22 +11870,17 @@ var Katrid;
             }
             set recordId(value) {
                 this._recordId = value;
-                // this.action.recordId = value;
             }
             get recordId() {
                 return this._recordId;
             }
             set record(rec) {
-                // Track field changes
                 if (rec) {
                     if (!(rec instanceof Data.DataRecord) && (typeof rec === 'object')) {
                         rec = this.model.fromObject(rec, this);
                     }
-                    // if (rec.$record.dataSource !== this)
-                    //   rec.$record.dataSource = this;
                     if (this.vm) {
                         this.vm.record = rec;
-                        // get proxy record
                         rec = this.vm.record;
                     }
                     if (this.dataCallback)
@@ -11871,8 +11888,6 @@ var Katrid;
                     this._record = rec;
                     this.recordId = rec.id;
                     this._pendingChanges = false;
-                    // if (this.action && this.action.view?.actionView)
-                    //   this.action.view.actionView.dispatchEvent(new CustomEvent('recordLoaded', {'detail': {record: rec}}));
                 }
                 this.childrenNotification(rec);
             }
@@ -11882,8 +11897,6 @@ var Katrid;
             }
             set records(recs) {
                 this._records = recs;
-                // if (this.vm)
-                //   this.vm.records = recs;
                 if (this.dataCallback)
                     this.dataCallback({ records: recs });
             }
@@ -11912,30 +11925,24 @@ var Katrid;
                 }
             }
             set recordIndex(index) {
-                // get the record from the record index
                 this._recordIndex = index;
                 let rec = this._records[index];
                 this.record = rec;
                 if (rec?.id) {
                     if (this.action)
                         this.action.changeUrl('id', this.recordId);
-                    // load record
                     this.get(rec.id);
-                    // set new id on browser address
                 }
             }
             get recordIndex() {
                 return this._recordIndex;
             }
             addRecord(rec) {
-                // TODO automation test
                 let record = this.model.newRecord(rec, this);
                 record.$flush();
-                // this.setValues(rec, record);
                 this.vm.records.push(record);
                 console.log('add record');
                 this.records.push(record);
-                // this.parent.record[this.field.name].push(rec);
                 return;
             }
             async expandGroup(index, row) {
@@ -11954,7 +11961,6 @@ var Katrid;
                     console.debug('expand group', this._records);
                 }
                 else {
-                    // expand next group level
                     let rows = await this._loadGroup(this.groups, row.$level + 1, this._params, row);
                     row.$children = rows;
                     this.vm.groups.splice.apply(this.vm.groups, [index + 1, 0].concat(rows));
@@ -12026,7 +12032,6 @@ var Katrid;
             }
             async parentNotification(parentRecord) {
                 this._clearTimeout();
-                // exit the function if the parent record is new
                 if (!parentRecord || (parentRecord.$state === Data.RecordState.created))
                     return;
                 this.state = DataSourceState.loading;
@@ -12036,8 +12041,6 @@ var Katrid;
                         data[this.field.info.field] = parentRecord.id;
                         await this.getFieldChoices(data);
                         let records = this.records;
-                        // if (this.vm)
-                        //   this.vm.records = res.data;
                         parentRecord[this.field.name] = records;
                     }
                     else {
@@ -12050,27 +12053,15 @@ var Katrid;
                 if (this._masterSource)
                     this._masterSource.children.splice(this._masterSource.children.indexOf(this), 1);
             }
-            /**
-             * Save record changes to memory
-             * @param validate
-             * @param browsing
-             */
             flush(validate = true, browsing = true) {
                 if (validate)
                     this.validate();
-                // apply changes to the active record instance
-                // save record into memory
                 this.record.$flush();
-                // change the datasource state
                 if (browsing)
                     this.state = DataSourceState.browsing;
-                // flush children
-                // for (let child of this.children)
-                //   child.flush();
                 return this.record;
             }
             discardChanges() {
-                // load the latest flushed record
                 this.record.$discard();
             }
             encodeObject(obj) {
@@ -12086,12 +12077,6 @@ var Katrid;
                 else
                     return obj;
             }
-            /**
-             * Prepare a record to be sent by encode each available field
-             * @param dataSource
-             * @param rec
-             * @protected
-             */
             static encodeRecord(dataSource, rec) {
                 let prepared = {};
                 for (let fieldName of Object.keys(rec)) {
@@ -12100,12 +12085,6 @@ var Katrid;
                 }
                 return prepared;
             }
-            /**
-             * Send field change notification to server
-             * @param field
-             * @param newValue
-             * @param record
-             */
             $onFieldChange(field, newValue, record) {
                 if (field.name === this._lastFieldName)
                     clearTimeout(this.pendingTimeout);
@@ -12115,11 +12094,8 @@ var Katrid;
                         this._fieldChanging = true;
                     try {
                         let rec = this.encode(record);
-                        // rec[field.name] = field.toJSON(newValue);
-                        // encode parent record
                         if (this.parent)
                             rec[this.field.info.field] = this.parent.encode(this.parent.record);
-                        // rec[this.field.info.field] = this.encodeObject(this.parent.record.$record);
                         this.dispatchEvent('admin_on_field_change', [field.name, rec]);
                     }
                     finally {
@@ -12127,17 +12103,12 @@ var Katrid;
                     }
                 }, 10);
             }
-            /**
-             * Encode data to be sent on field changed
-             * @param record
-             */
             encode(record) {
                 let res = {};
                 for (let [k, v] of Object.entries(record.$data)) {
                     let f = this.model.fields[k];
                     if (!f)
                         continue;
-                    // avoid circular reference error
                     if (!k.startsWith('$') && !(f instanceof Data.OneToManyField))
                         res[k] = f.toJSON(v);
                 }
@@ -12166,11 +12137,8 @@ var Katrid;
     (function (Data) {
         class Model {
             constructor(info) {
-                /** Model records is readonly */
                 this.readonly = false;
-                /** The name of id field */
                 this.idField = 'id';
-                /** The field representing the record name */
                 this.nameField = '$str';
                 this.name = info.name;
                 if (info.fields)
@@ -12183,11 +12151,10 @@ var Katrid;
             }
             get recordClass() {
                 if (!this._recordClass) {
-                    // we need to detect record changes
                     let me = this;
                     class RecordProxy extends Data.DataRecord {
+                        static { this.$model = me; }
                     }
-                    RecordProxy.$model = me;
                     let fields = this.allFields || this.fields;
                     for (let [k, field] of Object.entries(fields)) {
                         Object.defineProperty(RecordProxy.prototype, k, {
@@ -12200,12 +12167,10 @@ var Katrid;
                                     this.$pristine = {};
                                 if (!this.$transient)
                                     this.$transient = {};
-                                // store the old value
                                 if (!(k in this.$pristine))
                                     this.$pristine[k] = this.$data[k];
                                 if (!(k in this.$transient))
                                     this.$transient[k] = this.$data[k];
-                                // save the new value
                                 this.$data[k] = value;
                                 if ((field instanceof Katrid.Data.Field) && field.onChange && me.onFieldChange)
                                     me.onFieldChange(field, value);
@@ -12246,7 +12211,6 @@ var Katrid;
                 let rec = new this.recordClass(obj);
                 rec.$state = Data.RecordState.unmodified;
                 if (datasource?.parent) {
-                    // link to parent record
                     rec.$parent = datasource.parent.record;
                     rec.$parentField = datasource.field?.name;
                 }
@@ -12261,7 +12225,6 @@ var Katrid;
             discard(rec) {
                 rec.$discard();
             }
-            /** Validates a given record */
             validate(record) {
                 for (let field of Object.values(this.fields))
                     field.validate(record[field.name]);
@@ -12283,14 +12246,7 @@ var Katrid;
         })(RecordState = Data.RecordState || (Data.RecordState = {}));
         class DataRecord {
             constructor(obj = {}) {
-                // initialize DataRecord on o2m fields
-                // let model = Object.getPrototypeOf(this).constructor.$model;
-                // if (model?.fields)
-                //   for (let f of model.fields)
-                //     if ((f instanceof Katrid.Data.OneToManyField) && obj[f.name])
-                //       obj[f.name]
                 this.$data = obj;
-                // special attrs
                 if (!this.hasOwnProperty('id'))
                     this.id = obj.id;
                 if (obj.record_name !== undefined)
@@ -12318,7 +12274,6 @@ var Katrid;
                     this.$state = RecordState.modified;
                 this.$pristine = {};
                 this.$dirty = false;
-                // nested data
                 if (this.$parent) {
                     if (!this.$parent.$childrenData)
                         this.$parent.$childrenData = [];
@@ -12331,7 +12286,6 @@ var Katrid;
                 return new Katrid.Data.Validation(this).validate();
             }
             $destroy() {
-                // remove created records from pending list
                 if (this.$state === RecordState.created) {
                     if (this.$parent?.$childrenData?.includes(this))
                         this.$parent.$childrenData.splice(this.$parent.$childrenData.indexOf(this), 1);
@@ -12346,7 +12300,6 @@ var Katrid;
                 this.$pristine = {};
                 this.$dirty = false;
             }
-            // restore nested data to the original state
             $$discard() {
                 this.$discard();
                 Object.assign(this.$data, this.$transient);
@@ -12436,8 +12389,6 @@ var Katrid;
     (function (Data) {
         class Field {
             constructor(info) {
-                // view: Katrid.Forms.ModelView;
-                // viewInfo: Katrid.Forms.ViewInfo;
                 this._loaded = false;
                 this.attrs = {};
                 this.tag = 'input';
@@ -12472,7 +12423,6 @@ var Katrid;
                     this.choices = choices;
                 }
                 else {
-                    // choices from array
                     this.displayChoices = choices;
                     this.choices = Object.entries(choices).map(([k, v]) => [k, v]);
                 }
@@ -12535,7 +12485,6 @@ var Katrid;
                 input.setAttribute('v-model', 'record.' + this.name);
                 input.classList.add('form-field', 'form-control');
                 for (let k of Object.keys(this.attrs)) {
-                    // dynamic attributes
                     if (k.includes(':')) {
                         input.setAttribute(k, this.attrs[k]);
                     }
@@ -12543,6 +12492,8 @@ var Katrid;
                 input.autocomplete = 'no';
                 input.spellcheck = false;
                 input.setAttribute('v-input', 'v-input');
+                if (this.attrs['input-type'])
+                    input.setAttribute('type', this.attrs['input-type']);
                 if (this.attrs.required)
                     input.setAttribute('required', 'required');
                 if (this.maxLength)
@@ -12653,8 +12604,6 @@ var Katrid;
                     section.append(label);
                 }
                 section.append(control);
-                // special field attributes
-                // section['$fieldEl'] = fieldEl;
                 if (!span) {
                     let spanTempl = this.formSpanTemplate();
                     if (spanTempl) {
@@ -12678,16 +12627,12 @@ var Katrid;
                     if (this.helpText)
                         title = this.helpText;
                     title += '<br>Field: ' + this.name;
-                    // title += `<br>Content: ' + record.${this.name} + '`;
                     if (this.widgetHelp)
                         title += '<br>Dica:<br>' + this.widgetHelp;
                     if (this.model)
                         title += '<br>Model: ' + this.model;
                     section.setAttribute('data-title', title);
                     section.setAttribute('v-ui-tooltip', `$fields.${this.name}`);
-                    // disable ui-tooltip on mobile devices
-                    // section.setAttribute('v-tooltip', function() { console.log('test')});
-                    // section.addEventListener('mouseenter', () => console.log('mouse enter'));
                 }
             }
             listCreate(view, fieldEl) {
@@ -12696,7 +12641,6 @@ var Katrid;
                 td.setAttribute('field-name', this.name);
                 view.tRow.append(td);
                 let th = document.createElement('th');
-                // th.setAttribute('name', this.name);
                 th.innerHTML = this.listCaptionTemplate();
                 if (this.cssClass) {
                     td.classList.add(this.cssClass);
@@ -12704,19 +12648,12 @@ var Katrid;
                 }
                 th.setAttribute('v-on:click', `columnClick('${this.name}')`);
                 view.tHeadRow.append(th);
-                // if (this.name && view.inlineEditor) {
-                //   let formView = view.action.views.form;
-                //   let field: Katrid.Data.Field = formView.fields[this.name];
-                //   let fieldEl = (<any>view.action).formView.querySelector(`field[name=${this.name}]`);
-                //   // field.assign(fieldEl);
-                //   let el = field.formCreate(td);
-                //   el.className = field.cssClass;
-                //   td.append(el);
-                // }
             }
             formSpanTemplate() {
                 if (this.hasChoices)
                     return `{{ $fields['${this.name}'].displayChoices[record.${this.name}] || '${this.emptyText}' }}`;
+                if (this.attrs['input-type'] === 'password')
+                    return '<span>********</span>';
                 return `<span>{{ record.${this.name} }}</span>`;
             }
             listSpanTemplate() {
@@ -12726,15 +12663,6 @@ var Katrid;
                 return `<span class="grid-field-readonly">${this.caption}</span>`;
             }
             cardCreate() {
-                // let el = this._fieldEl;
-                // let view = this.view;
-                // let widget = el.getAttribute('widget') || this.widget;
-                // if (widget) {
-                //   let r: any = document.createElement(widget + '-field');
-                //   r.bind(this);
-                //   this.el = r;
-                //   return;
-                // }
                 let span = document.createElement('span');
                 span.innerText = `{{ record.${this.name} }}`;
                 return span;
@@ -12785,10 +12713,8 @@ var Katrid;
                     msgs.push(Katrid.i18n.gettext('This field cannot be empty.'));
                 return msgs;
             }
-            /** Validate a given value for a bound field */
             validateForm(boundField, value) {
                 let msgs = [];
-                // required validation
                 if (boundField.required && (!value && value !== false && value !== 0))
                     msgs.push(Katrid.i18n.gettext('This field cannot be empty.'));
                 return msgs;
@@ -12842,7 +12768,6 @@ var Katrid;
             Fields.registry = {
                 Field: Data.Field,
             };
-            /** Create a field instance from a field definition */
             function fromInfo(config, name) {
                 let cls;
                 if (config instanceof Katrid.Data.Field)
@@ -12857,7 +12782,6 @@ var Katrid;
                 return new cls(config);
             }
             Fields.fromInfo = fromInfo;
-            /** Create a collection of fields from a list of fields definitions */
             function fromArray(fields) {
                 let r = {};
                 if (Array.isArray(fields)) {
@@ -12872,7 +12796,6 @@ var Katrid;
         })(Fields = Data.Fields || (Data.Fields = {}));
     })(Data = Katrid.Data || (Katrid.Data = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="index.ts"/>
 var Katrid;
 (function (Katrid) {
     var Data;
@@ -12906,7 +12829,6 @@ var Katrid;
                         return value.split('..').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format(moment.HTML5_FMT.DATE));
                     if (value.includes(';'))
                         return value.split(';').map(v => moment(re.test(v.trim()) ? v.trim() : katrid.utils.autoCompleteDate(v.trim(), format)).format(moment.HTML5_FMT.DATE));
-                    // return iso date
                     if (re.test(value))
                         return moment(value, Katrid.i18n.formats.shortDateFormat).format(moment.HTML5_FMT.DATE);
                     return moment(katrid.utils.autoCompleteDate(value, format)).format(moment.HTML5_FMT.DATE);
@@ -12928,9 +12850,6 @@ var Katrid;
                 let div = document.createElement(this.tag);
                 div.setAttribute('v-model', 'record.' + this.name);
                 div.setAttribute('date-picker', "L");
-                // div.innerHTML = `
-                // <input type="text" name="${this.name}" class="form-control form-field" inputmode="numeric">
-                // <label class="input-group-text btn-calendar" type="button"><i class="fa fa-calendar fa-sm"></i></label>`;
                 if (this.attrs.required)
                     div.setAttribute('required', 'true');
                 div.setAttribute('id', this.getControlId());
@@ -12951,7 +12870,6 @@ var Katrid;
             }
             create() {
                 super.create();
-                // this.widget = 'datetime';
             }
             listSpanTemplate() {
                 return `<span v-ui-tooltip="" :data-tooltip="record && record.${this.name} && $filters.dateTimeHumanize(record.${this.name})">${this.formSpanTemplate()}</span>`;
@@ -12979,7 +12897,6 @@ var Katrid;
             }
             create() {
                 super.create();
-                // this.widget = 'time';
             }
             formSpanTemplate() {
                 return `{{ record.${this.name} || '${this.emptyText}' }}`;
@@ -13056,7 +12973,6 @@ var Katrid;
             }
             create() {
                 super.create();
-                // this.widget = 'boolean';
             }
             getParamTemplate() {
                 return 'view.param.Boolean';
@@ -13087,7 +13003,6 @@ var Katrid;
                 let caption = this.attrs.caption || this.caption;
                 if (this.helpText)
                     caption = this.helpText;
-                // label.setAttribute('v-show', 'changing');
                 label.innerHTML =
                     `<input type="checkbox" name="${this.name}" class="form-field form-control" v-model="record.${this.name}">${caption}<i class="fas"></i>`;
                 return label;
@@ -13205,7 +13120,6 @@ var Katrid;
         class RadioField extends ChoiceField {
             formControl(fieldEl) {
                 let label = document.createElement('div');
-                // label.setAttribute('v-for', `(name, choice) in $fields.${this.name}.displayChoices`)
                 label.classList.add('radio-button', 'radio-inline', 'form-field');
                 let css = fieldEl.getAttribute('class');
                 if (css)
@@ -13291,7 +13205,6 @@ var Katrid;
             }
             create() {
                 super.create();
-                // this.widget = 'foreignkey';
             }
             setChoices(choices) {
                 this.choices = choices;
@@ -13313,10 +13226,6 @@ var Katrid;
                     return value.text;
                 return value;
             }
-            /**
-             * Returns the id attribute from the Object value
-             * @param {Object} val - The value to be prepared
-             */
             toJSON(val) {
                 if (Array.isArray(val))
                     return val[0];
@@ -13446,7 +13355,6 @@ var Katrid;
             }
             loadInfo(info) {
                 super.loadInfo(info);
-                // views information are already specified
                 if (info.views)
                     this._loaded = true;
                 if (info['view-mode'])
@@ -13456,9 +13364,7 @@ var Katrid;
                 if (this._loaded)
                     return;
                 this._loaded = true;
-                // render component
                 let preLoadedViews = {};
-                // detect pre loaded views
                 let template = this.fieldEl?.querySelector('template');
                 if (template)
                     for (let child of template.content.children)
@@ -13466,20 +13372,16 @@ var Katrid;
                 let model = new Katrid.Services.ModelService(this.info.model);
                 let viewModes = { form: null };
                 viewModes[this.viewMode] = null;
-                // load views on server side
                 let res = await model.loadViews({ views: viewModes });
                 this.views = res.views;
                 this.fields = res.fields;
-                // find rel field
                 Object.values(res.views).forEach((viewInfo) => {
                     let relField = viewInfo.info.fields[this.info.field];
-                    // hide the rel field
                     if (relField) {
                         relField.required = false;
                         relField.visible = false;
                     }
                 });
-                // replace by preloaded views
                 for (let k of Object.keys(preLoadedViews)) {
                     if (!(k in res.views))
                         res.views[k] = { fields: res.fields };
@@ -13503,7 +13405,6 @@ var Katrid;
                             for (let rec of record[this.name])
                                 rec.$destroy();
                             record[this.name] = [];
-                            // record.$record.dataSource.record[this.name] = [];
                         }
                         else if (obj.action === 'CREATE') {
                             if (!record[this.name])
@@ -13520,7 +13421,6 @@ var Katrid;
             }
             formControl() {
                 let tag = 'onetomany-field';
-                // todo replace by field-onetomany
                 let grid = document.createElement(tag);
                 grid.setAttribute('name', this.name);
                 grid.setAttribute('v-model', 'record.' + this.name);
@@ -13694,7 +13594,6 @@ var katrid;
                 }
                 let objs = [];
                 for (let obj of data.objects) {
-                    // load objects
                     const lo = this.designer.loadObject(obj);
                     this.designer.pasteObject(lo).locked = false;
                     this.designer.addToSelection(lo);
@@ -14139,28 +14038,20 @@ var katrid;
             }
             createHandles() {
                 let handle;
-                // bottom-left
                 this.bottomLeft = handle = this.createHandle();
                 handle.classList.add('bottom-left');
-                // middle-left
                 this.middleLeft = handle = this.createHandle();
                 handle.classList.add('middle-left');
-                // top-left
                 this.topLeft = handle = this.createHandle();
                 handle.classList.add('top-left');
-                // top-right
                 this.topRight = handle = this.createHandle();
                 handle.classList.add('top-right');
-                // middle-right
                 this.middleRight = handle = this.createHandle();
                 handle.classList.add('middle-right');
-                // bottom-right
                 this.bottomRight = handle = this.createHandle();
                 handle.classList.add('bottom-right');
-                // top-center
                 this.topCenter = handle = this.createHandle();
                 handle.classList.add('top-center');
-                // bottom-center
                 this.bottomCenter = handle = this.createHandle();
                 handle.classList.add('bottom-center');
                 this.container.append(...this.handles);
@@ -14172,9 +14063,7 @@ var katrid;
                 if (this.onObjectResized)
                     this.onObjectResized({ target: this.target });
             }
-            /** Apply a rect delta to designer selection */
             applyRect(dx = 0, dy = 0, dw = 0, dh = 0) {
-                // apply zoom factor
                 if (this.designer && this.designer.zoom !== 100) {
                     const factor = this.designer.zoom / 100;
                     dx = dx / factor;
@@ -14223,8 +14112,6 @@ var katrid;
         design.VerticalRule = VerticalRule;
     })(design = katrid.design || (katrid.design = {}));
 })(katrid || (katrid = {}));
-/// <reference path="../drawing/shapes.ts" />
-/// <reference path="widgets.ts" />
 var katrid;
 (function (katrid) {
     var design;
@@ -14334,7 +14221,6 @@ var katrid;
                 this.add('move', selection.map(obj => ({ target: obj, x: obj.x, y: obj.y })));
             }
             addRedo(redo) {
-                // nested redo
                 if (this._redoEntry) {
                     this._redoEntry.data.push(redo.data);
                 }
@@ -14342,7 +14228,6 @@ var katrid;
                     this._redoEntry = redo;
                 }
             }
-            /** Undo or redo move object */
             undoMoveObject(undoEntry, description) {
                 this.addRedo({
                     action: 'move',
@@ -14443,7 +14328,6 @@ var katrid;
             dialog.className = 'modal-content';
             div.appendChild(content);
             content.append(dialog);
-            // dialog.className = 'modal-content';
             if (config.header !== false) {
                 const header = document.createElement('div');
                 header.className = 'modal-header';
@@ -14468,7 +14352,6 @@ var katrid;
         function confirm(config) {
             return new Promise(resolve => {
                 let dialog = createDialogElement({ header: config.title, autoDestroy: true });
-                // create buttons
                 let footer = dialog.querySelector('.modal-footer');
                 let btn = document.createElement('button');
                 btn.innerText = Katrid.i18n.gettext('OK');
@@ -14502,8 +14385,6 @@ var katrid;
         ui.confirm = confirm;
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
-/// <reference path="text.ts" />
-/// <reference path="image.ts" />
 var katrid;
 (function (katrid) {
     var drawing;
@@ -14622,6 +14503,7 @@ var Katrid;
         }
         Forms.MenuItemSeparator = MenuItemSeparator;
         class ContextMenu {
+            static { this.instances = []; }
             constructor(container = null) {
                 this.container = container;
                 this.items = [];
@@ -14665,10 +14547,8 @@ var Katrid;
                     this.el.append(item.el);
             }
             show(x, y, target = null) {
-                // create menu element
                 this.destroyElement();
                 this.createElement();
-                // set menu position
                 this.el.style.left = x + 'px';
                 this.el.style.top = y + 'px';
                 this.target = target;
@@ -14703,16 +14583,15 @@ var Katrid;
                 ContextMenu.instances.push(this);
             }
             close() {
-                // unhook event
                 document.removeEventListener('mousedown', this._eventHook);
                 document.removeEventListener('wheel', this._eventHook);
                 document.removeEventListener('keydown', this._eventKeyDownHook);
-                // remove element
                 this.el.remove();
                 this._eventHook = null;
                 let i = ContextMenu.instances.indexOf(this);
-                if (i > -1)
+                if (i > -1) {
                     ContextMenu.instances.splice(i, 1);
+                }
             }
             get visible() {
                 return this._visible;
@@ -14722,7 +14601,6 @@ var Katrid;
                     m.close();
             }
         }
-        ContextMenu.instances = [];
         Forms.ContextMenu = ContextMenu;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -14738,7 +14616,6 @@ var Katrid;
     var Forms;
     (function (Forms) {
         let customTagRegistry = {};
-        // CustomTag is a tag shortcut to simplify the view definition
         class CustomTag {
             static render(view, template) {
                 for (let [selector, customTag] of Object.entries(customTagRegistry)) {
@@ -14783,25 +14660,21 @@ var Katrid;
                         btn = template.querySelector(`.btn-actions[name=${name}]`);
                     let dropdownMenu;
                     if (btn) {
-                        // dropdown already is default
                         actionsButton = btn.parentElement;
                     }
                     else {
                         actionsButton = document.createElement('div');
                         actionsButton.classList.add('btn-group');
                         actionsButton.innerHTML = '<div class="dropdown"><button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown"></button><div class="dropdown-menu custom-actions"></div></div>';
-                        // add the left html content
                         btn = actionsButton.querySelector('button');
                         if (name)
                             btn.setAttribute('name', name);
                         let caption = actions.getAttribute('caption');
                         if (caption)
                             btn.innerHTML = caption + ' ';
-                        // add the new dropdown
                         atts.append(actionsButton);
                     }
                     dropdownMenu = actionsButton.querySelector('.dropdown-menu');
-                    // conditional display for each type of view
                     let vShow = actions.getAttribute('v-show');
                     if (vShow)
                         actionsButton.setAttribute('v-show', vShow);
@@ -14809,7 +14682,6 @@ var Katrid;
                     if (vIf)
                         actionsButton.setAttribute('v-if', vIf);
                     for (let action of actions.querySelectorAll('action')) {
-                        // add the item as a dropdown item and remove fragment from dom
                         dropdownMenu.append(this.prepareAction(action));
                         action.remove();
                     }
@@ -14820,7 +14692,6 @@ var Katrid;
             }
             prepareAction(action) {
                 let el = document.createElement('a');
-                // add anchor as action-link Web Component
                 el.classList.add('dropdown-item');
                 this.assign(action, el);
                 if (el.hasAttribute('data-action'))
@@ -14848,7 +14719,6 @@ var Katrid;
                     el.setAttribute('id', action.id);
                 if (action.hasAttribute('caption'))
                     el.innerHTML = action.getAttribute('caption');
-                // binding params
                 if (action.hasAttribute('binding-params'))
                     el.setAttribute('data-binding-params', action.getAttribute('binding-params'));
                 return el;
@@ -14859,7 +14729,6 @@ var Katrid;
             customTagRegistry[selector] = customTag;
         }
         Forms.registerCustomTag = registerCustomTag;
-        // initializes known custom tags
         registerCustomTag(':scope > actions', ActionsTag);
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -14962,7 +14831,6 @@ var Katrid;
                 let modal = document.createElement('div');
                 modal.classList.add('modal');
                 modal.tabIndex = -1;
-                // modal.setAttribute('role', 'dialog');
                 let buttonsTempl = `
         <button type="button" name="btn-ok" class="btn btn-primary">OK</button>
         <button type="button" name="btn-cancel" class="btn btn-secondary" data-bs-dismiss="modal">${Katrid.i18n.gettext('Cancel')}</button>
@@ -15021,7 +14889,6 @@ var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
-        /** Field bound to a form */
         class BoundField {
             constructor(field, name, fieldEl) {
                 this.field = field;
@@ -15069,7 +14936,6 @@ var Katrid;
                 if (!this.control)
                     return;
                 if (value) {
-                    // this.form.touched = true;
                     this.control.classList.remove('v-untouched');
                     this.control.classList.add('v-touched');
                 }
@@ -15153,26 +15019,15 @@ var Katrid;
             mounted(el) {
                 el.classList.add('v-data-form');
                 let form = el.$form = new DataForm(el);
-                // el.querySelectorAll('.form-field-section').forEach(child => {
-                //   let formField = <IFormField>child;
-                //   let field = formField.$field;
-                //   field.form = form;
-                //   form.fields[field.name] = field;
-                // });
             }
         });
         Katrid.directive('form-field', {
             mounted(el, binding, vnode) {
-                // let field = el.$field = new BoundField(el.getAttribute('name'));
-                // field.container = el;
-                // field.control = el.querySelector('.form-control');
-                // if (field.control) {
                 let input;
                 if (el.tagName === 'INPUT')
                     input = el;
                 else
                     input = el.querySelector('input');
-                // el.addEventListener('focusin', () => field.touched = true);
                 if (input?.tagName === 'INPUT')
                     input.addEventListener('mouseup', () => {
                         input.select();
@@ -15189,14 +15044,7 @@ var Katrid;
             constructor(info) {
                 this.info = info;
                 this._pending = true;
-                // this.info = info;
-                // for (let f of info.fields)
-                //
                 this.fields = info.fields;
-                // Object.values(this.fields).forEach(field => field.viewInfo = this);
-                // this.content = info.content;
-                // this.toolbar = info.toolbar;
-                // this.auto_load = info.auto_load;
             }
             async loadPendingViews() {
                 if (!this._pending)
@@ -15212,7 +15060,6 @@ var Katrid;
                             field.fieldEl = child;
                     }
                 }
-                // load pending nested views info
                 await Promise.all(Object.values(this.fields)
                     .filter(field => field['loadViews'])
                     .map((field) => field.loadViews()));
@@ -15279,7 +15126,6 @@ var Katrid;
                     record.$selected = true;
                 }
             }
-            // create context menu
             let menu = new Forms.ContextMenu();
             if (td && (td.tagName === 'TD'))
                 menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => copyClick(event.target.closest('table')));
@@ -15294,7 +15140,6 @@ var Katrid;
                 menu.addSeparator();
                 menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteSelection());
             }
-            // menu.add('Arquivar', this.copyClick);
             menu.show(event.pageX, event.pageY, td);
         }
         Forms.listRecordContextMenu = listRecordContextMenu;
@@ -15311,7 +15156,6 @@ var Katrid;
             let n = 0;
             let fkCache = {};
             for (let line of text.split('\n')) {
-                // ignore the header
                 if (n > 0) {
                     line = line.trim();
                     if (line) {
@@ -15321,7 +15165,6 @@ var Katrid;
                             let field = vm.$view.$columns[c];
                             if (field) {
                                 if (field instanceof Katrid.Data.ForeignKey) {
-                                    // caching fk search
                                     if (s) {
                                         if (!fkCache[field.name])
                                             fkCache[field.name] = {};
@@ -15352,7 +15195,6 @@ var Katrid;
                             }
                             c++;
                         }
-                        // save data to datasource
                         vm.$addRecord(record);
                     }
                 }
@@ -15381,7 +15223,6 @@ var Katrid;
                 if (i > -1)
                     this.records.splice(i, 1);
             }
-            // this.records = this.records.filter(rec => rec.$state !== Katrid.Data.RecordState.destroyed);
             this.selection = [];
             this.selectionLength = 0;
             this.$onChange();
@@ -15460,111 +15301,110 @@ var Katrid;
     (function (Reports) {
         let _counter = 0;
         class Params {
-        }
-        Params.Operations = {
-            exact: 'exact',
-            in: 'in',
-            contains: 'contains',
-            startswith: 'startswith',
-            endswith: 'endswith',
-            gt: 'gt',
-            lt: 'lt',
-            between: 'between',
-            isnull: 'isnull'
-        };
-        Params.Labels = null;
-        Params.DefaultOperations = {
-            CharField: Params.Operations.exact,
-            IntegerField: Params.Operations.exact,
-            DateTimeField: Params.Operations.between,
-            DateField: Params.Operations.between,
-            FloatField: Params.Operations.between,
-            DecimalField: Params.Operations.between,
-            ForeignKey: Params.Operations.exact,
-            ModelChoices: Params.Operations.exact,
-            SelectionField: Params.Operations.exact,
-        };
-        Params.TypeOperations = {
-            CharField: [Params.Operations.exact, Params.Operations.in, Params.Operations.contains, Params.Operations.startswith, Params.Operations.endswith, Params.Operations.isnull],
-            IntegerField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
-            FloatField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
-            DecimalField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
-            DateTimeField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
-            DateField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
-            ForeignKey: [Params.Operations.exact, Params.Operations.in, Params.Operations.isnull],
-            ModelChoices: [Params.Operations.exact, Params.Operations.in, Params.Operations.isnull],
-            SelectionField: [Params.Operations.exact, Params.Operations.isnull],
-        };
-        Params.Widgets = {
-            CharField(param) {
-                return `<div><input id="rep-param-id-${param.id}" v-model="param.value1" type="text" class="form-control"></div>`;
-            },
-            IntegerField(param) {
-                let secondField = '';
-                if (param.operation === 'between') {
-                    secondField = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" type="number" class="form-control"></div>`;
-                }
-                return `<div class="row"><div class="col-sm-6"><input id="rep-param-id-${param.id}" type="number" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
-            },
-            DecimalField(param) {
-                let secondField = '';
-                if (param.operation === 'between') {
-                    secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" input-decimal class="form-control"></div>`;
-                }
-                return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" input-decimal v-model="param.value1" class="form-control"></div>${secondField}</div>`;
-            },
-            DateTimeField(param) {
-                let secondField = '';
-                if (param.operation === 'between') {
-                    secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" v-model="param.value2" class="form-control"></div>`;
-                }
-                return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
-            },
-            DateField(param) {
-                let secondField = '';
-                if (param.operation === 'between') {
-                    secondField = `<div class="col-6">
+            static { this.Operations = {
+                exact: 'exact',
+                in: 'in',
+                contains: 'contains',
+                startswith: 'startswith',
+                endswith: 'endswith',
+                gt: 'gt',
+                lt: 'lt',
+                between: 'between',
+                isnull: 'isnull'
+            }; }
+            static { this.Labels = null; }
+            static { this.DefaultOperations = {
+                CharField: Params.Operations.exact,
+                IntegerField: Params.Operations.exact,
+                DateTimeField: Params.Operations.between,
+                DateField: Params.Operations.between,
+                FloatField: Params.Operations.between,
+                DecimalField: Params.Operations.between,
+                ForeignKey: Params.Operations.exact,
+                ModelChoices: Params.Operations.exact,
+                SelectionField: Params.Operations.exact,
+            }; }
+            static { this.TypeOperations = {
+                CharField: [Params.Operations.exact, Params.Operations.in, Params.Operations.contains, Params.Operations.startswith, Params.Operations.endswith, Params.Operations.isnull],
+                IntegerField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+                FloatField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+                DecimalField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+                DateTimeField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+                DateField: [Params.Operations.exact, Params.Operations.in, Params.Operations.gt, Params.Operations.lt, Params.Operations.between, Params.Operations.isnull],
+                ForeignKey: [Params.Operations.exact, Params.Operations.in, Params.Operations.isnull],
+                ModelChoices: [Params.Operations.exact, Params.Operations.in, Params.Operations.isnull],
+                SelectionField: [Params.Operations.exact, Params.Operations.isnull],
+            }; }
+            static { this.Widgets = {
+                CharField(param) {
+                    return `<div><input id="rep-param-id-${param.id}" v-model="param.value1" type="text" class="form-control"></div>`;
+                },
+                IntegerField(param) {
+                    let secondField = '';
+                    if (param.operation === 'between') {
+                        secondField = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" type="number" class="form-control"></div>`;
+                    }
+                    return `<div class="row"><div class="col-sm-6"><input id="rep-param-id-${param.id}" type="number" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                },
+                DecimalField(param) {
+                    let secondField = '';
+                    if (param.operation === 'between') {
+                        secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" input-decimal class="form-control"></div>`;
+                    }
+                    return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" input-decimal v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                },
+                DateTimeField(param) {
+                    let secondField = '';
+                    if (param.operation === 'between') {
+                        secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" v-model="param.value2" class="form-control"></div>`;
+                    }
+                    return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                },
+                DateField(param) {
+                    let secondField = '';
+                    if (param.operation === 'between') {
+                        secondField = `<div class="col-6">
 <input-date class="input-group date" v-model="param.value2" date-picker="L">
 <input id="rep-param-id-${param.id}-2" type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
       <label class="input-group-text btn-calendar"><i class="fa fa-calendar fa-sm"></i></label>
 </input-date>
 </div>`;
-                }
-                return `<div class="col-sm-12 row"><div class="col-6">
+                    }
+                    return `<div class="col-sm-12 row"><div class="col-6">
 <input-date class="input-group date" v-model="param.value1" date-picker="L">
 <input id="rep-param-id-${param.id}" type="text" class="form-control" inputmode="numeric" autocomplete="off">
       <label class="input-group-text btn-calendar"><i class="fa fa-calendar fa-sm"></i></label>
 </input-date>
 </div>${secondField}</div>`;
-            },
-            ForeignKey(param) {
-                const serviceName = param.info.field.attr('model') || param.params.model;
-                let multiple = '';
-                if (param.operation === 'in') {
-                    multiple = 'multiple';
+                },
+                ForeignKey(param) {
+                    const serviceName = param.info.field.attr('model') || param.params.model;
+                    let multiple = '';
+                    if (param.operation === 'in') {
+                        multiple = 'multiple';
+                    }
+                    return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="${serviceName}" field-name="${param.name}" v-model="param.value1" ${multiple}></div>`;
+                },
+                ModelChoices(param) {
+                    let multiple = '';
+                    if (param.operation === 'in') {
+                        multiple = 'multiple';
+                    }
+                    return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ui.action.report" model-choices="${param.info.modelChoices}" v-model="param.value1" ${multiple}></div>`;
+                },
+                SelectionField(param) {
+                    let multiple = '';
+                    let tag = 'select';
+                    if (param.operation === 'in') {
+                        tag = 'multiple-tags';
+                        multiple = 'multiple="multiple" class="multiple-tags"';
+                    }
+                    else
+                        multiple = 'class="form-select"';
+                    return `<div><${tag} ${multiple} v-model="param.value1"><option :value="value" v-for="(name, value, index) in param.choices">{{name}}</option></${tag}></div>`;
                 }
-                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="${serviceName}" field-name="${param.name}" v-model="param.value1" ${multiple}></div>`;
-            },
-            ModelChoices(param) {
-                let multiple = '';
-                if (param.operation === 'in') {
-                    multiple = 'multiple';
-                }
-                return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ui.action.report" model-choices="${param.info.modelChoices}" v-model="param.value1" ${multiple}></div>`;
-            },
-            SelectionField(param) {
-                // param.info.choices = param.info.field.data('choices');
-                let multiple = '';
-                let tag = 'select';
-                if (param.operation === 'in') {
-                    tag = 'multiple-tags';
-                    multiple = 'multiple="multiple" class="multiple-tags"';
-                }
-                else
-                    multiple = 'class="form-select"';
-                return `<div><${tag} ${multiple} v-model="param.value1"><option :value="value" v-for="(name, value, index) in param.choices">{{name}}</option></${tag}></div>`;
-            }
-        };
+            }; }
+        }
         Reports.Params = Params;
         Params.Widgets.StringField = Params.Widgets.CharField;
         class Param {
@@ -15580,8 +15420,6 @@ var Katrid;
                 this.type = this.info.type || (this.field && this.field.type) || 'CharField';
                 this.defaultOperation = this.info.operation || Params.DefaultOperations[this.type];
                 this.operation = this.defaultOperation;
-                // @operations = @info.operations or Params.TypeOperations[@type]
-                // this.operations = this.getOperations();
                 if (info.options)
                     this.choices = info.options;
                 this.exclude = this.info.exclude;
@@ -15731,7 +15569,6 @@ var Katrid;
                 this.totals = [];
             }
             telegram() {
-                // Katrid.Reports.Telegram.export(this);
             }
             getUserParams() {
                 let report = this;
@@ -15764,7 +15601,6 @@ var Katrid;
                         type: p.type
                     });
                 }
-                // TODO: optional display params
                 params.displayParams = info.join('\n');
                 let fields = container.find('#report-id-fields').val();
                 params['fields'] = fields;
@@ -15859,7 +15695,6 @@ var Katrid;
                 if (!params)
                     params = [];
                 this.fields = fields;
-                // Create params
                 if (this.action.fields)
                     for (let p of fields) {
                         this.action.fields[p.name] = p;
@@ -15885,7 +15720,6 @@ var Katrid;
                     if (p.name === paramName) {
                         let param = new Reports.Param(p, this);
                         this.params.push(param);
-                        // param.render(elParams);
                         break;
                     }
             }
@@ -15937,7 +15771,6 @@ var Katrid;
                     console.log(Katrid.Reports.currentUserReport.params.fields);
                     sel.select2('val', Katrid.Reports.currentUserReport.params.fields);
                 }
-                //sel.data().select2.updateSelection([{ id: 'vehicle', text: 'Vehicle'}])
                 sel = el.find('#report-id-totals');
                 sel.append(aggs)
                     .select2({ tags: ((() => {
@@ -16170,6 +16003,7 @@ var Katrid;
     var Forms;
     (function (Forms) {
         class CalendarView extends Forms.RecordCollectionView {
+            static { this.viewType = 'calendar'; }
             static createViewModeButton(container) {
                 let btn = document.createElement('button');
                 btn.type = 'button';
@@ -16180,7 +16014,6 @@ var Katrid;
             }
             beforeRender(template) {
                 let templ = super.beforeRender(template);
-                // collect fields names
                 this.fieldStart = template.getAttribute('date-start');
                 this.fieldEnd = template.getAttribute('date-end');
                 return templ;
@@ -16208,14 +16041,12 @@ var Katrid;
                 }
             }
             renderTemplate(content) {
-                // template render
                 let calendarEl = document.createElement('div');
                 calendarEl.className = 'calendar-view';
                 return calendarEl;
             }
             render() {
                 let el = super.render();
-                // delay the calendar render
                 setTimeout(() => {
                     let calendarEl = this.element.querySelector('.calendar-view');
                     this._calendar = new FullCalendar.Calendar(calendarEl, {
@@ -16231,7 +16062,6 @@ var Katrid;
                 return el;
             }
         }
-        CalendarView.viewType = 'calendar';
         Forms.CalendarView = CalendarView;
         Katrid.Forms.Views.registry['calendar'] = CalendarView;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -16249,8 +16079,6 @@ var Katrid;
                 if (name) {
                     let fld = this.fields[name];
                     if (fld) {
-                        // fld.view = this;
-                        // fld.assign(fieldEl);
                         if (fld.visible) {
                             return fld.cardCreate();
                         }
@@ -16335,6 +16163,7 @@ var Katrid;
         }
         Forms.CardRenderer = CardRenderer;
         class CardView extends Forms.RecordCollectionView {
+            static { this.viewType = 'card'; }
             static createViewModeButton(container) {
                 let btn = document.createElement('button');
                 btn.type = 'button';
@@ -16368,7 +16197,6 @@ var Katrid;
                 this.vm.records.unshift(rec);
             }
         }
-        CardView.viewType = 'card';
         Forms.CardView = CardView;
         Katrid.Forms.Views.registry['card'] = CardView;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -16398,11 +16226,11 @@ var Katrid;
         var DataSourceState = Katrid.Data.DataSourceState;
         Forms.changingStates = [DataSourceState.inserting, DataSourceState.editing];
         class FormView extends Forms.ModelView {
+            static { this.viewType = 'form'; }
             constructor(info) {
                 super(info);
                 this.dataCallbacks = [];
                 this._pendingViews = true;
-                // create field change hook events
                 if (this.fields)
                     for (let field of Object.values(this.fields))
                         if (field.onChange) {
@@ -16422,8 +16250,6 @@ var Katrid;
             set record(value) {
                 this._record = value;
                 this.vm.record = value;
-                // for (let child of this.nestedViews)
-                //   child.setParentRecord(value);
                 for (let cb of this.dataCallbacks)
                     cb(this.vm.record);
                 if (this.element)
@@ -16480,12 +16306,10 @@ var Katrid;
                 if (name) {
                     let fld = this.fields[name];
                     if (fld) {
-                        // add hook to v-sum attribute
                         if (fieldEl.hasAttribute('v-sum'))
                             this.addSumHook(fld, fieldEl);
                         if (!fieldEl.hasAttribute('invisible'))
                             return fld.formCreate(fieldEl);
-                        // boundField.control = boundField.container.querySelector('.form-field');
                     }
                     else
                         console.error(`Field "${name}" not found`);
@@ -16506,13 +16330,10 @@ var Katrid;
                 }
             }
             beforeRender(template) {
-                // form events
                 this._attributes = template.attributes;
-                // return a template view
                 let form = template;
                 form.setAttribute('autocomplete', 'off');
                 form.classList.add('row');
-                // compile fields (elements transformation)
                 for (let child of form.querySelectorAll('field')) {
                     if ((child.parentElement.tagName === 'FORM') && (child.parentElement !== form))
                         continue;
@@ -16675,11 +16496,8 @@ ${Katrid.i18n.gettext('Delete')}
                     record: this._record || {},
                     records: [],
                     name: '',
-                    // view: this.viewInfo,
                     actionView: this,
                     loadingRecord: false,
-                    // recordIndex: this.action.recordIndex,
-                    // recordCount: this.action.dataSource?.recordCount,
                     changing: this.changing,
                     inserting: this.inserting,
                     editing: this.editing,
@@ -16703,7 +16521,6 @@ ${Katrid.i18n.gettext('Delete')}
             }
             render() {
                 super.render();
-                // force readonly/editable
                 this.readonly = this._readonly;
                 if (this._state == null)
                     this.state = DataSourceState.editing;
@@ -16740,13 +16557,10 @@ ${Katrid.i18n.gettext('Delete')}
                 this.datasource.record = null;
                 this.setState(DataSourceState.inserting);
                 return this.datasource.insert(true, defaultValues).then(() => setTimeout(() => {
-                    // put focus into the 1st field
                     this.focus();
                 }));
-                // this.datasource.record = this.model.newRecord();
             }
             async save() {
-                // flush nested children
                 for (let child of this.nestedViews)
                     child.$flush();
                 await this.datasource.save();
@@ -16789,7 +16603,6 @@ ${Katrid.i18n.gettext('Delete')}
                         return me.getComponentData();
                     },
                 });
-                // override methods
                 Object.assign(comp.methods, {
                     edit() {
                         me.edit();
@@ -16817,7 +16630,6 @@ ${Katrid.i18n.gettext('Delete')}
                         me.copy();
                     },
                     readonly(ro, fields, exclude) {
-                        // set fields to readonly
                         if (ro) {
                             if (fields === '*') {
                                 this.readonlyFields = Object.keys(me.model.fields);
@@ -16867,9 +16679,7 @@ ${Katrid.i18n.gettext('Delete')}
                     sendFile(name, file) {
                         return Katrid.Services.Upload.sendFile({ model: this.action.model, method: name, file, vm: this });
                     },
-                    // console.log('inc', vm.$changing);
                 });
-                // override computed props
                 Object.assign(comp.computed, {
                     selection() {
                         return [this.record];
@@ -16888,10 +16698,6 @@ ${Katrid.i18n.gettext('Delete')}
                 el.classList.add('form-view');
                 return el;
             }
-            /**
-             * Shows the form as a modal dialog
-             * @param options
-             */
             async showDialog(options) {
                 this.dialog = true;
                 if (!options)
@@ -16904,7 +16710,6 @@ ${Katrid.i18n.gettext('Delete')}
                     await this.loadPendingViews();
                     el = this.render();
                 }
-                // auto load record by id
                 if (options?.id)
                     await this.setRecordId(options.id);
                 if (options?.state != null) {
@@ -16924,12 +16729,9 @@ ${Katrid.i18n.gettext('Delete')}
                         this._modal = null;
                     });
                     this._modal.show();
-                    // if (options?.edit)
-                    //   this.vm.dataSource.edit();
                 });
             }
             $onFieldChange(field, value) {
-                // update auto sum fields
                 if (this.sumHooks && (field.name in this.sumHooks)) {
                     let fields = this.sumHooks[field.name];
                     for (let info of fields) {
@@ -16946,12 +16748,9 @@ ${Katrid.i18n.gettext('Delete')}
                     this.datasource.$onFieldChange(field, value, this.datasource.record);
             }
             static async createNew(config) {
-                // let formInfo = config.viewInfo;
                 let svc = new Katrid.Services.ModelService(config.model);
-                // get form view info from server
                 let res = await svc.getViewInfo({ view_type: 'form' });
                 let model = new Katrid.Data.Model({ name: config.model, fields: res.fields });
-                // if (!formInfo)
                 let formInfo = new Forms.ModelViewInfo(res);
                 await formInfo.loadPendingViews();
                 let dlg = new Katrid.Forms.FormView({
@@ -16981,15 +16780,11 @@ ${Katrid.i18n.gettext('Delete')}
                 return '{{record.$str}}';
             }
             saveAndClose(commit) {
-                // this.$result = this.flush(true, false);
                 if (commit) {
                     this.$result = this.datasource.save();
                 }
                 else {
-                    // this._record.$flush();
                     this.datasource.flush();
-                    // notify the datasource
-                    // this.datasource._flush(this._record);
                     this.$result = this._record;
                 }
                 this.closeDialog();
@@ -17000,13 +16795,10 @@ ${Katrid.i18n.gettext('Delete')}
             }
             recordClick(event, index, record) {
             }
-            /** Put focus to field if specified or to the first one */
             focus(fieldName) {
                 if (!fieldName)
-                    // set focus to first .form-field element
                     this.element.querySelector('.form-field')?.focus();
             }
-            /** Close the current dialog and deletes the current record */
             deleteAndClose() {
                 let recIndex = this.records.indexOf(this.record);
                 if (recIndex) {
@@ -17019,7 +16811,6 @@ ${Katrid.i18n.gettext('Delete')}
                 if (!this._pendingViews)
                     return;
                 this._pendingViews = false;
-                // load pending nested views info
                 await Promise.all(Object.values(this.fields)
                     .filter(field => field['loadViews'])
                     .map((field) => field.loadViews()));
@@ -17030,20 +16821,16 @@ ${Katrid.i18n.gettext('Delete')}
                     this.datasource.state = DataSourceState.browsing;
                     if (this.records && this._recordIndex) {
                         this.datasource.record = this.records[this._recordIndex];
-                        // this.refresh();
                     }
                 }
                 else {
-                    // discard in-memory changes
                     if (this.datasource.parent)
                         this.record.$discard();
-                    // reload the record
                     else
                         this.refresh();
                 }
             }
         }
-        FormView.viewType = 'form';
         Forms.FormView = FormView;
         Katrid.Forms.Views.registry['form'] = FormView;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -17052,9 +16839,8 @@ var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
-        /** SearchView is a special view mode, and search instances will be generally rendered inside toolbar
-         * region of a RecordCollectionView descendant instance. */
         class SearchView extends Forms.ModelView {
+            static { this.viewType = 'search'; }
             constructor(info, action) {
                 super(info);
                 this._dataOffset = 1;
@@ -17145,13 +16931,9 @@ var Katrid;
                         this.tempConditions.push({ fieldName: null, $field: null, condition: null, value: null, value2: null, values: null });
                     },
                     applyFilter() {
-                        // add the current filter value
-                        // if (this.searchValue !== undefined)
                         this.addFieldCondition();
                         this.customFilter.push(this.tempFilter);
-                        // force the selection
                         this.tempFilter.selected = true;
-                        // this.filters.push(this.tempFilter);
                         this.tempCondition = null;
                         this.tempFilter = new Katrid.Forms.Views.Search.SearchFilters(this.$view);
                         this.customSearchExpanded = false;
@@ -17186,8 +16968,6 @@ var Katrid;
                             cond.conditions = me.getFieldConditions(cond.$field);
                             cond.condition = Object.keys(cond.conditions)[0];
                             cond.value = [null];
-                            // cond.value2 = null;
-                            // cond.values = null;
                         }
                         else
                             cond.$field = null;
@@ -17220,7 +17000,6 @@ var Katrid;
                 if (this._resultView)
                     this._resultView.groupLength = this.controller.groupLength;
                 if (this.controller.groupLength) {
-                    // this.controller._groupLength = this.controller.groupLength;
                     if (this._resultView)
                         this._resultView.applyGroups(this.controller.groupBy(), this.controller.getParams());
                 }
@@ -17420,7 +17199,6 @@ var Katrid;
                     this.createVm(this.element);
                     this.controller = new Katrid.Forms.Views.Search.SearchViewController(this);
                     this.controller.setContent(this.domTemplate());
-                    // load the default search specified on action context
                     if (this.action?.context.search_default)
                         setTimeout(() => this.load(this.action.context.search_default));
                 }
@@ -17494,7 +17272,6 @@ var Katrid;
                 }
             }
         }
-        SearchView.viewType = 'search';
         Forms.SearchView = SearchView;
         Katrid.Forms.Views.registry['search'] = SearchView;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
@@ -17544,7 +17321,6 @@ var Katrid;
                     td.innerHTML = `<i class="far fa-fw fa-star"></i>`;
                     this.tRow.append(td);
                 }
-                // render each field
                 for (let f of list.querySelectorAll(':scope > field')) {
                     this.addField(f);
                     f.remove();
@@ -17560,14 +17336,6 @@ var Katrid;
                     this.tRow.setAttribute('v-on:click', this.options.recordClick);
                 else
                     this.tRow.setAttribute('v-on:click', 'recordClick(record, index, $event)');
-                // if (this.inlineEditor)
-                //   this.tRow.setAttribute(
-                //     ':class',
-                //     `{
-                //     'form-data-changing': (changing && recordIndex === index),
-                //     'form-data-readonly': !(dataSource.changing && dataSource.recordIndex === index)
-                //     }`
-                //   );
                 let ngTrClass = list.getAttribute('v-tr-class');
                 if (ngTrClass) {
                     if (!ngTrClass.startsWith('{'))
@@ -17581,7 +17349,6 @@ var Katrid;
                     tr.setAttribute('v-for', '(record, index) in groups');
                     tr.setAttribute('v-on:click', 'if (record.$hasChildren) toggleGroup(record); else recordClick(record, record.$index, $event);');
                     tr.setAttribute(':class', `{'group-header': record.$hasChildren}`);
-                    // copy the cols definitions from regular records
                     tr.innerHTML = this.tRow.innerHTML;
                     for (let child of tr.children)
                         child.setAttribute('v-if', '!record.$hasChildren');
@@ -17613,7 +17380,6 @@ var Katrid;
                 table.append(this.tHead);
                 table.append(this.tBody);
                 this.table = table;
-                // this.createContextMenu();
                 return table;
             }
             addField(fld) {
@@ -17624,7 +17390,6 @@ var Katrid;
                 if (field && !field.visible)
                     return;
                 let html = fld.innerHTML;
-                // add anonymous column
                 if (field?.visible || !field)
                     this.columns.push(field);
                 if (!fieldName || html) {
@@ -17648,7 +17413,6 @@ var Katrid;
                 }
             }
             compile() {
-                // compile a function to render line by line
             }
         }
         Forms.ListRenderer = ListRenderer;
@@ -17661,6 +17425,7 @@ var Katrid;
                 this.rowSelector = true;
                 this.allowGrouping = true;
             }
+            static { this.viewType = 'list'; }
             static createViewModeButton(container) {
                 let btn = document.createElement('button');
                 btn.type = 'button';
@@ -17670,10 +17435,6 @@ var Katrid;
                 container.append(btn);
             }
             static async createSearchDialog(config) {
-                // load view info
-                // let viewInfo = config.viewInfo;
-                // if (!viewInfo)
-                // load list and search view info from server
                 let model = config.model;
                 console.debug(model);
                 if (typeof model === 'string')
@@ -17729,10 +17490,6 @@ var Katrid;
                 btn.setAttribute('v-on:click', 'allSelectionFilter = true');
                 parent.appendChild(div);
             }
-            /**
-             * Show a selection/search dialog
-             * @param options
-             */
             showDialog(options) {
                 if (!options)
                     options = {};
@@ -17762,8 +17519,6 @@ var Katrid;
                         this._modal = null;
                     });
                     this._modal.show();
-                    // if (options?.edit)
-                    //   this.vm.dataSource.edit();
                 });
                 return this.dialogPromise;
             }
@@ -17773,7 +17528,6 @@ var Katrid;
                 tr.setAttribute('data-form-id', (++this._formCounter).toString());
                 if (this.rowSelector)
                     tr.append(document.createElement('th'));
-                // TODO: replace by column instance
                 for (let f of Object.values(this.fields)) {
                     if (!f.visible)
                         continue;
@@ -17858,7 +17612,6 @@ var Katrid;
             edit(index) {
                 this.readonly = false;
                 this.element.removeAttribute('readonly');
-                // let rec = this.vm.records[index];
                 let table = this.element.querySelector('table');
                 let tbody = table.tBodies[0];
                 let tr = this.createInlineEditor();
@@ -17871,8 +17624,6 @@ var Katrid;
                     if (oldRow)
                         tbody.removeChild(oldRow);
                 });
-                // setTimeout(() => {
-                // });
                 return tr;
             }
             insert() {
@@ -17897,7 +17648,6 @@ var Katrid;
                 for (let fid of ((formId && [formId]) || Array.from(Object.keys(this.forms)))) {
                     let form = this._removeForm(fid);
                     if (form.index > -1) {
-                        // this.vm.records[form.index] = form.record;
                         form.record.$flush();
                     }
                     else
@@ -17909,7 +17659,6 @@ var Katrid;
                     let form = this._removeForm(fid);
                     if (form.record.$state === Katrid.Data.RecordState.created)
                         this.vm.records.splice(this.vm.records.indexOf(form.record), 1);
-                    // form.record.$discard();
                 }
             }
             renderTemplate(template) {
@@ -17927,17 +17676,12 @@ var Katrid;
                 this.vm.records = this.vm.groups;
             }
         }
-        TableView.viewType = 'list';
         Forms.TableView = TableView;
         function dataTableContextMenu(evt) {
             evt.stopPropagation();
             evt.preventDefault();
-            // create context menu
             let menu = new Forms.ContextMenu();
             menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => copyToClipboard(evt.target.closest('table')));
-            // menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => this.filterByFieldContent(td, rec));
-            // menu.add('<i class="fa fa-fw fa-trash"></i> Excluir', () => this.deleteRow());
-            // menu.add('Arquivar', this.copyClick);
             menu.show(evt.pageX, evt.pageY);
         }
         Forms.dataTableContextMenu = dataTableContextMenu;
@@ -18001,12 +17745,10 @@ var Katrid;
         return res;
     }
     function expandFormats(fmts) {
-        // convert server formats do client
         fmts.shortDateFormat = convertFormat(fmts.SHORT_DATE_FORMAT);
         fmts.shortDateTimeFormat = convertFormat(fmts.SHORT_DATETIME_FORMAT);
         return fmts;
     }
-    // Internationalization
     Katrid.i18n = {
         languageCode: 'en-us',
         formats: {
@@ -18103,7 +17845,6 @@ var katrid;
 (function (katrid) {
     katrid.i18n = Katrid.i18n;
 })(katrid || (katrid = {}));
-/// <reference path="../../../utils/i18n.ts"/>
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -18122,14 +17863,9 @@ var Katrid;
                         this.filterGroups = [];
                         this.groups = [];
                         this._groupLength = this.groupLength = 0;
-                        // groups must have a unique facet
                         this.facetGrouping = new Search.FacetGroup();
                         this.query = new Search.SearchQuery(this);
                         this.menu = container.querySelector('.search-dropdown-menu.search-view-menu');
-                        // new CustomFilterHelper(this, this.querySelector('.search-filter-button'));
-                        // new SaveFilterHelper(this, this.querySelector('.search-filter-favorites'));
-                        // new GroupFilterHelper(this, this.querySelector('.search-groupby-button'));
-                        // let menu = this.createMenu(scope, element.find('.search-dropdown-menu.search-view-menu'), element);
                         this.input = container.querySelector('.search-view-input');
                         let vm = searchView.vm;
                         vm.filterGroups = this.filterGroups;
@@ -18229,14 +17965,11 @@ var Katrid;
                         if (!this._availableItems) {
                             this._availableItems = [].concat(this.searchFields);
                         }
-                        // close expanded items
                         for (let obj of this._availableItems)
                             if (obj.expanded) {
                                 obj.expanded = false;
                             }
                         this.vm.availableItems = this._availableItems;
-                        // console.log(this.menu, this.vm.availableItems);
-                        // document.body.append(this.menu);
                         this.menu.classList.add('show');
                         this.first();
                     }
@@ -18293,15 +18026,10 @@ var Katrid;
                         });
                     }
                     getByName(name) {
-                        // try to find inside a group of filters
                         for (let item of this.filterGroups)
                             for (let subitem of item)
                                 if (subitem.name === name)
                                     return subitem;
-                        // for (let item of this.items)
-                        //   if (item.name === name)
-                        //     return item;
-                        //
                         for (let group of this.groups)
                             for (let item of group.items)
                                 if (item.name === name)
@@ -18320,8 +18048,6 @@ var Katrid;
                         }
                         else {
                         }
-                        // apply changes to window action
-                        // this.action.setSearchParams(this.getParams());
                         this.vm.update();
                     }
                     groupBy() {
@@ -18525,7 +18251,6 @@ var Katrid;
                         else {
                             for (let item of this.items)
                                 this.removeValue(item);
-                            // this.facet.values = [];
                         }
                         this.view.update();
                     }
@@ -18647,7 +18372,6 @@ var Katrid;
                         this.view.model.service.getFieldChoices({ field: this.name, term: this.view.vm.searchText })
                             .then((res) => {
                             this.children = res.items;
-                            // append returned items onto searchView.$items menu
                             let index = this.view.controller.availableItems.indexOf(this);
                             if (index > -1) {
                                 for (let obj of this.children) {
@@ -18676,7 +18400,6 @@ var Katrid;
                             return value.value;
                         }
                         else if (name.includes('__')) {
-                            // field self includes a  lookup
                             r[name] = value;
                         }
                         else {
@@ -18692,7 +18415,6 @@ var Katrid;
                     async select() {
                         this._value = null;
                         if (this.options?.allowSelect !== false) {
-                            // prepare value
                             if (this.field) {
                                 if (this.field instanceof Katrid.Data.DateTimeField)
                                     this.lookup = '__date';
@@ -18707,10 +18429,8 @@ var Katrid;
                                 }
                                 else
                                     fmt = this.field.format(this._value);
-                                // direct search
                                 if (fmt === this._value)
                                     this.facet.addValue(this.value);
-                                // add formatted value
                                 else
                                     this.facet.addValue([this._value, fmt]);
                             }
@@ -18737,7 +18457,6 @@ var Katrid;
                     static fromField(view, el) {
                         let field = view.fields[el.getAttribute('name')];
                         if (!field && (el.tagName === 'STRINGFIELD')) {
-                            // custom field
                             const name = el.getAttribute('name');
                             field = new Katrid.Data.StringField({ name, caption: el.getAttribute('caption') });
                         }
@@ -18755,7 +18474,6 @@ var Katrid;
         })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="index.ts"/>
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -19138,7 +18856,6 @@ var Katrid;
                     static fromGroup(opts) {
                         let view = opts.view;
                         let el = opts.el;
-                        // get default facet
                         let facet = opts.facet || view.facetGrouping;
                         let group = new SearchGroups(view, facet);
                         group.push(SearchGroup.fromItem(view, el, group));
@@ -19272,7 +18989,6 @@ var Katrid;
                     const cfg = {
                         allowClear: true,
                         query(query) {
-                            // make params
                             let data = {
                                 args: [query.term],
                                 kwargs: {
@@ -19385,7 +19101,6 @@ var Katrid;
                     return Vue.compile(templ)(this);
                 },
                 mounted() {
-                    // listen by master record changes
                     let timeout;
                     this.$parentRecordChanged = async (rec) => {
                         this.attachments = [];
@@ -19508,7 +19223,6 @@ var Katrid;
         UI.InputMask = InputMask;
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="../../ui/mask.ts"/>
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -19523,8 +19237,6 @@ var Katrid;
       <label class="input-group-text btn-calendar" type="button"><i class="fa fa-calendar fa-sm"></i></label></div>`,
             mounted() {
                 let vm = this;
-                // initializes the input mask
-                // TODO localize the date format
                 let mask = Katrid.i18n.gettext('9999-99-99');
                 let todayChar = Katrid.i18n.gettext('Today')[0].toLowerCase();
                 let format = vm.$attrs['date-picker'] || 'L';
@@ -19560,19 +19272,16 @@ var Katrid;
                 });
                 input.addEventListener('keydown', event => {
                     if (event.code === 'ArrowUp') {
-                        // tomorrow
                         let v = moment(this.modelValue || new Date()).add(1, 'days').format($format);
                         input.value = v;
                         vm.$emit('update:modelValue', applyValue(v));
                     }
                     else if (event.code === 'ArrowDown') {
-                        // yesterday
                         let v = moment(this.modelValue || new Date()).add(-1, 'days').format($format);
                         input.value = v;
                         vm.$emit('update:modelValue', applyValue(v));
                     }
                     else if (event.key.toLowerCase() === todayChar) {
-                        // today
                         let v = moment(new Date()).format($format);
                         input.value = v;
                         vm.$emit('update:modelValue', applyValue(v));
@@ -19580,7 +19289,6 @@ var Katrid;
                 });
                 input.addEventListener('change', () => {
                     if (input.value) {
-                        // date autocomplete
                         if (input.value.length < mask.length) {
                             let v = katrid.utils.autoCompleteDate(input.value, $format);
                             if (v)
@@ -19593,7 +19301,6 @@ var Katrid;
                 });
                 this.$format = $format;
                 let applyValue = (value) => {
-                    // cache the last date and return it in utc format
                     value = input.value;
                     if (format === 'L')
                         this.$lastValue = moment(value, $format).format('YYYY-MM-DD');
@@ -19608,10 +19315,8 @@ var Katrid;
                     let val = this.modelValue;
                     if (val)
                         val = moment(val).toDate();
-                    // initializes the popup calendar component
                     let calendar = new Katrid.ui.Calendar(this.$el, {
                         change: newDate => {
-                            // change callback
                             let v = moment(newDate).format($format);
                             input.value = v;
                             vm.$emit('update:modelValue', applyValue(v));
@@ -19620,7 +19325,6 @@ var Katrid;
                     });
                     calendar.show();
                 });
-                // initial value
                 if (this.modelValue)
                     input.value = moment(this.modelValue).format(this.$format);
             },
@@ -19686,12 +19390,10 @@ var katrid;
                 let month = today.getMonth();
                 let year = today.getFullYear();
                 if (match.length > 1) {
-                    // auto complete month
                     month = Number.parseInt(match[1][0]) - 1;
                 }
                 if (match.length > 2) {
                     let y = match[2][0];
-                    // auto complete year
                     if (y.length === 2)
                         y = '20' + y;
                     year = Number.parseInt(y);
@@ -19721,10 +19423,6 @@ var Katrid;
         UI.toggleFullScreen = toggleFullScreen;
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
-// Katrid.UI = katrid.ui;
-// shortcut
-// export let kui = Katrid.UI;
-/// <reference path="../../ui/index.ts"/>
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -19740,7 +19438,6 @@ var Katrid;
                 this._changed = false;
                 this.element.addEventListener('change', () => {
                     this._invalidate();
-                    // this._format();
                 });
                 this.element.addEventListener('blur', () => this._format());
                 this._create();
@@ -19834,13 +19531,10 @@ var Katrid;
         Forms.InputDecimal = InputDecimal;
         Katrid.component('input-decimal', {
             props: ['modelValue'],
-            //template: `<!--<input class="form-control">-->`,
             template: `<input type="text" class="form-control">`,
             mounted() {
                 let vm = this;
                 let decimal = vm.$attrs['input-decimal'];
-                // this.$el['$decimalSeparator'] = Katrid.i18n.formats.THOUSAND_SEPARATOR || '.';
-                // this.$el['$thousandSeparator'] = Katrid.i18n.formats.THOUSAND_SEPARATOR || ',';
                 this.$inputDecimal = new InputDecimal(this.$el);
                 this.$el.addEventListener('input', () => {
                     if (!this.$el._formula) {
@@ -19880,7 +19574,6 @@ var Katrid;
     (function (Forms) {
         var Widgets;
         (function (Widgets) {
-            /** Represents a data field renderer */
             class Widget {
                 constructor(field, fieldEl) {
                     this.field = field;
@@ -19898,7 +19591,6 @@ var Katrid;
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="index.ts"/>
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -19978,7 +19670,6 @@ var Katrid;
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="index.ts"/>
 var Katrid;
 (function (Katrid) {
     var UI;
@@ -20038,7 +19729,6 @@ var Katrid;
                 if (items.length) {
                     for (let item of items)
                         this.addItem(item);
-                    // pre select the 1st one
                     this.move(1);
                 }
             }
@@ -20049,7 +19739,6 @@ var Katrid;
                 this._elements = [];
             }
             init() {
-                // initial search
                 this.cancelSearch();
                 this._pending = this.search();
             }
@@ -20183,7 +19872,6 @@ var Katrid;
                     this._create(this.el);
             }
             _create(el) {
-                // to be implemented here
             }
         }
         UI.BaseInputWidget = BaseInputWidget;
@@ -20205,9 +19893,7 @@ var Katrid;
                 let name = el.getAttribute('name');
                 let model = el.getAttribute('data-model');
                 if (el.hasAttribute('allow-open')) {
-                    // show only when filled
                     append = `<span class="fa fa-fw fa-folder-open autocomplete-open" title="${Katrid.i18n.gettext('Open this object')}" v-on:click="openObject('${model}', record.${name}.id)"></span>`;
-                    // allow open object
                     this.allowOpen = true;
                 }
                 el.classList.add('form-control');
@@ -20300,7 +19986,6 @@ var Katrid;
             }
             onInput() {
                 this.term = this.input.value;
-                // clear selection
                 if (this.$selectedItem) {
                     this.$selectedItem = null;
                     this._setValue(null);
@@ -20318,15 +20003,6 @@ var Katrid;
                 this.term = '';
             }
             createMenu() {
-                // let source = () => {
-                //   return new Promise((resolve, reject) => {
-                //     let res: DropdownItem[] = [];
-                //     for (let i = 1; i <= 10; i++)
-                //       res.push({id: i, text: 'Item ' + i.toString()});
-                //     res.push({id: 11, text: 'Create New...', template: '<a class="dropdown-item">Create New...</a>'})
-                //     resolve(res);
-                //   });
-                // }
                 this.menu = new DropdownMenu(this, { source: this._source, target: this.el });
             }
             invalidateValue() {
@@ -20402,9 +20078,7 @@ var Katrid;
             setValue(item, el) {
                 let event = this._setValue(item, el);
                 if (!event.defaultPrevented) {
-                    // apply the selected text
                     this.selectedItem = item;
-                    // hide the dropdown menu
                     if (this.menu)
                         this.hideMenu();
                 }
@@ -20437,7 +20111,7 @@ var Katrid;
         class InputAutoComplete extends BaseAutoComplete {
             _create(el) {
                 super._create(el);
-                let model = el.getAttribute('data-model');
+                const model = el.getAttribute('data-model');
                 if (model) {
                     let svc = new Katrid.Services.ModelService(model);
                     this.setSource(async (query) => {
@@ -20473,7 +20147,6 @@ var Katrid;
         });
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="../../ui/autocomplete.ts"/>
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -20487,14 +20160,9 @@ var Katrid;
                     this.allowCreateNew = true;
                     this.filter = null;
                 }
-                /**
-                 * Bind the element with a Katrid.Data.Field, filter and the "source" of items
-                 * @param options
-                 */
                 bind(options) {
                     let field = options.field;
                     let model = options.model;
-                    // super.create();
                     this.allowCreateNew = this.el.getAttribute('allow-create') !== 'false';
                     this.allowAdvancedSearch = this.el.getAttribute('allow-search') !== 'false';
                     let name = this.el.getAttribute('name');
@@ -20505,7 +20173,6 @@ var Katrid;
                         this.setSource(field.choices);
                     else {
                         this.setSource(async (query) => {
-                            // evaluate domain attribute
                             let domain = this.filter || this.field.filter;
                             if (domain && (typeof domain === 'string'))
                                 domain = JSON.parse(domain);
@@ -20574,7 +20241,6 @@ var Katrid;
                                 return items;
                             }
                             else {
-                                // todo get field choices
                             }
                         });
                     }
@@ -20702,32 +20368,6 @@ var Katrid;
             fieldSection.append(header);
             fieldSection.append(table);
             return fieldSection;
-            /*
-            grid.append(toolbar);
-            let viewInfo = field.views[field.viewMode];
-            // TODO add card view
-            if (field.viewMode === 'list') {
-              let renderer = new ListRenderer(viewInfo, {rowSelector: true, allowGrouping: false});
-              grid.setAttribute('field-name', field.name);
-              let table: HTMLElement;
-              if (field['$$listTemplateCache'] === undefined) {
-                table = renderer.render(viewInfo.template, 'records');
-                field['$$listTemplate'] = table;
-              } else
-                table = field['$$listTemplateCache'];
-              let div = document.createElement('div');
-              div.classList.add('table-responsive');
-              div.append(table);
-              grid.append(div);
-              grid.$columns = renderer.columns;
-            } else if (field.viewMode == 'card') {
-              let renderer = new Katrid.Forms.Views.CardRenderer(viewInfo.fields);
-              grid.setAttribute('field-name', field.name);
-              let table = renderer.render(viewInfo.template);
-              grid.append(table);
-            }
-            return grid;
-             */
         }
         class SubWindowAction {
             constructor(config) {
@@ -20740,7 +20380,6 @@ var Katrid;
             form.datasource.parent = config.master;
             form.datasource.field = config.field;
             let relField = form.fields[config.field.info.field];
-            // hide related field
             if (relField)
                 relField.visible = false;
             await form.showDialog(config.options);
@@ -20759,7 +20398,6 @@ var Katrid;
             },
             render() {
                 if (!this.$compiledTemplate) {
-                    // save html structure to cache
                     let el = beforeRender(this.$field, this.$view.renderTemplate(this.$view.domTemplate()));
                     this.$columns = this.$view.$columns;
                     this.$compiledTemplate = Vue.compile(el);
@@ -20767,7 +20405,6 @@ var Katrid;
                 return this.$compiledTemplate(this);
             },
             created() {
-                // register as nested data
                 if (this.$parent.$view instanceof Katrid.Forms.FormView)
                     this.$parent.$view.nestedViews.push(this);
             },
@@ -20785,7 +20422,7 @@ var Katrid;
                     dataOffset: 0,
                     dataOffsetLimit: 0,
                     selectionLength: 0,
-                    $editing: false, // avoid to click twice
+                    $editing: false,
                     loading: false,
                     readonly: false,
                 };
@@ -20800,7 +20437,6 @@ var Katrid;
                             if (!this.$parent.changing)
                                 return;
                             this.$view.save();
-                            // the table allows direct input data
                             let tr = this.$view.edit(index);
                             let el = event.target;
                             let name = el.getAttribute('field-name');
@@ -20814,11 +20450,9 @@ var Katrid;
                                 });
                         }
                         else {
-                            // the table must show a dialog
                             let buttons = (parentChanging && [
                                 { text: Katrid.i18n.gettext('Save'), click: 'saveAndClose()' },
                                 { text: Katrid.i18n.gettext('Discard'), click: 'discardAndClose()' },
-                                // {text: Katrid.i18n.gettext('Delete'), click: 'deleteAndClose()'},
                             ]) || ['close'];
                             let form = await createDialog({
                                 index,
@@ -20830,17 +20464,13 @@ var Katrid;
                                     backdrop: 'static',
                                     buttons,
                                 },
-                                // master: this.$data.dataSource.masterSource,
                             });
-                            // form.datasource.records = this.records;
-                            // load from server if not loaded
                             if ((!record.$loaded) && (record.$state === Katrid.Data.RecordState.unmodified)) {
                                 let newRec = await form.datasource.get({ id: record.id });
                             }
                             else {
                                 form.datasource.record = this.records[index];
                             }
-                            // form.datasource.record = record;
                             if (parentChanging) {
                                 form.edit();
                                 form.focus();
@@ -20862,7 +20492,6 @@ var Katrid;
                 rowKeyDown(event) {
                     let control = event.target;
                     if ((event.key === 'Escape') && !event.shiftKey && !event.altKey) {
-                        // cancel edition
                         let tr = control.closest('tr');
                         let formId = tr.getAttribute('data-form-id');
                         this.$discard();
@@ -20928,7 +20557,6 @@ var Katrid;
                                 },
                             });
                             form.insert();
-                            // add created record to list
                             if (!this.records)
                                 this.records = [];
                             if (!this.$parent.record[this.$field.name])
@@ -20940,14 +20568,6 @@ var Katrid;
                                 this.$onChange();
                             }
                             return res;
-                            // form.vm.parent = this.$parent;
-                            // form.dataSource.insert();
-                            // let res = await form.showDialog({backdrop: 'static'});
-                            // if (res) {
-                            //   this.records.push(res);
-                            //   this.record = res;
-                            //   this.$emit('change', this.record);
-                            // }
                         }
                     }
                     finally {
@@ -20971,7 +20591,6 @@ var Katrid;
                     Katrid.Forms.selectionDelete.call(this, ...arguments);
                 },
                 _invalidateEditor() {
-                    // clear form inline editor
                     this.$view.discard();
                 }
             },
@@ -20980,7 +20599,6 @@ var Katrid;
                 this.$view.vm = this;
                 let modelValue = this.modelValue;
                 if (modelValue) {
-                    // modelValue = this.$view.model.fromArray(modelValue);
                     this.records = modelValue;
                 }
             },
@@ -20994,9 +20612,6 @@ var Katrid;
             watch: {
                 modelValue(value) {
                     if (value) {
-                        // value = this.$view.model.fromArray(value);
-                        // console.log('set o2m value', value)
-                        // this.$oldValue = [].concat(value);
                     }
                     else
                         value = [];
@@ -21028,7 +20643,6 @@ var Katrid;
                 this.editing = false;
             }
             newRecord() {
-                // create a new record
                 if (this.editing)
                     return;
                 try {
@@ -21036,7 +20650,6 @@ var Katrid;
                         this.view.insert();
                     }
                     else if (this.field.editor === 'dialog') {
-                        // show form as dialog
                         console.debug('form template', this.field.getView('form'));
                     }
                 }
@@ -21093,31 +20706,6 @@ var Katrid;
     (function (Forms) {
         var Widgets;
         (function (Widgets) {
-            // export class TableField extends FieldWidget {
-            //   connectedCallback() {
-            //     super.connectedCallback();
-            //     this.querySelector('table').classList.add('table');
-            //   }
-            //
-            //   create() {
-            //     super.create();
-            //     this.actionView.action.$element[0].addEventListener('recordLoaded', event => this.recordLoaded(event));
-            //   }
-            //
-            //   async recordLoaded(event: any) {
-            //     let rec = event.detail.record;
-            //     let data: any = {};
-            //     data[this.field.info.field || 'id'] = rec.id;
-            //     let res: any = await this.actionView.action.model.getFieldChoices({field: this.fieldName, filter: data})
-            //     this.actionView.action.scope.record[this.fieldName] = res.data;
-            //   }
-            //
-            //   get scope() {
-            //     return this.actionView.action.scope;
-            //   }
-            // }
-            //
-            // Katrid.define('table-field', TableField);
             Katrid.component('table-field', {
                 template: '<div class="table-responsive"><slot></slot></div>',
                 mounted() {
@@ -21164,11 +20752,9 @@ var Katrid;
                 tabset.classList.add('nav', 'nav-tabs');
                 tabset.setAttribute('role', 'tablist');
                 nav.append(tabset);
-                // let's create the tab-content
                 let content = document.createElement('div');
                 content.classList.add('tab-content');
                 Array.from(el.children).forEach((child, index) => {
-                    // let's create the nav-item
                     let a = document.createElement('a');
                     a.setAttribute('class', child.getAttribute('class'));
                     a.classList.add('nav-item', 'nav-link');
@@ -21188,7 +20774,6 @@ var Katrid;
                         a.setAttribute('v-hide', child.getAttribute('v-hide'));
                     a.setAttribute('onclick', `$(this).tab('show');let tabset=$(this).closest('.tabset');tabset.find('[data-tab]').removeClass('active');tabset.find('[data-tab=${index}]').addClass('active');`);
                     tabset.append(a);
-                    // let's create the tab-pane
                     let pane = document.createElement('div');
                     pane.classList.add('tab-pane', 'row');
                     pane.setAttribute('data-tab', index.toString());
@@ -21225,8 +20810,6 @@ var Katrid;
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="../data/datasource.ts" />
-/// <reference path="../components.ts" />
 var katrid;
 (function (katrid) {
     var ui;
@@ -21332,9 +20915,7 @@ var katrid;
                 let id = this.datasource.recordId;
                 this._recordId = id;
                 if (id != null) {
-                    // get comments
                     let svc = new Katrid.Services.ModelService('mail.message');
-                    // let res: any = await this.datasource.model.service.rpc('admin_get_comments', { id });
                     let res = await svc.rpc('get_messages', null, {
                         model_name: this.datasource.model.name, id
                     });
@@ -21391,16 +20972,12 @@ var Katrid;
         class LocalMemoryConnection {
         }
         Services.LocalMemoryConnection = LocalMemoryConnection;
-        /**
-         * Browser fetch adapter
-         */
         class FetchAdapter extends BaseAdapter {
             $fetch(url, config, params) {
                 if (params) {
                     url = new URL(url);
                     Object.entries(params).map((k, v) => url.searchParams.append(k, v));
                 }
-                // send events
                 $(Katrid).trigger('fetch.before');
                 return fetch(url, config)
                     .then(response => {
@@ -21419,16 +20996,11 @@ var Katrid;
 (function (Katrid) {
     var Services;
     (function (Services) {
-        /**
-         * JsonRPC is the default adapter and is based on FetchAdapter
-         */
         class JsonRpcAdapter extends Services.FetchAdapter {
         }
         Services.JsonRpcAdapter = JsonRpcAdapter;
     })(Services = Katrid.Services || (Katrid.Services = {}));
 })(Katrid || (Katrid = {}));
-/// <reference path="services.ts"/>
-/// <reference path="../forms/dialogs.ts" />
 var Katrid;
 (function (Katrid) {
     var Services;
@@ -21495,7 +21067,6 @@ var Katrid;
                     kwargs.context = config.context;
                 return this.post('api_get_field_choices', { args: [config.field, config.term], kwargs }, null, config.config);
             }
-            /** Get a single object from field and natural key */
             getFieldChoice(config) {
                 let kwargs = config.kwargs || {};
                 if (config.filter)
@@ -21505,7 +21076,6 @@ var Katrid;
                 return this.post('api_get_field_choice', { args: [config.field, config.term], kwargs }, null, config.config);
             }
             doViewAction(data) {
-                // deprecated
                 return this.post('admin_do_view_action', { kwargs: data });
             }
             callAdminViewAction(data) {
@@ -21541,14 +21111,12 @@ var Katrid;
                 return this.post('admin_auto_report', { kwargs: {} });
             }
             rpc(meth, args, kwargs) {
-                // execute rpc
                 return new Promise((resolve, reject) => {
                     this.post(meth, { args: args, kwargs: kwargs })
                         .then((res) => {
                         resolve(res);
                     })
                         .catch(res => {
-                        // display alert
                         if (res?.error && (typeof res.error === 'string'))
                             Katrid.Forms.Dialogs.Alerts.error(res.error);
                         else if (res.messages && Katrid.isObject(res.messages)) {
@@ -21566,14 +21134,12 @@ var Katrid;
             }
         }
         Services.ModelService = ModelService;
-        // Represents a server query
         class Query extends ModelService {
             constructor(id) {
                 super('ui.action.report');
                 this.id = id;
             }
             static read(config) {
-                // read data from server
                 let details, id, params, filter;
                 if (Katrid.isObject(config)) {
                     details = config.details;
@@ -21772,7 +21338,6 @@ var katrid;
                     await this.sendKeysToField(dlg, field, v.toString());
                 }
                 await katrid.sleep(100);
-                // save changes
                 dlg.querySelector('.modal-footer .btn').click();
             }
             async editRecordFrom(el, data) {
@@ -21795,7 +21360,6 @@ var katrid;
                     if (field.startsWith('$') || field.startsWith('_'))
                         continue;
                     let el = container.querySelector(`.form-field-section[name="${field}"]`);
-                    // OneToManyField has a different approach
                     if (!el) {
                         console.log('Field not found', field, container);
                         continue;
@@ -21951,7 +21515,6 @@ var Katrid;
                 }
                 this.inputSearch = this.querySelector('#navbar-search');
                 this.autocomplete = new AppGlobalSearch(this.inputSearch, this.app.config.menu);
-                // todo implement help provider
                 const toolTip = new Katrid.ui.Tooltip(this.querySelector('.navbar-search'), { helpText: `<h5>Pesquisa rápida</h5>Cliente: <strong>cli: &lt;nome do cliente&gt;</strong>
 <br>Forncedor: <strong>for: &lt;nome do cliente&gt;</strong>
 <br>Nota Fiscal: <strong>nf: &lt;num da nota&gt;</strong>
@@ -22014,7 +21577,6 @@ var Katrid;
                     ul.classList.add('navbar-nav', 'navbar-menu-group', 'mr-auto');
                     ul.style.display = 'none';
                     ul.setAttribute('data-parent-id', menu.id.toString());
-                    // this.nav.append(ul, this.navMenu);
                     this.navMenu.append(ul);
                     let menuClick = evt => {
                         evt.stopPropagation();
@@ -22097,7 +21659,6 @@ var Katrid;
                         url += '?menu_id=' + this._rootItem.id;
                     item.url = url;
                     el.setAttribute('href', url);
-                    // el.setAttribute('href', '#/app/?menu_id=' + item.id.toString());
                 }
                 return el;
             }
@@ -22107,7 +21668,6 @@ var Katrid;
                     menuItem.innerText = item.name;
                     let li = document.createElement('li');
                     let ul = document.createElement('ul');
-                    // ul.classList.add('dropdown-menu');
                     menuItem.classList.add('dropdown-toggle');
                     li.classList.add('dropdown-submenu');
                     li.append(menuItem);
@@ -22139,8 +21699,6 @@ var Katrid;
             }
             createUserMenu() {
                 let li = this.querySelector('.nav-item.user-menu.dropdown');
-                // li.addEventListener('pointerover', () => li.classList.add('show'));
-                // li.addEventListener('pointerout', () => li.classList.remove('show'));
             }
         }
         UI.AppHeader = AppHeader;
@@ -22167,7 +21725,6 @@ var Katrid;
                             let term = query.term.normalize('NFD').replace(/\p{Diacritic}/gu, "");
                             let re = new RegExp(term, 'i');
                             let aRes = Katrid.Services.Service.$post('/web/menu/search/', { term }).then(res => res.items);
-                            // find by a menu item using javascript (TODO allow custom finder)
                             if (!this._localMenuCache.length)
                                 menu.forEach(item => this._registerMenuItem(item));
                             for (let item of this._localMenuCache)
@@ -22202,7 +21759,6 @@ var Katrid;
             }
             onInput() {
                 this.term = this.input.value;
-                // clear selection
                 if (this.$selectedItem) {
                     this.$selectedItem = null;
                 }
@@ -22219,15 +21775,6 @@ var Katrid;
                 this.term = '';
             }
             createMenu() {
-                // let source = () => {
-                //   return new Promise((resolve, reject) => {
-                //     let res: DropdownItem[] = [];
-                //     for (let i = 1; i <= 10; i++)
-                //       res.push({id: i, text: 'Item ' + i.toString()});
-                //     res.push({id: 11, text: 'Create New...', template: '<a class="dropdown-item">Create New...</a>'})
-                //     resolve(res);
-                //   });
-                // }
                 this.menu = new UI.DropdownMenu(this, { source: this._source, target: this.input.parentElement });
             }
             invalidateValue() {
@@ -22286,13 +21833,8 @@ var Katrid;
                     item = $(el).data('item');
                     if (item?.href)
                         window.location.href = item.href;
-                    // if (item?.type === 'menuitem') {
-                    //   console.log('select item');
-                    //   (document.querySelector(`[data-menu-id="${item.id}"]`) as HTMLAnchorElement).click();
-                    // }
                 }
                 this.hideMenu();
-                // return this.setValue(item);
             }
             setValue(item, el) {
                 let event = new CustomEvent('selectItem', {
@@ -22301,11 +21843,8 @@ var Katrid;
                         dropdownItem: el,
                     }
                 });
-                // this.dispatchEvent(event);
                 if (!event.defaultPrevented) {
-                    // apply the selected text
                     this.selectedItem = item;
-                    // hide the dropdown menu
                     if (this.menu)
                         this.hideMenu();
                 }
@@ -22367,7 +21906,6 @@ var Katrid;
                 calendar.classList.add('month-calendar');
                 let date = new Date(year, month, 1);
                 let dow = date.getDay();
-                // render header
                 let header = document.createElement('div');
                 header.classList.add('month-header');
                 let nav = document.createElement('button');
@@ -22401,18 +21939,13 @@ var Katrid;
                 });
                 header.append(nav);
                 this.element.append(header);
-                // render days of week
                 const daysow = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
                 for (let i = 0; i < 7; i++) {
                     let el = document.createElement('div');
                     el.classList.add('dow');
-                    // let od = new Date();
-                    // od.setDate(date.getDate() - (6 - i));
-                    // el.innerText = moment(od).format('ddd');
                     el.innerText = daysow[i];
                     calendar.append(el);
                 }
-                // render days
                 let dayClick = event => this.dayClick(event);
                 date.setDate(date.getDate() - dow);
                 for (let i = 0; i < 42; i++) {
@@ -22448,7 +21981,6 @@ var Katrid;
             render() {
                 this.element = document.createElement('div');
                 this.element.classList.add('date-calendar');
-                // initial date
                 this._renderMonthCalendar(this._date.getFullYear(), this._date.getMonth());
                 return this.element;
             }
@@ -22544,48 +22076,10 @@ Katrid.filter('sprintf', function (fmt, ...args) {
 });
 var Katrid;
 (function (Katrid) {
-    var ui;
-    (function (ui) {
-        class DataControl {
-            constructor(config) {
-                this.datasource = config.datasource;
-            }
-            create() {
-            }
-            dataChangedCallback() {
-            }
-        }
-        ui.DataControl = DataControl;
-        class DataGridColumn {
-            constructor(info) {
-                this.name = info.name;
-                this.type = info.type;
-                this.label = info.label;
-            }
-        }
-        ui.DataGridColumn = DataGridColumn;
-        class DataGrid extends DataControl {
-            create() {
-                this.el = document.createElement('div');
-                const table = document.createElement('table');
-                table.classList.add('table', 'table-hover');
-                const tr = document.createElement('tr');
-                table.createTBody().append(tr);
-            }
-            dataChangedCallback() {
-                super.dataChangedCallback();
-            }
-        }
-        ui.DataGrid = DataGrid;
-    })(ui = Katrid.ui || (Katrid.ui = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
     var UI;
     (function (UI) {
         class HelpProvider {
             getTooltipHelp(tooltip) {
-                // get the help text for a given control
                 return;
             }
         }
@@ -22900,6 +22394,12 @@ var katrid;
                     this.el.classList.remove('vertical');
                 }
             }
+            showFloating(x, y) {
+                this.el.classList.add('floating');
+                this.el.style.left = x + 'px';
+                this.el.style.top = y + 'px';
+                document.body.appendChild(this.el);
+            }
         }
         ui.Toolbar = Toolbar;
         class ToolButtonGroup {
@@ -22995,6 +22495,13 @@ var katrid;
 (function (katrid) {
     var ui;
     (function (ui) {
+        ui.Tooltip = Katrid.ui.Tooltip;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
         const DEFAULT_EXPAND_CLASS = 'fa-chevron-right';
         const DEFAULT_COLLAPSE_CLASS = 'fa-chevron-down';
         class Component {
@@ -23040,14 +22547,12 @@ var katrid;
                             this.collapse();
                         }
                     });
-                    // children elements
                     this._ul = document.createElement('ul');
                     a.className = 'tree-item';
                     el.appendChild(a);
                     el.appendChild(this._ul);
                     this.el = el;
                     this._a = a;
-                    // expand toggle element
                     this._canExpand = true;
                     this._exp = document.createElement('span');
                     this._exp.addEventListener('dblclick', (evt) => evt.stopPropagation());
@@ -23065,7 +22570,6 @@ var katrid;
                     }
                     this._exp.classList.add('fa', 'fa-fw');
                     a.appendChild(this._exp);
-                    // icon element
                     if (typeof item.icon === 'string') {
                         this._iconElement = document.createElement('span');
                         this._iconElement.className = 'icon ' + item.icon;
@@ -23108,8 +22612,6 @@ var katrid;
                     evt.stopPropagation();
                     this.checked = cb.checked;
                 });
-                // label.appendChild(cb);
-                // label.appendChild(document.createElement('i'));
                 this.checkbox = cb;
                 this._a.insertBefore(cb, this._exp.nextElementSibling);
             }
@@ -23273,12 +22775,10 @@ var katrid;
                 return this._parent;
             }
             set parent(value) {
-                // remove node from its parent
                 if (this._parent) {
                     this.remove();
                 }
                 this._parent = value;
-                // add node onto new parent
                 if (value) {
                     value._addNode(this);
                 }
@@ -23398,14 +22898,11 @@ var katrid;
                 return this._selection;
             }
             set selection(value) {
-                // unselect old selection
                 for (let node of this._selection)
                     node.selected = false;
                 this._selection = value;
-                // set new nodes selection to selected
                 for (let node of value)
                     node.selected = true;
-                // dispatch selection change event
                 let evt = new CustomEvent('selectionchange', { detail: { selection: value } });
                 this.el.dispatchEvent(evt);
             }
@@ -23487,7 +22984,6 @@ var katrid;
                 this._striped = value;
                 if (value) {
                     this.el.classList.add('striped');
-                    // TODO custom node height
                     this._ul.style.backgroundSize = 'auto 50px';
                 }
                 else {
@@ -23508,7 +23004,6 @@ var katrid;
 (function (katrid) {
     var ui;
     (function (ui) {
-        /** Show a search dialog for a given model */
         async function search(config) {
             if (config.multiple == null)
                 config.multiple = true;
@@ -23628,7 +23123,6 @@ var katrid;
                 div.innerHTML = config.content;
             }
             dialog.appendChild(div);
-            // footer
             const footer = document.createElement('footer');
             footer.className = 'dialog-footer';
             if (config.buttons) {
@@ -23658,10 +23152,8 @@ var katrid;
       </div>
     </div>
   </div>`;
-                //$(modal).modal();
             }
             static showValidationError(title, msg, model, errors) {
-                // format errors to html
                 let errorHtml = '';
                 for (const [k, error] of Object.entries(errors)) {
                     errorHtml +=
@@ -23681,7 +23173,6 @@ var katrid;
             let modal = document.createElement('div');
             modal.classList.add('modal');
             modal.tabIndex = -1;
-            // modal.setAttribute('role', 'dialog');
             let buttonsTempl = `
         <button type="button" name="btn-ok" class="btn btn-primary">OK</button>
         <button type="button" name="btn-cancel" class="btn btn-secondary" data-bs-dismiss="modal">${katrid.i18n.gettext('Cancel')}</button>
@@ -23839,7 +23330,7 @@ var katrid;
             if (typeof config === 'string') {
                 msg = katrid.i18n.gettext('Please wait...');
             }
-            waitDialog ?? (waitDialog = ui.createDialogElement({ message: msg }));
+            waitDialog ??= ui.createDialogElement({ message: msg });
             waitDialog.showModal();
         }
         ui.showWaitDialog = showWaitDialog;
@@ -23849,15 +23340,575 @@ var katrid;
         ui.closeWaitDialog = closeWaitDialog;
         class WaitDialog {
             static show(msg) {
-                // $('#loading-msg').show();
                 showWaitDialog(msg);
             }
             static hide() {
-                // $('#loading-msg').hide();
                 closeWaitDialog();
             }
         }
         ui.WaitDialog = WaitDialog;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class TableCell {
+            constructor() {
+                this.touched = false;
+            }
+        }
+        ui.TableCell = TableCell;
+        class TableColumn {
+        }
+        ui.TableColumn = TableColumn;
+        class TableColumns extends katrid.OwnedCollection {
+            notify(action, item) {
+            }
+        }
+        ui.TableColumns = TableColumns;
+        class SelectionBox {
+            constructor(container) {
+                this.create();
+                if (container) {
+                    container.appendChild(this.el);
+                }
+            }
+            create() {
+                this.el = document.createElement("div");
+                this.el.className = "cells-selection-box";
+            }
+            setBounds(x, y, width, height) {
+                this.el.style.left = x + "px";
+                this.el.style.top = y + "px";
+                this.el.style.width = width + "px";
+                this.el.style.height = height + "px";
+            }
+            destroy() {
+                this.el.remove();
+            }
+        }
+        class CellsRange {
+            constructor(startRow, startCol, endRow, endCol) {
+                this.startRow = startRow;
+                this.startCol = startCol;
+                this.endRow = endRow;
+                this.endCol = endCol;
+            }
+            static fromCells(cells) {
+                let startRow = null;
+                let startCol = null;
+                let endRow = null;
+                let endCol = null;
+                for (const cell of cells) {
+                    if (startRow === null || cell.row < startRow) {
+                        startRow = cell.row;
+                    }
+                    if (endRow === null || cell.row > endRow) {
+                        endRow = cell.row;
+                    }
+                    if (startCol === null || cell.col < startCol) {
+                        startCol = cell.col;
+                    }
+                    if (endCol === null || cell.col > endCol) {
+                        endCol = cell.col;
+                    }
+                }
+                const range = new CellsRange(startRow, startCol, endRow, endCol);
+                range.cells = cells;
+                return range;
+            }
+            getRect() {
+                let x = null;
+                let y = null;
+                let width = null;
+                let height = null;
+                for (const cell of this.cells) {
+                    if (cell.el) {
+                        const rect = cell.el.getBoundingClientRect();
+                        if (x === null || rect.left < x) {
+                            x = rect.left;
+                        }
+                        if (y === null || rect.top < y) {
+                            y = rect.top;
+                        }
+                        if (width === null || rect.right > width) {
+                            width = rect.right;
+                        }
+                        if (height === null || rect.bottom > height) {
+                            height = rect.bottom;
+                        }
+                    }
+                }
+                return new DOMRect(x, y, width - x, height - y);
+            }
+            cellInRange(row, col) {
+                return row >= this.startRow && row <= this.endRow && col >= this.startCol && col <= this.endCol;
+            }
+            rowInRange(row) {
+                return row >= this.startRow && row <= this.endRow;
+            }
+            equals(range) {
+                return this.startRow === range.startRow && this.startCol === range.startCol && this.endRow === range.endRow && this.endCol === range.endCol;
+            }
+        }
+        ui.CellsRange = CellsRange;
+        class BaseGrid {
+            constructor() {
+                this.rowHeight = 20;
+                this.colWidth = 64;
+                this.minRows = 0;
+                this.maxRows = -1;
+                this.loadedRows = 0;
+                this.incrementalLoad = true;
+                this._striped = false;
+                this._visibleRows = [];
+                this._cells = [];
+                this.columns = new TableColumns(this);
+                this._rowTag = "div";
+                this._cellTag = "div";
+            }
+            dump() {
+            }
+            _create() {
+                this.el = document.createElement("div");
+                this.el.className = 'table-grid';
+                this.table = document.createElement("div");
+                this.table.className = "grid";
+            }
+            create() {
+                this._create();
+                this.createSizeLayer();
+                this.createEvents();
+                this.createHeader();
+                this.calcSize();
+                this.createRowHeader();
+                if (this.incrementalLoad) {
+                    this.el.addEventListener('scroll', (event) => {
+                        this._scroll();
+                    });
+                }
+            }
+            appendTo(container) {
+                this.create();
+                container.appendChild(this.el);
+                setTimeout(() => this.render());
+            }
+            render() {
+                if (this.dataRows) {
+                    this._scroll();
+                }
+                else {
+                    this.renderEmptyData();
+                }
+            }
+            renderEmptyData() {
+            }
+            createEvents() {
+                this.el.tabIndex = 0;
+                this.el.addEventListener('keydown', (event) => this.keyDown(event));
+            }
+            keyDown(event) {
+                if (event.shiftKey) {
+                    switch (event.key) {
+                        case 'ArrowUp':
+                            this.moveBy(0, -1, true);
+                            event.stopPropagation();
+                            event.preventDefault();
+                            break;
+                        case 'ArrowDown':
+                            this.moveBy(0, 1, true);
+                            event.stopPropagation();
+                            event.preventDefault();
+                            break;
+                        case 'ArrowLeft':
+                            this.moveBy(-1, 0, true);
+                            event.stopPropagation();
+                            event.preventDefault();
+                            break;
+                        case 'ArrowRight':
+                            this.moveBy(1, 0, true);
+                            event.stopPropagation();
+                            event.preventDefault();
+                            break;
+                    }
+                }
+                else {
+                    switch (event.key) {
+                        case 'ArrowUp':
+                            this.moveBy(0, -1);
+                            event.stopPropagation();
+                            event.preventDefault();
+                            break;
+                        case 'ArrowDown':
+                            this.moveBy(0, 1);
+                            event.stopPropagation();
+                            event.preventDefault();
+                            break;
+                        case 'ArrowLeft':
+                            this.moveBy(-1, 0);
+                            event.stopPropagation();
+                            event.preventDefault();
+                            break;
+                        case 'ArrowRight':
+                            this.moveBy(1, 0);
+                            event.stopPropagation();
+                            event.preventDefault();
+                            break;
+                    }
+                }
+            }
+            moveBy(dx, dy, shift = false) {
+                let cell = shift ? this.selectedCells?.at(-1) || this.selectedCell : this.selectedCell;
+                cell = this.getCell(cell.row + dy, cell.col + dx);
+                if (cell) {
+                    if (shift) {
+                        this.addToSelection(cell);
+                    }
+                    else {
+                        this.selectCell(cell);
+                    }
+                }
+            }
+            goto(row, col) {
+                const cell = this.getCell(row, col);
+                if (cell) {
+                    this.selectCell(cell);
+                }
+            }
+            createSizeLayer() {
+                this.sizeLayer = document.createElement("div");
+                this.sizeLayer.className = "grid-size-layer";
+                this.sizeLayer.appendChild(this.table);
+                this.el.appendChild(this.sizeLayer);
+            }
+            calcSize() {
+                this.sizeLayer.style.width = this.cols * this.colWidth + "px";
+                this.sizeLayer.style.height = this.rows * this.rowHeight + "px";
+            }
+            createRowHeader() {
+                this.rowHeaderElement = document.createElement("div");
+                this.rowHeaderElement.className = "row-header";
+            }
+            createHeader() {
+                this.headerElement = document.createElement("div");
+                this.headerElement.className = "header";
+            }
+            cellMouseDown(cell, event) {
+                this.el.focus();
+                this.selectCell(cell);
+            }
+            setSelectedCells(cells) {
+                if (this.selectedCells) {
+                    for (const c of this.selectedCells) {
+                        c.el?.classList.remove("selected");
+                    }
+                }
+                if (cells) {
+                    for (const c of cells) {
+                        this.selectCell(c);
+                    }
+                }
+            }
+            get selectedCell() {
+                if (!this._selectedCell) {
+                    this._selectedCell = this.getCell(0, 0);
+                }
+                return this._selectedCell;
+            }
+            set selectedCell(cell) {
+                this.selectCell(cell);
+            }
+            addToSelection(cell) {
+                this.selectedCells ??= [];
+                this.selectedCells.push(cell);
+                this._updateSelectionBox();
+            }
+            _updateSelectionBox() {
+                this._selBox ??= new SelectionBox(this.el);
+                if (this.selectedCells.length > 1) {
+                    const selRange = CellsRange.fromCells(this.selectedCells);
+                    const rect = selRange.getRect();
+                    this._selBox.setBounds(rect.x, rect.y, rect.width, rect.height);
+                }
+                else {
+                    this._selBox.destroy();
+                    this._selBox = null;
+                }
+            }
+            selectCell(cell) {
+                this.selectedCells = [];
+                this._updateSelectionBox();
+                this._selectedCell?.el?.classList.remove("selected");
+                this._selectedCell = cell;
+                cell?.el?.classList.add("selected");
+                if (cell) {
+                    this.scrollToCell(cell);
+                }
+                this.addToSelection(cell);
+                this._updateSelectionBox();
+            }
+            scrollToCell(cell) {
+                const rect = cell.el.getBoundingClientRect();
+                if (this.visibleRect.top - rect.top > this.visibleRect.bottom) {
+                }
+            }
+            getCell(row, col) {
+                return this.getRowCells(row)[col];
+            }
+            getRowCells(row) {
+                if (this.incrementalLoad && row >= this.loadedRows && this.rows > this.loadedRows) {
+                    this.loadMore(row - this.loadedRows);
+                }
+                return this._cells[row];
+            }
+            loadMore(n) {
+                this.cols ??= this.columns.items.length;
+                for (let i = 0; i < n; i++) {
+                    let dataRow = this.dataRows?.[this.loadedRows];
+                    if (!dataRow && this.rows > this.loadedRows) {
+                        dataRow = [];
+                        dataRow[this.cols - 1] = undefined;
+                    }
+                    const cells = [];
+                    for (let j = 0; j < this.cols; j++) {
+                        const dataCol = dataRow[j];
+                        cells.push({
+                            row: this.loadedRows,
+                            col: j,
+                            content: dataCol || "",
+                            touched: false,
+                        });
+                    }
+                    cells.rowIndex = this.loadedRows;
+                    this._cells.push(cells);
+                    this.loadedRows++;
+                }
+            }
+            _renderRows(rows) {
+                const res = [];
+                for (const row of rows) {
+                    res.push(this.renderRow(row));
+                }
+                return res;
+            }
+            renderHeader() {
+            }
+            renderFooter() {
+            }
+            scrollCol(col) {
+            }
+            scrollRow(row) {
+            }
+            destroyOffscreenCells(newRange) {
+                const newRows = [];
+                for (const r of this._visibleRows) {
+                    if (newRange.rowInRange(r.rowIndex)) {
+                        newRows.push(r);
+                    }
+                    else {
+                        r.rowElement?.remove();
+                        r.rowElement = null;
+                        continue;
+                    }
+                    for (const cell of r) {
+                        if (!newRange.cellInRange(cell.row, cell.col)) {
+                            cell.el?.remove();
+                        }
+                    }
+                }
+                return this._visibleRows = newRows;
+            }
+            renderRowHeader(rowElement) {
+                if (this.rowHeader) {
+                    for (const rh of this.rowHeader) {
+                        const th = document.createElement("th");
+                        rowElement.appendChild(th);
+                    }
+                }
+            }
+            renderRow(rowCells) {
+                const tr = document.createElement(this._rowTag);
+                tr.className = "grid-row";
+                tr.style.height = this.rowHeight + "px";
+                this.renderRowHeader(tr);
+                let i = 0;
+                const startCol = this._visibleRange?.startCol || 0;
+                const endCol = Math.min(this._visibleRange?.endCol, this.cols);
+                for (let x = startCol; x < endCol; x++) {
+                    let cell = rowCells[x];
+                    if (!cell)
+                        cell = rowCells[i] = { content: `${x}` };
+                    cell.el = tr.appendChild(this.renderCell(cell));
+                    i++;
+                }
+                rowCells.rowElement = tr;
+                return tr;
+            }
+            renderCell(cell) {
+                const td = document.createElement(this._cellTag);
+                td.style.width = `${this.colWidth}px`;
+                td.className = "cell";
+                td.textContent = cell?.content || "";
+                td.addEventListener("pointerdown", (event) => this.cellMouseDown(cell || { el: td }, event));
+                return td;
+            }
+            addColumn() {
+            }
+            addRow(data) {
+                this.dataRows.push(data);
+            }
+            redrawGrid() {
+                const range = this._getVisibleRange();
+                range.startRow = Math.max(range.startRow -= 1, 0);
+                if (this.rows) {
+                    range.endRow = Math.min(range.endRow += 2, this.rows);
+                }
+                if (this._visibleRange?.equals(range)) {
+                    return;
+                }
+                const keepRows = this.destroyOffscreenCells(range);
+                this._visibleRange = range;
+                if (this.loadedRows < range.endRow) {
+                    this.loadMore(range.endRow - this.loadedRows);
+                }
+                if (!keepRows.length) {
+                    this.appendRows(this._cells.slice(range.startRow, range.endRow));
+                }
+                else if (keepRows[0].rowIndex > range.startRow) {
+                    this.insertRows(this._cells.slice(range.startRow, keepRows[0].rowIndex));
+                }
+                else if (keepRows.at(-1).rowIndex < range.endRow) {
+                    this.appendRows(this._cells.slice(keepRows.at(-1).rowIndex + 1, range.endRow));
+                }
+            }
+            insertRows(rows) {
+                const first = this.table.firstChild;
+                for (const el of this._renderRows(rows)) {
+                    this.table.insertBefore(el, first);
+                }
+                this._visibleRows.splice(0, 0, ...rows);
+            }
+            appendRows(rows) {
+                for (const el of this._renderRows(rows)) {
+                    this.table.appendChild(el);
+                }
+                this._visibleRows.push(...rows);
+            }
+            _scroll() {
+                this.visibleRect = new DOMRect(this.el.scrollLeft, this.el.scrollTop, this.el.clientWidth, this.el.clientHeight);
+                this.redrawGrid();
+                if (this.incrementalLoad) {
+                    this.sizeLayer.style.paddingTop = this._visibleRange.startRow * this.rowHeight + "px";
+                }
+            }
+            _getVisibleRange() {
+                return new CellsRange(Math.floor(this.visibleRect.y / this.rowHeight), Math.min(Math.floor(this.visibleRect.x / this.colWidth), this.cols), Math.floor((this.visibleRect.y + this.visibleRect.height) / this.rowHeight), Math.floor((this.visibleRect.x + this.visibleRect.width) / this.colWidth));
+            }
+            addDataRow(data) {
+                this.dataRows ??= [];
+                this.dataRows.push(data);
+                this.rows = this.dataRows.length;
+            }
+        }
+        ui.BaseGrid = BaseGrid;
+        class Grid extends BaseGrid {
+        }
+        ui.Grid = Grid;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class Spreadsheet extends ui.Grid {
+            constructor(options) {
+                super();
+                this.incrementalLoad = true;
+                this.rows = options?.rows || 100;
+                this.cols = options?.cols || 20;
+            }
+            create() {
+                super.create();
+                this.table.classList.add("spreadsheet");
+            }
+            render() {
+                this.loadMore(this.rows);
+            }
+        }
+        ui.Spreadsheet = Spreadsheet;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class DataColumn {
+            constructor(collection) {
+                this.collection = collection;
+            }
+            dump() {
+                return {
+                    dataIndex: this.dataIndex,
+                    caption: this.caption,
+                };
+            }
+            load(data) {
+                this.dataIndex = data.dataIndex;
+                this.caption = data.caption;
+            }
+        }
+        ui.DataColumn = DataColumn;
+        class DataColumns extends katrid.OwnedCollection {
+            notify(action, item) {
+            }
+        }
+        ui.DataColumns = DataColumns;
+        class BaseTable extends ui.BaseGrid {
+            constructor() {
+                super();
+                this._rowTag = 'tr';
+                this._cellTag = 'td';
+                this.incrementalLoad = false;
+            }
+            calcSize() {
+            }
+            createSizeLayer() {
+                this.sizeLayer = document.createElement("div");
+                this.sizeLayer.className = "grid-size-layer";
+                this.sizeLayer.appendChild(this.table);
+                this.el.appendChild(this.sizeLayer);
+            }
+            _create() {
+                this.el = document.createElement('div');
+                this.el.classList.add('table-grid');
+                this.table = document.createElement('table');
+                this.table.className = 'table table-sm';
+                this._tbody = this.table.createTBody();
+            }
+            createHeader() {
+                this.headerElement = document.createElement('thead');
+                this.table.appendChild(this.headerElement);
+                if (this.columns) {
+                    let row = document.createElement('tr');
+                    this.headerElement.appendChild(row);
+                    for (const col of this.columns.items) {
+                        const cell = document.createElement('th');
+                        cell.innerText = col.caption || col.dataIndex.toString();
+                        row.appendChild(cell);
+                    }
+                }
+            }
+            redrawGrid() {
+                this._visibleRange = this._getVisibleRange();
+                this.loadMore(this.rows);
+                this._tbody.append(...this._renderRows(this._cells));
+            }
+        }
+        ui.BaseTable = BaseTable;
+        class Table extends BaseTable {
+        }
+        ui.Table = Table;
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
 var Katrid;
@@ -23912,6 +23963,53 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var katrid;
 (function (katrid) {
+    var utils;
+    (function (utils) {
+        function groupBy(data, key) {
+            const list = new Map();
+            for (const o of data) {
+                const k = o[key];
+                if (!list.has(k)) {
+                    list.set(k, []);
+                }
+                list.get(k).push(o);
+            }
+            return list;
+        }
+        class PivotNode {
+            constructor(key, data, childCols, childRows) {
+                this.key = key;
+                this.data = data;
+                this.childCols = childCols;
+                this.childRows = childRows;
+            }
+            expand(colKey, rowKey) {
+                expandNode(this, rowKey, colKey);
+            }
+        }
+        function pivot(data, key) {
+            return pivotDimension(Map.groupBy(data, obj => obj[key]));
+        }
+        utils.pivot = pivot;
+        function expandNode(node, rowKey, colKey) {
+            if (rowKey) {
+                node.childRows = pivotDimension(Map.groupBy(node.data, obj => obj[rowKey]));
+            }
+            if (colKey) {
+                node.childCols = pivotDimension(Map.groupBy(node.data, obj => obj[colKey]));
+            }
+        }
+        function pivotDimension(data) {
+            let res = [];
+            for (const [k, v] of data) {
+                res.push(new PivotNode(k, v, null, null));
+            }
+            return res;
+        }
+    })(utils = katrid.utils || (katrid.utils = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
     function printHtml(html) {
         let iframe = document.createElement('iframe');
         iframe.style.display = 'none';
@@ -23933,14 +24031,10 @@ var katrid;
 var Katrid;
 (function (Katrid) {
     function toCamelCase(s) {
-        // remove all characters that should not be in a variable name
-        // as well underscores and numbers from the beginning of the string
         s = s.replace(/([^a-zA-Z0-9_\- ])|^[_0-9]+/g, "").trim().toLowerCase();
-        // uppercase letters preceeded by a hyphen or a space
         s = s.replace(/([ -]+)([a-zA-Z0-9])/g, function (a, b, c) {
             return c.toUpperCase();
         });
-        // uppercase letters following numbers
         s = s.replace(/([0-9]+)([a-zA-Z])/g, function (a, b, c) {
             return b + c.toUpperCase();
         });
@@ -24031,108 +24125,5 @@ var katrid;
                 this._sendMesage(msg);
         }
     }
-    // Katrid.UI.uiKatrid.directive('comments', () =>
-    //   ({
-    //     restrict: 'E',
-    //     scope: {},
-    //     replace: true,
-    //     template: '<div class="content"><div class="comments"><mail-comments/></div></div>',
-    //     link(scope, element, attrs) {
-    //       if (element.closest('.modal-dialog').length)
-    //         element.remove();
-    //       else
-    //         $(element).closest('.form-view[ng-form=form]').children('.content:first').append(element);
-    //     }
-    //   })
-    // );
-    // Katrid.UI.uiKatrid.directive('mailComments', () =>
-    //   ({
-    //     restrict: 'E',
-    //     controller: ['$scope', ($scope) => {
-    //       $scope.comments = new Comments($scope);
-    //       $scope.files = [];
-    //
-    //       $scope.showEditor = () => {
-    //         $($scope.el).find('#mail-editor').show();
-    //         $($scope.el).find('#mail-msgEditor').focus();
-    //       };
-    //
-    //       $scope.hideEditor = () => {
-    //         $($scope.el).find('#mail-editor').hide();
-    //       };
-    //
-    //       $scope.attachFile = (file) => {
-    //         for (let f of file.files)
-    //           $scope.files.push({
-    //             name: f.name,
-    //             type: f.type,
-    //             file: f
-    //           });
-    //         $scope.$apply();
-    //       };
-    //
-    //       $scope.deleteFile = (idx) => {
-    //         $scope.files.splice(idx, 1);
-    //       }
-    //     }],
-    //     replace: true,
-    //     link(scope, element, attrs) {
-    //       scope.el = element;
-    //     },
-    //
-    //     template() {
-    //       return `
-    // <div class="container">
-    //         <h3>${Katrid.i18n.gettext('Comments')}</h3>
-    //         <div class="form-group">
-    //         <button class="btn btn-outline-secondary" ng-click="showEditor();">${Katrid.i18n.gettext('New message')}</button>
-    //         <button class="btn btn-outline-secondary">${Katrid.i18n.gettext('Log an internal note')}</button>
-    //         </div>
-    //         <div id="mail-editor" style="display: none;">
-    //           <div class="form-group">
-    //             <textarea id="mail-msgEditor" class="form-control" ng-model="message"></textarea>
-    //           </div>
-    //           <div class="form-group">
-    //             <button class="btn btn-default" type="button" onclick="$(this).next().click()"><i class="fa fa-paperclip"></i></button>
-    //             <input class="input-file-hidden" type="file" multiple onchange="angular.element(this).scope().attachFile(this)">
-    //           </div>
-    //           <div class="form-group" ng-show="files.length">
-    //             <ul class="list-inline attachments-area">
-    //               <li ng-repeat="file in files" ng-click="deleteFile($index)" title="${Katrid.i18n.gettext('Delete this attachment')}">{{ file.name }}</li>
-    //             </ul>
-    //           </div>
-    //           <div class="from-group">
-    //             <button class="btn btn-primary" ng-click="comments.postMessage(message)">${Katrid.i18n.gettext('Send')}</button>
-    //           </div>
-    //         </div>
-    //
-    //         <hr>
-    //
-    //         <div ng-show="loading">{{ loading }}</div>
-    //         <div class="comment media col-sm-12" ng-repeat="comment in comments.items">
-    //           <div class="media-left">
-    //             <img src="/static/admin/assets/img/avatar.png" class="avatar rounded">
-    //           </div>
-    //           <div class="media-body">
-    //             <strong>{{ ::comment.author_name }}</strong> - <span class="timestamp text-muted" title="$\{ ::comment.date_time|moment:'LLLL'}"> {{::comment.date_time|moment}}</span>
-    //             <div class="clearfix"></div>
-    //             <div class="form-group">
-    //               {{::comment.content}}
-    //             </div>
-    //             <div class="form-group" ng-if="comment.attachments">
-    //               <ul class="list-inline">
-    //                 <li ng-repeat="file in comment.attachments">
-    //                   {{file.mimetype}}
-    //                   <div class="comment-preview-image" ng-if="file.mimetype.startsWith('image')" style="width: 16%;height:100px;background-image:url('/web/content/$\{ ::file.id }')"></div>
-    //                   <a href="/web/content/$\{ ::file.id }/?download">{{ ::file.name }}</a>
-    //                 </li>
-    //               </ul>
-    //             </div>
-    //           </div>
-    //         </div>
-    //   </div>`;
-    //     }
-    //   })
-    // );
 })();
 //# sourceMappingURL=katrid.js.map

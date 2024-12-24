@@ -13961,7 +13961,56 @@ query-view .table-responsive {
   padding: 8px 0;
 }
 .report-manager .tool-window .tree-item:hover {
-  background-color: rgba(113, 44, 249, 0.1);
+  background-color: rgba(112, 44, 249, 0.1);
+}
+.report-manager .query-page-editor {
+  background-color: #ffffff;
+}
+.report-manager .table td.selected {
+  outline: 1px solid #3131fd;
+}
+
+.table-grid {
+  overflow: auto;
+  height: 100%;
+  width: 100%;
+}
+.table-grid .table tbody {
+  background-color: #ffffff;
+}
+.table-grid:focus-visible {
+  outline: none;
+}
+.table-grid .grid-size-layer {
+  background-color: #ffffff;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+.table-grid div.grid {
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  top: -1px;
+}
+.table-grid div.grid .grid-row {
+  display: flex;
+}
+.table-grid .cells-selection-box {
+  position: absolute;
+  background-color: rgb(14, 101, 235);
+  opacity: 0.1;
+  border: 1px solid #3131fd;
+  pointer-events: none;
+}
+.table-grid .cell {
+  flex: 1 0 auto;
+  border-left: 1px solid #e5e5e5;
+  border-top: 1px solid #e5e5e5;
+}
+.table-grid .cell.selected {
+  border: 1px solid #3131fd;
 }
 
 .toolbar-action-buttons {
@@ -13977,6 +14026,10 @@ query-view .table-responsive {
 .toolbar.floating {
   position: absolute;
   z-index: 990;
+  box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.1019607843), 0 4px 8px -3px rgba(0, 0, 0, 0.1019607843);
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #eaeaf0;
 }
 .toolbar .toolbtn {
   color: #8d8d8d;
