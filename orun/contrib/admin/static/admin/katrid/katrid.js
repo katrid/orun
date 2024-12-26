@@ -1931,10 +1931,10 @@ var katrid;
         admin.responseMiddleware = [ResponseMessagesProcessor];
     })(admin = katrid.admin || (katrid.admin = {}));
 })(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
+var Katrid;
+(function (Katrid) {
+    var BI;
+    (function (BI) {
         function newPlot(el, data, layout, config) {
             if (!layout)
                 layout = {};
@@ -1948,9 +1948,9 @@ var katrid;
                 config['responsive'] = true;
             return Plotly.newPlot(el, data, layout, config);
         }
-        bi.newPlot = newPlot;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
+        BI.newPlot = newPlot;
+    })(BI = Katrid.BI || (Katrid.BI = {}));
+})(Katrid || (Katrid = {}));
 var katrid;
 (function (katrid) {
     var bi;
