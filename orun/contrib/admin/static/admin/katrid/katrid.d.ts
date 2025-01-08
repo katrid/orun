@@ -601,12 +601,14 @@ declare namespace katrid.admin {
         children: MenuItem[];
         groups: GroupItem[];
         treeNode: TreeNode;
+        item: IMenuItem;
     }
     class GroupItem {
         id: number;
         name: string;
         menu: MenuItem[];
         treeNode: TreeNode;
+        item: IGroupItem;
     }
     interface IMenuItem {
         id: number;
@@ -635,6 +637,8 @@ declare namespace katrid.admin {
         load(data: any): void;
         selectGroupNode(node: katrid.ui.TreeNode): void;
         selectGroup(group: GroupItem): void;
+        onCommit: (data: any) => Promise<any>;
+        saveChanges(): void;
     }
     export {};
 }

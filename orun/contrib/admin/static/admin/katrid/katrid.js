@@ -1957,6 +1957,15 @@ var katrid;
                 let h = document.createElement('h3');
                 h.innerText = _.gettext('Permission Manager');
                 this.el.appendChild(h);
+                let div = this.el.appendChild(document.createElement('div'));
+                div.className = 'toolbar';
+                let btn = div.appendChild(document.createElement('button'));
+                btn.className = 'btn btn-primary';
+                btn.innerText = _.gettext('Save');
+                btn.addEventListener('click', () => this.saveChanges());
+                btn = div.appendChild(document.createElement('button'));
+                btn.className = 'btn btn-outline-secondary';
+                btn.innerText = _.gettext('Cancel');
                 let container = this.el.appendChild(document.createElement('div'));
                 container.className = 'row';
                 container.style.flex = '1';
@@ -2000,6 +2009,7 @@ var katrid;
                     gi.id = item.id;
                     gi.name = item.name;
                     gi.menu = [];
+                    gi.item = item;
                     this.groupMap.set(gi.id, gi);
                 }
                 for (const item of this.menu) {
@@ -2008,6 +2018,7 @@ var katrid;
                     mi.name = item.name;
                     mi.children = [];
                     mi.groups = [];
+                    mi.item = item;
                     this.menuMap.set(mi.id, mi);
                 }
                 const menu = [];
@@ -2047,12 +2058,42 @@ var katrid;
                     }
                 }
             }
+            saveChanges() {
+                let data = [];
+                for (const g of this.groupMap.values()) {
+                    const add = [];
+                    const remove = [];
+                    for (const m of this.menuMap.values()) {
+                        if (m.treeNode.checked) {
+                            if (!g.menu.includes(m)) {
+                                add.push(m);
+                            }
+                        }
+                        else {
+                            if (g.menu.includes(m)) {
+                                remove.push(m);
+                            }
+                        }
+                    }
+                    if (add.length || remove.length) {
+                        data.push({
+                            group: g.id,
+                            addMenu: add.map(m => m.id),
+                            removeMenu: remove.map(m => m.id)
+                        });
+                    }
+                }
+                this.onCommit?.call(this, data);
+            }
         }
         admin.PermissionManager = PermissionManager;
         admin.ClientAction.registry['katrid.admin.PermissionManager'] = async (clientAction) => {
             const manager = new PermissionManager(clientAction.element);
-            const GroupModel = new Katrid.Services.ModelService('auth.group');
-            let res = await GroupModel.rpc('admin_get_permissions');
+            const groupModel = new Katrid.Services.ModelService('auth.group');
+            manager.onCommit = async (data) => {
+                return await groupModel.rpc('admin_set_permissions', [data]);
+            };
+            let res = await groupModel.rpc('admin_get_permissions');
             if (res.groups && res.menu) {
                 manager.load(res);
             }

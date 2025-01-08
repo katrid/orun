@@ -102,6 +102,22 @@ class Group(orun.contrib.auth.models.Group, helper=True):
             'groups': [{'id': g.id, 'name': g.name, 'menus': [m.id for m in g.menus]} for g in cls.objects.all()]
         }
 
+    @api.classmethod
+    def admin_set_permissions(cls, data: list):
+        for perms in data:
+            group = Group.objects.get(pk=perms['group'])
+            adds = perms['addMenu']
+            removes = perms['removeMenu']
+            if adds:
+                for m in adds:
+                    group.menus.add(m)
+            if removes:
+                for g in removes:
+                    group.menus.remove(g)
+        return {
+            'message': gettext('Permissions updated successfully')
+        }
+
 
 class MenuGroup(models.Model):
     menu = models.ForeignKey(Menu, null=False)

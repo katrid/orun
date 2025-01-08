@@ -14132,6 +14132,9 @@ query-view .table-responsive {
 .toolbar {
   display: flex;
 }
+.toolbar .btn {
+  margin-right: 8px;
+}
 .toolbar.floating {
   position: absolute;
   z-index: 990;
