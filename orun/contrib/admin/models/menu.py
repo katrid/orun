@@ -13,6 +13,9 @@ MENU_SEP = '/'
 
 
 class Menu(models.Model):
+    """
+    Represents user interface menu items on admin site
+    """
     name = models.CharField(null=False, translate=True)
     sequence = models.IntegerField(default=99)
     parent = models.ForeignKey('self', related_name='children')
@@ -96,7 +99,7 @@ class Group(orun.contrib.auth.models.Group, helper=True):
         menu = Menu.objects.all()
         return {
             'menu': [
-                {'id': m.id, 'name': m.name, 'parent': m.parent_id, 'groups': [g.id for g in m.groups]}
+                {'id': m.id, 'name': m.name, 'parent': m.parent_id}
                 for m in menu
             ],
             'groups': [{'id': g.id, 'name': g.name, 'menus': [m.id for m in g.menus]} for g in cls.objects.all()]
