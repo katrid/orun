@@ -1945,9 +1945,13 @@ var katrid;
         class MenuItem {
         }
         class GroupItem {
+            constructor() {
+                this.modified = false;
+            }
         }
         class PermissionManager {
             constructor(el) {
+                this._loading = false;
                 this.el = el;
                 this._create();
             }
@@ -1971,8 +1975,7 @@ var katrid;
                 container.style.flex = '1';
                 this.el.appendChild(container);
                 let panel = container.appendChild(document.createElement('div'));
-                panel.className = 'nav-panel col-6';
-                panel.style.borderRight = '1px solid #ccc';
+                panel.className = 'left-panel col-6';
                 h = document.createElement('h4');
                 let tvEl = document.createElement('div');
                 h.innerText = _.gettext('Groups');
@@ -1980,17 +1983,17 @@ var katrid;
                 panel.appendChild(h);
                 panel.appendChild(tvEl);
                 panel = container.appendChild(document.createElement('div'));
-                panel.className = 'nav-panel col-6';
+                panel.className = 'left-panel col-6';
                 h = document.createElement('h4');
                 tvEl = document.createElement('div');
-                this._treeViewMenu = new katrid.ui.TreeView(tvEl, { options: { checkbox: true } });
+                this._treeViewMenu = new katrid.ui.TreeView(tvEl, { options: { checkbox: true, onCheckChange: (node) => this.nodeMenuCheck(node) } });
                 h.innerText = _.gettext('Menu');
                 panel.appendChild(h);
                 panel.appendChild(tvEl);
             }
             loadMenu(data, parentNode) {
                 for (const item of data) {
-                    item.treeNode = this._treeViewMenu.addItem({ id: item.id, text: item.name }, parentNode);
+                    item.treeNode = this._treeViewMenu.addItem({ id: item.id, text: item.name, menuItem: item }, parentNode);
                     if (item.children) {
                         this.loadMenu(item.children, item.treeNode);
                     }
@@ -2008,7 +2011,7 @@ var katrid;
                     const gi = new GroupItem();
                     gi.id = item.id;
                     gi.name = item.name;
-                    gi.menu = [];
+                    gi.menu = new Set();
                     gi.item = item;
                     this.groupMap.set(gi.id, gi);
                 }
@@ -2035,7 +2038,7 @@ var katrid;
                 }
                 for (const item of this.groups) {
                     const gi = this.groupMap.get(item.id);
-                    gi.menu = item.menus?.map(m => this.menuMap.get(m));
+                    gi.menu = new Set(item.menus?.map(m => this.menuMap.get(m)));
                 }
                 this.loadGroups(Array.from(this.groupMap.values()));
                 this.loadMenu(menu);
@@ -2049,41 +2052,67 @@ var katrid;
                 this.selectGroup(this.groupMap.get(node.data.id));
             }
             selectGroup(group) {
-                for (const item of this.menuMap.values()) {
-                    item.treeNode.checked = false;
-                }
-                if (group.menu) {
-                    for (const item of group.menu) {
-                        item.treeNode.checked = true;
+                if (this.group === group)
+                    return;
+                this.group = group;
+                try {
+                    this._loading = true;
+                    for (const item of this.menuMap.values()) {
+                        item.treeNode.checked = false;
+                    }
+                    if (group.menu) {
+                        for (const item of group.menu) {
+                            item.treeNode.checked = true;
+                        }
                     }
                 }
+                finally {
+                    this._loading = false;
+                }
             }
-            saveChanges() {
+            nodeMenuCheck(node) {
+                if (this._loading)
+                    return;
+                this.group.modified = true;
+                if (node.checked)
+                    this.group.menu.add(node.data.menuItem);
+                else
+                    this.group.menu.delete(node.data.menuItem);
+                for (const child of node.children) {
+                    this.nodeMenuCheck(child);
+                }
+            }
+            async saveChanges() {
                 let data = [];
                 for (const g of this.groupMap.values()) {
+                    if (!g.modified) {
+                        continue;
+                    }
                     const add = [];
                     const remove = [];
                     for (const m of this.menuMap.values()) {
-                        if (m.treeNode.checked) {
-                            if (!g.menu.includes(m)) {
-                                add.push(m);
-                            }
+                        if (!g.menu.has(m) && g.item.menus.includes(m.id)) {
+                            remove.push(m.id);
                         }
-                        else {
-                            if (g.menu.includes(m)) {
-                                remove.push(m);
-                            }
+                        else if (g.menu.has(m) && !g.item.menus.includes(m.id)) {
+                            add.push(m.id);
                         }
                     }
                     if (add.length || remove.length) {
-                        data.push({
-                            group: g.id,
-                            addMenu: add.map(m => m.id),
-                            removeMenu: remove.map(m => m.id)
-                        });
+                        data.push({ group: g.id, addMenu: add, removeMenu: remove, });
                     }
                 }
-                this.onCommit?.call(this, data);
+                if (await this.onCommit?.call(this, data)) {
+                    for (const perm of data) {
+                        const g = this.groupMap.get(perm.group);
+                        for (const m of perm.addMenu) {
+                            g.item.menus.push(m);
+                        }
+                        for (const m of perm.removeMenu) {
+                            g.item.menus.splice(g.item.menus.indexOf(m), 1);
+                        }
+                    }
+                }
             }
         }
         admin.PermissionManager = PermissionManager;
@@ -2091,7 +2120,8 @@ var katrid;
             const manager = new PermissionManager(clientAction.element);
             const groupModel = new Katrid.Services.ModelService('auth.group');
             manager.onCommit = async (data) => {
-                return await groupModel.rpc('admin_set_permissions', [data]);
+                await groupModel.rpc('admin_set_permissions', [data]);
+                return true;
             };
             let res = await groupModel.rpc('admin_get_permissions');
             if (res.groups && res.menu) {
@@ -14452,6 +14482,7 @@ var katrid;
             }
             setCheckAll(value) {
                 this.setChecked(value);
+                this.options?.onCheckChange?.(this);
                 if (this.children.length) {
                     for (let node of this.children) {
                         node.setCheckAll(value);

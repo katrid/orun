@@ -606,9 +606,10 @@ declare namespace katrid.admin {
     class GroupItem {
         id: number;
         name: string;
-        menu: MenuItem[];
+        menu: Set<MenuItem>;
         treeNode: TreeNode;
         item: IGroupItem;
+        modified: boolean;
     }
     interface IMenuItem {
         id: number;
@@ -625,6 +626,8 @@ declare namespace katrid.admin {
         el: HTMLElement;
         protected _treeViewMenu: TreeView;
         protected _treeViewGroup: TreeView;
+        protected _loading: boolean;
+        group: GroupItem;
         constructor(el: HTMLElement);
         protected _create(): void;
         loadMenu(data: MenuItem[], parentNode?: katrid.ui.TreeNode): void;
@@ -637,8 +640,9 @@ declare namespace katrid.admin {
         load(data: any): void;
         selectGroupNode(node: katrid.ui.TreeNode): void;
         selectGroup(group: GroupItem): void;
+        nodeMenuCheck(node: katrid.ui.TreeNode): void;
         onCommit: (data: any) => Promise<any>;
-        saveChanges(): void;
+        saveChanges(): Promise<void>;
     }
     export {};
 }
@@ -2887,8 +2891,9 @@ declare namespace katrid.ui {
         onSelect?: (node: TreeNode) => void;
         onExpand?: (node: TreeNode) => Promise<boolean>;
         onCollapse?: (node: TreeNode) => Promise<boolean>;
+        onCheckChange?: (node: TreeNode) => void;
     };
-    export type NodeOptions = {
+    export type TreeViewOptions = {
         data?: NodeData | NodeData[];
         options?: TreeNodeOptions;
     };
@@ -2948,20 +2953,20 @@ declare namespace katrid.ui {
         all(): IterableIterator<TreeNode>;
     }
     export class TreeView {
-        options?: NodeOptions;
+        options?: TreeViewOptions;
         nodes: TreeNode[];
         readonly el: HTMLElement;
         private _ul;
         private _selection;
         private _striped;
-        constructor(el: HTMLElement, options?: NodeOptions);
+        constructor(el: HTMLElement, options?: TreeViewOptions);
         get selection(): TreeNode[];
         set selection(value: TreeNode[]);
         get firstNode(): TreeNode;
         get lastNode(): TreeNode;
         previous(): void;
         next(): void;
-        addNodes(nodes: NodeOptions, parent?: any): void;
+        addNodes(nodes: TreeViewOptions, parent?: any): void;
         addItem(item: NodeData | string, parent?: TreeNode, options?: TreeNodeOptions): TreeNode;
         all(): Generator<TreeNode>;
         get currentNode(): TreeNode;

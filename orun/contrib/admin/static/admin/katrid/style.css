@@ -14383,6 +14383,9 @@ page[size=A4] {
 .permission-manager {
   padding: 10px;
 }
+.permission-manager .left-panel {
+  border-right: 1px solid #cccccc;
+}
 
 .help-center {
   width: 400px;
