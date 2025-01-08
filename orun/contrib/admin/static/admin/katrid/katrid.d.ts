@@ -74,6 +74,23 @@ declare namespace katrid.ui {
         render(): void;
     }
 }
+declare namespace katrid.ui {
+    interface IDesignableComponent {
+        designer: IDesigner;
+    }
+    interface IDesigner {
+        target: any;
+        component: IDesignableComponent;
+        destroy: () => void;
+    }
+    class BaseComponentDesigner implements IDesigner, IOutlineObject {
+        target: any;
+        component: IDesignableComponent;
+        constructor(target: any);
+        destroy(): void;
+        getOutlineInfo(): IOutlineInfo;
+    }
+}
 declare namespace Katrid {
     let $hashId: number;
     let customElementsRegistry: any;
@@ -228,6 +245,12 @@ declare namespace Katrid.Actions {
         generateHelp(help: any): void;
     }
     function goto(actionId: string, config: any, reset?: boolean): Promise<Action>;
+}
+declare namespace katrid.admin {
+    class ClientAction extends Katrid.Actions.Action {
+        static registry: Record<string, Function>;
+        onHashChange(params: any): Promise<void>;
+    }
 }
 declare namespace Katrid.Actions {
     class Homepage extends Action {
@@ -570,6 +593,52 @@ declare namespace katrid.admin {
     }
 }
 declare namespace katrid.admin {
+    import TreeView = katrid.ui.TreeView;
+    import TreeNode = katrid.ui.TreeNode;
+    class MenuItem {
+        id: number;
+        name: string;
+        children: MenuItem[];
+        groups: GroupItem[];
+        treeNode: TreeNode;
+    }
+    class GroupItem {
+        id: number;
+        name: string;
+        menu: MenuItem[];
+        treeNode: TreeNode;
+    }
+    interface IMenuItem {
+        id: number;
+        name: string;
+        parent: number;
+        groups: number[];
+    }
+    interface IGroupItem {
+        id: number;
+        name: string;
+        menus: number[];
+    }
+    export class PermissionManager {
+        el: HTMLElement;
+        protected _treeViewMenu: TreeView;
+        protected _treeViewGroup: TreeView;
+        constructor(el: HTMLElement);
+        protected _create(): void;
+        loadMenu(data: MenuItem[], parentNode?: katrid.ui.TreeNode): void;
+        loadGroups(data: GroupItem[]): void;
+        groups: IGroupItem[];
+        menu: IMenuItem[];
+        groupMap: Map<number | string, GroupItem>;
+        menuMap: Map<number | string, MenuItem>;
+        loadPermissions(): void;
+        load(data: any): void;
+        selectGroupNode(node: katrid.ui.TreeNode): void;
+        selectGroup(group: GroupItem): void;
+    }
+    export {};
+}
+declare namespace katrid.admin {
     class ResponseMessagesProcessor {
         response: Response;
         constructor(response: Response);
@@ -581,573 +650,11 @@ declare namespace katrid.admin {
 declare namespace Katrid.BI {
     function newPlot(el: any, data: any, layout: any, config: any): any;
 }
-declare namespace katrid.bi {
-    function createCodeEditor(dom: HTMLElement, code?: string, language?: string, previewType?: string): Promise<unknown>;
-    function showCodeEditor(code: string, lang: string): Promise<any>;
-}
-declare namespace katrid.design {
-    class WidgetDesigner {
-        target: katrid.drawing.BaseWidget;
-        draw: katrid.drawing.Draw;
-        designer: katrid.design.DesignSurface;
-        dragging: boolean;
-        private _dx;
-        private _dy;
-        moved: boolean;
-        gridX: number;
-        gridY: number;
-        locked: boolean;
-        constructor(target: katrid.drawing.BaseWidget, designer?: katrid.design.DesignSurface);
-        private _pointerDownHandler;
-        private _pointerMoveHandler;
-        private _pointerUpHandler;
-        drawDesign(parent: katrid.drawing.Draw): drawing.Draw;
-        destroyDesign(): void;
-        getDesignRect(): DOMRect;
-        get pageY(): any;
-        moveTo(x: number, y: number): void;
-        moveToParent(parent: katrid.drawing.BaseWidget): void;
-        moveBy(dx: number, dy: number): void;
-        get page(): any;
-        resize(width: number, height: number): void;
-        update(widget: katrid.drawing.BaseWidget): void;
-        designMove(ox: number, oy: number): void;
-        applyRect(dx: number, dy: number, dw: number, dh: number): void;
-        designApplyRect(dx: number, dy: number, dw: number, dh: number): void;
-        setRect(x: number, y: number, width: number, height: number): void;
-        protected designMouseDown(event: PointerEvent): void;
-        protected designMouseMove(event: MouseEvent): void;
-        dump(): any;
-        load(data: any): void;
-        protected _mouseUp(): void;
-        protected designMouseUp(event: PointerEvent): void;
-    }
-}
-declare namespace katrid.drawing {
-    class BaseWidget {
-        designer: katrid.design.WidgetDesigner;
-        name: string;
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-        element: Element;
-        graphic: Graphic;
-        objects: BaseWidget[];
-        parent: BaseWidget;
-        page: BasePage;
-        clientWidth: number;
-        clientHeight: number;
-        private _created;
-        get clientY(): any;
-        get clientX(): any;
-        constructor();
-        protected defaultProps(): void;
-        protected _create(): void;
-        get location(): Point;
-        set location(value: Point);
-        get size(): Size;
-        set size(value: Size);
-        drawTo(parent: Draw): void;
-        drawDesign(parent: Draw): Graphic;
-        create(): void;
-        redraw(): void;
-        remove(): void;
-        getDesignRect(): DOMRect;
-        getType(): string;
-        dump(): any;
-        load(data: any): void;
-        getClassByName(name: string): typeof BaseWidget;
-        children(): BaseWidget[];
-        protected loadObjects(data: any): void;
-    }
-    class Rectangle extends BaseWidget {
-        rect: Graphic;
-        defaultProps(): void;
-        create(): void;
-        redraw(): void;
-    }
-}
-declare namespace katrid.drawing {
-    class Image extends BaseWidget {
-        img: Graphic;
-        protected defaultProps(): void;
-        field: string;
-        center: boolean;
-        transparent: boolean;
-        datasource: katrid.bi.DataSource;
-        picture: string;
-        format: string;
-        dump(): any;
-        load(info: any): void;
-        private _rect;
-        create(): void;
-        redraw(): void;
-    }
-}
-declare namespace katrid.drawing {
-    class Text extends BaseWidget {
-        private _text;
-        allowExpression: boolean;
-        allowTags: boolean;
-        wrap: boolean;
-        canGrow: boolean;
-        highlights: TextHighlight[];
-        protected textElement: HTMLElement;
-        protected foreignObject: SVGForeignObjectElement;
-        private _background;
-        private _div;
-        create(): void;
-        protected defaultProps(): void;
-        get text(): string;
-        set text(value: string);
-        get background(): Background;
-        set background(value: Background);
-        private _displayFormat;
-        get displayFormat(): DisplayFormat;
-        set displayFormat(value: DisplayFormat);
-        private _border;
-        get border(): katrid.drawing.Border;
-        set border(value: katrid.drawing.Border);
-        private _font;
-        get font(): katrid.drawing.Font;
-        set font(value: katrid.drawing.Font);
-        private _hAlign;
-        get hAlign(): HAlign;
-        set hAlign(value: HAlign);
-        private _vAlign;
-        get vAlign(): VAlign;
-        set vAlign(value: VAlign);
-        protected applyStyle(): void;
-        dump(): any;
-        load(info: any): void;
-        redraw(): void;
-    }
-}
-declare namespace katrid.drawing {
-    class Barcode extends BaseWidget {
-        protected defaultProps(): void;
-        field: string;
-        center: boolean;
-        datasource: katrid.bi.DataSource;
-        code: string;
-        barcodeType: string;
-        dump(): any;
-        load(info: any): void;
-        redraw(): void;
-    }
-}
-declare namespace katrid.bi {
-    const componentRegistry: Record<string, typeof katrid.drawing.BaseWidget>;
-}
-declare namespace katrid.bi {
-    class _DataSource {
-        commandText: string;
-        data: any[];
-        private _name;
-        private widgets;
-        constructor(name: string, commandText: string);
-        get name(): string;
-        set name(value: string);
-        dump(): {
-            name: string;
-            commandText: string;
-        };
-        static fromJson(data: any): _DataSource;
-        refresh(): Promise<void>;
-        get dataView(): any[];
-        values(column: string | number): any[];
-        bind(widget: WidgetContainer): void;
-        unbind(widget: WidgetContainer): void;
-    }
-}
-declare namespace katrid.bi {
-    const GUIDELINE_DELAY = 2000;
-    class BasePageDesigner {
-        container: HTMLElement;
-        page: katrid.report.BasePage;
-        reportDesigner?: ReportEditor;
-        el: HTMLElement;
-        grabs: GrabHandles[];
-        selection: ReportWidget[];
-        dragging: boolean;
-        snapToGrid: boolean;
-        guidelines: SVGElement[];
-        selectionBox: boolean;
-        draggingSelectionBox: boolean;
-        protected _documentKeyDown: (event: KeyboardEvent) => void;
-        protected _dx: number;
-        protected _dy: number;
-        constructor(container: HTMLElement, page: katrid.report.BasePage, reportDesigner?: ReportEditor);
-        activate(): void;
-        deactivate(): void;
-        get report(): report.Report;
-        protected onKeyDown(event: KeyboardEvent): void;
-        resizeSelectionBy(deltaX: number, deltaY: number): void;
-        protected _resizingTimeout: any;
-        protected refreshGrabs(): void;
-        clearGuidelines(): void;
-        clearSelection(): void;
-        addToSelection(obj: BandedObject): void;
-        destroyGrabHandles(obj?: BandedObject): void;
-        createGrabHandles(obj: BandedObject): void;
-        createElement(widgetName: string, target: Element, x: number, y: number): void;
-        selectObject(obj: BandedObject): void;
-        removeFromSelection(obj: BandedObject): void;
-        moveSelectionBy(deltaX: number, deltaY: number): void;
-        deleteSelection(): void;
-        onPointerDown(event: PointerEvent): void;
-        protected _selBox: HTMLElement | katrid.ui.SVGObject;
-        protected createSelectionBox(x: number, y: number, width: number, height: number): void;
-        protected destroySelectionBox(): void;
-        protected _bx: number;
-        protected _by: number;
-        protected _bw: number;
-        protected _bh: number;
-        protected updateSelectionBox(x: number, y: number, width: number, height: number): void;
-        onPointerUp(event: PointerEvent): void;
-        refreshSelection(): void;
-        onMouseMove(event: MouseEvent): void;
-    }
-    class GrabHandles {
-        topCenter: HTMLLabelElement;
-        topRight: HTMLLabelElement;
-        middleLeft: HTMLLabelElement;
-        bottomRight: HTMLLabelElement;
-        bottomCenter: HTMLLabelElement;
-        bottomLeft: HTMLLabelElement;
-        middleRight: HTMLLabelElement;
-        topLeft: HTMLLabelElement;
-        handles: HTMLElement[];
-        dragging: boolean;
-        onObjectResized: ({ target }: {
-            target: any;
-        }) => void;
-        onObjectResizing: ({ target }: {
-            target: any;
-        }) => void;
-        container: HTMLElement;
-        target: ReportWidget;
-        gridX: number;
-        gridY: number;
-        snapToGrid: boolean;
-        constructor(config: any);
-        createHandle(): HTMLLabelElement;
-        clear(): void;
-        setPosition(): void;
-        _setGrabHandle(): void;
-        createHandles(): this;
-        destroy(): void;
-    }
-}
-declare namespace katrid.bi {
-    class ReportDesigner {
-        container: HTMLElement;
-        private _report;
-        pages: BasePageDesigner[];
-        tabs: HTMLElement[];
-        el: HTMLElement;
-        toolbox: katrid.bi.Toolbox;
-        toolWindow: katrid.bi.ToolWindow;
-        tabsetElement: HTMLElement;
-        workspace: HTMLElement;
-        private _datasources;
-        constructor(container: HTMLElement);
-        create(): void;
-        propertiesEditor: katrid.bi.ObjectInspector;
-        onSelectionChange(selection?: any[]): void;
-        get datasources(): DataSource[];
-        protected createDragEvents(): void;
-        toolItemDrop(widget: string, evt: DragEvent): void;
-        createElement(widgetName: string, target: Element, x: number, y: number): void;
-        newReport(reportType?: string): any;
-        get report(): Report;
-        set report(value: Report);
-        private _page;
-        get page(): BasePageDesigner;
-        set page(value: BasePageDesigner);
-        getValidName(prefix: string): string;
-        showParamsDialog(): Promise<any>;
-        preview(showParams?: boolean): Promise<void>;
-        protected loadReport(report: Report): void;
-        protected createPageDesigner(page: BasePage): BasePageDesigner;
-        widgetExecuteEditor(widget: ReportWidget): Promise<void>;
-        fileHandle: any;
-        showOpenFilePicker(): Promise<void>;
-        showSaveFilePicker(): Promise<void>;
-        loading: boolean;
-        removeObjectNotification(obj: any): void;
-        dump(): any;
-        load(structure: any, filename?: string): Report;
-        set filename(filename: string);
-        clear(): void;
-        registerDataSource(ds: DataSource): void;
-    }
-    let reportDesigner: ReportDesigner;
-}
-declare namespace katrid.drawing {
+declare namespace Katrid.Components {
     class Component {
         name: string;
-        getType(): string;
-        dump(): {
-            type: string;
-            name: string;
-        };
-        load(info: any): void;
     }
-    type Point = {
-        x: number;
-        y: number;
-    };
-    type Size = {
-        width: number;
-        height: number;
-    };
-    enum PageSize {
-        A3,
-        A4,
-        A5,
-        Letter,
-        Custom,
-        Responsive,
-        WebSmall,
-        WebMedium,
-        WebLarge
-    }
-    enum PageOrientation {
-        Portrait = 0,
-        Landscape = 1
-    }
-    type Background = {
-        color: string;
-        style: string;
-    };
-    type TextHighlight = {
-        font?: Font;
-        background?: any;
-        visible?: boolean;
-        condition: string;
-    };
-    type DisplayFormat = {
-        type: string;
-        format?: string;
-    };
-    enum HAlign {
-        left = 0,
-        center = 1,
-        right = 2,
-        justify = 3
-    }
-    enum VAlign {
-        top = 0,
-        middle = 1,
-        bottom = 2
-    }
-    interface Font {
-        name?: string;
-        size?: string;
-        bold?: boolean;
-        italic?: boolean;
-        underline?: boolean;
-        color?: string;
-    }
-    interface Border {
-        all?: boolean;
-        top?: boolean;
-        right?: boolean;
-        bottom?: boolean;
-        left?: boolean;
-        rounded?: number;
-    }
-}
-declare var Plotly: any;
-declare var requirejs: any;
-declare var appStudio: any;
-declare var monaco: any;
-declare namespace katrid.design {
-    type PropertyConfig = {
-        caption?: string;
-        description?: string;
-        placeholder?: string;
-        title?: string;
-        onGetValues?: (typeEditor: ComponentEditor) => any[];
-        options?: any[] | Record<any, string>;
-    };
-    class PropertyEditor {
-        name: string;
-        config?: PropertyConfig;
-        caption: string;
-        description: string;
-        placeholder: string;
-        title: string;
-        cssClass: string;
-        static tag: string;
-        constructor(name: string, config?: PropertyConfig);
-        createEditor(typeEditor: ComponentEditor): HTMLElement;
-        protected setValue(value: any, input: HTMLElement): void;
-        protected createLabel(editor: HTMLElement): void;
-        createInput(typeEditor: ComponentEditor): HTMLElement;
-        createInputEvent(typeEditor: ComponentEditor, input: HTMLElement): void;
-        inputChange(typeEditor: ComponentEditor, input: any, evt: any): void;
-        getValue(typeEditor: ComponentEditor): any;
-        apply(typeEditor: ComponentEditor, value: any): void;
-    }
-    class StringProperty extends PropertyEditor {
-        createInput(typeEditor: ComponentEditor): HTMLElement;
-    }
-    class NameStringProperty extends PropertyEditor {
-    }
-    class TextProperty extends StringProperty {
-        static tag: string;
-    }
-    class IntegerProperty extends PropertyEditor {
-        createInput(typeEditor: ComponentEditor): HTMLElement;
-    }
-    class AutocompleteProperty extends StringProperty {
-    }
-    class BooleanProperty extends PropertyEditor {
-        createEditor(typeEditor: ComponentEditor): HTMLElement;
-    }
-    class BackgroundProperty extends PropertyEditor {
-        createEditor(typeEditor: ComponentEditor): HTMLElement;
-    }
-    class FontProperty extends PropertyEditor {
-        createEditor(typeEditor: ComponentEditor): HTMLElement;
-    }
-    class BorderProperty extends PropertyEditor {
-        createEditor(typeEditor: ComponentEditor): HTMLElement;
-        private allChecked;
-    }
-    class VAlignProperty extends PropertyEditor {
-        createEditor(typeEditor: ComponentEditor): HTMLElement;
-    }
-    class HAlignProperty extends PropertyEditor {
-        createEditor(typeEditor: ComponentEditor): HTMLElement;
-    }
-    class DisplayFormatProperty extends PropertyEditor {
-        createEditor(typeEditor: ComponentEditor): HTMLElement;
-    }
-    interface ISelectPropertyItem {
-        value: any;
-        text: string;
-    }
-    class SelectProperty extends StringProperty {
-        static tag: string;
-        getValues(typeEditor: ComponentEditor): ISelectPropertyItem[];
-        createInput(typeEditor: ComponentEditor): HTMLElement;
-        selectItem(typeEditor: ComponentEditor, index: number): void;
-    }
-    class ComponentProperty extends SelectProperty {
-        onGetValues: (typeEditor: ComponentEditor) => ISelectPropertyItem[];
-        values: any[];
-        constructor(name: string, config: IPropertyConfig);
-        getValues(typeEditor: ComponentEditor): ISelectPropertyItem[];
-        selectItem(typeEditor: ComponentEditor, index: number): void;
-        protected setValue(value: any, input: HTMLElement): void;
-    }
-    class LocationProperty extends PropertyEditor {
-        createEditor(typeEditor: ComponentEditor): HTMLElement;
-    }
-    class HeightProperty extends PropertyEditor {
-        createEditor(typeEditor: ComponentEditor): HTMLElement;
-    }
-    class SizeProperty extends PropertyEditor {
-        createEditor(typeEditor: ComponentEditor): HTMLElement;
-    }
-    function findComponentEditor(type: typeof katrid.drawing.Component): any;
-    function registerComponentEditor(type: typeof katrid.drawing.Component, editor: typeof ComponentEditor): void;
-    function getComponentEditor(type: typeof katrid.drawing.Component): typeof ComponentEditor;
-    class ComponentEditor {
-        designer: DesignSurface;
-        static properties: PropertyEditor[];
-        targetObject: any;
-        constructor(comp: any, designer: DesignSurface);
-        createEditor(): HTMLElement;
-        showEditor(): void;
-        static registerPropertyEditor(propName: string, editor?: PropertyEditor): void;
-        static defineProperties(): StringProperty[];
-        setPropValue(proName: string, value: any): void;
-    }
-    class WidgetEditor extends ComponentEditor {
-        static defineProperties(): PropertyEditor[];
-    }
-    class DataSourceProperty extends SelectProperty {
-        getValues(typeEditor: ComponentEditor): {
-            value: bi.DataSource;
-            text: string;
-        }[];
-        getValue(typeEditor: ComponentEditor): any;
-        apply(target: any, value: any): void;
-    }
-    function showCodeEditor(value?: string, lang?: string, previewType?: string): Promise<unknown>;
-    function createCodeEditor(dom: HTMLElement, value?: string, lang?: string, previewType?: string): Promise<unknown>;
-}
-declare namespace katrid.bi {
-    interface IObject {
-        name: string;
-        dump(): any;
-        load(data: any): void;
-    }
-    class Field {
-        name: string;
-        expression: string;
-        calculated: boolean;
-        client: boolean;
-    }
-    class DataSource {
-        name: string;
-        fields: any[];
-        connection: string;
-        data: any;
-        master: DataSource;
-        report: katrid.report.Report;
-        protected _dataStored: boolean;
-        constructor(name: string);
-        dump(): any;
-        load(info: any): void;
-    }
-    class SqlDataSource extends DataSource {
-        private _sql;
-        protected _dataStored: boolean;
-        get sql(): string;
-        set sql(value: string);
-        dump(): any;
-        load(info: any): void;
-        read(): Promise<any>;
-    }
-    class ORMDataSource extends DataSource {
-        model: string;
-        domain: any;
-        selectFields: string[];
-        where: any;
-        protected _dataStored: boolean;
-        dump(): any;
-        load(info: any): void;
-        read(): Promise<any>;
-    }
-}
-declare namespace katrid.drawing {
-    class BaseColumn {
-        expression: string;
-        caption: string;
-        dump(): any;
-    }
-    class BaseGrid extends BaseWidget {
-        gridElement: HTMLTableElement;
-        foreignObject: SVGForeignObjectElement;
-        private _div;
-        columns: BaseColumn[];
-        protected defaultProps(): void;
-        create(): void;
-        createTable(): void;
-        thClick(th: HTMLElement): void;
-        dump(): any;
-    }
-}
-declare namespace katrid.bi {
-    class Grid extends katrid.drawing.BaseGrid {
-        datasource: DataSource;
-        dump(): any;
+    class Widget extends Component {
     }
 }
 declare namespace Katrid.Core {
@@ -1229,1203 +736,6 @@ declare namespace Katrid {
 declare namespace katrid {
     const core: typeof Katrid.Core;
 }
-declare namespace Katrid.Forms {
-    import IViewInfo = Katrid.Specification.UI.IViewInfo;
-    interface IView {
-        template?: string | HTMLElement;
-        container?: HTMLElement;
-        info?: Katrid.Specification.UI.IViewInfo;
-    }
-    class BaseView {
-        config: IView;
-        dialog: boolean;
-        vm: any;
-        parentVm: any;
-        container: HTMLElement;
-        element: HTMLElement;
-        template: HTMLTemplateElement;
-        html: string;
-        protected info: IViewInfo;
-        constructor(config: IView);
-        protected create(info: IView): void;
-        protected _applyDataDefinition(data: any): any;
-        protected getComponentData(): any;
-        protected createComponent(): any;
-        protected cloneTemplate(): HTMLElement;
-        domTemplate(): HTMLElement;
-        protected createDialogButtons(buttons: string[] | any[]): HTMLButtonElement[];
-        protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
-        scripts: string[];
-        _readyEventListeners: any[];
-        protected createVm(el: HTMLElement): any;
-        beforeRender(templ: HTMLElement): HTMLElement;
-        createElement(): void;
-        applyCustomTags(template: HTMLElement): void;
-        render(): HTMLElement;
-        protected _modal: bootstrap.Modal;
-        closeDialog(): void;
-        renderTo(container: HTMLElement): void;
-        onHashChange(params: any): Promise<void>;
-    }
-    function compileButtons(container: HTMLElement): void;
-    interface ISetupScript {
-        methods: any;
-        computed: any;
-        created(): unknown;
-        ready(view: BaseView): unknown;
-    }
-    let globalSettings: any;
-}
-declare namespace Katrid.Forms {
-    interface ISearchOptions {
-        id?: number | string;
-        index?: number;
-        where?: Record<string, any>;
-        page?: number;
-        limit?: number;
-        timeout?: number;
-    }
-    let searchModes: string[];
-    let registry: any;
-    interface IModelViewInfo extends IView {
-        name?: string;
-        model?: Katrid.Data.Model;
-        fields?: Record<string, Katrid.Data.IFieldInfo>;
-        toolbar?: any;
-        toolbarVisible?: boolean;
-        autoLoad?: boolean;
-        record?: any;
-        records?: any[];
-        recordGroups?: any[];
-        action?: Katrid.Actions.WindowAction;
-        recordClick?: (record: any, index: number, event: Event) => void;
-        multiple?: boolean;
-        viewInfo?: Katrid.Forms.ModelViewInfo;
-    }
-    class ModelView extends BaseView {
-        datasource: Katrid.Data.DataSource;
-        model: Katrid.Data.Model;
-        fields: Record<string, Katrid.Data.Field>;
-        action: Katrid.Actions.WindowAction;
-        toolbarVisible: boolean;
-        pendingOperation: number;
-        protected _record: any;
-        record: any;
-        config: IModelViewInfo;
-        dialogButtons: string[] | any[];
-        protected _readonly: boolean;
-        protected _loadingHandle: any;
-        protected info: IModelViewInfo;
-        constructor(info: IModelViewInfo);
-        static viewType: string;
-        static fromTemplate(action: Katrid.Actions.WindowAction, model: Katrid.Data.Model, template: string): ModelView;
-        static createViewModeButton(container: HTMLElement): void;
-        deleteSelection(sel: any[]): Promise<boolean>;
-        protected create(info: Katrid.Forms.IModelViewInfo): void;
-        protected dataSourceCallback(data: Katrid.Data.IDataCallback): void;
-        protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
-        protected _records: any[];
-        get records(): any[];
-        set records(value: any[]);
-        private _recordCount;
-        get recordCount(): number;
-        set recordCount(value: number);
-        private _active;
-        get active(): boolean;
-        set active(value: boolean);
-        protected setActive(value: boolean): void;
-        protected getComponentData(): any;
-        get readonly(): boolean;
-        set readonly(value: boolean);
-        ready(): Promise<any>;
-        refresh(): void;
-        protected _search(options: ISearchOptions): Promise<any>;
-        private _mergeHeader;
-        mergeHeader(parent: HTMLElement, container: HTMLElement): HTMLElement;
-        protected _vmCreated(vm: any): void;
-        doViewAction(action: string, target: any): Promise<any>;
-        callSubAction(action: string, selection?: any[]): Promise<void>;
-        protected _evalResponseAction(res: any): Promise<any>;
-        protected getSelectedIds(): Promise<any[]>;
-        protected createComponent(): any;
-        getViewType(): any;
-        autoCreateView(): HTMLElement;
-        domTemplate(): HTMLElement;
-        beforeRender(template: HTMLElement): HTMLElement;
-        protected renderTemplate(template: HTMLElement): HTMLElement;
-        createToolbar(): HTMLElement;
-        dialogPromise: Promise<any>;
-        generateHelp(help: any): void;
-    }
-    interface IRecordGroup {
-        $str: string;
-        $count: number;
-        $children?: any[];
-        $expanded?: boolean;
-        $hasChildren?: boolean;
-    }
-    abstract class RecordCollectionView extends ModelView {
-        private _searchView;
-        autoLoad: boolean;
-        recordGroups: IRecordGroup[];
-        groupLength: number;
-        private _orderBy;
-        constructor(info: IModelViewInfo);
-        get orderBy(): string[];
-        set orderBy(value: string[]);
-        getSelectedIds(): Promise<any[]>;
-        callSubAction(action: string, selection?: any[]): Promise<void>;
-        protected create(info: Katrid.Forms.IModelViewInfo): void;
-        protected _recordClick(record: any, index?: number): Promise<void>;
-        nextPage(): void;
-        prevPage(): void;
-        protected createComponent(): any;
-        protected setActive(value: boolean): void;
-        get searchView(): SearchView;
-        set searchView(value: SearchView);
-        protected dataSourceCallback(data: Katrid.Data.IDataCallback): void;
-        protected setSearchView(searchView: SearchView): void;
-        protected getComponentData(): any;
-        protected prepareGroup(groups: IRecordGroup[]): IRecordGroup[];
-        groupBy(data: any[]): Promise<any>;
-        applyGroups(groups: any, params: any): Promise<void>;
-        private _addRecordsToGroup;
-        expandGroup(group: IRecordGroup): Promise<void>;
-        expandAll(): void;
-        collapseAll(): void;
-        collapseGroup(group: IRecordGroup): void;
-        private _lastSearch;
-        setSearchParams(params: any): Promise<void>;
-        protected _invalidateSelection(): void;
-        createToolbar(): HTMLElement;
-        protected createToolbarButtons(container: HTMLElement): HTMLElement;
-        protected createSelectionInfo(parent: HTMLElement): void;
-        get $modalResult(): any;
-        set $modalResult(value: any);
-        showDialog(options?: any): Promise<unknown>;
-        ready(): Promise<unknown>;
-    }
-    class ActionViewElement extends Katrid.WebComponent {
-        action: Katrid.Actions.WindowAction;
-        view: ModelView;
-        protected create(): void;
-    }
-}
-declare namespace Katrid.Forms.Views {
-    export let registry: Record<string, typeof ModelView>;
-    interface ITemplates {
-        form?: string | HTMLTemplateElement;
-        list?: string | HTMLTemplateElement;
-        card?: string | HTMLTemplateElement;
-        [key: string]: any;
-    }
-    export function fromTemplates(action: Katrid.Actions.WindowAction, model: Katrid.Data.Model, templates: ITemplates): Record<string, ModelView>;
-    export {};
-}
-declare namespace katrid.drawing {
-    class BasePage {
-        name: string;
-        width: number;
-        height: number;
-        designer: katrid.design.DesignSurface;
-        objects: BaseWidget[];
-        constructor();
-        get isEmpty(): boolean;
-        protected defaultProps(): void;
-        get size(): Size;
-        set size(value: Size);
-        protected _pageSize: keyof typeof PageSize;
-        get pageSize(): keyof typeof PageSize;
-        set pageSize(value: keyof typeof PageSize);
-        private _orientation;
-        get orientation(): PageOrientation;
-        set orientation(value: PageOrientation);
-        dump(): any;
-        allObjects(): Generator<any>;
-        children(): BaseWidget[];
-        load(data: any): void;
-        onLoad(info: any): void;
-        protected _createDesigner(): design.PageDesigner;
-        loading: boolean;
-        createDesigner(): design.DesignSurface;
-    }
-}
-declare namespace katrid.bi {
-    class BasePage extends katrid.drawing.BasePage {
-        description: string;
-        report: katrid.report.Report;
-    }
-}
-declare namespace Katrid.BI {
-    export class QueryView extends Katrid.Forms.RecordCollectionView {
-        static viewType: string;
-        private _queryId;
-        searchViewVisible: boolean;
-        fieldList: Katrid.Data.Field[];
-        table: HTMLTableElement;
-        data: any;
-        metadata: any;
-        get queryId(): string | number;
-        set queryId(value: string | number);
-        queryChange(query: any): Promise<void>;
-        refreshQuery(query: any, params?: any): Promise<any>;
-        loadData(data: any): void;
-        private _loadedRows;
-        private _lastGroup;
-        private _lastGroupValues;
-        groups: string[];
-        groupsIndex: number[];
-        evalTotal(col: Column, values: any[]): number;
-        addGroupHeader(grouper: any, record: any, data: any[]): void;
-        addGroupFooter(): void;
-        more(count: number): number;
-        params: any[];
-        columns: Column[];
-        ready(): Promise<void>;
-        tableScroll(evt: any): void;
-        contextMenu(evt: any): void;
-        copyToClipboard(formatting?: boolean): Promise<void>;
-        export(): void;
-        get orientation(): "landscape" | "portrait";
-        reportTemplate: string;
-        print(): Promise<void>;
-        destroy(): void;
-    }
-    class Column {
-        name: string | number;
-        label: string;
-        type: string;
-        visible: boolean;
-        dataIndex: number;
-        total: string;
-        width: number;
-        cols: number;
-        constructor(info: any);
-    }
-    export {};
-}
-declare namespace katrid.bi {
-    class QueryView extends Katrid.BI.QueryView {
-    }
-    class QueryPage extends BasePage {
-        title: string;
-        private _model;
-        modelService: Katrid.Services.ModelService;
-        private _datasource;
-        userCanCustomize: boolean;
-        availableFields: string[];
-        fields: string[];
-        groupByFields: string[];
-        queryView: QueryView;
-        protected _createDesigner(): QueryPageDesigner;
-        dump(): any;
-        load(d: any): void;
-        get model(): string;
-        set model(value: string);
-        setModelService(service: Katrid.Services.ModelService): Promise<void>;
-        protected createQueryView(fields: any): void;
-        get datasource(): DataSource;
-        set datasource(value: DataSource);
-    }
-}
-declare namespace katrid.bi {
-    import ComponentEditor = katrid.design.ComponentEditor;
-    class DataSourceEditor extends ComponentEditor {
-        static defineProperties(): katrid.design.PropertyEditor[];
-    }
-    class GridEditor extends katrid.design.WidgetEditor {
-        static defineProperties(): katrid.design.PropertyEditor[];
-    }
-    class QueryPageEditor extends katrid.design.ComponentEditor {
-        static defineProperties(): katrid.design.PropertyEditor[];
-    }
-}
-declare namespace katrid.drawing {
-    const NS = "http://www.w3.org/2000/svg";
-    class Graphic {
-        $el: SVGElement;
-        constructor(tag: string | SVGElement, attrs?: Record<string, string | number>);
-        path(attrs?: Record<string, string | number>): void;
-        rect(x: number, y: number, width: number, height: number): Graphic;
-        private _d;
-        private _path;
-        beginPath(attrs?: any): Graphic;
-        moveTo(x: number, y: number): this;
-        lineTo(x: number, y: number): this;
-        closePath(): this;
-        text(x: number, y: number, text: string, attrs?: any): Graphic;
-        line(x1: number, y1: number, x2: number, y2: number, attrs?: Record<string, string | number>): Graphic;
-        image(x: number, y: number, width: number, height: number, src: string): Graphic;
-        attr(name: string | Record<string, string | number>, value?: string | number): string | this;
-        clear(): this;
-        append(obj: Graphic): void;
-        parent(): Graphic;
-        translate(x: number, y: number): void;
-        remove(): void;
-    }
-    function svg(el: SVGElement): Graphic;
-    class Draw extends Graphic {
-    }
-    function draw(tag: string, attrs?: Record<string, string | number>): Graphic;
-    function rect(x: number, y: number, width: number, height: number, attrs?: Record<string, string | number>): Graphic;
-    function g(attrs?: Record<string, string | number>): Graphic;
-    class SVG extends Draw {
-        private _width;
-        private _height;
-        constructor(width: number, height: number);
-        get width(): number;
-        set width(value: number);
-        get height(): number;
-        set height(value: number);
-    }
-    class Canvas extends SVG {
-        container: Element;
-        constructor(width?: number, height?: number);
-        appendTo(parent: Element): void;
-    }
-}
-declare namespace katrid.design {
-    import BaseWidget = katrid.drawing.BaseWidget;
-    const GUIDELINE_DELAY = 1000;
-    class DesignSurface extends katrid.drawing.Canvas {
-        dragging: boolean;
-        grabs: GrabHandles[];
-        snapToGrid: boolean;
-        gridX: number;
-        gridY: number;
-        showGrid: boolean;
-        showGuidelines: boolean;
-        selection: BaseWidget[];
-        guidelines: SVGElement[];
-        objects: BaseWidget[];
-        undoManager: UndoManager;
-        clipboardManager: ClipboardManager;
-        workspace: Element;
-        private _loading;
-        onNotification: (obj: any, event: string) => void;
-        constructor(width?: number, height?: number);
-        defaultProps(): void;
-        get loading(): boolean;
-        set loading(value: boolean);
-        beginChanges(action: string): void;
-        endChanges(): void;
-        create(): void;
-        private _keyDownHandler;
-        private _active;
-        eventsDisabled: boolean;
-        enableEvents(): void;
-        disableEvents(): void;
-        activate(): void;
-        private _selBox;
-        protected createSelectionBox(x: number, y: number, width: number, height: number): void;
-        deactivate(): void;
-        protected onKeyDown(event: KeyboardEvent): void;
-        applyRectToSelection(dx: number, dy: number, dw: number, dh: number): void;
-        updateSelectedObjects(): void;
-        protected updateGrabs(): void;
-        refreshGrabs(): void;
-        resizeSelectionBy(dw: number, dh: number): void;
-        addObject(obj: BaseWidget): WidgetDesigner;
-        addDesigner(designer: WidgetDesigner): void;
-        setSelection(objs: BaseWidget[]): void;
-        clearSelection(): void;
-        createGrabHandles(obj: BaseWidget): void;
-        destroyGrabHandles(obj?: BaseWidget): void;
-        applySelectionBox(rect: DOMRect): void;
-        invalidate(): void;
-        getValidName(name: string): string;
-        getDesigner(widget: BaseWidget): WidgetDesigner;
-        removeFromSelection(obj: BaseWidget): void;
-        protected onSelectionChange(): void;
-        addToSelection(obj: BaseWidget): void;
-        selectObject(obj: BaseWidget): void;
-        toggleSelection(obj: BaseWidget): void;
-        moveSelectionBy(dx: number, dy: number): void;
-        onSelectionMoved(): void;
-        protected _createGuideline(x1: number, y1: number, x2: number, y2: number): void;
-        resizing: boolean;
-        createGuidelines(): void;
-        clearGuidelines(): void;
-        loadObject(obj: any): BaseWidget;
-        removeObject(obj: BaseWidget): void;
-        deleteSelection(): void;
-        protected _removeObjects(objs: BaseWidget[], description?: string): void;
-        removeObjects(objs: BaseWidget[]): void;
-        cut(): Promise<void>;
-        copy(): Promise<void>;
-        paste(): Promise<void>;
-        pasteObject(obj: BaseWidget): WidgetDesigner;
-        undo(): void;
-        redo(): void;
-        resize(width: number, height: number): void;
-        getDesignerHeight(): number;
-        protected _resize(): void;
-        private _zoom;
-        get zoom(): number;
-        set zoom(value: number);
-        protected _resizingTimeout: any;
-        private _tempGuidelines;
-        selectionBox: boolean;
-        draggingSelectionBox: boolean;
-        protected _dx: number;
-        protected _dy: number;
-        protected _bx: number;
-        protected _by: number;
-        protected _bw: number;
-        protected _bh: number;
-        onPointerDown(event: PointerEvent): void;
-        onMouseMove(event: MouseEvent): void;
-        onPointerUp(event: PointerEvent): void;
-        protected _onPointerUp(): void;
-        refreshSelection(): void;
-        protected destroySelectionBox(): void;
-        protected updateSelectionBox(x: number, y: number, width: number, height: number): void;
-        widgetDoubleClick(widget: WidgetDesigner, event: MouseEvent): void;
-        executeEditor(widget: WidgetDesigner): void;
-        protected toolItemDragOver(evt: DragEvent): void;
-        protected createDragEvents(): void;
-        protected toolItemDrop(widget: string, evt: DragEvent): void;
-        createWidget(widgetName: string, target: Element, x: number, y: number): void;
-        getElement(): Element;
-    }
-}
-declare namespace katrid.design {
-    class PageDesigner extends katrid.design.DesignSurface {
-        protected _page: katrid.drawing.BasePage;
-        constructor(page: katrid.drawing.BasePage);
-        get page(): katrid.drawing.BasePage;
-        get report(): report.Report;
-        set page(value: katrid.drawing.BasePage);
-        showConfigWizard(): void;
-        hideConfigWizard(): void;
-        onConfigClick(event: MouseEvent): void;
-        getElement(): Element;
-    }
-}
-declare namespace katrid.bi {
-    class PageDesigner extends katrid.design.PageDesigner {
-        reportDesigner: ReportEditor;
-        activate(): void;
-        protected onSelectionChange(): void;
-    }
-}
-declare namespace katrid.bi {
-    class PivotTable {
-        el: HTMLElement;
-        table: HTMLTableElement;
-        constructor(container: HTMLElement);
-        create(): void;
-        createTable(): void;
-        private _cols;
-        get cols(): string[];
-        set cols(value: string[]);
-        private _rows;
-        get rows(): string[];
-        set rows(value: string[]);
-        update(): void;
-        data: any[];
-        setData(data: any[]): void;
-        rowPivot: any;
-        colPivot: any;
-        protected loadData(): void;
-    }
-}
-declare namespace Katrid.Core {
-    export class Plugin {
-        app: Application;
-        constructor(app: Application);
-        hashChange(url: string): boolean;
-    }
-    class Plugins extends Array<typeof Plugin> {
-        start(app: Application): void;
-    }
-    export let plugins: Plugins;
-    export function registerPlugin(cls: typeof Plugin): void;
-    export {};
-}
-declare namespace Katrid.BI {
-}
-declare namespace Katrid.BI {
-    class QueryViewerElement extends Katrid.WebComponent {
-        queryViewer: QueryViewer;
-        protected create(): void;
-    }
-    class QueryViewer {
-        el: HTMLElement;
-        container: HTMLElement;
-        constructor(el: HTMLElement);
-        protected create(): void;
-        queryId: number | string;
-        query: Katrid.Services.Query;
-        load(): Promise<void>;
-        metadata: any;
-        params: Katrid.Reports.Param[];
-        btnPrint: HTMLButtonElement;
-        btnExport: HTMLButtonElement;
-        createParamsPanel(params: any): void;
-        applyParams(): Promise<void>;
-        queryView: QueryView;
-        print(): Promise<void>;
-        createQueryView(fields: any, data: any, reportType?: string): QueryView;
-    }
-}
-declare namespace katrid.bi {
-    const QueryViewer: typeof Katrid.BI.QueryViewer;
-}
-declare namespace katrid.bi {
-    class ReportEditor {
-        container: HTMLElement;
-        el: HTMLElement;
-        dataExplorer: DataExplorer;
-        paramExplorer: ParamExplorer;
-        pageExplorer: PageExplorer;
-        outlineExplorer: OutlineExplorer;
-        toolBox: ToolBox;
-        inspector: ObjectInspector;
-        zoomTool: ZoomTool;
-        protected leftNav: HTMLElement;
-        protected rightNav: HTMLElement;
-        private _report;
-        pages: katrid.bi.BasePageDesigner[];
-        workspaceElement: HTMLElement;
-        constructor(container: HTMLElement);
-        onSelectionChanged(selection: any[]): void;
-        objectNotification(obj: any, event: 'add' | 'remove' | 'rename'): void;
-        private _name;
-        get reportName(): string;
-        set reportName(value: string);
-        create(): void;
-        createWorkspace(): void;
-        protected createToolbar(container: HTMLElement): ui.Toolbar;
-        showParamsDialog(): Promise<any>;
-        preview(showParams?: boolean): Promise<void>;
-        activatePage(page: katrid.bi.BasePage): void;
-        get report(): katrid.report.Report;
-        set report(value: katrid.report.Report);
-        showToolBox(): void;
-        showPageExplorer(): void;
-        showOutlineExplorer(): void;
-        showDataExplorer(): void;
-        showParamExplorer(): void;
-        showPropertiesEditor(): void;
-        loading: boolean;
-        loadReport(report: katrid.report.Report): void;
-        onSave: (data: any) => void;
-        save(): void;
-        onDestroy: () => void;
-        close(): void;
-        newReportWizard(): void;
-        newReport(repType?: katrid.report.PageType): report.Report;
-        protected clean(): void;
-        addPage(page: katrid.report.BasePage): BasePageDesigner;
-        protected setModified(): void;
-        newPage(type?: katrid.report.PageType, name?: string): BasePageDesigner;
-        private _modified;
-        get modified(): boolean;
-        set modified(value: boolean);
-        private _page;
-        get page(): katrid.design.PageDesigner;
-        set page(value: katrid.design.PageDesigner);
-        load(data: any, filename?: string): void;
-        fileHandle: FileSystemFileHandle;
-        openFile(): Promise<void>;
-        saveFile(): Promise<void>;
-        setParams(params: string): void;
-        configCurrentPage(evt: MouseEvent): void;
-    }
-}
-declare namespace katrid.bi {
-}
-declare namespace Katrid.BI {
-    interface ITableConfig {
-        caption?: string;
-        fieldElements?: HTMLElement[];
-    }
-    export class TableWidget {
-        el: HTMLElement;
-        config?: ITableConfig;
-        constructor(el: HTMLElement, config?: ITableConfig);
-        private _queryCommand;
-        get queryCommand(): string;
-        set queryCommand(value: string);
-        private _waiting;
-        get waiting(): boolean;
-        set waiting(value: boolean);
-        protected _refresh(data: any): void;
-    }
-    export class TableWidgetElement extends Katrid.WebComponent {
-        protected create(): void;
-    }
-    export {};
-}
-declare namespace Katrid.Services {
-    class Service {
-        name: string;
-        static url: string;
-        constructor(name: string);
-        static adapter: BaseAdapter;
-        static $fetch(url: any, config: any, params?: any): any;
-        static $post(url: any, data: any, params?: any): any;
-        get(name: string, params: any): JQuery.jqXHR<any>;
-        post(name: string, data: any, params?: any, config?: any, context?: any): Promise<unknown>;
-    }
-    class Data extends Service {
-        static get url(): string;
-        reorder(model: any, ids: any, field?: string, offset?: number): Promise<unknown>;
-    }
-    class Attachments {
-        static delete(id: any): void;
-        static upload(file: any, config: any): Promise<any>;
-    }
-    class Upload {
-        static callWithFiles(config: any): any;
-        static sendFile(config: any): void;
-        static uploadTo(url: any, file: any): JQuery.jqXHR<any>;
-    }
-    let data: Data;
-    function post(url: string, data: any): Promise<any>;
-}
-declare namespace katrid.bi {
-    class TableWidget extends katrid.drawing.BaseWidget {
-        datasource: DataSource;
-        table: HTMLTableElement;
-        dump(): any;
-    }
-}
-declare namespace katrid.bi {
-    class DataToolWindow {
-        container: HTMLElement;
-        protected btnNew: HTMLButtonElement;
-        protected table: HTMLTableElement;
-        el: HTMLElement;
-        constructor(container: HTMLElement);
-        create(): void;
-        createDataSourceDialog(opts?: any): Promise<any>;
-        newDataSource(): Promise<void>;
-        editDataSource(dataSource: DataSource): Promise<void>;
-        createDataSource(name: string, sql: string): void;
-        saveDataSource(dataSource: DataSource, name: string, sql: string): void;
-        registerDataSource(dataSource: DataSource): void;
-        addDataSource(dataSource: DataSource): void;
-        clear(): void;
-        get datasources(): DataSource[];
-    }
-}
-declare namespace katrid.bi {
-}
-declare namespace katrid.bi {
-    class ToolWindow {
-        designer: any;
-        protected btnNew: HTMLButtonElement;
-        protected table: HTMLTableElement;
-        template: string;
-        constructor(designer: any, container: HTMLElement);
-        showCodeEditor(): Promise<void>;
-        createDataSourceDialog(opts?: any): Promise<any>;
-        newDataSource(): Promise<void>;
-        editDataSource(dataSource: DataSource): Promise<void>;
-        createDataSource(name: string, sql: string): void;
-        saveDataSource(dataSource: DataSource, name: string, sql: string): void;
-        registerDataSource(dataSource: DataSource): void;
-        addDataSource(dataSource: DataSource): void;
-        clear(): void;
-        get datasources(): DataSource[];
-    }
-}
-declare namespace katrid.bi {
-    class QueryPageDesigner extends katrid.bi.PageDesigner {
-        elEmptyPage: HTMLElement;
-        get page(): katrid.bi.QueryPage;
-        set page(value: katrid.bi.QueryPage);
-        get queryView(): katrid.bi.QueryView;
-        pageContainer: HTMLElement;
-        create(): void;
-        createEmptyPage(): void;
-        getElement(): Element;
-    }
-}
-declare namespace katrid.report {
-    interface DesignableWidget {
-        name: string;
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-    }
-    interface IReportObject {
-        name: string;
-    }
-    class ReportElement extends katrid.drawing.BaseWidget {
-        protected applyStyle(): void;
-    }
-}
-declare namespace katrid.report {
-    let reportDesigner: ReportDesigner;
-    class ReportDesigner {
-        container: HTMLElement;
-        private _modified;
-        private _report;
-        pages: katrid.design.DesignSurface[];
-        tabs: HTMLElement[];
-        el: HTMLElement;
-        toolbox: katrid.bi.Toolbox;
-        toolWindow: katrid.bi.ToolWindow;
-        tabsetElement: HTMLElement;
-        workspace: HTMLElement;
-        private _datasources;
-        constructor(container: HTMLElement);
-        create(): void;
-        propertiesEditor: katrid.bi.ObjectInspector;
-        onSelectionChange(selection?: IWidgetDesigner[]): void;
-        get datasources(): bi.DataSource[];
-        protected createDragEvents(): void;
-        toolItemDrop(widget: string, evt: DragEvent): void;
-        createWidget(widgetName: string, target: Element, x: number, y: number): void;
-        newReport(): Report;
-        get report(): Report;
-        set report(value: Report);
-        private _page;
-        get page(): PageDesigner;
-        set page(value: PageDesigner);
-        getValidName(prefix: string): string;
-        protected loadReport(report: Report): void;
-        widgetExecuteEditor(widget: ReportElement): Promise<void>;
-        fileHandle: any;
-        showOpenFilePicker(): Promise<void>;
-        showSaveFilePicker(): Promise<void>;
-        loading: boolean;
-        dump(): {
-            report: {
-                version: number;
-                type: PageType;
-                pages: any[];
-                datasources: any[];
-            };
-        };
-        load(info: any, filename?: string): Report;
-        set filename(filename: string);
-        clear(): void;
-        registerDataSource(ds: katrid.bi.DataSource): void;
-        addPage(page: katrid.report.BasePage): design.DesignSurface;
-        newPage(type?: katrid.report.PageType): design.DesignSurface;
-        setModified(modified?: boolean): void;
-    }
-}
-declare namespace katrid.report {
-    class BasePage extends katrid.bi.BasePage {
-    }
-}
-declare namespace katrid.report {
-    enum PageType {
-        Banded = "banded",
-        Query = "query",
-        Dashboard = "dashboard",
-        Document = "document",
-        Spreadsheet = "spreadsheet"
-    }
-    class Report {
-        pages: BasePage[];
-        datasources: katrid.bi.DataSource[];
-        reportType: PageType;
-        loading: boolean;
-        name: string;
-        onLoadCallbacks: Function[];
-        params: string;
-        cache: any;
-        constructor(pageType?: PageType);
-        static fromMetadata(metadata: any): Report;
-        addPage(page: BasePage): void;
-        removeDataSource(ds: katrid.bi.DataSource): void;
-        getValidName(prefix: string): string;
-        findObject(name: string): any;
-        getObjects(): Generator<katrid.bi.IObject>;
-        newPage(type?: PageType): BasePage;
-        addDataSource(datasource: katrid.bi.DataSource): void;
-        dump(): {
-            report: {
-                version: number;
-                type: PageType;
-                pages: any[];
-                datasources: any[];
-            };
-        };
-        protected loadPage(pageInfo: any): BandedPage;
-        protected loadDataSource(ds: any): bi.DataSource;
-        clear(): void;
-        load(data: any): void;
-        addLoadCallback(cb: Function): void;
-    }
-}
-declare namespace katrid.report {
-    import Graphic = katrid.drawing.Graphic;
-    import BaseWidget = katrid.drawing.BaseWidget;
-    class BandedObject extends ReportElement {
-    }
-    class Band extends ReportElement {
-        name: string;
-        sizer: Graphic;
-        private _background;
-        private _headerHeight;
-        private _sizerHeight;
-        protected _header: Graphic;
-        private _resizing;
-        private _tempSizer;
-        private _dy;
-        canGrow: boolean;
-        canShrink: boolean;
-        parentBand: Band;
-        protected defaultProps(): void;
-        onRemoveNotification(obj: any): void;
-        getDesignRect(): DOMRect;
-        reorderBy(d: number): void;
-        get clientY(): number;
-        get report(): katrid.report.Report;
-        get background(): katrid.drawing.Background;
-        set background(value: katrid.drawing.Background);
-        get totalHeight(): number;
-        addObject(obj: BaseWidget): design.WidgetDesigner;
-        validateHeight(): void;
-        dump(): any;
-        appendToDesigner(obj: BaseWidget): design.WidgetDesigner;
-        pageDesigner: BandDesigner;
-        bandDesign: Graphic;
-        elBand: Graphic;
-        private _rect;
-        getHeaderCaption(): string;
-        protected _createDesigner(): void;
-        createDesigner(): void;
-        createGroup(): void;
-        createSizer(bandDesigner: Graphic): Graphic;
-        createDesignerContextMenu(designer: BandDesigner): Katrid.Forms.ContextMenu;
-        private _minHeight;
-        protected getMinHeight(): number;
-        protected _sizerMouseDown(event: PointerEvent): void;
-        protected _sizerMouseMove(event: PointerEvent): void;
-        protected _sizerMouseUp(event: PointerEvent): void;
-        sizerMoveBy(dy: number): boolean;
-        destroyDesigner(): void;
-        redraw(): void;
-        getClassByName(name: string): typeof BaseWidget;
-    }
-    class DataBand extends Band {
-        static type: string;
-        header: Band;
-        footer: Band;
-        groupHeader: GroupHeader;
-        parentBand: DataBand;
-        private _datasource;
-        get datasource(): bi.DataSource;
-        set datasource(value: bi.DataSource);
-        load(info: any): void;
-        onRemoveNotification(obj: any): void;
-        dump(): any;
-        onLoad(info: any): void;
-    }
-    class PageHeader extends Band {
-        static type: string;
-    }
-    class PageFooter extends Band {
-        static type: string;
-    }
-    class ReportTitle extends Band {
-        static type: string;
-    }
-    class HeaderBand extends Band {
-        static type: string;
-        remove(): void;
-    }
-    class FooterBand extends Band {
-        static type: string;
-        remove(): void;
-    }
-    class GroupHeader extends Band {
-        static type: string;
-        parentBand: GroupHeader;
-        footer: GroupFooter;
-        dataBand: DataBand;
-        expression: string;
-        remove(): void;
-        onRemoveNotification(obj: any): void;
-        dump(): any;
-        load(info: any): void;
-        onLoad(info: any): void;
-    }
-    class GroupFooter extends Band {
-        static type: string;
-        header: GroupHeader;
-        remove(): void;
-        load(info: any): void;
-        onLoad(info: any): void;
-    }
-    class SummaryBand extends Band {
-        static type: string;
-    }
-}
-declare namespace katrid.report {
-    class BandedObjectDesigner extends katrid.design.WidgetDesigner {
-        protected _mouseUp(): void;
-    }
-    class BandDesigner extends katrid.bi.PageDesigner {
-        defaultProps(): void;
-        removeObjectNotification(): void;
-        create(): void;
-        loadBands(): void;
-        addBand(band: Band): void;
-        newBand(bandType: string): Band;
-        getValidName(prefix: string): string;
-        invalidate(): void;
-        invalidateBands(): void;
-        getDesignerHeight(): number;
-        adjustPageHeight(): void;
-        protected _resize(): void;
-        private _rearrangeBand;
-        private _selectedBand;
-        get selectedBand(): Band;
-        set selectedBand(value: Band);
-        createGrabHandles(obj: katrid.drawing.BaseWidget): void;
-        removeBand(band: Band): void;
-        protected onKeyDown(event: KeyboardEvent): void;
-        applySelectionBox(rect: DOMRect): void;
-        protected onSelectionChange(): void;
-        moveObjectToBand(obj: katrid.drawing.BaseWidget, band: Band): void;
-        onSelectionMoved(): void;
-        protected toolItemDragOver(evt: DragEvent): void;
-        createWidget(widgetName: string, target: Element, x: number, y: number): void;
-        pasteObject(obj: katrid.drawing.BaseWidget): katrid.design.WidgetDesigner;
-        private _configButton;
-        showConfigWizard(): void;
-        hideConfigWizard(): void;
-        onConfigClick(event: MouseEvent): void;
-    }
-}
-declare namespace katrid.report {
-    class TableBand extends Band {
-        static type: string;
-        table: HTMLTableElement;
-        private _datasource;
-        columns: string[];
-        headerVisible: boolean;
-        footerVisible: boolean;
-        defaultProps(): void;
-        get datasource(): bi.DataSource;
-        set datasource(value: bi.DataSource);
-        load(info: any): void;
-        onLoad(info: any): void;
-        dump(): any;
-        protected _createDesigner(): void;
-        createDesignerContextMenu(designer: katrid.report.BandDesigner): Katrid.Forms.ContextMenu;
-        createOutlineContextMenu(): void;
-        redraw(): void;
-        showTableEditor(evt: MouseEvent): void;
-        selectColumns(): void;
-        selectColumn(col: any): void;
-    }
-}
-declare namespace katrid.report {
-    import ComponentEditor = katrid.design.ComponentEditor;
-    import PropertyEditor = katrid.design.PropertyEditor;
-    import WidgetEditor = katrid.design.WidgetEditor;
-    class BandEditor extends ComponentEditor {
-        static defineProperties(): katrid.design.PropertyEditor[];
-    }
-    class DataBandEditor extends BandEditor {
-        static defineProperties(): katrid.design.PropertyEditor[];
-    }
-    class GroupHeaderEditor extends BandEditor {
-        static defineProperties(): PropertyEditor[];
-    }
-    class PageEditor extends ComponentEditor {
-        static defineProperties(): PropertyEditor[];
-    }
-    class SubReportEditor extends WidgetEditor {
-    }
-    class TableBandEditor extends BandEditor {
-        static defineProperties(): katrid.design.PropertyEditor[];
-    }
-}
-declare namespace katrid.report {
-    class GridBand extends Band {
-        datasource: katrid.bi.DataSource;
-    }
-}
-declare namespace katrid.report {
-    import BaseWidget = katrid.drawing.BaseWidget;
-    interface IObjectInfo {
-        name: string;
-        height: number;
-        width: number;
-    }
-    export type BandInfo = {
-        name: string;
-        width: number;
-        height: number;
-        objects: IObjectInfo[];
-    };
-    export type PageInfo = {
-        name: string;
-        height: number;
-        width: number;
-        bands: BandInfo[];
-    };
-    export class BandedPage extends BasePage {
-        bands: Band[];
-        protected defaultProps(): void;
-        protected _createDesigner(): BandDesigner;
-        addBand(band: Band): void;
-        children(): katrid.drawing.BaseWidget[];
-        allObjects(): Generator<BaseWidget>;
-        removeBand(band: Band): void;
-        redraw(): void;
-        dump(): any;
-        load(info: PageInfo): void;
-    }
-    export {};
-}
-declare namespace katrid.report {
-    import BaseWidget = katrid.drawing.BaseWidget;
-    class SubReport extends BaseWidget {
-        protected _page: BasePage;
-        protected defaultProps(): void;
-        get page(): BasePage;
-        set page(value: BasePage);
-        dump(): any;
-        redraw(): void;
-    }
-}
-declare namespace Katrid.BI {
-    class ReportPreview {
-        loadReport(report: any): void;
-        loadBand(data: any): void;
-        loadText(data: any): HTMLSpanElement;
-        loadImage(data: any): HTMLImageElement;
-    }
-}
-declare namespace katrid.bi {
-    class AlignmentTool {
-        el: HTMLElement;
-        designer: katrid.design.DesignSurface;
-        constructor();
-        create(): void;
-        alignLeft(): void;
-        alignCenterHorizontal(): void;
-        alignRight(): void;
-        alignTop(): void;
-        alignCenterVertical(): void;
-        alignBottom(): void;
-        distributeHorizontally(): void;
-        distributeVertically(): void;
-    }
-}
-declare namespace katrid.bi {
-    class BaseToolWindow {
-        container: HTMLElement;
-        el: HTMLElement;
-        constructor(container: HTMLElement);
-        getHeaderTemplate(): string;
-        create(): void;
-        hide(): void;
-        show(): void;
-    }
-}
-declare namespace katrid.bi {
-    class DataExplorer extends BaseToolWindow {
-        table: HTMLElement;
-        onNewDataSource: () => DataSource;
-        onSelectionChange: (datasource?: DataSource) => void;
-        onRemoveDataSource: (datasource?: DataSource) => void;
-        designer: PageDesigner;
-        getHeaderTemplate(): string;
-        protected tv: katrid.ui.TreeView;
-        create(): void;
-        registerDataSource(datasource: DataSource): void;
-        saveDataSource(datasource: SqlDataSource, name: string, sql: string): void;
-        editDataSource(datasource: DataSource): Promise<void>;
-        createDataSourceDialog(opts?: any): Promise<any>;
-        clear(): void;
-        nodeContextMenu(node: katrid.ui.TreeNode, evt?: MouseEvent): void;
-    }
-}
-declare namespace katrid.bi {
-    class ObjectInspector extends BaseToolWindow {
-        editor: katrid.design.ComponentEditor;
-        selection: any[];
-        content: HTMLElement;
-        private _designer;
-        alignmentTool: AlignmentTool;
-        getHeaderTemplate(): string;
-        create(): void;
-        private _keyDown;
-        get designer(): katrid.design.DesignSurface;
-        set designer(value: katrid.design.DesignSurface);
-        setSelection(selection: any[]): void;
-        getComponentEditor(component: any): design.ComponentEditor;
-        createComponentEditor(component: any): design.ComponentEditor;
-        refresh(): void;
-    }
-}
-declare namespace katrid.bi {
-    import TreeNode = katrid.ui.TreeNode;
-    class OutlineExplorer extends BaseToolWindow {
-        treeView: katrid.ui.TreeView;
-        getHeaderTemplate(): string;
-        create(): void;
-        objectNotification(obj: any, event: 'add' | 'remove' | 'rename'): void;
-        clear(): void;
-        loadReport(report: katrid.report.Report): void;
-        private _findNode;
-        addObject(obj: any): TreeNode;
-        removeObject(obj: any): void;
-        renameObject(obj: any): void;
-        protected getObjectText(obj: any): any;
-        onSelectItem: (obj: any) => void;
-        selectObject(obj: any): void;
-    }
-}
-declare namespace katrid.bi {
-    class PageExplorer extends BaseToolWindow {
-        reportEditor: ReportEditor;
-        treeView: katrid.ui.TreeView;
-        getHeaderTemplate(): string;
-        create(): void;
-        registerPage(page: katrid.drawing.BasePage): void;
-        clear(): void;
-    }
-}
-declare namespace katrid.bi {
-    class ParamExplorer extends BaseToolWindow {
-        reportEditor: ReportEditor;
-        getHeaderTemplate(): string;
-        create(): void;
-    }
-}
-declare namespace katrid.bi {
-    class ToolBox extends BaseToolWindow {
-        getHeaderTemplate(): string;
-        create(): void;
-    }
-}
-declare namespace katrid.bi {
-    class ZoomTool {
-        container: any;
-        private _designer;
-        protected buttonReset: HTMLElement;
-        constructor(container: any, designer?: katrid.design.DesignSurface);
-        create(): void;
-        get designer(): design.DesignSurface;
-        set designer(value: design.DesignSurface);
-        protected setZoomText(value: number | string): void;
-        zoomIn(): void;
-        zoomOut(): void;
-        zoomReset(): void;
-    }
-}
-declare namespace Katrid.Components {
-    class Component {
-        name: string;
-    }
-    class Widget extends Component {
-    }
-}
 declare namespace katrid.exceptions {
     class Exception extends Error {
         constructor(message: any);
@@ -2433,7 +743,6 @@ declare namespace katrid.exceptions {
     class ValidationError extends Exception {
     }
 }
-declare var _: any;
 declare var Vue: any;
 declare namespace Katrid {
     let localSettings: any;
@@ -2450,8 +759,25 @@ declare namespace Katrid {
 }
 declare namespace katrid {
     function init(): void;
-    const elementDataSymbol: unique symbol;
     function data(el: any, key?: string, value?: any): any;
+}
+declare namespace Katrid.Core {
+    export class Plugin {
+        app: Application;
+        constructor(app: Application);
+        hashChange(url: string): boolean;
+    }
+    class Plugins extends Array<typeof Plugin> {
+        start(app: Application): void;
+    }
+    export let plugins: Plugins;
+    export function registerPlugin(cls: typeof Plugin): void;
+    export {};
+}
+declare namespace katrid.data {
+    interface IDataSource {
+        name: string;
+    }
 }
 declare namespace Katrid.Data {
     export enum DataSourceState {
@@ -2987,149 +1313,6 @@ declare namespace katrid.db {
         put(item: any, key?: string | number): Promise<any>;
     }
 }
-declare namespace katrid.design {
-    class ClipboardManager {
-        designer: DesignSurface;
-        constructor(designer: DesignSurface);
-        getClipboardData(): Promise<any[]>;
-        prepareCopyData(): string;
-        copy(): Promise<void>;
-        pasteData(data: any): any[];
-        paste(): Promise<any[]>;
-    }
-}
-declare namespace katrid.design {
-    class GrabHandles {
-        topCenter: SVGElement;
-        topRight: SVGElement;
-        middleLeft: SVGElement;
-        bottomRight: SVGElement;
-        bottomCenter: SVGElement;
-        bottomLeft: SVGElement;
-        middleRight: SVGElement;
-        topLeft: SVGElement;
-        handles: SVGElement[];
-        private _dragging;
-        onObjectResized: ({ target }: {
-            target: any;
-        }) => void;
-        onObjectResizing: ({ target }: {
-            target: any;
-        }) => void;
-        container: Element;
-        target: katrid.drawing.BaseWidget;
-        gridX: number;
-        gridY: number;
-        snapToGrid: boolean;
-        designer: DesignSurface;
-        constructor(config: {
-            target: katrid.drawing.BaseWidget;
-            container: Element;
-            snapToGrid?: boolean;
-            gridX?: number;
-            gridY?: number;
-            designer: DesignSurface;
-            onObjectResized?: ({ target }: {
-                target: any;
-            }) => void;
-            onObjectResizing?: ({ target }: {
-                target: any;
-            }) => void;
-        });
-        set dragging(value: boolean);
-        get dragging(): boolean;
-        createHandle(): SVGElement;
-        clear(): void;
-        setPosition(): void;
-        _setGrabHandle(): void;
-        createHandles(): this;
-        resized(): void;
-        applyRect(dx?: number, dy?: number, dw?: number, dh?: number): void;
-        destroy(): void;
-    }
-}
-declare namespace katrid.design {
-}
-declare namespace katrid.design {
-    class Rule {
-        el: Element;
-        graphic: katrid.drawing.Graphic;
-        width: number;
-        height: number;
-        create(): void;
-        redraw(): void;
-    }
-    class HorizontalRule extends Rule {
-    }
-    class VerticalRule extends Rule {
-    }
-}
-declare namespace katrid.design {
-    import Font = katrid.drawing.Font;
-    import HAlign = katrid.drawing.HAlign;
-    import VAlign = katrid.drawing.VAlign;
-    import Border = katrid.drawing.Border;
-    class TextWidget extends katrid.drawing.BaseWidget {
-        text: string;
-        fill: string;
-        private _font;
-        border: Border;
-        constructor(text?: string);
-        defaultProps(): void;
-        get font(): Font;
-        set font(value: Font);
-        private _hAlign;
-        get hAlign(): HAlign;
-        set hAlign(value: HAlign);
-        private _vAlign;
-        get vAlign(): VAlign;
-        set vAlign(value: VAlign);
-        applyStyle(): void;
-    }
-}
-declare namespace katrid.design {
-    interface UndoEntry {
-        action: string;
-        data: any;
-        description?: string;
-    }
-    class UndoManager {
-        designer: DesignSurface;
-        stack: UndoEntry[];
-        capacity: number;
-        index: number;
-        private _redoEntry;
-        enabled: boolean;
-        constructor(designer: DesignSurface);
-        beginUpdate(): void;
-        endUpdate(): void;
-        add(action: string, data: any, description?: string): void;
-        undo(): void;
-        redo(): void;
-        resizeSelection(selection: katrid.drawing.BaseWidget[]): void;
-        moveSelection(selection: katrid.drawing.BaseWidget[]): void;
-        addRedo(redo: UndoEntry): void;
-        protected undoMoveObject(undoEntry: IUndoMoveObject[], description?: string): void;
-        protected undoResizeObject(undoEntry: IUndoResizeObject[]): void;
-        protected undoPaste(undoEntry: any[]): void;
-        protected undoProperty(undoEntry: any[]): void;
-        protected undoRemove(undoEntry: any[]): void;
-        protected undoEntry(entry: UndoEntry): void;
-        redoEntry(entry: UndoEntry): void;
-    }
-    interface IUndoMoveObject {
-        target: katrid.drawing.BaseWidget;
-        x: number;
-        y: number;
-    }
-    interface IUndoResizeObject {
-        target: katrid.drawing.BaseWidget;
-        x: number;
-        y: number;
-        w: number;
-        h: number;
-    }
-}
 declare namespace katrid.ui {
     type ConfirmConfig = {
         title: string;
@@ -3138,22 +1321,6 @@ declare namespace katrid.ui {
     };
     export function confirm(config: ConfirmConfig): Promise<boolean>;
     export {};
-}
-declare namespace katrid.drawing.editors {
-    class TextObjectEditor extends katrid.design.WidgetEditor {
-        static defineProperties(): katrid.design.PropertyEditor[];
-        showEditor(): Promise<void>;
-    }
-    class ImageEditor extends katrid.design.WidgetEditor {
-        static defineProperties(): katrid.design.PropertyEditor[];
-    }
-    class BarcodeEditor extends katrid.design.WidgetEditor {
-        static defineProperties(): katrid.design.PropertyEditor[];
-    }
-}
-declare namespace katrid.drawing {
-    function pointInRect(x: number, y: number, rect: DOMRect): boolean;
-    function rectInRect(rect1: DOMRect, rect2: DOMRect): Boolean;
 }
 declare namespace Katrid.Forms {
     class MenuItem {
@@ -3281,6 +1448,53 @@ declare namespace Katrid.Forms {
     }
 }
 declare namespace Katrid.Forms {
+    import IViewInfo = Katrid.Specification.UI.IViewInfo;
+    interface IView {
+        template?: string | HTMLElement;
+        container?: HTMLElement;
+        info?: Katrid.Specification.UI.IViewInfo;
+    }
+    class BaseView {
+        config: IView;
+        dialog: boolean;
+        vm: any;
+        parentVm: any;
+        container: HTMLElement;
+        element: HTMLElement;
+        template: HTMLTemplateElement;
+        html: string;
+        protected info: IViewInfo;
+        constructor(config: IView);
+        protected create(info: IView): void;
+        protected _applyDataDefinition(data: any): any;
+        protected getComponentData(): any;
+        protected createComponent(): any;
+        protected cloneTemplate(): HTMLElement;
+        domTemplate(): HTMLElement;
+        protected createDialogButtons(buttons: string[] | any[]): HTMLButtonElement[];
+        protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
+        scripts: string[];
+        _readyEventListeners: any[];
+        protected createVm(el: HTMLElement): any;
+        beforeRender(templ: HTMLElement): HTMLElement;
+        createElement(): void;
+        applyCustomTags(template: HTMLElement): void;
+        render(): HTMLElement;
+        protected _modal: bootstrap.Modal;
+        closeDialog(): void;
+        renderTo(container: HTMLElement): void;
+        onHashChange(params: any): Promise<void>;
+    }
+    function compileButtons(container: HTMLElement): void;
+    interface ISetupScript {
+        methods: any;
+        computed: any;
+        created(): unknown;
+        ready(view: BaseView): unknown;
+    }
+    let globalSettings: any;
+}
+declare namespace Katrid.Forms {
     class ModelViewInfo {
         info: IModelViewInfo;
         fields: Record<string, Katrid.Data.Field>;
@@ -3292,6 +1506,152 @@ declare namespace Katrid.Forms {
         loadPendingViews(): Promise<void>;
         get template(): HTMLElement;
     }
+}
+declare namespace Katrid.Forms {
+    interface ISearchOptions {
+        id?: number | string;
+        index?: number;
+        where?: Record<string, any>;
+        page?: number;
+        limit?: number;
+        timeout?: number;
+    }
+    let searchModes: string[];
+    let registry: any;
+    interface IModelViewInfo extends IView {
+        name?: string;
+        model?: Katrid.Data.Model;
+        fields?: Record<string, Katrid.Data.IFieldInfo>;
+        toolbar?: any;
+        toolbarVisible?: boolean;
+        autoLoad?: boolean;
+        record?: any;
+        records?: any[];
+        recordGroups?: any[];
+        action?: Katrid.Actions.WindowAction;
+        recordClick?: (record: any, index: number, event: Event) => void;
+        multiple?: boolean;
+        viewInfo?: Katrid.Forms.ModelViewInfo;
+    }
+    class ModelView extends BaseView {
+        datasource: Katrid.Data.DataSource;
+        model: Katrid.Data.Model;
+        fields: Record<string, Katrid.Data.Field>;
+        action: Katrid.Actions.WindowAction;
+        toolbarVisible: boolean;
+        pendingOperation: number;
+        protected _record: any;
+        record: any;
+        config: IModelViewInfo;
+        dialogButtons: string[] | any[];
+        protected _readonly: boolean;
+        protected _loadingHandle: any;
+        protected info: IModelViewInfo;
+        constructor(info: IModelViewInfo);
+        static viewType: string;
+        static fromTemplate(action: Katrid.Actions.WindowAction, model: Katrid.Data.Model, template: string): ModelView;
+        static createViewModeButton(container: HTMLElement): void;
+        deleteSelection(sel: any[]): Promise<boolean>;
+        protected create(info: Katrid.Forms.IModelViewInfo): void;
+        protected dataSourceCallback(data: Katrid.Data.IDataCallback): void;
+        protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
+        protected _records: any[];
+        get records(): any[];
+        set records(value: any[]);
+        private _recordCount;
+        get recordCount(): number;
+        set recordCount(value: number);
+        private _active;
+        get active(): boolean;
+        set active(value: boolean);
+        protected setActive(value: boolean): void;
+        protected getComponentData(): any;
+        get readonly(): boolean;
+        set readonly(value: boolean);
+        ready(): Promise<any>;
+        refresh(): void;
+        protected _search(options: ISearchOptions): Promise<any>;
+        private _mergeHeader;
+        mergeHeader(parent: HTMLElement, container: HTMLElement): HTMLElement;
+        protected _vmCreated(vm: any): void;
+        doViewAction(action: string, target: any): Promise<any>;
+        callSubAction(action: string, selection?: any[]): Promise<void>;
+        protected _evalResponseAction(res: any): Promise<any>;
+        protected getSelectedIds(): Promise<any[]>;
+        protected createComponent(): any;
+        getViewType(): any;
+        autoCreateView(): HTMLElement;
+        domTemplate(): HTMLElement;
+        beforeRender(template: HTMLElement): HTMLElement;
+        protected renderTemplate(template: HTMLElement): HTMLElement;
+        createToolbar(): HTMLElement;
+        dialogPromise: Promise<any>;
+        generateHelp(help: any): void;
+    }
+    interface IRecordGroup {
+        $str: string;
+        $count: number;
+        $children?: any[];
+        $expanded?: boolean;
+        $hasChildren?: boolean;
+    }
+    abstract class RecordCollectionView extends ModelView {
+        private _searchView;
+        autoLoad: boolean;
+        recordGroups: IRecordGroup[];
+        groupLength: number;
+        private _orderBy;
+        constructor(info: IModelViewInfo);
+        get orderBy(): string[];
+        set orderBy(value: string[]);
+        getSelectedIds(): Promise<any[]>;
+        callSubAction(action: string, selection?: any[]): Promise<void>;
+        protected create(info: Katrid.Forms.IModelViewInfo): void;
+        protected _recordClick(record: any, index?: number): Promise<void>;
+        nextPage(): void;
+        prevPage(): void;
+        protected createComponent(): any;
+        protected setActive(value: boolean): void;
+        get searchView(): SearchView;
+        set searchView(value: SearchView);
+        protected dataSourceCallback(data: Katrid.Data.IDataCallback): void;
+        protected setSearchView(searchView: SearchView): void;
+        protected getComponentData(): any;
+        protected prepareGroup(groups: IRecordGroup[]): IRecordGroup[];
+        groupBy(data: any[]): Promise<any>;
+        applyGroups(groups: any, params: any): Promise<void>;
+        private _addRecordsToGroup;
+        expandGroup(group: IRecordGroup): Promise<void>;
+        expandAll(): void;
+        collapseAll(): void;
+        collapseGroup(group: IRecordGroup): void;
+        private _lastSearch;
+        setSearchParams(params: any): Promise<void>;
+        protected _invalidateSelection(): void;
+        createToolbar(): HTMLElement;
+        protected createToolbarButtons(container: HTMLElement): HTMLElement;
+        protected createSelectionInfo(parent: HTMLElement): void;
+        get $modalResult(): any;
+        set $modalResult(value: any);
+        showDialog(options?: any): Promise<unknown>;
+        ready(): Promise<unknown>;
+    }
+    class ActionViewElement extends Katrid.WebComponent {
+        action: Katrid.Actions.WindowAction;
+        view: ModelView;
+        protected create(): void;
+    }
+}
+declare namespace Katrid.Forms.Views {
+    export let registry: Record<string, typeof ModelView>;
+    interface ITemplates {
+        form?: string | HTMLTemplateElement;
+        list?: string | HTMLTemplateElement;
+        card?: string | HTMLTemplateElement;
+        [key: string]: any;
+    }
+    export function fromTemplates(action: Katrid.Actions.WindowAction, model: Katrid.Data.Model, templates: ITemplates): Record<string, ModelView>;
+    export {};
 }
 declare namespace Katrid.Forms {
     function selectionSelectToggle(record: any): void;
@@ -3624,7 +1984,7 @@ declare var KATRID_I18N: any;
 declare namespace Katrid {
     let intl: {
         number(config: any): any;
-        toFixed: (length: any) => any;
+        toFixed: (length: number) => any;
     };
     interface IServerFormats {
         DATETIME_FORMAT?: string;
@@ -3656,10 +2016,14 @@ declare namespace Katrid {
         npgettext(ctx: any, singular: any, plural: any, count: number): string;
         interpolate(fmt: string, obj: any): string;
     }
-    let i18n: Ii18n;
+    const i18n: Ii18n;
 }
 declare namespace katrid {
     const i18n: Katrid.Ii18n;
+}
+declare namespace _ {
+    const i18n: Katrid.Ii18n;
+    const gettext: (s: string) => string;
 }
 declare namespace Katrid.Forms.Views.Search {
     interface ISchemaItem {
@@ -4020,10 +2384,15 @@ declare namespace Katrid.UI {
         set source(value: any | string);
     }
     export class BaseInputWidget {
+        protected _options: any;
         el: HTMLElement;
-        constructor(options: any);
+        constructor(_options: any);
         protected _create(el: HTMLElement): void;
     }
+    export type AutoCompleteOptions = {
+        el: HTMLElement;
+        source?: any;
+    };
     export class BaseAutoComplete extends BaseInputWidget {
         field: any;
         $selectedItem: any;
@@ -4035,6 +2404,7 @@ declare namespace Katrid.UI {
         term: string;
         multiple: boolean;
         allowOpen: boolean;
+        constructor(options: AutoCompleteOptions | HTMLSelectElement);
         protected _create(el: HTMLElement): void;
         private _tags;
         private _facets;
@@ -4049,7 +2419,6 @@ declare namespace Katrid.UI {
         protected createMenu(): void;
         protected invalidateValue(): void;
         protected onKeyDown(evt: any): void;
-        private _dataValue;
         showMenu(): void;
         hideMenu(): void;
         menuVisible(): boolean;
@@ -4064,11 +2433,16 @@ declare namespace Katrid.UI {
         get selectedItem(): any;
         set selectedItem(value: any);
         get selectedValue(): any;
+        get value(): any;
+        set value(value: any);
     }
-    class InputAutoComplete extends BaseAutoComplete {
+    export class InputAutoComplete extends BaseAutoComplete {
         protected _create(el: HTMLElement): void;
     }
     export {};
+}
+declare namespace katrid.ui {
+    let InputAutoComplete: typeof Katrid.UI.InputAutoComplete;
 }
 declare namespace Katrid.Forms.Controls {
     class InputForeignKeyElement extends Katrid.UI.BaseAutoComplete {
@@ -4130,6 +2504,33 @@ declare namespace Katrid.Services {
 declare namespace Katrid.Services {
     class JsonRpcAdapter extends FetchAdapter {
     }
+}
+declare namespace Katrid.Services {
+    class Service {
+        name: string;
+        static url: string;
+        constructor(name: string);
+        static adapter: BaseAdapter;
+        static $fetch(url: any, config: any, params?: any): any;
+        static $post(url: any, data: any, params?: any): any;
+        get(name: string, params: any): JQuery.jqXHR<any>;
+        post(name: string, data: any, params?: any, config?: any, context?: any): Promise<unknown>;
+    }
+    class Data extends Service {
+        static get url(): string;
+        reorder(model: any, ids: any, field?: string, offset?: number): Promise<unknown>;
+    }
+    class Attachments {
+        static delete(id: any): void;
+        static upload(file: any, config: any): Promise<any>;
+    }
+    class Upload {
+        static callWithFiles(config: any): any;
+        static sendFile(config: any): void;
+        static uploadTo(url: any, file: any): JQuery.jqXHR<any>;
+    }
+    let data: Data;
+    function post(url: string, data: any): Promise<any>;
 }
 declare namespace Katrid.Services {
     export interface IGetFieldChoices {
@@ -4368,6 +2769,20 @@ declare namespace Katrid.ui {
         constructor(input: HTMLInputElement);
     }
 }
+declare namespace katrid.ui {
+    interface IOutlineInfo {
+        name?: string;
+        type?: string;
+        template?: string;
+        children?: IOutlineInfo[];
+        target: IOutlineObject;
+        getContextMenu?(): Katrid.Forms.ContextMenu;
+    }
+    interface IOutlineObject {
+        getOutlineInfo(): IOutlineInfo;
+        parent?: IOutlineObject;
+    }
+}
 declare var Plotly: any;
 declare namespace Katrid.Forms.Widgets {
     class PlotlyChart extends HTMLElement {
@@ -4492,6 +2907,7 @@ declare namespace katrid.ui {
         el: HTMLElement;
         constructor(treeView: TreeView, item: any, options?: TreeNodeOptions);
         get children(): TreeNode[];
+        clear(): void;
         select(): this;
         collapse(): void;
         checkbox: HTMLInputElement;
@@ -4639,12 +3055,29 @@ declare namespace katrid.ui {
     }
 }
 declare namespace katrid.ui {
+    class CellInput {
+        grid: BaseGrid;
+        cell: TableCell;
+        el: HTMLElement;
+        value: string;
+        protected _prevElement: HTMLElement;
+        constructor(grid: BaseGrid, cell: TableCell);
+        protected create(): void;
+        private _blurHandler;
+        apply(): void;
+        applyValue(): void;
+        destroy(): void;
+        appendTo(parent: HTMLElement): HTMLElement;
+        select(): void;
+    }
+}
+declare namespace katrid.ui {
     export class TableCell {
-        row?: number;
-        col?: number;
+        y?: number;
+        x?: number;
         content: string;
         font?: string;
-        el?: Element;
+        el?: HTMLElement;
         touched: boolean;
     }
     export class TableColumn {
@@ -4660,6 +3093,7 @@ declare namespace katrid.ui {
     export class TableColumns extends katrid.OwnedCollection<TableColumn> {
         notify(action: katrid.CollectionNotifyEvents, item: katrid.ui.TableColumn): void;
     }
+    export const RE_EDIT: RegExp;
     class SelectionBox {
         el: HTMLElement;
         constructor(container?: HTMLElement);
@@ -4680,12 +3114,32 @@ declare namespace katrid.ui {
         rowInRange(row: number): boolean;
         equals(range: CellsRange): boolean;
     }
+    export enum GridHeaderEnumerator {
+        number = 1,
+        letter = 2
+    }
+    export class BaseGridHeaderItem {
+        height: number;
+        width: number;
+        createElement(counter: number | string): HTMLElement;
+    }
+    export class AutoGridHeaderItem extends BaseGridHeaderItem {
+        enumerator: GridHeaderEnumerator;
+        initialCounter: number | string;
+        constructor(enumerator: GridHeaderEnumerator);
+        createElement(counter: number | string): HTMLElement;
+        getNextNumber(counter: number): number;
+        getNextLetter(counter: string): string;
+    }
+    export class GridHeaderItem {
+        value: string;
+    }
     export class BaseGrid implements katrid.Persistent {
         columns: TableColumns;
         dataRows: any[];
-        header: any[];
+        header: BaseGridHeaderItem[];
         footer: any[];
-        rowHeader: any[];
+        rowHeader: BaseGridHeaderItem[];
         rowHeight: number;
         colWidth: number;
         protected _cells: GridRow[];
@@ -4716,7 +3170,23 @@ declare namespace katrid.ui {
         protected renderEmptyData(): void;
         protected createEvents(): void;
         protected keyDown(event: KeyboardEvent): void;
+        gotoPrevCell(cell?: TableCell): void;
+        gotoNextCell(cell?: TableCell): void;
+        protected dblClick(event: MouseEvent): void;
+        protected _createCellEditor(cell: TableCell): CellInput;
+        protected _cellEditors: CellInput[];
+        inputCellValue(cell: TableCell, value: string): void;
+        protected _isEditing: boolean;
+        get isEditing(): boolean;
+        editCell(cell?: TableCell, selectAll?: boolean): void;
+        applyInput(): void;
+        cancelEdit(): void;
+        protected _lastCell: TableCell;
+        unselectAll(): void;
+        moveTo(x: number, y: number): void;
         moveBy(dx: number, dy: number, shift?: boolean): void;
+        protected unselectRow(row: number): void;
+        protected unselectCol(col: number): void;
         goto(row: number, col: number): void;
         protected createSizeLayer(): void;
         protected calcSize(): void;
@@ -4725,14 +3195,21 @@ declare namespace katrid.ui {
         protected headerElement: HTMLElement;
         protected createHeader(): void;
         protected _selBox: SelectionBox;
+        protected _draggingSelection: boolean;
         cellMouseDown(cell: TableCell, event: MouseEvent): void;
         selectedCells: TableCell[];
         setSelectedCells(cells: TableCell[]): void;
         protected _selectedCell: TableCell;
         get selectedCell(): TableCell;
         set selectedCell(cell: TableCell);
+        protected _selMaxRow: number;
+        protected _selMinRow: number;
+        protected _selMaxCol: number;
+        protected _selMinCol: number;
         addToSelection(cell: TableCell): void;
+        private _getCellsInRange;
         protected _updateSelectionBox(): void;
+        autoSaveCell: boolean;
         selectCell(cell: TableCell): void;
         scrollToCell(cell: TableCell): void;
         getCell(row: number, col: number): TableCell;
@@ -4746,11 +3223,13 @@ declare namespace katrid.ui {
         protected _visibleRange: CellsRange;
         protected _visibleRows: GridRow[];
         protected destroyOffscreenCells(newRange: CellsRange): GridRow[];
-        renderRowHeader(rowElement: Element): void;
+        renderRowHeader(row: GridRow): void;
         renderRow(rowCells: GridRow): Element;
         renderCell(cell: TableCell): HTMLElement;
-        addColumn(): void;
+        addColumn(col?: TableColumn): TableColumn;
         addRow(data: any): void;
+        protected destroyCells(): void;
+        refresh(): void;
         protected redrawGrid(): void;
         protected insertRows(rows: GridRow[]): void;
         protected appendRows(rows: GridRow[]): void;

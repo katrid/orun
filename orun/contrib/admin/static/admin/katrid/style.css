@@ -13854,7 +13854,9 @@ query-view .table-responsive {
 .report-manager .report-editor-header .back {
   cursor: pointer;
 }
-.report-manager .report-editor-header h1, .report-manager .report-editor-header .h1, .report-manager .report-editor-header h3, .report-manager .report-editor-header .h3 {
+.report-manager .report-editor-header h1, .report-manager .report-editor-header .h1,
+.report-manager .report-editor-header h3,
+.report-manager .report-editor-header .h3 {
   margin: 0;
 }
 .report-manager .report-editor-header span {
@@ -13975,6 +13977,42 @@ query-view .table-responsive {
   height: 100%;
   width: 100%;
 }
+.table-grid .grid-vertical-header {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  height: 100%;
+  z-index: 9;
+  background-color: #e1e1e1;
+}
+.table-grid .grid-vertical-header .grid-header-cell {
+  text-align: right;
+  padding: 0 4px;
+}
+.table-grid .grid-vertical-header .grid-header {
+  position: absolute;
+}
+.table-grid .cell {
+  position: relative;
+  background-color: #ffffff;
+  user-select: none;
+}
+.table-grid .cell .grid-cell-input {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  border: none;
+  outline: none;
+}
+.table-grid .cell .grid-cell-input :focus {
+  outline: none;
+}
+.table-grid .cell:empty {
+  background: transparent;
+}
 .table-grid .table tbody {
   background-color: #ffffff;
 }
@@ -14005,12 +14043,83 @@ query-view .table-responsive {
   pointer-events: none;
 }
 .table-grid .cell {
-  flex: 1 0 auto;
+  flex: 0 0 auto;
   border-left: 1px solid #e5e5e5;
   border-top: 1px solid #e5e5e5;
 }
 .table-grid .cell.selected {
   border: 1px solid #3131fd;
+}
+
+.report-container .data-export-editor .base-table-designer {
+  flex: 1 0 auto;
+}
+.report-container .data-export-editor table th {
+  background: #e5e5e5;
+  cursor: pointer;
+}
+.report-container .data-export-editor table tr {
+  height: 20px;
+  background-color: #ffffff;
+}
+.report-container .data-export-editor table td, .report-container .data-export-editor table th {
+  border: 1px solid #e5e5e5;
+  padding: 4px;
+  white-space: nowrap;
+}
+.report-container .data-export-editor table th.allow-drop {
+  border-left: 3px solid blue;
+}
+
+.grid-designer,
+.table-designer {
+  padding: 20px 0 0 20px;
+  min-height: 40px;
+  position: relative;
+}
+.grid-designer .hgutter,
+.table-designer .hgutter {
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 0;
+  height: 20px;
+}
+.grid-designer .vgutter,
+.table-designer .vgutter {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  bottom: 0;
+  width: 20px;
+}
+.grid-designer .grid-design-mark,
+.table-designer .grid-design-mark {
+  position: absolute;
+  background-color: #e5e5e5;
+  border: 1px solid #e5e5e5;
+  border-radius: 50%;
+  left: 0;
+  top: 0;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+.grid-designer .btn-grid-design-add,
+.table-designer .btn-grid-design-add {
+  position: absolute;
+  border-radius: 50%;
+  background-color: #e5e5e5;
+  border: 1px solid #e5e5e5;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.report-container .base-table-designer {
+  margin: 8px;
 }
 
 .toolbar-action-buttons {
@@ -14266,6 +14375,10 @@ page[size=A4] {
 }
 .block-text-editor .paragraph-block.block-editor:empty:after {
   content: "﻿";
+}
+
+.permission-manager {
+  padding: 10px;
 }
 
 .help-center {

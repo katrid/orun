@@ -1,10 +1,4 @@
 "use strict";
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
 var katrid;
 (function (katrid) {
     var ui;
@@ -28,6 +22,23 @@ var katrid;
             }
         }
         ui.Widget = Widget;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class BaseComponentDesigner {
+            constructor(target) {
+                this.target = target;
+            }
+            destroy() {
+            }
+            getOutlineInfo() {
+                return;
+            }
+        }
+        ui.BaseComponentDesigner = BaseComponentDesigner;
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
 var Katrid;
@@ -464,6 +475,23 @@ var Katrid;
         Actions.registry[UrlAction.actionType] = UrlAction;
     })(Actions = Katrid.Actions || (Katrid.Actions = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var admin;
+    (function (admin) {
+        class ClientAction extends Katrid.Actions.Action {
+            static { this.registry = {}; }
+            async onHashChange(params) {
+                const tag = this.info.tag;
+                if (tag in ClientAction.registry) {
+                    const action = ClientAction.registry[tag](this);
+                }
+            }
+        }
+        admin.ClientAction = ClientAction;
+        Katrid.Actions.registry['ui.action.client'] = ClientAction;
+    })(admin = katrid.admin || (katrid.admin = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Actions;
@@ -1914,6 +1942,127 @@ var katrid;
 (function (katrid) {
     var admin;
     (function (admin) {
+        class MenuItem {
+        }
+        class GroupItem {
+        }
+        class PermissionManager {
+            constructor(el) {
+                this.el = el;
+                this._create();
+            }
+            _create() {
+                this.el ??= document.createElement('div');
+                this.el.classList.add('permission-manager');
+                let h = document.createElement('h3');
+                h.innerText = _.gettext('Permission Manager');
+                this.el.appendChild(h);
+                let container = this.el.appendChild(document.createElement('div'));
+                container.className = 'row';
+                container.style.flex = '1';
+                this.el.appendChild(container);
+                let panel = container.appendChild(document.createElement('div'));
+                panel.className = 'nav-panel col-6';
+                panel.style.borderRight = '1px solid #ccc';
+                h = document.createElement('h4');
+                let tvEl = document.createElement('div');
+                h.innerText = _.gettext('Groups');
+                this._treeViewGroup = new katrid.ui.TreeView(tvEl, { options: { onSelect: (node) => this.selectGroupNode(node) } });
+                panel.appendChild(h);
+                panel.appendChild(tvEl);
+                panel = container.appendChild(document.createElement('div'));
+                panel.className = 'nav-panel col-6';
+                h = document.createElement('h4');
+                tvEl = document.createElement('div');
+                this._treeViewMenu = new katrid.ui.TreeView(tvEl, { options: { checkbox: true } });
+                h.innerText = _.gettext('Menu');
+                panel.appendChild(h);
+                panel.appendChild(tvEl);
+            }
+            loadMenu(data, parentNode) {
+                for (const item of data) {
+                    item.treeNode = this._treeViewMenu.addItem({ id: item.id, text: item.name }, parentNode);
+                    if (item.children) {
+                        this.loadMenu(item.children, item.treeNode);
+                    }
+                }
+            }
+            loadGroups(data) {
+                for (const item of data) {
+                    item.treeNode = this._treeViewGroup.addItem({ id: item.id, text: item.name });
+                }
+            }
+            loadPermissions() {
+                this.groupMap = new Map();
+                this.menuMap = new Map();
+                for (const item of this.groups) {
+                    const gi = new GroupItem();
+                    gi.id = item.id;
+                    gi.name = item.name;
+                    gi.menu = [];
+                    this.groupMap.set(gi.id, gi);
+                }
+                for (const item of this.menu) {
+                    const mi = new MenuItem();
+                    mi.id = item.id;
+                    mi.name = item.name;
+                    mi.children = [];
+                    mi.groups = [];
+                    this.menuMap.set(mi.id, mi);
+                }
+                const menu = [];
+                for (const item of this.menu) {
+                    const mi = this.menuMap.get(item.id);
+                    mi.groups = item.groups?.map(g => this.groupMap.get(g));
+                    if (item.parent) {
+                        const p = this.menuMap.get(item.parent);
+                        p.children.push(mi);
+                    }
+                    else {
+                        menu.push(mi);
+                    }
+                }
+                for (const item of this.groups) {
+                    const gi = this.groupMap.get(item.id);
+                    gi.menu = item.menus?.map(m => this.menuMap.get(m));
+                }
+                this.loadGroups(Array.from(this.groupMap.values()));
+                this.loadMenu(menu);
+            }
+            load(data) {
+                this.groups = data.groups;
+                this.menu = data.menu;
+                this.loadPermissions();
+            }
+            selectGroupNode(node) {
+                this.selectGroup(this.groupMap.get(node.data.id));
+            }
+            selectGroup(group) {
+                for (const item of this.menuMap.values()) {
+                    item.treeNode.checked = false;
+                }
+                if (group.menu) {
+                    for (const item of group.menu) {
+                        item.treeNode.checked = true;
+                    }
+                }
+            }
+        }
+        admin.PermissionManager = PermissionManager;
+        admin.ClientAction.registry['katrid.admin.PermissionManager'] = async (clientAction) => {
+            const manager = new PermissionManager(clientAction.element);
+            const GroupModel = new Katrid.Services.ModelService('auth.group');
+            let res = await GroupModel.rpc('admin_get_permissions');
+            if (res.groups && res.menu) {
+                manager.load(res);
+            }
+        };
+    })(admin = katrid.admin || (katrid.admin = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var admin;
+    (function (admin) {
         class ResponseMessagesProcessor {
             constructor(response) {
                 this.response = response;
@@ -1951,2706 +2100,18 @@ var Katrid;
         BI.newPlot = newPlot;
     })(BI = Katrid.BI || (Katrid.BI = {}));
 })(Katrid || (Katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        async function createCodeEditor(dom, code = null, language = 'javascript', previewType = 'table') {
-            return new Promise((resolve, reject) => {
-                require(['vs/editor/editor.main'], function () {
-                    let codeEditor = monaco.editor.create(dom, {
-                        language,
-                        automaticLayout: true,
-                        value: code,
-                    });
-                    resolve(codeEditor);
-                });
-            });
-        }
-        bi.createCodeEditor = createCodeEditor;
-        async function showCodeEditor(code, lang) {
-            let div = document.createElement('div');
-            div.className = 'code-editor';
-            let dlg = new katrid.ui.Dialog({ title: 'Code Editor', buttons: ['ok', 'cancel'] });
-            dlg.dialog.classList.add('code-editor-dialog');
-            const ed = await createCodeEditor(div, code, lang);
-            dlg.dialog.querySelector('.dialog-body').appendChild(div);
-            dlg.dialog.addEventListener('close', () => {
-                monaco.editor.getModels().forEach(m => m.dispose());
-                dlg.dialog.remove();
-            });
-            let modal = await dlg.showModal();
-            if (modal === 'ok') {
-                return ed.getModel().getValue();
-            }
-            else {
-                return false;
-            }
-        }
-        bi.showCodeEditor = showCodeEditor;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var design;
-    (function (design) {
-        class WidgetDesigner {
-            constructor(target, designer) {
-                this.target = target;
-                this.dragging = false;
-                this.moved = false;
-                this.gridX = 8;
-                this.gridY = 8;
-                this.locked = false;
-                this.designer = designer;
-            }
-            drawDesign(parent) {
-                this.draw = this.target.drawDesign(parent);
-                if (!this._pointerDownHandler) {
-                    this._pointerDownHandler = (event) => this.designMouseDown(event);
-                    this._pointerMoveHandler = (event) => this.designMouseMove(event);
-                    this._pointerUpHandler = (event) => this.designMouseUp(event);
-                    this.target.graphic.$el.addEventListener('pointerdown', this._pointerDownHandler);
-                    this.target.graphic.$el.addEventListener('pointermove', this._pointerMoveHandler);
-                    this.target.graphic.$el.addEventListener('pointerup', this._pointerUpHandler);
-                    this.target.graphic.$el.addEventListener('dblclick', (event) => this.designer.widgetDoubleClick(this, event));
-                }
-                return this.draw;
-            }
-            destroyDesign() {
-                if (this._pointerDownHandler) {
-                    this.target.graphic.$el.removeEventListener('pointerdown', this._pointerDownHandler);
-                    this.target.graphic.$el.removeEventListener('pointermove', this._pointerMoveHandler);
-                    this.target.graphic.$el.removeEventListener('pointerup', this._pointerUpHandler);
-                }
-            }
-            getDesignRect() {
-                return new DOMRect(this.target.x, this.target.y, this.target.width, this.target.height);
-            }
-            get pageY() {
-                return this.target.y + this.target.parent.clientY;
-            }
-            moveTo(x, y) {
-                this.target.x = x;
-                this.target.y = y;
-                this.update(this.target);
-            }
-            moveToParent(parent) {
-                this.target.parent = parent;
-            }
-            moveBy(dx, dy) {
-                let x = Math.max(this.target.x + dx, 0);
-                let y = this.target.y + dy;
-                this.draw.attr('transform', `translate(${x}, ${y})`);
-                this.target.x = x;
-                this.target.y = y;
-            }
-            get page() {
-                return;
-            }
-            resize(width, height) {
-                this.target.width = width;
-                this.target.height = height;
-                this.update(this.target);
-            }
-            update(widget) {
-                widget.redraw();
-            }
-            designMove(ox, oy) {
-                this.designer?.moveSelectionBy(ox, oy);
-            }
-            applyRect(dx, dy, dw, dh) {
-                this.target.x += dx;
-                this.target.y += dy;
-                this.target.width += dw;
-                this.target.height += dh;
-                this.update(this.target);
-            }
-            designApplyRect(dx, dy, dw, dh) {
-                this.designer.applyRectToSelection(dx, dy, dw, dh);
-            }
-            setRect(x, y, width, height) {
-                this.target.x = x;
-                this.target.y = y;
-                this.target.width = width;
-                this.target.height = height;
-                this.update(this.target);
-            }
-            designMouseDown(event) {
-                if (event.button === 0) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    this.moved = false;
-                    this.designer.dragging = this.dragging = true;
-                    event.target.setPointerCapture(event.pointerId);
-                    this._dx = event.clientX;
-                    this._dy = event.clientY;
-                    if (this.designer.snapToGrid) {
-                        this._dx = Math.trunc(this._dx / this.gridX) * this.gridX;
-                        this._dy = Math.trunc(this._dy / this.gridY) * this.gridY;
-                    }
-                    if (event.shiftKey) {
-                        this.designer.toggleSelection(this.target);
-                    }
-                    else {
-                        this.designer.selectObject(this.target);
-                    }
-                    this.designer.createGuidelines();
-                }
-            }
-            designMouseMove(event) {
-                if (this.dragging) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    let x = event.clientX;
-                    let y = event.clientY;
-                    if (this.designer.snapToGrid && !event.ctrlKey) {
-                        x = Math.trunc(x / this.designer.gridX) * this.designer.gridX;
-                        y = Math.trunc(y / this.designer.gridY) * this.designer.gridY;
-                    }
-                    let dx = x - this._dx;
-                    let dy = y - this._dy;
-                    if (dx || dy) {
-                        this.moved = true;
-                        this.designer.clearGuidelines();
-                        this.designMove(dx, dy);
-                        this.designer.undoManager.beginUpdate();
-                        if (x)
-                            this._dx = x;
-                        if (y)
-                            this._dy = y;
-                        this.designer.createGuidelines();
-                    }
-                }
-            }
-            dump() {
-                return {
-                    locked: this.locked,
-                };
-            }
-            load(data) {
-                this.locked = data.locked;
-            }
-            _mouseUp() {
-                if (this.moved) {
-                    this.designer.onSelectionMoved();
-                }
-            }
-            designMouseUp(event) {
-                this.designer.clearGuidelines();
-                this.designer.undoManager.endUpdate();
-                this.designer.dragging = this.dragging = false;
-                event.target.releasePointerCapture(event.pointerId);
-                event.stopPropagation();
-                this.designer.clearGuidelines();
-                this._mouseUp();
-                this.moved = false;
-            }
-        }
-        design.WidgetDesigner = WidgetDesigner;
-    })(design = katrid.design || (katrid.design = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        class BaseWidget {
-            get clientY() {
-                return this.y + this.parent.clientY;
-            }
-            get clientX() {
-                return this.x + this.parent.clientX;
-            }
-            constructor() {
-                this._created = false;
-                this.defaultProps();
-                this._create();
-            }
-            defaultProps() {
-                this.x = 0;
-                this.y = 0;
-                this.width = 0;
-                this.height = 0;
-            }
-            _create() {
-                if (!this._created) {
-                    this._created = true;
-                    this.create();
-                }
-            }
-            get location() {
-                return { x: this.x, y: this.y };
-            }
-            set location(value) {
-                this.x = value.x;
-                this.y = value.y;
-                this.redraw();
-            }
-            get size() {
-                return { width: this.width, height: this.height };
-            }
-            set size(value) {
-                this.width = value.width;
-                this.height = value.height;
-                this.redraw();
-            }
-            drawTo(parent) {
-                this._create();
-                this.redraw();
-                parent.append(this.graphic);
-            }
-            drawDesign(parent) {
-                this._create();
-                this.redraw();
-                this.graphic.attr('class', 'widget-designer');
-                return this.graphic;
-            }
-            create() {
-                this.graphic = drawing.g({ transform: `translate(${this.x},${this.y})` });
-                this.element = this.graphic.$el;
-            }
-            redraw() {
-                this.graphic.attr('transform', `translate(${this.x},${this.y})`);
-            }
-            remove() {
-                if (this.parent && this.parent.objects.includes(this)) {
-                    this.parent.objects.splice(this.parent.objects.indexOf(this), 1);
-                }
-                this.element.remove();
-            }
-            getDesignRect() {
-                if (this.parent)
-                    return new DOMRect(this.parent.x + this.x, this.clientY, this.width, this.height);
-                return new DOMRect(this.x, this.y, this.width, this.height);
-            }
-            getType() {
-                return this.constructor.name;
-            }
-            dump() {
-                return {
-                    type: this.getType(),
-                    name: this.name,
-                    x: this.x,
-                    y: this.y,
-                    width: this.width,
-                    height: this.height,
-                    objects: this.objects?.map(obj => obj.dump()),
-                };
-            }
-            load(data) {
-                this.name = data.name;
-                this.x = data.x || data.left || 0;
-                this.y = data.y || data.top || 0;
-                this.width = data.width;
-                this.height = data.height;
-                if (data.objects) {
-                    this.loadObjects(data);
-                }
-            }
-            getClassByName(name) {
-                return katrid.report[name];
-            }
-            children() {
-                return this.objects;
-            }
-            loadObjects(data) {
-                for (const o of data.objects) {
-                    let cls = this.getClassByName(o.type);
-                    if (cls === undefined) {
-                        console.error(`Class ${o.type} not found`);
-                        continue;
-                    }
-                    let obj = new cls();
-                    this.objects.push(obj);
-                    obj.page = this.page;
-                    obj.parent = this;
-                    obj.load(o);
-                }
-            }
-        }
-        drawing.BaseWidget = BaseWidget;
-        class Rectangle extends BaseWidget {
-            defaultProps() {
-                super.defaultProps();
-                this.width = 100;
-                this.height = 100;
-            }
-            create() {
-                if (!this.element) {
-                    this.graphic = drawing.g({ transform: `translate(${this.x},${this.y})` });
-                    this.element = this.graphic.$el;
-                    this.rect = this.graphic.rect(0, 0, this.width, this.height);
-                }
-            }
-            redraw() {
-                super.redraw();
-                this.rect.attr('width', this.width);
-                this.rect.attr('height', this.height);
-            }
-        }
-        drawing.Rectangle = Rectangle;
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        class Image extends drawing.BaseWidget {
-            constructor() {
-                super(...arguments);
-                this.transparent = false;
-            }
-            defaultProps() {
-                super.defaultProps();
-                this.height = 50;
-                this.width = 50;
-            }
-            dump() {
-                return Object.assign(super.dump(), {
-                    field: this.field,
-                    dataSource: this.datasource?.name,
-                    picture: this.picture,
-                    center: this.center,
-                    transparent: this.transparent,
-                    format: this.format,
-                    width: this.width,
-                    height: this.height,
-                });
-            }
-            load(info) {
-                super.load(info);
-                this.field = info.field;
-                this.picture = info.picture;
-                this.transparent = info.transparent;
-                this.format = info.format;
-                this.center = info.center;
-                if (info.datasource) {
-                    this.datasource = this.report.findObject(info.datasource);
-                }
-            }
-            create() {
-                super.create();
-                this.img = katrid.drawing.draw('image', { x: 0, y: 0, width: this.width, height: this.height });
-                this.graphic.append(this.img);
-                this._rect = this.graphic.rect(0, 0, this.width, this.height);
-            }
-            redraw() {
-                super.redraw();
-                if (this.picture) {
-                    this.img.attr('src', `data:image/${this.format};base64, ` + this.picture);
-                }
-                this.img.attr('width', this.width);
-                this.img.attr('height', this.height);
-                this._rect.attr('width', this.width);
-                this._rect.attr('height', this.height);
-            }
-        }
-        drawing.Image = Image;
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        class Text extends drawing.BaseWidget {
-            create() {
-                this.graphic = drawing.g({ transform: `translate(${this.x},${this.y})` });
-                let fobj = drawing.draw('foreignObject', { x: 0, y: 0, width: this.width, height: this.height });
-                const div = this._div = document.createElement('div');
-                div.className = 'text-object';
-                this.textElement = document.createElement('span');
-                div.append(this.textElement);
-                fobj.$el.append(div);
-                this.foreignObject = fobj.$el;
-                this.graphic.append(fobj);
-                this.element = this.graphic.$el;
-                this.text = this._text;
-            }
-            defaultProps() {
-                super.defaultProps();
-                this.height = 20;
-                this.width = 100;
-                this.wrap = false;
-                this.allowExpression = true;
-                this.canGrow = false;
-                this.allowTags = false;
-            }
-            get text() {
-                return this._text;
-            }
-            set text(value) {
-                this._text = value;
-                if (this.textElement)
-                    this.textElement.innerHTML = value;
-            }
-            get background() {
-                return this._background;
-            }
-            set background(value) {
-                this._background = value;
-                this.applyStyle();
-            }
-            get displayFormat() {
-                ;
-                return this._displayFormat;
-            }
-            set displayFormat(value) {
-                this._displayFormat = value;
-            }
-            get border() {
-                return this._border;
-            }
-            set border(value) {
-                this._border = value;
-                this.applyStyle();
-            }
-            get font() {
-                if (!this._font)
-                    this._font = { name: 'Helvetica', size: '9pt', color: '#000000' };
-                return this._font;
-            }
-            set font(value) {
-                this._font = value;
-                this.applyStyle();
-            }
-            get hAlign() {
-                return this._hAlign;
-            }
-            set hAlign(value) {
-                this._hAlign = value;
-                this.applyStyle();
-            }
-            get vAlign() {
-                return this._vAlign;
-            }
-            set vAlign(value) {
-                this._vAlign = value;
-                this.applyStyle();
-            }
-            applyStyle() {
-                if (this.border == null) {
-                    this._div.style.border = 'none';
-                }
-                else {
-                    this._div.style.border = 'none';
-                    if (this.border.all)
-                        this._div.style.border = '1px solid gray';
-                    else {
-                        if (this.border.left)
-                            this._div.style.borderLeft = '1px solid gray';
-                        if (this.border.right)
-                            this._div.style.borderRight = '1px solid gray';
-                        if (this.border.top)
-                            this._div.style.borderTop = '1px solid gray';
-                        if (this.border.bottom)
-                            this._div.style.borderBottom = '1px solid gray';
-                    }
-                }
-                if (this.font) {
-                    this._div.style.fontFamily = '';
-                    if (this.font.name)
-                        this._div.style.fontFamily = this.font.name;
-                    if (this.font.size)
-                        this._div.style.fontSize = this.font.size.toString() + 'pt';
-                    this._div.style.fontStyle = null;
-                    if (this.font.italic)
-                        this._div.style.fontStyle = 'italic';
-                    this._div.style.fontWeight = null;
-                    if (this.font.bold)
-                        this._div.style.fontWeight = 'bold';
-                    this._div.style.textDecoration = null;
-                    if (this.font.underline)
-                        this._div.style.textDecoration = 'underline';
-                    if (this.font.color)
-                        this._div.style.color = this.font.color;
-                }
-                if (this._background)
-                    this._div.style.background = this._background.color;
-                if (this._vAlign != null)
-                    switch (this._vAlign) {
-                        case drawing.VAlign.bottom:
-                            this._div.style.verticalAlign = 'bottom';
-                            break;
-                        case drawing.VAlign.middle:
-                            this._div.style.verticalAlign = 'middle';
-                            break;
-                        default:
-                            this._div.style.verticalAlign = 'top';
-                    }
-                if (this._hAlign != null)
-                    switch (this._hAlign) {
-                        case drawing.HAlign.center:
-                            this._div.style.textAlign = 'center';
-                            break;
-                        case drawing.HAlign.right:
-                            this._div.style.textAlign = 'right';
-                            break;
-                        case drawing.HAlign.justify:
-                            this._div.style.textAlign = 'justify';
-                            break;
-                        default:
-                            this._div.style.textAlign = 'left';
-                    }
-            }
-            dump() {
-                const r = super.dump();
-                r.text = this.text;
-                r.hAlign = this.hAlign;
-                r.vAlign = this.vAlign;
-                if (this._font)
-                    r.font = this._font;
-                if (this._border)
-                    r.border = this._border;
-                if (this.background)
-                    r.background = this.background;
-                r.allowExpression = this.allowExpression;
-                r.allowTags = this.allowTags;
-                r.canGrow = this.canGrow;
-                r.wrap = this.wrap;
-                if (this._background) {
-                    r.background = this._background;
-                }
-                if (this._displayFormat) {
-                    r.displayFormat = this._displayFormat;
-                }
-                if (this.highlights) {
-                    r.highlights = this.highlights;
-                }
-                return r;
-            }
-            load(info) {
-                super.load(info);
-                this.text = info.text;
-                this.allowExpression = info.allowExpression;
-                this.allowTags = info.allowTags;
-                this.canGrow = info.canGrow;
-                this.wrap = info.wrap;
-                if (info.hAlign)
-                    this._hAlign = info.hAlign;
-                if (info.vAlign)
-                    this._vAlign = info.vAlign;
-                if (info.font)
-                    this._font = info.font;
-                if (info.border)
-                    this._border = info.border;
-                if (info.background)
-                    this._background = info.background;
-                if (info.displayFormat)
-                    this._displayFormat = info.displayFormat;
-                if (info.highlights)
-                    this.highlights = info.highlights;
-                else if (info.highlight)
-                    this.highlights = [info.highlight];
-                this.applyStyle();
-            }
-            redraw() {
-                super.redraw();
-                this.foreignObject.setAttribute('width', this.width.toString());
-                this.foreignObject.setAttribute('height', this.height.toString());
-                this._div.style.width = this.width.toString() + 'px';
-                this._div.style.height = this.height.toString() + 'px';
-            }
-        }
-        drawing.Text = Text;
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        class Barcode extends drawing.BaseWidget {
-            defaultProps() {
-                super.defaultProps();
-                this.height = 50;
-                this.width = 100;
-            }
-            dump() {
-                return Object.assign(super.dump(), {
-                    field: this.field, dataSource: this.datasource?.name, code: this.code,
-                    center: this.center,
-                    barcodeType: this.barcodeType,
-                    width: this.width,
-                    height: this.height,
-                });
-            }
-            load(info) {
-                super.load(info);
-                this.field = info.field;
-                this.code = info.code;
-                this.barcodeType = info.barcodeType;
-            }
-            redraw() {
-                super.redraw();
-                this.graphic.clear();
-                this.graphic.rect(0, 0, this.width, this.height);
-                this.graphic.text(4, this.height / 2, 'BARCODE').attr('fill', 'black');
-            }
-        }
-        drawing.Barcode = Barcode;
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        bi.componentRegistry = {
-            text: katrid.drawing.Text,
-            Text: katrid.drawing.Text,
-            image: katrid.drawing.Image,
-            Image: katrid.drawing.Image,
-            Barcode: katrid.drawing.Barcode,
-            barcode: katrid.drawing.Barcode,
-        };
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class _DataSource {
-            constructor(name, commandText) {
-                this.commandText = commandText;
-                this.widgets = [];
-                this._name = name;
-            }
-            get name() {
-                return this._name;
-            }
-            set name(value) {
-                this._name = value;
-                for (let widget of this.widgets)
-                    widget._datasourceName = value;
-            }
-            dump() {
-                return {
-                    name: this.name,
-                    commandText: this.commandText,
-                };
-            }
-            static fromJson(data) {
-                return new this(data.name, data.commandText);
-            }
-            async refresh() {
-                this.data = [];
-                if (this.commandText) {
-                    let res = await Katrid.Services.Service.$post('/bi/studio/query/', { query: this.commandText });
-                    this.data = res.data;
-                }
-                for (let widget of this.widgets)
-                    widget.dataNotification(this);
-            }
-            get dataView() {
-                return this.data;
-            }
-            values(column) {
-                if (this.dataView)
-                    return this.dataView.map(obj => obj[column]);
-                return [];
-            }
-            bind(widget) {
-                if (this.widgets.indexOf(widget) === -1)
-                    this.widgets.push(widget);
-            }
-            unbind(widget) {
-                this.widgets.splice(this.widgets.indexOf(widget), 1);
-            }
-        }
-        bi._DataSource = _DataSource;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        bi.GUIDELINE_DELAY = 2000;
-        class BasePageDesigner {
-            constructor(container, page, reportDesigner) {
-                this.container = container;
-                this.page = page;
-                this.reportDesigner = reportDesigner;
-                this.dragging = false;
-                this.snapToGrid = false;
-                this.selectionBox = false;
-                this.draggingSelectionBox = false;
-                this._dx = 0;
-                this._dy = 0;
-                this._bx = 0;
-                this._by = 0;
-                this._bw = 0;
-                this._bh = 0;
-                page.designing = true;
-                page.designer = this;
-                this.selection = [];
-                this.grabs = [];
-            }
-            activate() {
-                if (this._documentKeyDown)
-                    document.removeEventListener('keydown', this._documentKeyDown);
-                this._documentKeyDown = (event) => this.onKeyDown(event);
-                document.addEventListener('keydown', this._documentKeyDown);
-                this.container.append(this.el);
-                this.reportDesigner.activatePage(this.page);
-            }
-            deactivate() {
-                this.clearSelection();
-                if (this.el?.parentElement)
-                    this.el.parentElement.removeChild(this.el);
-                document.removeEventListener('keydown', this._documentKeyDown);
-                this._documentKeyDown = null;
-            }
-            get report() {
-                return this.page.report;
-            }
-            onKeyDown(event) {
-                if (this.selection?.length && !event.altKey && !event.altKey) {
-                    if (event.shiftKey) {
-                        switch (event.key) {
-                            case 'ArrowDown':
-                                if (event.ctrlKey)
-                                    this.resizeSelectionBy(0, 1);
-                                else
-                                    this.resizeSelectionBy(0, 1);
-                                break;
-                            case 'ArrowUp':
-                                if (event.ctrlKey)
-                                    this.resizeSelectionBy(0, -1);
-                                else
-                                    this.resizeSelectionBy(0, -1);
-                                break;
-                            case 'ArrowLeft':
-                                if (event.ctrlKey)
-                                    this.resizeSelectionBy(-1, 0);
-                                else
-                                    this.resizeSelectionBy(-1, 0);
-                                break;
-                            case 'ArrowRight':
-                                if (event.ctrlKey)
-                                    this.resizeSelectionBy(1, 0);
-                                else
-                                    this.resizeSelectionBy(1, 0);
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    else {
-                        switch (event.key) {
-                            case 'ArrowDown':
-                                if (event.ctrlKey)
-                                    this.moveSelectionBy(0, -1 * this.gridY);
-                                else
-                                    this.moveSelectionBy(0, -1);
-                                this._tempGuidelines();
-                                break;
-                            case 'ArrowUp':
-                                if (event.ctrlKey)
-                                    this.moveSelectionBy(0, 1 * this.gridY);
-                                else
-                                    this.moveSelectionBy(0, 1);
-                                this._tempGuidelines();
-                                break;
-                            case 'ArrowLeft':
-                                if (event.ctrlKey)
-                                    this.moveSelectionBy(1 * this.gridX, 0);
-                                else
-                                    this.moveSelectionBy(1, 0);
-                                this._tempGuidelines();
-                                break;
-                            case 'ArrowRight':
-                                if (event.ctrlKey)
-                                    this.moveSelectionBy(-1 * this.gridX, 0);
-                                else
-                                    this.moveSelectionBy(-1, 0);
-                                this._tempGuidelines();
-                                break;
-                            case 'Delete':
-                                this.deleteSelection();
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                }
-                else if (this.selectedBand && !event.altKey && !event.metaKey && !event.ctrlKey)
-                    if (event.key === 'Delete')
-                        this.deleteSelection();
-            }
-            resizeSelectionBy(deltaX, deltaY) {
-                for (let el of this.selection)
-                    el.resize(el.width + deltaX, el.height + deltaY);
-                this.refreshGrabs();
-                if (this.guidelines?.length) {
-                    clearTimeout(this._resizingTimeout);
-                    this._resizingTimeout = setTimeout(() => this.clearGuidelines(), bi.GUIDELINE_DELAY);
-                }
-            }
-            refreshGrabs() {
-                for (let g of this.grabs)
-                    g.setPosition();
-            }
-            clearGuidelines() {
-                if (this.guidelines)
-                    for (let g of this.guidelines)
-                        g.remove();
-                this.guidelines = [];
-            }
-            clearSelection() {
-                this.destroyGrabHandles();
-                this.selection = [];
-                this.reportDesigner.onSelectionChange(this.selection);
-            }
-            addToSelection(obj) {
-                if (!this.selection.includes(obj)) {
-                    this.selection.push(obj);
-                    this.createGrabHandles(obj);
-                }
-                this.reportDesigner.onSelectionChange(this.selection);
-            }
-            destroyGrabHandles(obj) {
-                for (let gh of Array.from(this.grabs))
-                    if (!obj || (gh.target === obj)) {
-                        gh.destroy();
-                        this.grabs.splice(this.grabs.indexOf(gh), 1);
-                    }
-            }
-            createGrabHandles(obj) {
-                const grabs = new GrabHandles({
-                    container: this.container,
-                    target: obj,
-                    onObjectResizing: () => obj.onDesignResizing(),
-                    onObjectResized: () => obj.onDesignResized(),
-                    snapToGrid: false,
-                });
-                this.grabs.push(grabs);
-            }
-            createElement(widgetName, target, x, y) {
-            }
-            selectObject(obj) {
-                if (!this.selection.includes(obj))
-                    this.clearSelection();
-                this.addToSelection(obj);
-            }
-            removeFromSelection(obj) {
-                if (this.selection.includes(obj)) {
-                    this.destroyGrabHandles(obj);
-                    this.selection.splice(this.selection.indexOf(obj), 1);
-                }
-                this.reportDesigner.onSelectionChange(this.selection);
-            }
-            moveSelectionBy(deltaX, deltaY) {
-                for (let obj of this.selection) {
-                    obj.designMoveBy(deltaX, deltaY);
-                }
-                for (let grabs of this.grabs)
-                    grabs.setPosition();
-            }
-            deleteSelection() {
-                const sel = this.selection.length;
-                for (let obj of this.selection)
-                    obj.remove();
-                for (let grabs of this.grabs)
-                    grabs.destroy();
-                this.grabs = [];
-                this.reportDesigner.onSelectionChange();
-            }
-            onPointerDown(event) {
-                if (this.selectionBox && event.button === 0) {
-                    this.draggingSelectionBox = true;
-                    this._dx = event.layerX;
-                    this._dy = event.layerY;
-                    this._bx = this._by = this._bw = this._bh = 0;
-                    this.createSelectionBox(this._dx, this._dy, 0, 0);
-                }
-            }
-            createSelectionBox(x, y, width, height) {
-                this._selBox = document.createElement('div');
-                this._selBox.className = 'designer-selection-box';
-                $(this._selBox).css({ left: x, top: y, width: width, height: height });
-                this.container.append(this._selBox);
-            }
-            destroySelectionBox() {
-                this._selBox.remove();
-            }
-            updateSelectionBox(x, y, width, height) {
-                $(this._selBox).css({ left: x, top: y, width, height });
-                this._bx = x;
-                this._by = y;
-                this._bw = width;
-                this._bh = height;
-            }
-            onPointerUp(event) {
-                if (this.selectionBox) {
-                    this.clearGuidelines();
-                    if (this.draggingSelectionBox) {
-                        this.draggingSelectionBox = false;
-                        this.refreshSelection();
-                        this.destroySelectionBox();
-                    }
-                }
-            }
-            refreshSelection() {
-                if (!this.selection?.length)
-                    this.reportDesigner.onSelectionChange([this.page]);
-            }
-            onMouseMove(event) {
-                if (this.draggingSelectionBox) {
-                    event.preventDefault();
-                    let x = this._dx;
-                    let y = this._dy;
-                    let w = event.layerX - this._dx;
-                    let h = event.layerY - this._dy;
-                    if (w < 0) {
-                        x += w;
-                        w = Math.abs(w);
-                    }
-                    if (h < 0) {
-                        y += h;
-                        h = Math.abs(h);
-                    }
-                    this.updateSelectionBox(x, y, w, h);
-                }
-            }
-        }
-        bi.BasePageDesigner = BasePageDesigner;
-        class GrabHandles {
-            constructor(config) {
-                this.dragging = false;
-                this.gridX = 0;
-                this.gridY = 0;
-                this.snapToGrid = false;
-                this.container = config.container;
-                this.target = config.target;
-                this.onObjectResized = config.onObjectResized;
-                this.onObjectResizing = config.onObjectResizing;
-                this.handles = [];
-                this.createHandles();
-                this.setPosition();
-                if (config.snapToGrid) {
-                    this.gridX = config.gridX;
-                    this.gridY = config.gridY;
-                    this.snapToGrid = true;
-                }
-            }
-            createHandle() {
-                let h = document.createElement('label');
-                h.classList.add('target-handle');
-                this.handles.push(h);
-                return h;
-            }
-            clear() {
-                for (let handle of this.handles)
-                    handle.remove();
-                this.handles = [];
-            }
-            setPosition() {
-                const rect = this.target.getDesignRect();
-                let handle = new GrabHandle(this.bottomLeft);
-                handle.left = rect.left - 3;
-                handle.top = rect.bottom - 5;
-                handle = new GrabHandle(this.middleLeft);
-                handle.left = rect.left - 3;
-                handle.top = rect.bottom - rect.height / 2 - 4;
-                handle = new GrabHandle(this.topLeft);
-                handle.left = rect.left - 3;
-                handle.top = rect.top - 3;
-                handle = new GrabHandle(this.topRight);
-                handle.left = rect.right - 4;
-                handle.top = rect.top - 3;
-                handle = new GrabHandle(this.middleRight);
-                handle.left = rect.right - 4;
-                handle.top = rect.bottom - rect.height / 2 - 4;
-                handle = new GrabHandle(this.bottomRight);
-                handle.left = rect.right - 4;
-                handle.top = rect.bottom - 5;
-                handle = new GrabHandle(this.topCenter);
-                handle.left = rect.right - rect.width / 2 - 4;
-                handle.top = rect.top - 3;
-                handle = new GrabHandle(this.bottomCenter);
-                handle.left = rect.right - rect.width / 2 - 4;
-                handle.top = rect.bottom - 5;
-            }
-            _setGrabHandle() {
-                let _y, _x, w, h;
-                this.topLeft.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    _y = evt.clientY;
-                    _x = evt.clientX;
-                    if (this.snapToGrid) {
-                        _x = Math.trunc(_x / this.gridX) * this.gridX;
-                        _y = Math.trunc(_y / this.gridY) * this.gridY;
-                    }
-                    let el = this.target;
-                    h = el.height;
-                    w = el.width;
-                    let pos = { left: el.left, top: el.top };
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    targetHandle.setPointerCapture(evt.pointerId);
-                    let _onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let y = evt.clientY;
-                            let x = evt.clientX;
-                            if (this.snapToGrid) {
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            }
-                            if (x || y) {
-                                y = _y - y;
-                                x = _x - x;
-                                el.left = pos.left - x;
-                                el.top = pos.top - y;
-                                el.height = h + y;
-                                el.width = w + x;
-                                this.setPosition();
-                                if (this.onObjectResizing)
-                                    this.onObjectResizing({ target: this.target });
-                            }
-                        }
-                    };
-                    let _onmouseup = (evt) => {
-                        targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            if (this.onObjectResized)
-                                this.onObjectResized({ target: this.target });
-                            targetHandle.removeEventListener('pointermove', _onmousemove);
-                            targetHandle.removeEventListener('pointerup', _onmouseup);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', _onmousemove);
-                    targetHandle.addEventListener('pointerup', _onmouseup, { once: true });
-                });
-                this.topRight.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    _y = evt.screenY;
-                    _x = evt.screenX;
-                    if (this.snapToGrid) {
-                        _x = Math.trunc(_x / this.gridX) * this.gridX;
-                        _y = Math.trunc(_y / this.gridY) * this.gridY;
-                    }
-                    let el = this.target;
-                    let h = el.height;
-                    let w = el.width;
-                    let pos = { left: el.left, top: el.top };
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    targetHandle.setPointerCapture(evt.pointerId);
-                    let _onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let y = evt.screenY;
-                            let x = evt.screenX;
-                            if (this.snapToGrid) {
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            }
-                            if (x || y) {
-                                y = _y - y;
-                                x = _x - x;
-                                el.left = pos.left;
-                                el.top = pos.top - y;
-                                el.height = h + y;
-                                el.width = w - x;
-                                this.setPosition();
-                                if (this.onObjectResizing)
-                                    this.onObjectResizing({ target: this.target });
-                            }
-                        }
-                    };
-                    let _onmouseup = (evt) => {
-                        targetHandle.setPointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            if (this.onObjectResized)
-                                this.onObjectResized({ target: this.target });
-                            targetHandle.removeEventListener('pointermove', _onmousemove);
-                            targetHandle.removeEventListener('pointerup', _onmouseup);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', _onmousemove);
-                    targetHandle.addEventListener('pointerup', _onmouseup, { once: true });
-                });
-                this.bottomRight.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    _y = evt.clientY;
-                    _x = evt.clientX;
-                    if (this.snapToGrid) {
-                        _x = Math.trunc(_x / this.gridX) * this.gridX;
-                        _y = Math.trunc(_y / this.gridY) * this.gridY;
-                    }
-                    let el = this.target;
-                    w = el.width;
-                    h = el.height;
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    targetHandle.setPointerCapture(evt.pointerId);
-                    let _onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let y = _y - evt.clientY;
-                            let x = _x - evt.clientX;
-                            if (this.snapToGrid) {
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            }
-                            if (x || y) {
-                                el.height = h - y;
-                                el.width = w - x;
-                                this.setPosition();
-                                if (this.onObjectResizing)
-                                    this.onObjectResizing({ target: this.target });
-                            }
-                        }
-                    };
-                    let _onmouseup = (evt) => {
-                        targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            if (this.onObjectResized)
-                                this.onObjectResized({ target: this.target });
-                            targetHandle.removeEventListener('pointermove', _onmousemove);
-                            targetHandle.removeEventListener('pointerup', _onmouseup);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', _onmousemove);
-                    targetHandle.addEventListener('pointerup', _onmouseup);
-                });
-                this.middleLeft.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    _x = evt.clientX;
-                    if (this.snapToGrid)
-                        _x = Math.trunc(_x / this.gridX) * this.gridX;
-                    let el = this.target;
-                    w = el.width;
-                    let l = el.left;
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    targetHandle.setPointerCapture(evt.pointerId);
-                    let _onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let x = evt.clientX;
-                            if (this.snapToGrid)
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                            if (x) {
-                                x = _x - x;
-                                el.left = l - x;
-                                el.width = w + x;
-                                this.setPosition();
-                                if (this.onObjectResizing)
-                                    this.onObjectResizing({ target: this.target });
-                            }
-                        }
-                    };
-                    let _onmouseup = (evt) => {
-                        targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            if (this.onObjectResized)
-                                this.onObjectResized({ target: this.target });
-                            targetHandle.removeEventListener('pointermove', _onmousemove);
-                            targetHandle.removeEventListener('pointerup', _onmouseup);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', _onmousemove);
-                    targetHandle.addEventListener('pointerup', _onmouseup);
-                });
-                this.middleRight.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    _x = evt.clientX;
-                    if (this.snapToGrid)
-                        _x = Math.trunc(_x / this.gridX) * this.gridX;
-                    let el = this.target;
-                    w = el.width;
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    targetHandle.setPointerCapture(evt.pointerId);
-                    let _onmousemove = (evt) => {
-                        evt.preventDefault();
-                        evt.stopPropagation();
-                        if (this.dragging) {
-                            let x = evt.clientX;
-                            if (this.snapToGrid)
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                            if (x) {
-                                x = _x - x;
-                                el.width = w - x;
-                                this.setPosition();
-                                if (this.onObjectResizing)
-                                    this.onObjectResizing({ target: this.target });
-                            }
-                        }
-                    };
-                    let _onmouseup = (evt) => {
-                        targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            if (this.onObjectResized)
-                                this.onObjectResized({ target: this.target });
-                            targetHandle.removeEventListener('pointermove', _onmousemove);
-                            targetHandle.removeEventListener('pointerup', _onmouseup);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', _onmousemove);
-                    targetHandle.addEventListener('pointerup', _onmouseup);
-                });
-                this.bottomCenter.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    _y = evt.clientY;
-                    if (this.snapToGrid)
-                        _y = Math.trunc(_y / this.gridY) * this.gridY;
-                    let el = this.target;
-                    h = el.height;
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    targetHandle.setPointerCapture(evt.pointerId);
-                    let _onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let y = evt.clientY;
-                            if (this.snapToGrid)
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            if (y) {
-                                y = _y - y;
-                                el.height = h - y;
-                                this.setPosition();
-                                if (this.onObjectResizing)
-                                    this.onObjectResizing({ target: this.target });
-                            }
-                        }
-                    };
-                    let _onmouseup = (evt) => {
-                        targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            if (this.onObjectResized)
-                                this.onObjectResized({ target: this.target });
-                            targetHandle.removeEventListener('pointermove', _onmousemove);
-                            targetHandle.removeEventListener('pointerup', _onmouseup);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', _onmousemove);
-                    targetHandle.addEventListener('pointerup', _onmouseup);
-                });
-                this.topCenter.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    _y = evt.clientY;
-                    if (this.snapToGrid)
-                        _y = Math.trunc(_y / this.gridY) * this.gridY;
-                    let el = this.target;
-                    h = el.height;
-                    let t = el.top;
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    targetHandle.setPointerCapture(evt.pointerId);
-                    let _onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let y = evt.clientY;
-                            if (this.snapToGrid)
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            if (y) {
-                                y = _y - y;
-                                el.top = t - y;
-                                el.height = h + y;
-                                this.setPosition();
-                                if (this.onObjectResizing)
-                                    this.onObjectResizing({ target: this.target });
-                            }
-                        }
-                    };
-                    let _onmouseup = (evt) => {
-                        targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            if (this.onObjectResized)
-                                this.onObjectResized({ target: this.target });
-                            targetHandle.removeEventListener('pointermove', _onmousemove);
-                            targetHandle.removeEventListener('pointerup', _onmouseup);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', _onmousemove);
-                    targetHandle.addEventListener('pointerup', _onmouseup);
-                });
-                this.bottomLeft.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    _y = evt.clientY;
-                    _x = evt.clientX;
-                    if (this.snapToGrid) {
-                        _x = Math.trunc(_x / this.gridX) * this.gridX;
-                        _y = Math.trunc(_y / this.gridY) * this.gridY;
-                    }
-                    let el = this.target;
-                    h = el.height;
-                    w = el.width;
-                    let l = el.left;
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    targetHandle.setPointerCapture(evt.pointerId);
-                    let _onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let y = evt.clientY;
-                            let x = evt.clientX;
-                            if (this.snapToGrid) {
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            }
-                            if (x || y) {
-                                y = _y - y;
-                                x = _x - x;
-                                el.height = h - y;
-                                el.left = l - x;
-                                el.width = w + x;
-                                this.setPosition();
-                                if (this.onObjectResizing)
-                                    this.onObjectResizing({ target: this.target });
-                            }
-                        }
-                    };
-                    let _onmouseup = (evt) => {
-                        targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            if (this.onObjectResized)
-                                this.onObjectResized({ target: this.target });
-                            targetHandle.removeEventListener('pointermove', _onmousemove);
-                            targetHandle.removeEventListener('pointerup', _onmouseup);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', _onmousemove);
-                    targetHandle.addEventListener('pointerup', _onmouseup);
-                });
-            }
-            createHandles() {
-                let handle;
-                this.bottomLeft = handle = this.createHandle();
-                handle.classList.add('bottom-left');
-                this.container.append(handle);
-                this.middleLeft = handle = this.createHandle();
-                handle.classList.add('middle-left');
-                this.container.append(handle);
-                this.topLeft = handle = this.createHandle();
-                handle.classList.add('top-left');
-                this.container.append(handle);
-                this.topRight = handle = this.createHandle();
-                handle.classList.add('top-right');
-                this.container.append(handle);
-                this.middleRight = handle = this.createHandle();
-                handle.classList.add('middle-right');
-                this.container.append(handle);
-                this.bottomRight = handle = this.createHandle();
-                handle.classList.add('bottom-right');
-                this.container.append(handle);
-                this.topCenter = handle = this.createHandle();
-                handle.classList.add('top-center');
-                this.container.append(handle);
-                this.bottomCenter = handle = this.createHandle();
-                handle.classList.add('bottom-center');
-                this.container.append(handle);
-                this.setPosition();
-                this._setGrabHandle();
-                return this;
-            }
-            destroy() {
-                for (let h of this.handles)
-                    h.remove();
-                this.handles = [];
-            }
-        }
-        bi.GrabHandles = GrabHandles;
-        class GrabHandle {
-            constructor(el) {
-                this.el = el;
-            }
-            set left(value) {
-                this.el.style.left = `${value}px`;
-            }
-            set top(value) {
-                this.el.style.top = `${value}px`;
-            }
-            set width(value) {
-                this.el.style.width = `${value}px`;
-            }
-            set height(value) {
-                this.el.style.height = `${value}px`;
-            }
-        }
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class ReportDesigner {
-            constructor(container) {
-                this.container = container;
-                this.loading = false;
-                this.pages = [];
-                this.create();
-                katrid.bi.reportDesigner = this;
-            }
-            create() {
-                this._datasources = [];
-                this.workspace = document.createElement('div');
-                this.workspace.className = 'katrid-studio workspace';
-                this.el = document.createElement('div');
-                this.el.className = 'katrid-report-designer workspace-area';
-                const tabset = document.createElement('div');
-                tabset.className = 'tabset';
-                const nav = document.createElement('ul');
-                nav.className = 'nav nav-tabs';
-                tabset.append(nav);
-                this.tabsetElement = tabset;
-                this.container.append(tabset);
-                this.container.append(this.workspace);
-                this.toolbox = new katrid.bi.Toolbox(this.workspace);
-                this.workspace.append(this.el);
-                this.toolWindow = new katrid.bi.ToolWindow(this, this.workspace);
-                this.container.classList.add('report-designer');
-                this.createDragEvents();
-                document.querySelectorAll('.toolbox-item')
-                    .forEach((el, idx) => {
-                    el.setAttribute('draggable', 'true');
-                    el.addEventListener('dragstart', (evt) => {
-                        this.page.clearSelection();
-                        evt.dataTransfer.setData('text', el.getAttribute('data-widget'));
-                    });
-                });
-                document.querySelectorAll('.toolbox-item img').forEach(el => el.setAttribute('draggable', 'false'));
-                let el = document.querySelector('#properties-editor');
-                this.propertiesEditor = new katrid.bi.ObjectInspector(this, el);
-            }
-            onSelectionChange(selection) {
-                if (selection)
-                    this.propertiesEditor.setSelection(selection);
-                else
-                    this.propertiesEditor.setSelection([]);
-                $(this).trigger('selectionChange', selection);
-            }
-            get datasources() {
-                return this._datasources;
-            }
-            createDragEvents() {
-                this.container.addEventListener('dragover', (evt) => {
-                    let target = evt.target;
-                    if (target.closest('.band-designer'))
-                        evt.preventDefault();
-                });
-                this.container.addEventListener('drop', (evt) => {
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    this.toolItemDrop(evt.dataTransfer.getData('text'), evt);
-                });
-            }
-            toolItemDrop(widget, evt) {
-                this.createElement(widget, evt.target, evt.offsetX, evt.offsetY);
-            }
-            createElement(widgetName, target, x, y) {
-                this.page.createElement(widgetName, target, x, y);
-            }
-            newReport(reportType = 'banded') {
-                this.clear();
-                if (reportType === 'banded') {
-                    const rep = new BandedReport();
-                    rep.newPage();
-                    this.loadReport(rep);
-                    return rep;
-                }
-                else if (reportType === 'dashboard') {
-                    const rep = new DashboardReport();
-                    rep.newPage();
-                    this.loadReport(rep);
-                    return rep;
-                }
-            }
-            get report() {
-                return this._report;
-            }
-            set report(value) {
-                this._report = value;
-            }
-            get page() {
-                return this._page;
-            }
-            set page(value) {
-                if (value !== this._page) {
-                    if (this._page)
-                        this._page.deactivate();
-                    this._page = value;
-                    if (value) {
-                        value.activate();
-                        this.el.append(value.container);
-                    }
-                }
-            }
-            getValidName(prefix) {
-                return this._report.getValidName(prefix);
-            }
-            async showParamsDialog() {
-                const params = this.report.params;
-                if (params) {
-                    const xml = jQuery.parseXML(params);
-                    let code = '';
-                    let cached = this.report.cache.params || {};
-                    const info = {};
-                    for (let param of xml.querySelector('params').children) {
-                        let paramName = param.getAttribute('name');
-                        let paramLabel = param.getAttribute('label');
-                        let paramType = param.getAttribute('type') || 'StringField';
-                        info[paramName] = { label: paramLabel, type: paramType };
-                        code += `${paramName}: ${cached[paramName] || 'null'}    # ${paramLabel} (${paramType})\n`;
-                    }
-                    const res = await katrid.bi.showCodeEditor(code.trimEnd(), 'yaml', null);
-                    if (res !== false) {
-                        const values = jsyaml.load(res);
-                        const displayParams = {};
-                        for (let [k, v] of Object.entries(values)) {
-                            if (v != null) {
-                                if (info[k].type === 'DateField')
-                                    values[k] = moment.utc(v).format('YYYY-MM-DD');
-                            }
-                        }
-                        this.report.cache.params = values;
-                        return { values, info };
-                    }
-                }
-            }
-            async preview(showParams = false) {
-                let params;
-                if (showParams) {
-                    params = await this.showParamsDialog();
-                    if (params === false)
-                        return;
-                }
-                const model = new Katrid.Services.ModelService('ui.action.report');
-                const res = await model.rpc('preview', [JSON.stringify(this.dump()), { values: params.values, info: params.info }]);
-            }
-            loadReport(report) {
-                this.clear();
-                this._report = report;
-                this._datasources = report.datasources;
-                for (let ds of this._datasources)
-                    this.toolWindow.registerDataSource(ds);
-                for (let page of report.pages)
-                    this.pages.push(this.createPageDesigner(page));
-                if (this.pages.length)
-                    this.page = this.pages[0];
-            }
-            createPageDesigner(page) {
-                const el = document.createElement('div');
-                el.className = 'page-designer';
-                return page.createDesigner(el, this);
-            }
-            async widgetExecuteEditor(widget) {
-                const editorCls = katrid.bi.getComponentEditor(widget.constructor);
-                if (editorCls) {
-                    const editor = new editorCls(widget);
-                    await editor.showEditor();
-                }
-            }
-            async showOpenFilePicker() {
-                [this.fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Reptile Report (*.report)', accept: { 'application/json': ['.report'] } }] });
-                const file = await this.fileHandle.getFile();
-                const contents = await file.text();
-                this.load(JSON.parse(contents), file.name);
-            }
-            async showSaveFilePicker() {
-                if (!this.fileHandle)
-                    this.fileHandle = await window.showSaveFilePicker({ types: [{ description: 'Reptile Report (*.report)', accept: { 'application/json': ['.report'] } }] });
-                const file = await this.fileHandle.createWritable();
-                console.log('content', this._report.dump);
-                const content = this.dump();
-                const blob = new Blob([JSON.stringify(this.dump())], { type: 'application/json' });
-                await file.write(blob);
-                await file.close();
-            }
-            removeObjectNotification(obj) {
-                if (!this.loading)
-                    for (let child of Array.from(this._report.objects()))
-                        child.onRemoveObjectNotification(obj);
-            }
-            dump() {
-                return this._report.dump();
-            }
-            load(structure, filename) {
-                this.clear();
-                let rep;
-                const repInfo = structure.report;
-                if (repInfo.type === 'banded')
-                    rep = new BandedReport();
-                rep.load(repInfo);
-                this.loadReport(rep);
-                this.filename = filename;
-                return rep;
-            }
-            set filename(filename) {
-                console.log('set filename', filename);
-                document.title = filename ? filename + ' - Report Editor' : 'Report Editor';
-            }
-            clear() {
-                this.toolWindow.clear();
-                if (this._page)
-                    this._page.deactivate();
-                this.filename = '';
-                this.fileHandle = null;
-                this.pages = [];
-                this._report = null;
-            }
-            registerDataSource(ds) {
-                ds.report = this._report;
-                if (!this._datasources.includes(ds)) {
-                    this._datasources.push(ds);
-                    this.toolWindow.registerDataSource(ds);
-                }
-            }
-        }
-        bi.ReportDesigner = ReportDesigner;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
+var Katrid;
+(function (Katrid) {
+    var Components;
+    (function (Components) {
         class Component {
-            getType() {
-                return this.constructor.name;
-            }
-            dump() {
-                return {
-                    type: this.getType(),
-                    name: this.name,
-                };
-            }
-            load(info) {
-                this.name = info.name;
-            }
         }
-        drawing.Component = Component;
-        let PageSize;
-        (function (PageSize) {
-            PageSize[PageSize["A3"] = { width: 1122, height: 1587 }] = "A3";
-            PageSize[PageSize["A4"] = { width: 794, height: 1122 }] = "A4";
-            PageSize[PageSize["A5"] = { width: 583, height: 794 }] = "A5";
-            PageSize[PageSize["Letter"] = { width: 816, height: 1071 }] = "Letter";
-            PageSize[PageSize["Custom"] = { width: 0, height: 0 }] = "Custom";
-            PageSize[PageSize["Responsive"] = { width: -1, height: -1 }] = "Responsive";
-            PageSize[PageSize["WebSmall"] = { width: 768, height: 1024 }] = "WebSmall";
-            PageSize[PageSize["WebMedium"] = { width: 1024, height: 768 }] = "WebMedium";
-            PageSize[PageSize["WebLarge"] = { width: 1280, height: 1024 }] = "WebLarge";
-        })(PageSize = drawing.PageSize || (drawing.PageSize = {}));
-        let PageOrientation;
-        (function (PageOrientation) {
-            PageOrientation[PageOrientation["Portrait"] = 0] = "Portrait";
-            PageOrientation[PageOrientation["Landscape"] = 1] = "Landscape";
-        })(PageOrientation = drawing.PageOrientation || (drawing.PageOrientation = {}));
-        let HAlign;
-        (function (HAlign) {
-            HAlign[HAlign["left"] = 0] = "left";
-            HAlign[HAlign["center"] = 1] = "center";
-            HAlign[HAlign["right"] = 2] = "right";
-            HAlign[HAlign["justify"] = 3] = "justify";
-        })(HAlign = drawing.HAlign || (drawing.HAlign = {}));
-        let VAlign;
-        (function (VAlign) {
-            VAlign[VAlign["top"] = 0] = "top";
-            VAlign[VAlign["middle"] = 1] = "middle";
-            VAlign[VAlign["bottom"] = 2] = "bottom";
-        })(VAlign = drawing.VAlign || (drawing.VAlign = {}));
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var design;
-    (function (design) {
-        var HAlign = katrid.drawing.HAlign;
-        var VAlign = katrid.drawing.VAlign;
-        class PropertyEditor {
-            static { this.tag = 'input'; }
-            constructor(name, config) {
-                this.name = name;
-                this.config = config;
-                this.caption = config?.caption;
-                this.description = config?.description;
-                this.placeholder = config?.placeholder;
-                this.title = config?.title;
-            }
-            createEditor(typeEditor) {
-                let editor = document.createElement('section');
-                editor.classList.add('form-group', 'col-12');
-                editor.setAttribute('prop-name', this.name);
-                editor.classList.add('property-editor');
-                if (this.caption)
-                    this.createLabel(editor);
-                if (this.cssClass)
-                    editor.classList.add(this.cssClass);
-                let input = this.createInput(typeEditor);
-                let value = this.getValue(typeEditor);
-                this.setValue(value, input);
-                editor.append(input);
-                if (this.title) {
-                    editor.title = this.title;
-                }
-                return editor;
-            }
-            setValue(value, input) {
-                if (value != null) {
-                    input.value = value;
-                }
-            }
-            createLabel(editor) {
-                let label = document.createElement('label');
-                label.innerText = this.caption || this.name;
-                label.className = 'control-label';
-                editor.appendChild(label);
-            }
-            createInput(typeEditor) {
-                let input = document.createElement(this.constructor.tag);
-                input.classList.add('form-control');
-                if (this.placeholder)
-                    input.placeholder = this.placeholder;
-                this.createInputEvent(typeEditor, input);
-                return input;
-            }
-            createInputEvent(typeEditor, input) {
-                input.addEventListener('change', evt => this.inputChange(typeEditor, input, evt));
-            }
-            inputChange(typeEditor, input, evt) {
-                this.apply(typeEditor, input.value);
-            }
-            getValue(typeEditor) {
-                return typeEditor.targetObject[this.name];
-            }
-            apply(typeEditor, value) {
-                typeEditor.targetObject[this.name] = value;
-            }
+        Components.Component = Component;
+        class Widget extends Component {
         }
-        design.PropertyEditor = PropertyEditor;
-        class StringProperty extends PropertyEditor {
-            createInput(typeEditor) {
-                let el = super.createInput(typeEditor);
-                el.spellcheck = false;
-                return el;
-            }
-        }
-        design.StringProperty = StringProperty;
-        class NameStringProperty extends PropertyEditor {
-        }
-        design.NameStringProperty = NameStringProperty;
-        class TextProperty extends StringProperty {
-            static { this.tag = 'textarea'; }
-        }
-        design.TextProperty = TextProperty;
-        class IntegerProperty extends PropertyEditor {
-            createInput(typeEditor) {
-                let el = super.createInput(typeEditor);
-                el.type = 'number';
-                return el;
-            }
-        }
-        design.IntegerProperty = IntegerProperty;
-        class AutocompleteProperty extends StringProperty {
-        }
-        design.AutocompleteProperty = AutocompleteProperty;
-        let CONTROL_COUNT = 0;
-        class BooleanProperty extends PropertyEditor {
-            createEditor(typeEditor) {
-                let editor = document.createElement('section');
-                editor.className = 'col-12 property-editor';
-                editor.innerHTML = `<div class="form-check"><input class="form-check-input" type="checkbox" id="_el-input-${++CONTROL_COUNT}"><label class="form-check-label" for="_el-input-${CONTROL_COUNT}">${this.caption}</label></div>`;
-                let input = editor.querySelector('input');
-                input.checked = this.getValue(typeEditor);
-                input.addEventListener('change', () => typeEditor.targetObject[this.name] = input.checked);
-                return editor;
-            }
-        }
-        design.BooleanProperty = BooleanProperty;
-        class BackgroundProperty extends PropertyEditor {
-            createEditor(typeEditor) {
-                const editor = document.createElement('section');
-                editor.className = 'col-12 property-editor';
-                editor.innerHTML = `
-      <table>
-      <tr>
-      <td><label>Background</label></td>
-      <td style="width:100%">
-      <input class="form-control" type="color" name="background-color">
-      </td></tr>
-      </table>
-      `;
-                const val = this.getValue(typeEditor) || {};
-                const bgColor = editor.querySelector('input[name="background-color"]');
-                if (val.color)
-                    bgColor.value = val.color;
-                else
-                    bgColor.value = '#FFFFFF';
-                bgColor.addEventListener('change', () => {
-                    val.color = bgColor.value;
-                    typeEditor.targetObject['background'] = val;
-                });
-                return editor;
-            }
-        }
-        design.BackgroundProperty = BackgroundProperty;
-        class FontProperty extends PropertyEditor {
-            createEditor(typeEditor) {
-                const editor = document.createElement('section');
-                editor.className = 'col-12 property-editor';
-                editor.style.textAlign = 'center';
-                editor.innerHTML = `
-<table>
-<tr>
-<td>
-<select class="form-select-sm" name="font-name">
-<option value=""></option>
-<option value="Arial">Arial</option>
-<option value="Helvetica">Helvetica</option>
-<option value="Times New Roman">Times New Roman</option>
-<option value="Courier">Courier</option>
-<option value="Courier New">Courier New</option>
-</select>
-</td>
-<td>
-<input class="form-control input-sm" type="number" name="font-size" value="9">
-</td>
-<td style="width:40px">
-<input class="form-control input-sm" name="font-color" type="color">
-</td>
-</tr>
-</table>
-<div class="btn-group" style="width: 100%">
-<input class="btn-check" type="checkbox" id="property-font-bold" name="font-bold">
-<label class="btn btn-sm btn-outline-secondary" for="property-font-bold"><i class="fa-solid fa-bold"></i></label>
-<input class="btn-check" type="checkbox" id="property-font-italic" name="font-italic">
-<label class="btn btn-sm btn-outline-secondary" for="property-font-italic"><i class="fa-solid fa-italic"></i></label>
-<input class="btn-check" type="checkbox" id="property-font-underline" name="font-underline">
-<label class="btn btn-sm btn-outline-secondary" for="property-font-underline"><i class="fa-solid fa-underline"></i></label>
-</div>
-`;
-                let val = this.getValue(typeEditor) || {};
-                let bold = editor.querySelector('input[name="font-bold"]');
-                if (val.bold)
-                    bold.checked = true;
-                bold.addEventListener('change', () => {
-                    val.bold = bold.checked;
-                    typeEditor.targetObject.font = val;
-                });
-                let italic = editor.querySelector('input[name="font-italic"]');
-                if (val.italic)
-                    italic.checked = true;
-                italic.addEventListener('change', () => {
-                    val.italic = italic.checked;
-                    typeEditor.targetObject.font = val;
-                });
-                let underline = editor.querySelector('input[name="font-underline"]');
-                if (val.underline)
-                    underline.checked = true;
-                underline.addEventListener('change', () => {
-                    val.underline = underline.checked;
-                    typeEditor.targetObject['font'] = val;
-                });
-                let fontName = editor.querySelector('select[name="font-name"]');
-                fontName.value = typeEditor.targetObject.font?.name;
-                fontName.addEventListener('change', () => {
-                    val.name = fontName.value;
-                    typeEditor.targetObject['font'] = val;
-                });
-                let fontColor = editor.querySelector('input[name="font-color"]');
-                fontColor.value = typeEditor.targetObject['font']?.color;
-                fontColor.addEventListener('change', () => {
-                    val.color = fontColor.value;
-                    typeEditor.targetObject['font'] = val;
-                });
-                let fontSize = editor.querySelector('input[name="font-size"]');
-                if (typeEditor.targetObject['font']?.size) {
-                    let size = typeEditor.targetObject['font'].size;
-                    if (typeof size === 'number')
-                        fontSize.value = size.toString();
-                    else
-                        fontSize.value = size.match(/(\d+)/)[0];
-                }
-                fontSize.addEventListener('change', () => {
-                    val.size = fontSize.value;
-                    typeEditor.targetObject['font'] = val;
-                });
-                return editor;
-            }
-        }
-        design.FontProperty = FontProperty;
-        class BorderProperty extends PropertyEditor {
-            createEditor(typeEditor) {
-                let editor = document.createElement('div');
-                editor.className = 'property-editor';
-                editor.style.textAlign = 'center';
-                editor.innerHTML = `
-<div class="btn-group" style="width: 100%">
-<input class="btn-check" type="checkbox" id="property-border-all" name="border-all">
-<label class="btn btn-sm btn-outline-secondary" for="property-border-all"><i class="fa-duotone fa-border-all"></i></label>
-<input class="btn-check" type="checkbox" id="property-border-top" name="border-top">
-<label class="btn btn-sm btn-outline-secondary" for="property-border-top"><i class="fa-duotone fa-border-top"></i></label>
-<input class="btn-check" type="checkbox" id="property-border-right" name="border-right">
-<label class="btn btn-sm btn-outline-secondary" for="property-border-right"><i class="fa-duotone fa-border-right"></i></label>
-<input class="btn-check" type="checkbox" id="property-border-bottom" name="border-bottom">
-<label class="btn btn-sm btn-outline-secondary" for="property-border-bottom"><i class="fa-duotone fa-border-bottom"></i></label>
-<input class="btn-check" type="checkbox" id="property-border-left" name="border-left">
-<label class="btn btn-sm btn-outline-secondary" for="property-border-left"><i class="fa-duotone fa-border-left"></i></label>
-</div>
-      `;
-                let val = this.getValue(typeEditor) || {};
-                let all = editor.querySelector('input[name="border-all"]');
-                let top = editor.querySelector('input[name="border-top"]');
-                let right = editor.querySelector('input[name="border-right"]');
-                let bottom = editor.querySelector('input[name="border-bottom"]');
-                let left = editor.querySelector('input[name="border-left"]');
-                if (val.all)
-                    all.checked = true;
-                else {
-                    top.checked = val.top;
-                    right.checked = val.right;
-                    bottom.checked = val.bottom;
-                    left.checked = val.left;
-                }
-                all.addEventListener('change', () => {
-                    val.all = all.checked;
-                    top.checked = right.checked = bottom.checked = left.checked = val.top = val.right = val.bottom = val.left = val.all;
-                    if (val.all)
-                        typeEditor.targetObject[this.name] = val;
-                    else
-                        typeEditor.targetObject[this.name] = null;
-                });
-                top.addEventListener('change', () => {
-                    val.top = top.checked;
-                    all.checked = val.all = this.allChecked(val);
-                    typeEditor.targetObject[this.name] = val;
-                });
-                right.addEventListener('change', () => {
-                    val.right = right.checked;
-                    all.checked = val.all = this.allChecked(val);
-                    typeEditor.targetObject[this.name] = val;
-                });
-                bottom.addEventListener('change', () => {
-                    val.bottom = bottom.checked;
-                    all.checked = val.all = this.allChecked(val);
-                    typeEditor.targetObject[this.name] = val;
-                });
-                left.addEventListener('change', () => {
-                    val.left = left.checked;
-                    all.checked = val.all = this.allChecked(val);
-                    typeEditor.targetObject[this.name] = val;
-                });
-                return editor;
-            }
-            allChecked(val) {
-                return val.top && val.right && val.bottom && val.left;
-            }
-        }
-        design.BorderProperty = BorderProperty;
-        class VAlignProperty extends PropertyEditor {
-            createEditor(typeEditor) {
-                let editor = document.createElement('div');
-                editor.className = 'property-editor';
-                editor.style.textAlign = 'center';
-                editor.innerHTML = `
-<div class="btn-group" style="width: 100%">
-<input class="btn-check" type="radio" id="property-valign-top" name="valign" value="0">
-<label class="btn btn-sm btn-outline-secondary" for="property-valign-top"><i class="fa-duotone fa-objects-align-top"></i></label>
-<input class="btn-check" type="radio" id="property-valign-middle" name="valign" value="1">
-<label class="btn btn-sm btn-outline-secondary" for="property-valign-middle"><i class="fa-duotone fa-objects-align-center-vertical"></i></label>
-<input class="btn-check" type="radio" id="property-valign-bottom" name="valign" value="2">
-<label class="btn btn-sm btn-outline-secondary" for="property-valign-bottom"><i class="fa-duotone fa-objects-align-bottom"></i></label>
-</div>
-      `;
-                let val = this.getValue(typeEditor) || VAlign.top;
-                let top = editor.querySelector('#property-valign-top');
-                let middle = editor.querySelector('#property-valign-middle');
-                let bottom = editor.querySelector('#property-valign-bottom');
-                top.checked = val === VAlign.top;
-                middle.checked = val === VAlign.middle;
-                bottom.checked = val === VAlign.bottom;
-                const change = evt => typeEditor.targetObject[this.name] = parseInt(evt.target.value);
-                top.addEventListener('change', change);
-                middle.addEventListener('change', change);
-                bottom.addEventListener('change', change);
-                return editor;
-            }
-        }
-        design.VAlignProperty = VAlignProperty;
-        class HAlignProperty extends PropertyEditor {
-            createEditor(typeEditor) {
-                const editor = document.createElement('div');
-                editor.className = 'property-editor';
-                editor.style.textAlign = 'center';
-                editor.innerHTML = `
-<div class="btn-group" style="width: 100%">
-<input class="btn-check" type="radio" id="property-halign-left" name="halign" value="0">
-<label class="btn btn-sm btn-outline-secondary" title="Align to left" for="property-halign-left"><i class="fa-duotone fa-align-left"></i></label>
-<input class="btn-check" type="radio" id="property-halign-center" name="halign" value="1">
-<label class="btn btn-sm btn-outline-secondary" title="Align to center" for="property-halign-center"><i class="fa-duotone fa-align-center"></i></label>
-<input class="btn-check" type="radio" id="property-halign-right" name="halign" value="2">
-<label class="btn btn-sm btn-outline-secondary" title="Align to right" for="property-halign-right"><i class="fa-duotone fa-align-right"></i></label>
-<input class="btn-check" type="radio" id="property-halign-justify" name="halign" value="3">
-<label class="btn btn-sm btn-outline-secondary" title="Justify" for="property-halign-justify"><i class="fa-duotone fa-align-justify"></i></label>
-</div>`;
-                let val = this.getValue(typeEditor) || HAlign.left;
-                let left = editor.querySelector('#property-halign-left');
-                let center = editor.querySelector('#property-halign-center');
-                let right = editor.querySelector('#property-halign-right');
-                let justify = editor.querySelector('#property-halign-justify');
-                left.checked = val === HAlign.left;
-                center.checked = val === HAlign.center;
-                right.checked = val === HAlign.right;
-                justify.checked = val === HAlign.justify;
-                const change = evt => typeEditor.targetObject[this.name] = parseInt(evt.target.value);
-                left.addEventListener('change', change);
-                center.addEventListener('change', change);
-                right.addEventListener('change', change);
-                justify.addEventListener('change', change);
-                return editor;
-            }
-        }
-        design.HAlignProperty = HAlignProperty;
-        class DisplayFormatProperty extends PropertyEditor {
-            createEditor(typeEditor) {
-                const editor = document.createElement('div');
-                editor.className = 'property-editor';
-                editor.style.textAlign = 'center';
-                editor.innerHTML = `
-      <table><tr>
-      <td><select class="form-select" name="displayFormat"><option value=""></option>
-        <option value="Numeric">Numeric</option>
-        <option value="DateTime">DateTime</option>
-        <option value="String">String</option>
-      </select></td>
-      <td><input class="form-control" type="text"></td>
-      </tr></table>
-`;
-                const val = this.getValue(typeEditor) || {};
-                const input = editor.querySelector('input');
-                const kind = editor.querySelector('select');
-                if (val.type)
-                    kind.value = val.type;
-                if (val.format)
-                    input.value = val.format;
-                const onChange = () => typeEditor.targetObject['displayFormat'] = val;
-                input.addEventListener('change', onChange);
-                kind.addEventListener('change', onChange);
-                return editor;
-            }
-        }
-        design.DisplayFormatProperty = DisplayFormatProperty;
-        class SelectProperty extends StringProperty {
-            static { this.tag = 'select'; }
-            getValues(typeEditor) {
-                if (this.config.options) {
-                    if (Array.isArray(this.config.options))
-                        return this.config.options;
-                    return Array.from(Object.entries(this.config.options).map(([k, v]) => ({
-                        value: k.toString(),
-                        text: v.toString()
-                    })));
-                }
-                return;
-            }
-            createInput(typeEditor) {
-                let input = super.createInput(typeEditor);
-                input.className = 'form-select';
-                input.innerHTML = `<option value="">(${this.caption || this.name})</option>`;
-                for (let obj of this.getValues(typeEditor)) {
-                    let el = document.createElement('option');
-                    el.setAttribute('value', obj.value);
-                    el.innerText = obj.text;
-                    input.append(el);
-                }
-                input.addEventListener('change', () => this.selectItem(typeEditor, parseInt(input.value)));
-                return input;
-            }
-            selectItem(typeEditor, index) {
-            }
-        }
-        design.SelectProperty = SelectProperty;
-        class ComponentProperty extends SelectProperty {
-            constructor(name, config) {
-                super(name, config);
-                this.onGetValues = config.onGetValues;
-            }
-            getValues(typeEditor) {
-                let vals = Array.from(this.onGetValues(typeEditor));
-                this.values = vals.map(v => v.value);
-                vals.forEach((v, i) => v.value = i);
-                return vals;
-            }
-            selectItem(typeEditor, index) {
-                typeEditor.targetObject[this.name] = this.values[index];
-            }
-            setValue(value, input) {
-                if (value) {
-                    const i = this.values.indexOf(value);
-                    if (i > -1) {
-                        input.value = i.toString();
-                        return;
-                    }
-                }
-                input.value = '';
-            }
-        }
-        design.ComponentProperty = ComponentProperty;
-        function createInputGroup(text) {
-            let igroup = document.createElement('div');
-            igroup.className = 'input-group input-group-sm';
-            let span = document.createElement('span');
-            span.className = 'input-group-text';
-            span.innerHTML = text;
-            let input = document.createElement('input');
-            input.className = 'form-control input-xl';
-            igroup.append(input);
-            igroup.append(span);
-            return igroup;
-        }
-        class LocationProperty extends PropertyEditor {
-            createEditor(typeEditor) {
-                let editor = document.createElement('section');
-                editor.classList.add('form-group', 'row', 'property-editor');
-                editor.setAttribute('prop-name', this.name);
-                let loc = this.getValue(typeEditor);
-                if (this.caption)
-                    this.createLabel(editor);
-                if (this.cssClass)
-                    editor.classList.add(this.cssClass);
-                let div = document.createElement('div');
-                div.className = 'col-6';
-                let igroup = createInputGroup('x');
-                let input = igroup.querySelector('input');
-                input.value = loc?.x;
-                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
-                    x: parseInt(evt.target.value),
-                    y: loc.y
-                }));
-                div.append(igroup);
-                editor.append(div);
-                div = document.createElement('div');
-                div.className = 'col-6';
-                igroup = createInputGroup('y');
-                input = igroup.querySelector('input');
-                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
-                    x: loc.x,
-                    y: parseInt(evt.target.value),
-                }));
-                input.value = loc?.y;
-                div.append(igroup);
-                editor.append(div);
-                return editor;
-            }
-        }
-        design.LocationProperty = LocationProperty;
-        class HeightProperty extends PropertyEditor {
-            createEditor(typeEditor) {
-                const editor = document.createElement('section');
-                editor.classList.add('form-group', 'row', 'property-editor');
-                editor.setAttribute('prop-name', this.name);
-                let size = this.getValue(typeEditor);
-                if (this.caption) {
-                    this.createLabel(editor);
-                }
-                if (this.cssClass) {
-                    editor.classList.add(this.cssClass);
-                }
-                let div = document.createElement('div');
-                div.className = 'col-12';
-                let igroup = createInputGroup('<i class="fa-regular fa-arrows-up-down"></i>');
-                let input = igroup.querySelector('input');
-                input.type = 'number';
-                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, parseInt(evt.target.value)));
-                input.value = size;
-                div.append(igroup);
-                editor.append(div);
-                if (this.title) {
-                    editor.title = this.title;
-                }
-                return editor;
-            }
-        }
-        design.HeightProperty = HeightProperty;
-        class SizeProperty extends PropertyEditor {
-            createEditor(typeEditor) {
-                const editor = document.createElement('section');
-                editor.classList.add('form-group', 'row', 'property-editor');
-                editor.setAttribute('prop-name', this.name);
-                let size = this.getValue(typeEditor);
-                if (this.caption) {
-                    this.createLabel(editor);
-                }
-                if (this.cssClass) {
-                    editor.classList.add(this.cssClass);
-                }
-                let div = document.createElement('div');
-                div.className = 'col-6';
-                let igroup = createInputGroup('<i class="fa-regular fa-arrows-left-right"></i>');
-                let input = igroup.querySelector('input');
-                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
-                    width: parseInt(evt.target.value),
-                    height: size.height,
-                }));
-                input.value = size.width;
-                div.append(igroup);
-                editor.append(div);
-                div = document.createElement('div');
-                div.className = 'col-6';
-                igroup = createInputGroup('<i class="fa-regular fa-arrows-up-down"></i>');
-                input = igroup.querySelector('input');
-                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
-                    width: size.width,
-                    height: parseInt(evt.target.value),
-                }));
-                input.value = size.height;
-                div.append(igroup);
-                editor.append(div);
-                return editor;
-            }
-        }
-        design.SizeProperty = SizeProperty;
-        let componentEditorRegistry = [];
-        function findComponentEditor(type) {
-            for (let reg of componentEditorRegistry)
-                if (reg.type === type)
-                    return reg;
-            for (let i = componentEditorRegistry.length - 1; i >= 0; i--) {
-                let reg = componentEditorRegistry[i];
-                if (reg.type && type.prototype instanceof reg.type)
-                    return reg;
-            }
-            for (let reg of componentEditorRegistry) {
-                if (reg.type === undefined)
-                    return reg;
-            }
-        }
-        design.findComponentEditor = findComponentEditor;
-        function registerComponentEditor(type, editor) {
-            let reg;
-            for (let r of componentEditorRegistry)
-                if (r.type === type) {
-                    reg = r;
-                    break;
-                }
-            if (!reg) {
-                reg = { type, editor };
-                componentEditorRegistry.push(reg);
-            }
-            else {
-                reg.editor = editor;
-            }
-            editor.properties = editor.defineProperties();
-        }
-        design.registerComponentEditor = registerComponentEditor;
-        function getComponentEditor(type) {
-            let reg = findComponentEditor(type);
-            if (reg) {
-                return reg.editor;
-            }
-            return ComponentEditor;
-        }
-        design.getComponentEditor = getComponentEditor;
-        class ComponentEditor {
-            constructor(comp, designer) {
-                this.designer = designer;
-                this.targetObject = comp;
-            }
-            createEditor() {
-                let editor = document.createElement('div');
-                let props = this.constructor['properties'];
-                for (let prop of props)
-                    editor.append(prop.createEditor(this));
-                return editor;
-            }
-            showEditor() {
-            }
-            static registerPropertyEditor(propName, editor) {
-                this.properties[propName] = editor;
-            }
-            static defineProperties() {
-                return [
-                    new StringProperty('name', { placeholder: 'Object Name' }),
-                ];
-            }
-            setPropValue(proName, value) {
-                this.targetObject[proName] = value;
-                this.designer.updateSelectedObjects();
-            }
-        }
-        design.ComponentEditor = ComponentEditor;
-        registerComponentEditor(katrid.drawing.Component, ComponentEditor);
-        class WidgetEditor extends ComponentEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new LocationProperty('location'), new SizeProperty('size'));
-            }
-        }
-        design.WidgetEditor = WidgetEditor;
-        registerComponentEditor(katrid.drawing.BaseWidget, WidgetEditor);
-        class DataWidgetEditor extends ComponentEditor {
-            static defineProperties() {
-                return [
-                    new StringProperty('title', { caption: 'Title' }),
-                    new DataSourceProperty('datasource', { caption: 'Data Source' }),
-                ];
-            }
-        }
-        class DataSourceProperty extends SelectProperty {
-            getValues(typeEditor) {
-                return typeEditor.designer.report.datasources.map(ds => ({
-                    value: ds,
-                    text: ds.name
-                }));
-            }
-            getValue(typeEditor) {
-                let target = typeEditor.targetObject;
-                if (target.datasource) {
-                    return appStudio.dataSources.indexOf(target.datasource);
-                }
-            }
-            apply(target, value) {
-                target.targetObject.setDataSource(appStudio.dataSources[value]);
-            }
-        }
-        design.DataSourceProperty = DataSourceProperty;
-        class ChartEditor extends WidgetEditor {
-            async showEditor() {
-                this.targetObject.code = await showCodeEditor(this.targetObject.code, 'javascript', 'chart');
-            }
-        }
-        class PieChartEditor extends ChartEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new AutocompleteProperty('values', { caption: 'Values' }), new AutocompleteProperty('labels', { caption: 'Labels' }));
-            }
-        }
-        class DonutChartEditor extends PieChartEditor {
-        }
-        class BarChartEditor extends ChartEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new AutocompleteProperty('x', { caption: 'X' }), new AutocompleteProperty('y', { caption: 'Y' }));
-            }
-        }
-        class LineChartEditor extends BarChartEditor {
-        }
-        async function showCodeEditor(value = null, lang = 'javascript', previewType = 'table') {
-            let codeEditor;
-            return new Promise((resolve, reject) => {
-                requirejs(['vs/editor/editor.main'], function () {
-                    let title = 'Code Editor';
-                    let modal = document.createElement('div');
-                    modal.className = 'modal';
-                    modal.tabIndex = -1;
-                    modal.innerHTML = `<div class="modal-dialog modal-xl modal-fullscreen-md-down" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">${title}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-      <div class="code-editor"></div>
-      </div>
-      <div class="modal-footer">
-      <button type="button" class="btn-ok btn btn-outline-secondary">OK</button>
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-      </div>
-    </div>
-  </div>`;
-                    let lastTimeout;
-                    let dlg = new bootstrap.Modal(modal);
-                    modal.addEventListener('hidden.bs.modal', () => {
-                        modal.remove();
-                        resolve(false);
-                    });
-                    dlg.show();
-                    let btnOk = modal.querySelector('.btn-ok');
-                    if (!codeEditor) {
-                        let editor = modal.querySelector('.code-editor');
-                        let preview = modal.querySelector('.preview');
-                        codeEditor = monaco.editor.create(editor, {
-                            lang,
-                        });
-                        if (previewType === 'table') {
-                            let tbl = new Katrid.bi.TableWidget(preview);
-                            codeEditor.onDidChangeModelContent(event => {
-                                if (lastTimeout)
-                                    clearTimeout(lastTimeout);
-                                lastTimeout = setTimeout(() => {
-                                    let previewType = modal.getAttribute('preview-type');
-                                    lastTimeout = null;
-                                    let code = codeEditor.getModel().getValue();
-                                    if (previewType === 'table')
-                                        tbl.fromCode(code);
-                                    else if (previewType === 'chart')
-                                        chartPreview(preview, code);
-                                    else
-                                        preview.innerHTML = code;
-                                }, 1000);
-                            });
-                        }
-                    }
-                    let defValue = value;
-                    if (!defValue) {
-                        if (lang === 'javascript') {
-                            defValue = ['({})'].join('\n');
-                        }
-                        else if (lang === 'html') {
-                            defValue = '<div></div>';
-                        }
-                    }
-                    if (lang) {
-                        monaco.editor.setModelLanguage(codeEditor.getModel(), lang);
-                    }
-                    codeEditor.getModel().setValue(defValue);
-                    codeEditor.focus();
-                    btnOk.addEventListener('click', () => {
-                        resolve(codeEditor.getModel().getValue());
-                        dlg.hide();
-                    });
-                });
-            });
-        }
-        design.showCodeEditor = showCodeEditor;
-        let _lastChart = null;
-        function chartPreview(preview, code) {
-            $(preview).empty();
-            if (_lastChart) {
-                Plotly.purge(_lastChart);
-                _lastChart = null;
-            }
-            let config = katrid.bi.getTraces(eval(code), this.studio);
-            _lastChart = Plotly.newPlot(preview, config.traces, config.layout || { height: $(preview).height(), width: $(preview).width() }, { responsive: true });
-        }
-        function getTraces(config) {
-            let kwargs = ['datasource', 'x', 'y', 'values', 'labels'];
-            if (config.traces instanceof Function) {
-                let traces = [];
-                for (let t of config.traces()) {
-                    let trace = {};
-                    if (typeof t.datasource === 'string') {
-                        let ds = appStudio.findComponent(t.datasource);
-                        if (ds.data) {
-                            if (t.x)
-                                trace.x = ds.values(t.x);
-                            if (t.y)
-                                trace.y = ds.values(t.y);
-                            if (t.values)
-                                trace.values = ds.values(t.values);
-                            if (t.labels)
-                                trace.labels = ds.values(t.labels);
-                        }
-                        for (let k of Object.keys(t)) {
-                            if (!kwargs.includes(k))
-                                trace[k] = t[k];
-                        }
-                    }
-                    traces.push(trace);
-                }
-                config.traces = traces;
-            }
-            return config;
-        }
-        async function createCodeEditor(dom, value = null, lang = 'javascript', previewType = 'table') {
-            return new Promise((resolve, reject) => {
-                requirejs(['vs/editor/editor.main'], function () {
-                    let codeEditor = monaco.editor.create(dom, {
-                        lang,
-                    });
-                    setTimeout(() => {
-                        codeEditor.layout();
-                    });
-                    if (lang)
-                        monaco.editor.setModelLanguage(codeEditor.getModel(), lang);
-                    if (value)
-                        codeEditor.getModel().setValue(value);
-                    resolve(codeEditor);
-                });
-            });
-        }
-        design.createCodeEditor = createCodeEditor;
-    })(design = katrid.design || (katrid.design = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class Field {
-            constructor() {
-                this.calculated = false;
-                this.client = false;
-            }
-        }
-        bi.Field = Field;
-        class DataSource {
-            constructor(name) {
-                this.name = name;
-                this._dataStored = true;
-            }
-            dump() {
-                return {
-                    name: this.name,
-                    master: this.master?.name,
-                    data: this._dataStored ? this.data : undefined,
-                };
-            }
-            load(info) {
-                this.name = info.name;
-                this.data = info.data;
-                if (info.master) {
-                    this.report.addLoadCallback(() => this.master = this.report.findObject(info.master));
-                }
-            }
-        }
-        bi.DataSource = DataSource;
-        class SqlDataSource extends DataSource {
-            constructor() {
-                super(...arguments);
-                this._dataStored = false;
-            }
-            get sql() {
-                return this._sql;
-            }
-            set sql(value) {
-                this._sql = value;
-                if (this._sql && this.connection) {
-                    this.read();
-                }
-            }
-            dump() {
-                const d = super.dump();
-                d.sql = this._sql;
-                return d;
-            }
-            load(info) {
-                super.load(info);
-                this._sql = info.sql;
-            }
-            async read() {
-                this.fields = null;
-                const model = new Katrid.Services.ModelService('ui.action.report');
-                const res = await model.rpc('exec_sql', [this._sql, {}], {});
-                this.data = res.data;
-                this.fields = res.fields;
-                return res;
-            }
-        }
-        bi.SqlDataSource = SqlDataSource;
-        class ORMDataSource extends DataSource {
-            constructor() {
-                super(...arguments);
-                this._dataStored = false;
-            }
-            dump() {
-                const d = super.dump();
-                d.model = this.model;
-                d.domain = this.domain;
-                d.selectFields = this.selectFields;
-                d.where = this.where;
-                return d;
-            }
-            load(info) {
-                super.load(info);
-                this.model = info.model;
-                this.domain = info.domain;
-                this.selectFields = info.selectFields;
-                this.where = info.where;
-            }
-            async read() {
-                const model = new Katrid.Services.ModelService(this.model);
-                const res = await model.rpc('search', [this.domain, this.selectFields], {});
-                this.data = res.data;
-                this.fields = res.fields;
-                return res;
-            }
-        }
-        bi.ORMDataSource = ORMDataSource;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        class BaseColumn {
-            dump() {
-                return { expression: this.expression, caption: this.caption };
-            }
-        }
-        drawing.BaseColumn = BaseColumn;
-        class BaseGrid extends drawing.BaseWidget {
-            constructor() {
-                super(...arguments);
-                this.columns = [];
-            }
-            defaultProps() {
-                super.defaultProps();
-                this.height = 100;
-                this.width = 200;
-            }
-            create() {
-                this.graphic = drawing.g({ transform: `translate(${this.x},${this.y})` });
-                let fobj = drawing.draw('foreignObject', { x: 0, y: 0, width: this.width, height: this.height });
-                const div = this._div = document.createElement('div');
-                div.className = 'grid';
-                this.gridElement = document.createElement('table');
-                div.append(this.gridElement);
-                fobj.$el.append(div);
-                this.foreignObject = fobj.$el;
-                this.graphic.append(fobj);
-                this.element = this.graphic.$el;
-                this.createTable();
-            }
-            createTable() {
-                const thead = this.gridElement.createTHead();
-                let tr = thead.appendChild(document.createElement('tr'));
-                let th = tr.appendChild(document.createElement('th'));
-                th.innerText = 'Column 1';
-                th.style.cursor = 'pointer';
-                th.addEventListener('click', (event) => {
-                    this.thClick(event.target);
-                });
-                tr.appendChild(document.createElement('th')).innerText = 'Column 2';
-                tr.appendChild(document.createElement('th')).innerText = 'Column 3';
-            }
-            thClick(th) {
-            }
-            dump() {
-                const d = super.dump();
-                d.columns = this.columns.map(c => c.dump());
-                return d;
-            }
-        }
-        drawing.BaseGrid = BaseGrid;
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class Grid extends katrid.drawing.BaseGrid {
-            dump() {
-                const d = super.dump();
-                d.datasource = this.datasource?.name;
-                return d;
-            }
-        }
-        bi.Grid = Grid;
-        katrid.bi.componentRegistry.Grid = Grid;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
+        Components.Widget = Widget;
+    })(Components = Katrid.Components || (Katrid.Components = {}));
+})(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Core;
@@ -5007,6106 +2468,6 @@ var katrid;
 (function (katrid) {
     katrid.core = Katrid.Core;
 })(katrid || (katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Forms;
-    (function (Forms) {
-        class BaseView {
-            constructor(config) {
-                this.config = config;
-                this.dialog = false;
-                this.create(config);
-                if (this.container)
-                    this.render();
-            }
-            create(info) {
-                if (info?.template instanceof HTMLTemplateElement)
-                    this.template = info.template;
-                else if (info?.template instanceof HTMLElement)
-                    this.html = info.template.outerHTML;
-                else if (typeof info?.template === 'string')
-                    this.html = info.template;
-                else if (typeof info?.info?.template === 'string')
-                    this.html = info.info.template;
-                if (info?.container)
-                    this.container = info.container;
-            }
-            _applyDataDefinition(data) {
-                if (this._readyEventListeners)
-                    for (let def of this._readyEventListeners)
-                        if (def.data)
-                            Object.assign(data, def.data);
-                return data;
-            }
-            getComponentData() {
-                let data = {
-                    data: null,
-                    ...Katrid.globalData,
-                };
-                this._applyDataDefinition(data);
-                return data;
-            }
-            createComponent() {
-                let me = this;
-                let computed = {};
-                if (this.parentVm)
-                    computed = {
-                        parent() {
-                            return me.parentVm;
-                        }
-                    };
-                return {
-                    data() {
-                        return me.getComponentData();
-                    },
-                    methods: {},
-                    computed,
-                    created() {
-                        for (let def of me._readyEventListeners)
-                            if (def.created)
-                                def.created.call(this);
-                    },
-                };
-            }
-            cloneTemplate() {
-                let templ, el;
-                if (this.template) {
-                    templ = this.template;
-                }
-                else {
-                    el = templ = Katrid.html(this.html);
-                }
-                if (templ instanceof HTMLTemplateElement) {
-                    templ = templ.content;
-                    el = templ.firstElementChild.cloneNode(true);
-                }
-                this.scripts = [];
-                for (let script of templ.querySelectorAll('script')) {
-                    this.scripts.push(script.text);
-                    script.parentNode.removeChild(script);
-                }
-                return el;
-            }
-            domTemplate() {
-                let templ = this.cloneTemplate();
-                return templ;
-            }
-            createDialogButtons(buttons) {
-                const defButtons = {
-                    close: {
-                        dismiss: 'modal',
-                        text: Katrid.i18n.gettext('Close'),
-                    },
-                    ok: {
-                        dismiss: 'modal',
-                        text: Katrid.i18n.gettext('OK'),
-                        modalResult: true,
-                    },
-                    cancel: {
-                        dismiss: 'modal',
-                        text: Katrid.i18n.gettext('Cancel'),
-                        modalResult: false,
-                    },
-                };
-                let res = [];
-                for (let b of buttons) {
-                    if (Katrid.isString(b))
-                        b = defButtons[b];
-                    let btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.innerText = b.text;
-                    if (b.modalResult)
-                        btn.setAttribute('v-on:click', '$result = ' + b.modalResult.toString());
-                    else if (b.click)
-                        btn.setAttribute('v-on:click', b.click);
-                    if (b.dismiss)
-                        btn.setAttribute('data-bs-dismiss', b.dismiss);
-                    if (b.class)
-                        btn.className = b.class;
-                    else
-                        btn.className = 'btn btn-outline-secondary';
-                    res.push(btn);
-                }
-                return res;
-            }
-            createDialog(content, buttons = ['close']) {
-                let templ = Katrid.html(`
-    <div class="modal" tabindex="-1" role="dialog">
-      <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">
-              {{ title }}
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body data-form data-panel">
-               
-            <div class="clearfix"></div>
-          </div>
-          <div class="modal-footer">
-<!--buttons-->
-          </div>
-        </div>
-      </div>
-    </div>
-      `);
-                templ.querySelector('.modal-body').append(content);
-                let footer = templ.querySelector('.modal-footer');
-                for (let b of this.createDialogButtons(buttons))
-                    footer.append(b);
-                return templ;
-            }
-            createVm(el) {
-                let component = this.createComponent();
-                if (this.scripts) {
-                    this._readyEventListeners = [];
-                    for (let script of this.scripts) {
-                        let setup = eval(`(${script})`);
-                        if (setup && setup.call) {
-                            let def = setup.call(this);
-                            if (def.methods)
-                                Object.assign(component.methods, def.methods);
-                            if (def.ready || def.created || def.data)
-                                this._readyEventListeners.push(def);
-                            if (def.beforeMount)
-                                def.beforeMount.call(this, el);
-                        }
-                    }
-                }
-                let vm = Katrid.createVm(component).mount(el);
-                this.vm = vm;
-                return vm;
-            }
-            beforeRender(templ) {
-                return templ;
-            }
-            createElement() {
-                if (!this.element) {
-                    this.element = this.beforeRender(this.domTemplate());
-                    this.applyCustomTags(this.element);
-                }
-            }
-            applyCustomTags(template) {
-                Katrid.Forms.CustomTag.render(this, template);
-            }
-            render() {
-                this.createElement();
-                if (!this.vm)
-                    this.createVm(this.element);
-                if (this.container) {
-                    this.container.append(this.element);
-                    if (this._readyEventListeners) {
-                        for (let event of this._readyEventListeners)
-                            if (event.ready)
-                                event.ready.call(this.vm, this);
-                    }
-                }
-                return this.element;
-            }
-            closeDialog() {
-                this._modal.hide();
-            }
-            renderTo(container) {
-                this.container = container;
-                this.render();
-            }
-            async onHashChange(params) {
-            }
-        }
-        Forms.BaseView = BaseView;
-        function compileButtons(container) {
-            let sendFileCounter = 0;
-            return container.querySelectorAll('button').forEach((btn, index) => {
-                let $btn = $(btn);
-                let type = $btn.attr('type');
-                if (!$btn.attr('type') || ($btn.attr('type') === 'object'))
-                    $btn.attr('type', 'button');
-                if (type === 'object') {
-                    let sendFile = $btn.attr('send-file');
-                    $btn.attr('button-object', $btn.attr('name'));
-                    if (sendFile === undefined) {
-                        $btn.attr('v-on:click', `actionClick(selection, '${$btn.attr('name')}', $event)`);
-                    }
-                    else {
-                        let idSendFile = `__send_file_${++sendFileCounter}`;
-                        $btn.parent().append(`<input id="${idSendFile}" type="file" style="display: none" v-on:change="sendFile('${$btn.attr('name')}', $event.target)"/>`);
-                        $btn.attr('send-file', $btn.attr('name'));
-                        $btn.attr('onclick', `$('#${idSendFile}').trigger('click')`);
-                    }
-                }
-                else if (type === 'tag') {
-                    $btn.attr('button-tag', $btn.attr('name'));
-                    $btn.attr('onclick', `Katrid.Actions.ClientAction.tagButtonClick($(this))`);
-                }
-                if (!$btn.attr('class'))
-                    $btn.addClass('btn btn-outline-secondary');
-            });
-        }
-        Forms.compileButtons = compileButtons;
-        Forms.globalSettings = {
-            defaultGridInline: false,
-        };
-    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Forms;
-    (function (Forms) {
-        function x() {
-            return "";
-        }
-        Forms.searchModes = ['table', 'card'];
-        Forms.registry = {};
-        class ModelView extends Forms.BaseView {
-            constructor(info) {
-                super(info);
-                this.pendingOperation = 0;
-                this._active = false;
-            }
-            static fromTemplate(action, model, template) {
-                return new Katrid.Forms.Views.registry[this.viewType]({ action, model, template });
-            }
-            static createViewModeButton(container) {
-            }
-            async deleteSelection(sel) {
-                if ((((sel.length === 1) && confirm(Katrid.i18n.gettext('Confirm delete record?'))) ||
-                    ((sel.length > 1) && confirm(Katrid.i18n.gettext('Confirm delete records?')))) && sel) {
-                    let res = await this.datasource.delete(sel.map(rec => rec.id));
-                    Katrid.Forms.Dialogs.Alerts.success(Katrid.i18n.gettext('Record(s) deleted successfully'));
-                    this.refresh();
-                    return true;
-                }
-            }
-            create(info) {
-                this.action = info.action;
-                this._readonly = true;
-                let viewInfo = info.viewInfo;
-                if (info.model)
-                    this.model = info.model;
-                else if (info.name || info.action?.modelName) {
-                    console.warn('Please specify a model instance instead of name');
-                    this.model = new Katrid.Data.Model({
-                        name: info.name || info.action.modelName,
-                        fields: info.fields || viewInfo?.fields
-                    });
-                    if (info.action?.model)
-                        this.model.allFields = info.action.model.fields;
-                }
-                else if (info.fields) {
-                    this.model = new Katrid.Data.Model({ fields: info.fields, name: this.action?.modelName });
-                }
-                else if (viewInfo?.fields || viewInfo?.info?.fields) {
-                    this.model = new Katrid.Data.Model({ name: viewInfo.info.name, fields: viewInfo.fields || viewInfo.info.fields });
-                }
-                this.fields = this.model.fields;
-                this.datasource = new Katrid.Data.DataSource({
-                    model: this.model, context: this.action?.context, domain: this.action?.config?.domain,
-                    fields: this.fields,
-                });
-                this.datasource.dataCallback = (data) => this.dataSourceCallback(data);
-                if (info.records)
-                    this.records = this.model.fromArray(info.records);
-                else
-                    this.records = null;
-                if ((this.toolbarVisible == null) && this.action)
-                    this.toolbarVisible = true;
-                else
-                    this.toolbarVisible = info.toolbarVisible;
-                super.create(info);
-            }
-            dataSourceCallback(data) {
-                if (data.record)
-                    this.record = data.record;
-                else if (data.records)
-                    this.records = data.records;
-            }
-            createDialog(content, buttons = ['close']) {
-                let el = super.createDialog(content, buttons);
-                el.setAttribute('data-model', this.model.name);
-                return el;
-            }
-            get records() {
-                return this._records;
-            }
-            set records(value) {
-                this._records = value;
-                if (value)
-                    this.recordCount = value.length;
-                else
-                    this.recordCount = null;
-                if (this.vm)
-                    this.vm.records = value;
-            }
-            get recordCount() {
-                return this._recordCount;
-            }
-            set recordCount(value) {
-                this._recordCount = value;
-                if (this.vm)
-                    this.vm.recordCount = value;
-                if (this.action?.searchView?.vm)
-                    this.action.searchView.vm.recordCount = value;
-            }
-            get active() {
-                return this._active;
-            }
-            set active(value) {
-                this._active = value;
-                this.setActive(value);
-            }
-            setActive(value) {
-            }
-            getComponentData() {
-                let data = super.getComponentData();
-                data.records = this.records;
-                data.pendingRequest = false;
-                return data;
-            }
-            get readonly() {
-                return this._readonly;
-            }
-            set readonly(value) {
-                this._readonly = value;
-                if (value) {
-                    this.element.classList.add('readonly');
-                    this.element.classList.remove('editable');
-                }
-                else {
-                    this.element.classList.add('editable');
-                    this.element.classList.remove('readonly');
-                }
-            }
-            async ready() {
-            }
-            refresh() {
-                this.datasource.refresh();
-            }
-            _search(options) {
-                if (options.id)
-                    return this.datasource.get({ id: options.id, timeout: options.timeout });
-                return this.datasource.search({
-                    where: options.where,
-                    page: options.page,
-                    limit: options.limit,
-                    fields: Array.from(Object.keys(this.fields))
-                });
-            }
-            _mergeHeader(parent, header) {
-                for (let child of Array.from(header.children)) {
-                    if (child.tagName === 'HEADER')
-                        this._mergeHeader(parent, child);
-                    else {
-                        header.removeChild(child);
-                        parent.append(child);
-                    }
-                }
-            }
-            mergeHeader(parent, container) {
-                let headerEl = container.querySelector('header');
-                Forms.compileButtons(container);
-                if (headerEl) {
-                    headerEl.remove();
-                    this._mergeHeader(parent, headerEl);
-                }
-                return parent;
-            }
-            _vmCreated(vm) {
-                vm.$view = this;
-                vm.$fields = this.fields;
-                this.datasource.vm = vm;
-            }
-            async doViewAction(action, target) {
-                return this._evalResponseAction(await this.model.service.callAdminViewAction({ action: action, ids: [target] }));
-            }
-            async callSubAction(action, selection) {
-                return;
-            }
-            async _evalResponseAction(res) {
-                if (res?.open) {
-                    window.open(res.open);
-                }
-                return res;
-            }
-            getSelectedIds() {
-                return;
-            }
-            createComponent() {
-                let comp = super.createComponent();
-                let me = this;
-                Object.assign(comp.methods, {
-                    refresh() {
-                        me.refresh();
-                    },
-                    nextPage() {
-                        me.datasource.nextPage();
-                    },
-                    rpc(methodName, params) {
-                        if (Array.isArray(params))
-                            return me.model.service.rpc(methodName, params);
-                        return me.model.service.rpc(methodName, params.args, params.kwargs);
-                    },
-                    actionClick(selection, methodName, event) {
-                        me.action.formButtonClick(selection.map(obj => obj.id), methodName);
-                    },
-                    doViewAction(action, target) {
-                        return me.doViewAction(action, target);
-                    },
-                    async deleteSelection() {
-                        if (await me.deleteSelection(this.selection))
-                            this.selection = [];
-                    },
-                    sum(iterable, member) {
-                        let res = 0;
-                        if (iterable)
-                            for (let obj of iterable)
-                                res += obj[member] || 0;
-                        return res;
-                    },
-                    sendFile(name, file) {
-                        return Katrid.Services.Upload.sendFile({ model: me.model || me.action?.model, method: name, file, vm: this });
-                    },
-                    $closeDialog(result) {
-                        if (result !== undefined)
-                            this.$result = result;
-                        me.closeDialog();
-                    }
-                });
-                comp.methods.setViewMode = async function (mode) {
-                    return await me.action.showView(mode);
-                };
-                comp.methods.callAdminViewAction = async function (args) {
-                    let input;
-                    if (args.prompt) {
-                        input = prompt(args.prompt);
-                        if (!input)
-                            return;
-                    }
-                    if (!args.confirm || (args.confirm && confirm(args.confirm))) {
-                        const config = { action: args.action, ids: args.ids };
-                        if (!config.ids)
-                            config.ids = await me.getSelectedIds();
-                        if (input)
-                            config.prompt = input;
-                        let res = await me.model.service.callAdminViewAction(config);
-                        if (res.location)
-                            window.location.href = res.location;
-                    }
-                };
-                comp.methods.insert = async function (defaultValues) {
-                    let view = await this.setViewMode('form');
-                    view.vm.insert(defaultValues);
-                };
-                comp.computed.$fields = function () {
-                    return me.fields;
-                };
-                comp.created = function () {
-                    me._vmCreated(this);
-                };
-                return comp;
-            }
-            getViewType() {
-                return Object.getPrototypeOf(this).constructor.viewType;
-            }
-            autoCreateView() {
-                let el = document.createElement(this.getViewType() + '-view');
-                for (let f of Object.values(this.model.fields)) {
-                    let field = document.createElement('field');
-                    field.setAttribute('name', f.name);
-                    el.append(field);
-                }
-                return el;
-            }
-            domTemplate() {
-                if (!this.template && !this.html)
-                    return this.autoCreateView();
-                return super.domTemplate();
-            }
-            beforeRender(template) {
-                let header = template.querySelector(':scope > header');
-                Forms.compileButtons(template);
-                if (header)
-                    template.removeChild(header);
-                let actions = template.querySelector(':scope > actions');
-                if (actions)
-                    template.removeChild(actions);
-                let templ = this.renderTemplate(template);
-                if (this.dialog)
-                    return this.createDialog(templ, this.dialogButtons);
-                let actionView = document.createElement('div');
-                actionView.className = 'view-content';
-                let viewContent = document.createElement('div');
-                viewContent.classList.add('action-view-content', 'content-scroll');
-                if (this.toolbarVisible)
-                    actionView.append(this.createToolbar());
-                if (actions)
-                    actionView.append(actions);
-                let newHeader = document.createElement('div');
-                newHeader.className = 'content-container-heading';
-                if (header)
-                    this._mergeHeader(newHeader, header);
-                let content = document.createElement('div');
-                content.className = 'content no-padding';
-                content.append(newHeader);
-                content.append(templ);
-                viewContent.append(content);
-                actionView.append(viewContent);
-                return actionView;
-            }
-            renderTemplate(template) {
-                return template;
-            }
-            createToolbar() {
-                let el = document.createElement('div');
-                el.className = 'toolbar';
-                return el;
-            }
-            generateHelp(help) {
-                if (this.fields) {
-                    for (let f of Object.values(this.fields))
-                        if (f.visible) {
-                            let h4 = document.createElement('h4');
-                            h4.innerText = f.caption;
-                            help.element.append(h4);
-                            if (f.helpText) {
-                                let p = document.createElement('p');
-                                p.innerHTML = f.helpText;
-                                help.element.append(p);
-                                if (f.widgetHelp) {
-                                    p = document.createElement('p');
-                                    p.className = 'text-muted';
-                                    p.innerHTML = f.widgetHelp;
-                                    help.element.append(p);
-                                }
-                            }
-                        }
-                }
-            }
-        }
-        Forms.ModelView = ModelView;
-        class RecordCollectionView extends ModelView {
-            constructor(info) {
-                super(info);
-                this.autoLoad = true;
-            }
-            get orderBy() {
-                return this._orderBy;
-            }
-            set orderBy(value) {
-                this._orderBy = value;
-                this.datasource.orderBy = value;
-            }
-            async getSelectedIds() {
-                if (this.vm.allSelectionFilter)
-                    return this.model.service.listId({ where: this._lastSearch, limit: 99999 });
-                else
-                    return this.vm.selection.map(obj => obj.id);
-            }
-            async callSubAction(action, selection) {
-                if (!selection)
-                    selection = await this.getSelectedIds();
-                if (selection?.length)
-                    await this.model.service.callSubAction(action, selection);
-                return;
-            }
-            create(info) {
-                super.create(info);
-                this.recordGroups = info.recordGroups || null;
-            }
-            async _recordClick(record, index) {
-                if (this.dialog) {
-                    this.vm.$result = record;
-                    this.closeDialog();
-                }
-                else {
-                    this.record = record;
-                    if (this.action) {
-                        let formView = await this.action.showView('form', { params: { id: record.id } });
-                        console.debug('set records', this.groupLength);
-                        if (this.groupLength)
-                            formView.records = this.datasource.records;
-                        else
-                            formView.records = this.vm.records;
-                        formView.recordIndex = index;
-                    }
-                }
-            }
-            nextPage() {
-                this.datasource.nextPage();
-            }
-            prevPage() {
-                this.datasource.prevPage();
-            }
-            createComponent() {
-                let comp = super.createComponent();
-                let me = this;
-                comp.methods.recordClick = this.config.recordClick || async function (record, index, event) {
-                    await me._recordClick(record, index);
-                };
-                comp.methods.toggleGroup = function (group) {
-                    if (group.$expanded)
-                        me.collapseGroup(group);
-                    else
-                        me.expandGroup(group);
-                };
-                comp.methods.download = function (config) {
-                    if (config.format)
-                        return this.rpc('api_export', { kwargs: { where: me._lastSearch, fields: Array.from(Object.keys(me.fields)) } });
-                };
-                return comp;
-            }
-            setActive(value) {
-                if (this._searchView) {
-                    let btn = this._searchView.element.querySelector('.btn-view-' + Object.getPrototypeOf(this).constructor.viewType);
-                    if (btn) {
-                        if (value)
-                            btn.classList.add('active');
-                        else
-                            btn.classList.remove('active');
-                    }
-                }
-            }
-            get searchView() {
-                return this._searchView;
-            }
-            set searchView(value) {
-                this._searchView = value;
-                if (value && this.toolbarVisible) {
-                    this.setSearchView(value);
-                    value.resultView = this;
-                }
-            }
-            dataSourceCallback(data) {
-                super.dataSourceCallback(data);
-                if (this._searchView) {
-                    this._searchView.vm.dataOffset = this.datasource.offset;
-                    this._searchView.vm.dataOffsetLimit = this.datasource.offsetLimit;
-                    this._searchView.vm.recordCount = this.datasource.recordCount;
-                    this.vm.recordCount = this.datasource.recordCount;
-                }
-                this._invalidateSelection();
-            }
-            setSearchView(searchView) {
-                if (this.element) {
-                    let div = this.element.querySelector('.search-view-area');
-                    if (div) {
-                        div.innerHTML = '';
-                        div.append(searchView.element);
-                    }
-                }
-            }
-            getComponentData() {
-                let data = super.getComponentData();
-                data.selection = [];
-                data.groups = this.prepareGroup(this.recordGroups);
-                data.recordCount = this.recordCount;
-                data.$fields = this.fields;
-                data.allSelectionFilter = false;
-                return data;
-            }
-            prepareGroup(groups) {
-                return groups;
-            }
-            async groupBy(data) {
-                this.vm.records = this.vm.groups;
-            }
-            async applyGroups(groups, params) {
-                let res = await this.datasource.groupBy(groups, params);
-                await this.groupBy(res);
-            }
-            _addRecordsToGroup(index, list) {
-            }
-            async expandGroup(group) {
-                group.$expanded = true;
-                let idx = this.vm.groups.indexOf(group);
-                console.log(group);
-                let children = group.$children;
-                if (!children) {
-                    await this.datasource.expandGroup(idx, group);
-                }
-                else {
-                    let groups = this.vm.groups;
-                    this.vm.groups = [...groups.slice(0, idx + 1), ...children, ...groups.slice(idx + 1)];
-                }
-            }
-            expandAll() {
-                for (let g of this.vm.groups) {
-                    if (g.$hasChildren && !g.$expanded) {
-                        this.expandGroup(g);
-                    }
-                }
-            }
-            collapseAll() {
-                for (let g of this.vm.groups)
-                    if (g.$hasChildren && g.$expanded)
-                        this.collapseGroup(g);
-            }
-            collapseGroup(group) {
-                let idx = this.vm.groups.indexOf(group);
-                let groups = this.vm.groups;
-                for (let sub of group.$children) {
-                    if (!sub.$hasChildren)
-                        break;
-                    else if (sub.$expanded)
-                        this.collapseGroup(sub);
-                }
-                groups.splice(idx + 1, group.$children.length);
-                group.$expanded = false;
-            }
-            async setSearchParams(params) {
-                let p = {};
-                if (this.action?.info?.domain)
-                    p = JSON.parse(this.action.info.domain);
-                for (let [k, v] of Object.entries(p)) {
-                    let arg = {};
-                    arg[k] = v;
-                    params.push(arg);
-                }
-                this._lastSearch = params;
-                await this.datasource.search({ where: params });
-            }
-            _invalidateSelection() {
-                this.vm.selection = [];
-                this.vm.selectionLength = 0;
-                this.vm.allSelected = false;
-            }
-            createToolbar() {
-                let templ = `<div class="data-heading panel panel-default">
-      <div class="panel-body">
-        <div class="row">
-        <div class="col-md-6">
-        
-          <action-navbar></action-navbar>
-          <p class="help-block"></p>
-          <div class="toolbar">
-            <div class="toolbar-action-buttons"></div>
-        </div>
-      </div>
-          <div class="search-view-area col-md-6"></div>
-        </div>
-      </div>
-    </div>`;
-                let toolbar = Katrid.html(templ);
-                toolbar.querySelector('action-navbar').actionManager = this.action.actionManager;
-                this.createToolbarButtons(toolbar);
-                return toolbar;
-            }
-            createToolbarButtons(container) {
-                let parent = container.querySelector('.toolbar-action-buttons');
-                let btnCreate = document.createElement('button');
-                btnCreate.className = 'btn btn-primary btn-action-create';
-                btnCreate.innerText = Katrid.i18n.gettext('Create');
-                btnCreate.setAttribute('v-on:click', 'insert()');
-                parent.append(btnCreate);
-                let btnXls = document.createElement('button');
-                btnXls.innerHTML = '<i class="fas fa-download"></i>';
-                btnXls.title = 'Download as excel';
-                btnXls.className = 'btn btn-outline-secondary btn-export-xls';
-                btnXls.setAttribute('v-on:click', "download({format: 'xlsx'})");
-                parent.append(btnXls);
-                if (this.config?.toolbar?.print) {
-                    let btnPrint = document.createElement('div');
-                    btnPrint.classList.add('btn-group');
-                    btnPrint.innerHTML = `<button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" name="print" data-bs-toggle="dropdown" aria-haspopup="true">
-        ${Katrid.i18n.gettext('Print')} <span class="caret"></span>
-      </button>
-      <div class="dropdown-menu">
-        <a class="dropdown-item" v-on:click="autoReport()">${Katrid.i18n.gettext('Auto Report')}</a>
-      </div>`;
-                    let dropdown = btnPrint.querySelector('.dropdown-menu');
-                    for (let bindingAction of this.config?.toolbar?.print) {
-                        let a = document.createElement('a');
-                        a.classList.add('dropdown-item');
-                        a.setAttribute('data-id', bindingAction.id);
-                        a.innerText = bindingAction.name;
-                        dropdown.append(a);
-                    }
-                    parent.append(btnPrint);
-                }
-                let btnRefresh = document.createElement('button');
-                btnRefresh.type = 'button';
-                btnRefresh.classList.add('btn', 'toolbtn');
-                btnRefresh.innerHTML = '<i class="fas fa-redo-alt"></i>';
-                btnRefresh.title = Katrid.i18n.gettext('Refresh');
-                btnRefresh.setAttribute('v-on:click', 'refresh()');
-                parent.append(btnRefresh);
-                this.createSelectionInfo(parent);
-                let btnActions = document.createElement('div');
-                btnActions.classList.add('btn-group');
-                btnActions.innerHTML = `<div class="dropdown">
-        <button name="actions" type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown" v-show="selectionLength"
-                aria-haspopup="true">
-          ${Katrid.i18n.gettext('Action')} <span class="caret"></span>
-        </button>
-        <div class="dropdown-menu dropdown-menu-actions">
-          <a class="dropdown-item" v-on:click="deleteSelection()">
-            <i class="fa fa-fw fa-trash-o"></i> ${Katrid.i18n.gettext('Delete')}
-          </a>
-          <!-- replace-actions -->
-        </div>
-      </div>`;
-                parent.append(btnActions);
-                return parent;
-            }
-            createSelectionInfo(parent) {
-            }
-            get $modalResult() {
-                return this.vm.$result;
-            }
-            set $modalResult(value) {
-                this.vm.$result = value;
-            }
-            showDialog(options) {
-                if (!options)
-                    options = {};
-                if (options.backdrop === undefined)
-                    options.backdrop = 'static';
-                this.dialog = true;
-                return new Promise(async (resolve, reject) => {
-                    let el = this.element;
-                    if (!el)
-                        el = this.render();
-                    $(el).modal(options)
-                        .on('hidden.bs.modal', () => {
-                        resolve(this.vm.$modalResult);
-                        $(el).data('bs.modal', null);
-                        el.remove();
-                    });
-                });
-            }
-            async ready() {
-                if (!this.records) {
-                    return this.datasource.open();
-                }
-                else {
-                    this.refresh();
-                }
-            }
-        }
-        Forms.RecordCollectionView = RecordCollectionView;
-        class ActionViewElement extends Katrid.WebComponent {
-            create() {
-                this.classList.add('action-view');
-            }
-        }
-        Forms.ActionViewElement = ActionViewElement;
-        Katrid.define('action-view', ActionViewElement);
-    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
-})(Katrid || (Katrid = {}));
-(function (Katrid) {
-    var Forms;
-    (function (Forms) {
-        var Views;
-        (function (Views) {
-            Views.registry = {};
-            function fromTemplates(action, model, templates) {
-                let res = {};
-                for (let [k, t] of Object.entries(templates)) {
-                    res[k] = Views.registry[k].fromTemplate(action, model, t);
-                }
-                return res;
-            }
-            Views.fromTemplates = fromTemplates;
-        })(Views = Forms.Views || (Forms.Views = {}));
-    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
-})(Katrid || (Katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        class BasePage {
-            constructor() {
-                this.objects = [];
-                this.loading = false;
-                this.defaultProps();
-            }
-            get isEmpty() {
-                return this.objects?.length === 0;
-            }
-            defaultProps() {
-                this.width = -1;
-                this.height = -1;
-            }
-            get size() {
-                return { width: this.width, height: this.height };
-            }
-            set size(value) {
-                this.width = value.width;
-                this.height = value.height;
-                if (this._pageSize && this._pageSize !== 'Custom') {
-                    const pageSize = drawing.PageSize[this._pageSize];
-                    if (pageSize.width !== value.width || pageSize.height !== value.height) {
-                        this._pageSize = 'Custom';
-                    }
-                }
-                if (this.designer) {
-                    this.designer.resize(value.width, value.height);
-                }
-            }
-            get pageSize() {
-                return this._pageSize;
-            }
-            set pageSize(value) {
-                this._pageSize = value;
-                if (value) {
-                    const val = drawing.PageSize[value];
-                    this.width = val.width;
-                    this.height = val.height;
-                    if (this.designer) {
-                        this.designer.resize(val.width, val.height);
-                    }
-                }
-            }
-            get orientation() {
-                this._orientation ??= drawing.PageOrientation.Portrait;
-                return this._orientation;
-            }
-            set orientation(value) {
-                if (value === this._orientation) {
-                    return;
-                }
-                if (value !== this._orientation) {
-                    const { height, width } = this.size;
-                    this.width = height;
-                    this.height = width;
-                    if (this.designer) {
-                        this.designer.resize(this.width, this.height);
-                    }
-                }
-                this._orientation = value;
-            }
-            dump() {
-                return {
-                    name: this.name,
-                    height: this.height,
-                    width: this.width,
-                    pageSize: this._pageSize,
-                    orientation: this._orientation,
-                };
-            }
-            *allObjects() {
-                for (let obj of this.objects) {
-                    yield obj;
-                }
-            }
-            children() {
-                return this.objects;
-            }
-            load(data) {
-                this.name = data.name;
-                this.width = data.width;
-                this.height = data.height;
-                this._pageSize = data.pageSize;
-                this._orientation = data.orientation;
-            }
-            onLoad(info) {
-            }
-            _createDesigner() {
-                return new katrid.design.PageDesigner(this);
-            }
-            createDesigner() {
-                try {
-                    this.loading = true;
-                    this.designer = this._createDesigner();
-                    return this.designer;
-                }
-                finally {
-                    this.loading = false;
-                }
-            }
-        }
-        drawing.BasePage = BasePage;
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class BasePage extends katrid.drawing.BasePage {
-        }
-        bi.BasePage = BasePage;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var BI;
-    (function (BI) {
-        const SCROLL_PAGE_SIZE = 100;
-        class QueryView extends Katrid.Forms.RecordCollectionView {
-            constructor() {
-                super(...arguments);
-                this.searchViewVisible = true;
-                this._loadedRows = 0;
-            }
-            static { this.viewType = 'query'; }
-            get queryId() {
-                return this._queryId;
-            }
-            set queryId(value) {
-                this._queryId = value;
-                if (value) {
-                    this.queryChange(value);
-                }
-            }
-            async queryChange(query) {
-                $(this).empty();
-                let container = document.createElement('div');
-                container.classList.add('table-responsive');
-            }
-            async refreshQuery(query, params) {
-                this._loadedRows = 0;
-                $(this.container).empty();
-                let res = await Katrid.Services.Query.read({ id: query, details: true, params });
-                let fields = this.fields = res.fields;
-                this.fieldList = Object.values(this.fields);
-                return res;
-            }
-            loadData(data) {
-                this._lastGroup = undefined;
-                let table = this.table = document.createElement('table');
-                table.classList.add('table', 'table-hover');
-                const thead = table.createTHead();
-                const thr = thead.insertRow(0);
-                table.createTBody();
-                let fixed = false;
-                for (let f of this.columns) {
-                    let th = document.createElement('th');
-                    if (f.dataIndex > -1) {
-                        let field = this.fieldList[f.dataIndex];
-                        if (field.type)
-                            th.className = field.type;
-                        if (f.width) {
-                            th.style.width = f.width + 'px';
-                            fixed = true;
-                        }
-                        if (f.cols)
-                            th.classList.add('col-' + f.cols);
-                        if (!f.label)
-                            f.label = field.caption;
-                    }
-                    else if (f.type)
-                        th.className = f.type;
-                    th.innerText = f.label;
-                    thr.append(th);
-                }
-                this.element.append(table);
-                if (fixed)
-                    table.classList.add('table-fixed');
-                table.addEventListener('contextmenu', evt => this.contextMenu(evt));
-            }
-            evalTotal(col, values) {
-                let val = 0;
-                switch (col.total.toLowerCase()) {
-                    case 'sum':
-                        values.forEach(obj => val += parseFloat(obj[col.dataIndex]) || 0);
-                        return val;
-                    case 'min':
-                        values.forEach(obj => val = Math.min(parseFloat(obj[col.dataIndex]) || 0, val));
-                        return val;
-                    case 'max':
-                        values.forEach(obj => val = Math.max(parseFloat(obj[col.dataIndex]) || 0, val));
-                        return val;
-                    case 'avg':
-                        values.forEach(obj => val += parseFloat(obj[col.dataIndex]) || 0);
-                        return val / values.length;
-                }
-            }
-            addGroupHeader(grouper, record, data) {
-                const tbody = this.table.tBodies.item(0);
-                const tr = document.createElement('tr');
-                let th = document.createElement('th');
-                let colIndex = this.columns.length;
-                for (let col of this.columns)
-                    if (col.total) {
-                        colIndex = this.columns.indexOf(col);
-                        break;
-                    }
-                th.colSpan = colIndex;
-                if (grouper)
-                    th.innerText = grouper.toString();
-                else {
-                    th.innerText = '--';
-                    th.className = 'text-muted';
-                }
-                tr.append(th);
-                for (let i = colIndex; i < this.columns.length; i++) {
-                    let col = this.columns[i];
-                    th = document.createElement('th');
-                    if (col.total) {
-                        th.className = col.type;
-                        let val = this.evalTotal(col, data);
-                        th.innerText = Katrid.intl.number({ minimumFractionDigits: 2 }).format(val);
-                    }
-                    tr.append(th);
-                }
-                tbody.append(tr);
-            }
-            addGroupFooter() {
-                const tbody = this.table.tBodies.item(0);
-                const tr = document.createElement('tr');
-                let th = document.createElement('th');
-                th.colSpan = this.columns.length;
-                th.innerText = 'Total de registros: ' + this._lastGroupValues.length.toString();
-                tr.append(th);
-                tbody.append(tr);
-            }
-            more(count) {
-                const tbody = this.table.tBodies.item(0);
-                count = Math.min(count, this.data.length - this._loadedRows);
-                for (let c = 0; c < count; c++) {
-                    let row = this.data[this._loadedRows + c];
-                    let tr = document.createElement('tr');
-                    let i = 0;
-                    if (this.groupsIndex) {
-                        let gIndex = this.groupsIndex[0];
-                        let groupVal = row[gIndex];
-                        if (this._lastGroup != groupVal) {
-                            if (this._lastGroup !== undefined) {
-                                this.addGroupFooter();
-                            }
-                            this._lastGroupValues = this.data.filter(obj => obj[gIndex] == groupVal);
-                            this.addGroupHeader(groupVal, row, this._lastGroupValues);
-                            this._lastGroup = groupVal;
-                        }
-                    }
-                    for (let column of this.columns) {
-                        if (column.dataIndex > -1) {
-                            let field = this.fieldList[column.dataIndex];
-                            let col = row[column.dataIndex];
-                            let td = document.createElement('td');
-                            if (col == null)
-                                col = '--';
-                            else {
-                                if (field.type === 'DecimalField')
-                                    col = Katrid.intl.number({ minimumFractionDigits: 2 }).format(col);
-                                else if (Katrid.isNumber(col))
-                                    col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
-                                else if ((field.type === 'DateField') || (field.type === 'date'))
-                                    col = moment(col).format('DD/MM/YYYY');
-                                else if ((field.type === 'DateTimeField') || (field.type === 'datetime'))
-                                    col = moment(col).format('DD/MM/YYYY HH:mm');
-                            }
-                            if (field.type)
-                                td.className = field.type;
-                            td.innerText = col;
-                            tr.append(td);
-                        }
-                        i++;
-                    }
-                    tbody.append(tr);
-                }
-                this._loadedRows += count;
-                if (count && (this._loadedRows === this.data.length) && this.groupsIndex)
-                    this.addGroupFooter();
-                return count;
-            }
-            async ready() {
-                this.columns = null;
-                this.fieldList = Object.values(this.fields);
-                const fieldNames = Object.keys(this.fields);
-                if (this.metadata.template?.columns) {
-                    this.columns = this.metadata.template.columns.map(c => new Column(c));
-                    for (let col of this.columns)
-                        if (typeof col.name === 'string') {
-                            col.dataIndex = fieldNames.indexOf(col.name);
-                            if (!col.type)
-                                col.type = this.fieldList[col.dataIndex].type;
-                        }
-                }
-                else
-                    this.columns = this.fieldList.map((f, idx) => new Column({
-                        name: f.name, type: f.type, label: f.caption, dataIndex: idx
-                    }));
-                if (this.metadata?.groupBy)
-                    this.groupsIndex = this.metadata.groupBy.map(g => fieldNames.indexOf(g));
-                this.element = document.createElement('div');
-                this.element.classList.add('table-responsive');
-                this.element.addEventListener('scroll', event => this.tableScroll(event));
-                this.loadData(this.data);
-                this.more(SCROLL_PAGE_SIZE * 2);
-                while ((this.element.scrollHeight < this.element.clientHeight) && this.more(SCROLL_PAGE_SIZE)) {
-                }
-                if (this.searchViewVisible) {
-                    let searchView = new Katrid.Forms.SearchView({ fields: this.fields });
-                    searchView.renderTo(this.container);
-                }
-                this.container.append(this.element);
-            }
-            tableScroll(evt) {
-                if (this.element.scrollHeight < (this.element.scrollTop + this.element.clientHeight + 100))
-                    this.more(SCROLL_PAGE_SIZE);
-            }
-            contextMenu(evt) {
-                evt.stopPropagation();
-                evt.preventDefault();
-                let menu = new Katrid.Forms.ContextMenu();
-                menu.add('<i class="fa fa-fw fa-copy"></i> ' + Katrid.i18n.gettext('Copy'), () => this.copyToClipboard());
-                menu.add('<i class="fa fa-fw fa-copy"></i> ' + Katrid.i18n.gettext('Copy with formatting'), () => this.copyToClipboard(true));
-                menu.add('<i class="fa fa-fw fa-download"></i> ' + Katrid.i18n.gettext('Export'), () => this.export());
-                menu.show(evt.pageX, evt.pageY);
-            }
-            async copyToClipboard(formatting = false) {
-                if (formatting)
-                    navigator.clipboard.writeText(Katrid.UI.Utils.toTsv(this.data));
-                else {
-                    await this.more(this.data.length - this._loadedRows);
-                    navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
-                }
-            }
-            export() {
-                Katrid.UI.Utils.textToDownload(Katrid.UI.Utils.tableToText(this.table), `${this._queryId}.tsv`);
-            }
-            get orientation() {
-                if (this.metadata?.orientation == 2)
-                    return 'landscape';
-                return 'portrait';
-            }
-            async print() {
-                while ((this._loadedRows < this.data.length) && this.more(1000)) {
-                }
-                const wnd = window.open('');
-                wnd.addEventListener('afterprint', () => {
-                    wnd.close();
-                });
-                if (this.reportTemplate)
-                    wnd.document.write(this.reportTemplate);
-                const style = document.createElement('style');
-                style.innerHTML = `@page { size: A4 ${this.orientation} }`;
-                wnd.document.head.append(style);
-                wnd.document.querySelector('.document-content').innerHTML = this.table.outerHTML;
-                wnd.document.body.classList.add(this.orientation);
-                wnd.document.querySelector('h1').innerText = this.metadata.name;
-                wnd.document.write('<script>print()</script>');
-                wnd.document.close();
-            }
-            destroy() {
-                this.element.remove();
-            }
-        }
-        BI.QueryView = QueryView;
-        class Column {
-            constructor(info) {
-                this.name = info.name;
-                this.type = info.type;
-                this.label = info.label;
-                this.visible = info.visible ? info.visible != null : true;
-                this.dataIndex = info.dataIndex;
-                this.total = info.total;
-                this.width = info.width;
-                this.cols = info.cols;
-            }
-        }
-    })(BI = Katrid.BI || (Katrid.BI = {}));
-})(Katrid || (Katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class QueryView extends Katrid.BI.QueryView {
-        }
-        bi.QueryView = QueryView;
-        class QueryPage extends bi.BasePage {
-            constructor() {
-                super(...arguments);
-                this.userCanCustomize = false;
-            }
-            _createDesigner() {
-                return new bi.QueryPageDesigner(this);
-            }
-            dump() {
-                const d = super.dump();
-                d.datasource = this.datasource?.name;
-                d.userCanCustomize = this.userCanCustomize;
-                d.title = this.title;
-                d.model = this.model;
-                return d;
-            }
-            load(d) {
-                super.load(d);
-                this.userCanCustomize = d.userCanCustomize;
-                this.title = d.title;
-                this.model = d.model;
-            }
-            get model() {
-                return this._model;
-            }
-            set model(value) {
-                this._model = value;
-                if (this.modelService?.name !== value) {
-                    this.setModelService(new Katrid.Services.ModelService(value));
-                }
-            }
-            async setModelService(service) {
-                this.modelService = service;
-                const fields = await this.modelService.getFieldsInfo({ view_type: 'list' });
-                this.createQueryView(fields);
-            }
-            createQueryView(fields) {
-                this.queryView = new QueryView({ fields });
-                this.queryView.metadata = { template: {} };
-                if (this.designer) {
-                    this.queryView.container = this.designer.getElement();
-                    this.queryView.ready().then(() => {
-                        console.debug(this.queryView.element);
-                    });
-                }
-            }
-            get datasource() {
-                return this._datasource;
-            }
-            set datasource(value) {
-                this._datasource = value;
-            }
-        }
-        bi.QueryPage = QueryPage;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        var ComponentEditor = katrid.design.ComponentEditor;
-        class DataSourceEditor extends ComponentEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new katrid.design.ComponentProperty('master', {
-                    caption: 'Master Source',
-                    onGetValues: (typeEditor) => {
-                        let res = [];
-                        for (let ds of typeEditor.designer.report.datasources)
-                            if (typeEditor.targetObject !== ds)
-                                res.push({ value: ds, text: ds.name });
-                        return res;
-                    }
-                }), new katrid.design.TextProperty('sql', { caption: 'SQL' }));
-            }
-        }
-        bi.DataSourceEditor = DataSourceEditor;
-        class GridEditor extends katrid.design.WidgetEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new katrid.design.DataSourceProperty('datasource', { caption: 'Data Source' }));
-            }
-        }
-        bi.GridEditor = GridEditor;
-        class QueryPageEditor extends katrid.design.ComponentEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new katrid.design.StringProperty('model', { caption: 'Data Model' }), new katrid.design.DataSourceProperty('datasource', { caption: 'Data Source' }), new katrid.design.BooleanProperty('userCanCustomize', { caption: 'User Can Customize' }), new katrid.design.StringProperty('title', { caption: 'Page Title' }), new katrid.design.TextProperty('description', { caption: 'Description' }));
-            }
-        }
-        bi.QueryPageEditor = QueryPageEditor;
-        katrid.design.registerComponentEditor(katrid.bi.DataSource, DataSourceEditor);
-        katrid.design.registerComponentEditor(katrid.bi.Grid, GridEditor);
-        katrid.design.registerComponentEditor(katrid.bi.QueryPage, QueryPageEditor);
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        drawing.NS = 'http://www.w3.org/2000/svg';
-        class Graphic {
-            constructor(tag, attrs) {
-                this.$el = typeof tag === 'string' ? document.createElementNS(drawing.NS, tag) : tag;
-                if (attrs) {
-                    for (const [key, value] of Object.entries(attrs)) {
-                        this.$el.setAttribute(key, attrs[key].toString());
-                    }
-                }
-            }
-            path(attrs) {
-                const path = draw('path', { ...attrs });
-                this.append(path);
-            }
-            rect(x, y, width, height) {
-                const rect = draw('rect', { x, y, width, height });
-                this.append(rect);
-                return rect;
-            }
-            beginPath(attrs) {
-                if (attrs === undefined)
-                    attrs = { d: '' };
-                this._path = new Graphic('path', attrs);
-                this.append(this._path);
-                this._d = '';
-                return this._path;
-            }
-            moveTo(x, y) {
-                this._d += ` M${x} ${y}`;
-                this._path.attr('d', this._d);
-                return this;
-            }
-            lineTo(x, y) {
-                this._d += ` L${x} ${y}`;
-                this._path.attr('d', this._d);
-                return this;
-            }
-            closePath() {
-                this._path.attr('d', this._path.attr('d') + ' Z');
-                return this;
-            }
-            text(x, y, text, attrs) {
-                const textObject = draw('text', { x, y, ...attrs });
-                textObject.$el.textContent = text;
-                this.append(textObject);
-                return textObject;
-            }
-            line(x1, y1, x2, y2, attrs) {
-                const line = draw('line', { x1, y1, x2, y2, ...attrs });
-                this.append(line);
-                return line;
-            }
-            image(x, y, width, height, src) {
-                const image = draw('image', { x, y, width, height });
-                this.append(image);
-                return image;
-            }
-            attr(name, value) {
-                if (typeof name === 'string') {
-                    if (value === undefined) {
-                        return this.$el.getAttribute(name);
-                    }
-                    this.$el.setAttribute(name, value.toString());
-                }
-                else {
-                    for (let [k, v] of Object.entries(name)) {
-                        this.$el.setAttribute(k, v.toString());
-                    }
-                }
-                return this;
-            }
-            clear() {
-                this.$el.innerHTML = '';
-                return this;
-            }
-            append(obj) {
-                this.$el.appendChild(obj.$el);
-            }
-            parent() {
-                return new Graphic(this.$el.parentNode);
-            }
-            translate(x, y) {
-                this.attr('transform', `translate(${x},${y})`);
-            }
-            remove() {
-                this.$el.remove();
-            }
-        }
-        drawing.Graphic = Graphic;
-        function svg(el) {
-            return new Graphic(el);
-        }
-        drawing.svg = svg;
-        class Draw extends Graphic {
-        }
-        drawing.Draw = Draw;
-        function draw(tag, attrs) {
-            return new Graphic(tag, attrs);
-        }
-        drawing.draw = draw;
-        function rect(x, y, width, height, attrs) {
-            return new Graphic('rect', { x, y, width, height, ...attrs });
-        }
-        drawing.rect = rect;
-        function g(attrs) {
-            return new Graphic('g', attrs);
-        }
-        drawing.g = g;
-        class SVG extends Draw {
-            constructor(width, height) {
-                super('svg');
-                this.width = width;
-                this.height = height;
-            }
-            get width() {
-                return this._width;
-            }
-            set width(value) {
-                this._width = value;
-                this.$el.setAttribute('width', value.toString());
-            }
-            get height() {
-                return this._height;
-            }
-            set height(value) {
-                this._height = value;
-                this.$el.setAttribute('height', value.toString());
-            }
-        }
-        drawing.SVG = SVG;
-        class Canvas extends SVG {
-            constructor(width = 500, height = 500) {
-                super(width, height);
-            }
-            appendTo(parent) {
-                this.container = parent;
-                parent.appendChild(this.$el);
-            }
-        }
-        drawing.Canvas = Canvas;
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var design;
-    (function (design) {
-        const isMac = navigator['userAgentData']?.platform === 'macOS';
-        design.GUIDELINE_DELAY = 1000;
-        class DesignSurface extends katrid.drawing.Canvas {
-            constructor(width = 500, height = 500) {
-                super(width, height);
-                this.dragging = false;
-                this.snapToGrid = false;
-                this.gridX = 4;
-                this.gridY = 4;
-                this.showGrid = false;
-                this.showGuidelines = false;
-                this._loading = false;
-                this._active = false;
-                this.eventsDisabled = false;
-                this.resizing = false;
-                this._zoom = 100;
-                this.selectionBox = true;
-                this.draggingSelectionBox = false;
-                this._dx = 0;
-                this._dy = 0;
-                this._bx = 0;
-                this._by = 0;
-                this._bw = 0;
-                this._bh = 0;
-                this.selection = [];
-                this.grabs = [];
-                this.guidelines = [];
-                this.objects = [];
-                this.$el.classList.add('design-surface');
-                this.undoManager = new design.UndoManager(this);
-                this.clipboardManager = new design.ClipboardManager(this);
-                this.defaultProps();
-                this.workspace = this.$el;
-                this.create();
-            }
-            defaultProps() {
-            }
-            get loading() {
-                return this._loading;
-            }
-            set loading(value) {
-                this.undoManager.enabled = !value;
-                this._loading = value;
-            }
-            beginChanges(action) {
-                switch (action) {
-                    case 'move':
-                        this.undoManager.moveSelection(this.selection);
-                        break;
-                }
-                this.undoManager.beginUpdate();
-            }
-            endChanges() {
-                this.undoManager.endUpdate();
-            }
-            create() {
-                this.$el.addEventListener('pointerdown', (event) => this.onPointerDown(event));
-                this.$el.addEventListener('pointerup', (event) => this.onPointerUp(event));
-                this.$el.addEventListener('mousemove', (event) => this.onMouseMove(event));
-                this.$el.addEventListener('contextmenu', (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    this.showContextMenu(event.clientX, event.clientY);
-                });
-                this.createDragEvents();
-            }
-            enableEvents() {
-                this.eventsDisabled = false;
-            }
-            disableEvents() {
-                this.eventsDisabled = true;
-            }
-            activate() {
-                if (this._active) {
-                    return;
-                }
-                this._active = true;
-                if (this._keyDownHandler) {
-                    document.removeEventListener('keydown', this._keyDownHandler);
-                }
-                this._keyDownHandler = (event) => this.onKeyDown(event);
-                document.addEventListener('keydown', this._keyDownHandler);
-            }
-            createSelectionBox(x, y, width, height) {
-                this._selBox = katrid.drawing.draw('rect', { x, y, width, height, class: 'selection-box' });
-                this.append(this._selBox);
-            }
-            deactivate() {
-                if (!this._active) {
-                    return;
-                }
-                this._active = false;
-                this.clearSelection();
-                document.removeEventListener('keydown', this._keyDownHandler);
-                this._keyDownHandler = null;
-                this.$el.remove();
-            }
-            onKeyDown(event) {
-                if (this.eventsDisabled) {
-                    return;
-                }
-                let ctrlKey = event.ctrlKey;
-                let altKey = event.altKey;
-                if (isMac) {
-                    ctrlKey = altKey;
-                    altKey = false;
-                }
-                if ((!isMac && ctrlKey) || (isMac && event.metaKey && !ctrlKey)) {
-                    if (event.key === 'z') {
-                        event.preventDefault();
-                        this.undo();
-                        return;
-                    }
-                    else if (event.key === 'c') {
-                        event.preventDefault();
-                        this.copy();
-                        return;
-                    }
-                    else if (event.key === 'v') {
-                        event.preventDefault();
-                        this.paste();
-                        return;
-                    }
-                    else if (event.key === 'x') {
-                        event.preventDefault();
-                        this.cut();
-                    }
-                    else if ((isMac && event.key === 'Z') || (!isMac && event.key === 'y')) {
-                        event.preventDefault();
-                        this.redo();
-                        return;
-                    }
-                }
-                if (this.selection?.length && !altKey) {
-                    if (event.shiftKey) {
-                        switch (event.key) {
-                            case 'ArrowDown':
-                                event.preventDefault();
-                                if (ctrlKey)
-                                    this.resizeSelectionBy(0, 1);
-                                else
-                                    this.resizeSelectionBy(0, this.gridY || 1);
-                                break;
-                            case 'ArrowUp':
-                                event.preventDefault();
-                                if (ctrlKey)
-                                    this.resizeSelectionBy(0, -1);
-                                else
-                                    this.resizeSelectionBy(0, -this.gridY || -1);
-                                break;
-                            case 'ArrowLeft':
-                                event.preventDefault();
-                                if (ctrlKey)
-                                    this.resizeSelectionBy(-1, 0);
-                                else
-                                    this.designer.refre;
-                                this.resizeSelectionBy(-this.gridX || -1, 0);
-                                break;
-                            case 'ArrowRight':
-                                event.preventDefault();
-                                if (ctrlKey)
-                                    this.resizeSelectionBy(1, 0);
-                                else
-                                    this.resizeSelectionBy(this.gridX || 1, 0);
-                                break;
-                        }
-                    }
-                    else {
-                        switch (event.key) {
-                            case 'ArrowDown':
-                                event.preventDefault();
-                                if (ctrlKey)
-                                    this.moveSelectionBy(0, this.gridY || 1);
-                                else
-                                    this.moveSelectionBy(0, 1);
-                                this._tempGuidelines();
-                                break;
-                            case 'ArrowUp':
-                                event.preventDefault();
-                                if (ctrlKey)
-                                    this.moveSelectionBy(0, -1 * this.gridY || 1);
-                                else
-                                    this.moveSelectionBy(0, -1);
-                                this._tempGuidelines();
-                                break;
-                            case 'ArrowLeft':
-                                event.preventDefault();
-                                if (ctrlKey)
-                                    this.moveSelectionBy(-this.gridX || -1, 0);
-                                else
-                                    this.moveSelectionBy(-1, 0);
-                                this._tempGuidelines();
-                                break;
-                            case 'ArrowRight':
-                                event.preventDefault();
-                                if (ctrlKey)
-                                    this.moveSelectionBy(this.gridX || 1, 0);
-                                else
-                                    this.moveSelectionBy(1, 0);
-                                this._tempGuidelines();
-                                break;
-                            case 'Delete':
-                                event.preventDefault();
-                                this.deleteSelection();
-                                break;
-                        }
-                    }
-                }
-            }
-            applyRectToSelection(dx, dy, dw, dh) {
-                if (dx || dy || dw || dh) {
-                    this.undoManager.resizeSelection(this.selection);
-                    for (let obj of this.selection) {
-                        obj.designer.applyRect(dx, dy, dw, dh);
-                    }
-                    this.updateGrabs();
-                }
-            }
-            updateSelectedObjects() {
-                for (let obj of this.selection) {
-                    obj.redraw();
-                }
-                this.updateGrabs();
-            }
-            updateGrabs() {
-                if (!this.resizing) {
-                    this.destroyGrabHandles();
-                    for (let obj of this.selection) {
-                        this.createGrabHandles(obj);
-                    }
-                }
-                for (let grabs of this.grabs) {
-                    grabs.setPosition();
-                }
-            }
-            refreshGrabs() {
-                for (let grabs of this.grabs) {
-                    grabs.setPosition();
-                }
-            }
-            resizeSelectionBy(dw, dh) {
-                this.applyRectToSelection(0, 0, dw, dh);
-            }
-            addObject(obj) {
-                if (this.objects.includes(obj)) {
-                    return obj.designer;
-                }
-                this.objects.push(obj);
-                const designer = this.getDesigner(obj);
-                this.addDesigner(designer);
-                this.undoManager.add('add', [obj]);
-                if (this.onNotification) {
-                    this.onNotification(obj, 'add');
-                }
-                return obj.designer;
-            }
-            addDesigner(designer) {
-                this.append(designer.drawDesign(this));
-            }
-            setSelection(objs) {
-                this.clearSelection();
-                for (let obj of objs) {
-                    this.addToSelection(obj);
-                }
-            }
-            clearSelection() {
-                this.destroyGrabHandles();
-                this.selection = [];
-                this.onSelectionChange();
-            }
-            createGrabHandles(obj) {
-                const grabs = new design.GrabHandles({
-                    container: this.workspace || this.container,
-                    target: obj,
-                    onObjectResizing: () => obj.designer.onDesignResizing?.(),
-                    onObjectResized: () => obj.designer.onDesignResized?.(),
-                    snapToGrid: this.snapToGrid,
-                    designer: this,
-                    gridX: this.gridX,
-                    gridY: this.gridY,
-                });
-                this.grabs.push(grabs);
-            }
-            destroyGrabHandles(obj) {
-                if (this.resizing)
-                    return;
-                for (let gh of Array.from(this.grabs))
-                    if (!obj || (gh.target === obj)) {
-                        gh.destroy();
-                        this.grabs.splice(this.grabs.indexOf(gh), 1);
-                    }
-            }
-            applySelectionBox(rect) {
-                this.clearSelection();
-                for (let obj of this.objects) {
-                    if (katrid.drawing.rectInRect(obj.element.getBoundingClientRect(), rect))
-                        this.addToSelection(obj);
-                }
-            }
-            invalidate() {
-            }
-            getValidName(name) {
-                return;
-            }
-            getDesigner(widget) {
-                if (!widget.designer) {
-                    widget.designer = new design.WidgetDesigner(widget, this);
-                }
-                return widget.designer;
-            }
-            removeFromSelection(obj) {
-                if (this.selection.includes(obj)) {
-                    this.destroyGrabHandles(obj);
-                    this.selection.splice(this.selection.indexOf(obj), 1);
-                }
-            }
-            onSelectionChange() {
-            }
-            addToSelection(obj) {
-                if (!this.selection.includes(obj)) {
-                    this.selection.push(obj);
-                    this.createGrabHandles(obj);
-                }
-                this.onSelectionChange();
-            }
-            selectObject(obj) {
-                if (!this.selection.includes(obj))
-                    this.clearSelection();
-                this.addToSelection(obj);
-            }
-            toggleSelection(obj) {
-                if (this.selection.includes(obj)) {
-                    this.removeFromSelection(obj);
-                }
-                else {
-                    this.addToSelection(obj);
-                }
-            }
-            moveSelectionBy(dx, dy) {
-                if (this._zoom !== 100) {
-                    dx = dx / (this._zoom / 100);
-                    dy = dy / (this._zoom / 100);
-                }
-                if (this.selection.length) {
-                    this.undoManager.moveSelection(this.selection);
-                    for (let obj of this.selection) {
-                        obj.designer.moveBy(dx, dy);
-                    }
-                }
-                for (let grabs of this.grabs)
-                    grabs.setPosition();
-            }
-            onSelectionMoved() {
-            }
-            _createGuideline(x1, y1, x2, y2) {
-                const line = this.line(x1, y1, x2, y2, { class: 'guideline' });
-                this.guidelines.push(line.$el);
-                this.append(line);
-            }
-            createGuidelines() {
-                if (!this.resizing) {
-                    this.destroyGrabHandles();
-                }
-                for (let obj of this.selection)
-                    for (let comp of this.objects) {
-                        if (comp !== obj) {
-                            let compRect = comp.designer.getDesignRect();
-                            let rect = obj.getDesignRect();
-                            if (rect.right === compRect.right)
-                                this._createGuideline(rect.right, rect.top, compRect.right, compRect.bottom);
-                            if (rect.left === compRect.left)
-                                this._createGuideline(rect.left, rect.top, compRect.left, compRect.bottom);
-                            if (rect.right === compRect.left)
-                                this._createGuideline(rect.right, rect.top, compRect.left, compRect.bottom);
-                            if (rect.left === compRect.right)
-                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.bottom);
-                            if (rect.top === compRect.top)
-                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.top);
-                            if (rect.bottom === compRect.top)
-                                this._createGuideline(rect.left, rect.bottom, compRect.right, compRect.top);
-                            if (rect.top === compRect.bottom)
-                                this._createGuideline(rect.left, rect.top, compRect.right, compRect.bottom);
-                            if (rect.bottom === compRect.bottom)
-                                this._createGuideline(rect.left, rect.bottom, compRect.right, compRect.bottom);
-                        }
-                    }
-            }
-            clearGuidelines() {
-                this.updateGrabs();
-                for (let line of this.guidelines) {
-                    line.remove();
-                }
-                this.guidelines = [];
-            }
-            loadObject(obj) {
-                if (obj.type === 'Text') {
-                    const o = new katrid.drawing.Text();
-                    o.load(obj);
-                    return o;
-                }
-                if (obj.type === 'Rectangle') {
-                    const o = new katrid.drawing.Rectangle();
-                    o.load(obj);
-                    return o;
-                }
-            }
-            removeObject(obj) {
-                this._removeObjects([obj]);
-            }
-            deleteSelection() {
-                const sel = this.selection.length;
-                this._removeObjects(this.selection, `Delete ${sel} objects`);
-                this.grabs = [];
-                this.selection = [];
-                this.onSelectionChange();
-            }
-            _removeObjects(objs, description) {
-                this.undoManager.add('remove', [...objs], description);
-                if (this.onNotification) {
-                    objs.forEach(obj => this.onNotification(obj, 'remove'));
-                }
-                for (let obj of objs) {
-                    if (this.selection.includes(obj)) {
-                        this.destroyGrabHandles(obj);
-                        this.selection.splice(this.selection.indexOf(obj), 1);
-                    }
-                    if (this.objects.includes(obj)) {
-                        this.objects.splice(this.objects.indexOf(obj), 1);
-                        obj.remove();
-                    }
-                }
-                this.updateGrabs();
-            }
-            removeObjects(objs) {
-                this._removeObjects(objs);
-            }
-            async cut() {
-                await this.clipboardManager.copy();
-                this._removeObjects(this.selection);
-            }
-            copy() {
-                if (this.selection.length) {
-                    console.debug('copy', this.selection);
-                    return this.clipboardManager.copy();
-                }
-            }
-            async paste() {
-                try {
-                    this.undoManager.beginUpdate();
-                    const objs = await this.clipboardManager.paste();
-                    this.undoManager.endUpdate();
-                    this.undoManager.add('add', objs);
-                }
-                finally {
-                    this.undoManager.endUpdate();
-                }
-            }
-            pasteObject(obj) {
-                return this.addObject(obj);
-            }
-            undo() {
-                this.undoManager.undo();
-                this.updateGrabs();
-            }
-            redo() {
-                this.undoManager.redo();
-            }
-            resize(width, height) {
-                this.width = width;
-                this.height = height;
-                this._resize();
-            }
-            getDesignerHeight() {
-                return this.height;
-            }
-            _resize() {
-                let w = this.width;
-                let h = this.getDesignerHeight();
-                if (this._zoom !== 100) {
-                    w = w * (this._zoom / 100);
-                    h = h * (this._zoom / 100);
-                }
-                this.attr('width', w.toString());
-                this.attr('height', h.toString());
-                this.attr('viewBox', `0 0 ${this.width} ${this.getDesignerHeight()}`);
-            }
-            get zoom() {
-                return this._zoom;
-            }
-            set zoom(value) {
-                this._zoom = value;
-                this._resize();
-            }
-            _tempGuidelines() {
-                this.clearGuidelines();
-                this.createGuidelines();
-                clearTimeout(this._resizingTimeout);
-                this._resizingTimeout = setTimeout(() => this.clearGuidelines(), design.GUIDELINE_DELAY);
-            }
-            onPointerDown(event) {
-                if (this.eventsDisabled) {
-                    return;
-                }
-                event.stopPropagation();
-                this.clearSelection();
-                if (this.selectionBox && event.button === 0) {
-                    this.draggingSelectionBox = true;
-                    const r = this.$el.getBoundingClientRect();
-                    this._dx = event.clientX - r.left;
-                    this._dy = event.clientY - r.top;
-                    this._bx = this._by = this._bw = this._bh = 0;
-                    this.createSelectionBox(this._dx, this._dy, 0, 0);
-                }
-                if (!this.selection.length && event.button === 0)
-                    this.$el.setPointerCapture(event.pointerId);
-            }
-            onMouseMove(event) {
-                if (this.eventsDisabled) {
-                    return;
-                }
-                if (this.draggingSelectionBox) {
-                    event.preventDefault();
-                    let x = this._dx;
-                    let y = this._dy;
-                    const r = this.$el.getBoundingClientRect();
-                    let w = event.clientX - this._dx - r.left;
-                    let h = event.clientY - this._dy - r.top;
-                    if (w < 0) {
-                        x += w;
-                        w = Math.abs(w);
-                    }
-                    if (h < 0) {
-                        y += h;
-                        h = Math.abs(h);
-                    }
-                    this.updateSelectionBox(x, y, w, h);
-                }
-            }
-            onPointerUp(event) {
-                if (this.eventsDisabled) {
-                    return;
-                }
-                if (!this.resizing) {
-                    this.clearGuidelines();
-                }
-                if (this.draggingSelectionBox) {
-                    this.draggingSelectionBox = false;
-                    this.$el.releasePointerCapture(event.pointerId);
-                    this._onPointerUp();
-                    this.destroySelectionBox();
-                    this.refreshSelection();
-                }
-            }
-            _onPointerUp() {
-                this.applySelectionBox(this._selBox.$el.getBoundingClientRect());
-            }
-            refreshSelection() {
-            }
-            destroySelectionBox() {
-                this._selBox.remove();
-            }
-            updateSelectionBox(x, y, width, height) {
-                this._selBox.attr({ x, y, width, height });
-                this._bx = x;
-                this._by = y;
-                this._bw = width;
-                this._bh = height;
-            }
-            widgetDoubleClick(widget, event) {
-                event.preventDefault();
-                event.stopPropagation();
-                this.executeEditor(widget);
-            }
-            executeEditor(widget) {
-                let editorCls = design.getComponentEditor(widget.target.constructor);
-                const editor = new editorCls(widget.target, this);
-                editor.showEditor();
-            }
-            toolItemDragOver(evt) {
-            }
-            createDragEvents() {
-                this.$el.addEventListener('dragover', (evt) => {
-                    this.toolItemDragOver(evt);
-                });
-                this.$el.addEventListener('drop', (evt) => {
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    this.toolItemDrop(evt.dataTransfer.getData('text'), evt);
-                });
-            }
-            toolItemDrop(widget, evt) {
-                this.createWidget(widget, evt.target, evt.offsetX, evt.offsetY);
-            }
-            createWidget(widgetName, target, x, y) {
-            }
-            getElement() {
-                return this.$el;
-            }
-        }
-        design.DesignSurface = DesignSurface;
-    })(design = katrid.design || (katrid.design = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var design;
-    (function (design) {
-        class PageDesigner extends katrid.design.DesignSurface {
-            constructor(page) {
-                super();
-                this.page = page;
-            }
-            get page() {
-                return this._page;
-            }
-            get report() {
-                return this.page.report;
-            }
-            set page(value) {
-                this._page = value;
-                if (value && value.width > 0) {
-                    this.width = value.width;
-                }
-                if (value && value.height > 0) {
-                    this.height = value.height;
-                }
-            }
-            showConfigWizard() {
-            }
-            hideConfigWizard() {
-            }
-            onConfigClick(event) {
-            }
-            getElement() {
-                return this.$el;
-            }
-        }
-        design.PageDesigner = PageDesigner;
-    })(design = katrid.design || (katrid.design = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class PageDesigner extends katrid.design.PageDesigner {
-            activate() {
-                super.activate();
-                this.reportDesigner.activatePage(this.page);
-            }
-            onSelectionChange() {
-                super.onSelectionChange();
-                this.reportDesigner.onSelectionChanged(this.selection);
-            }
-        }
-        bi.PageDesigner = PageDesigner;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class PivotTable {
-            constructor(container) {
-                this.create();
-                container?.append(this.el);
-            }
-            create() {
-                this.el = document.createElement('div');
-                this.createTable();
-            }
-            createTable() {
-                this.table = document.createElement('table');
-                this.el.append(this.table);
-                this.table.createTHead();
-                this.table.createTBody();
-            }
-            get cols() {
-                return this._cols;
-            }
-            set cols(value) {
-                this._cols = value;
-                this.update();
-            }
-            get rows() {
-                return this._rows;
-            }
-            set rows(value) {
-                this._rows = value;
-                this.update();
-            }
-            update() {
-                this.table.remove();
-                this.createTable();
-                this.loadData();
-            }
-            setData(data) {
-                this.data = data;
-                if (data) {
-                    this.loadData();
-                }
-            }
-            loadData() {
-                if (this._rows?.length) {
-                    this.rowPivot = katrid.utils.pivot(this.data, this._rows[0]);
-                }
-                if (this._cols?.length) {
-                    this.colPivot = katrid.utils.pivot(this.data, this._cols[0]);
-                }
-                let tr1 = document.createElement('tr');
-                this.table.tBodies[0].append(tr1);
-                tr1.appendChild(document.createElement('td'));
-                if (this.colPivot) {
-                    for (const col of this.colPivot) {
-                        let td = document.createElement('td');
-                        td.innerText = col.key;
-                        tr1.append(td);
-                    }
-                }
-                if (this.rowPivot)
-                    for (const row of this.rowPivot) {
-                        let tr = document.createElement('tr');
-                        this.table.tBodies[0].append(tr);
-                        let td = document.createElement('td');
-                        td.innerText = row.key;
-                        tr.append(td);
-                    }
-            }
-        }
-        bi.PivotTable = PivotTable;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Core;
-    (function (Core) {
-        class Plugin {
-            constructor(app) {
-                this.app = app;
-            }
-            hashChange(url) {
-                return false;
-            }
-        }
-        Core.Plugin = Plugin;
-        class Plugins extends Array {
-            start(app) {
-                for (let plugin of this)
-                    app.plugins.push(new plugin(app));
-            }
-        }
-        Core.plugins = new Plugins();
-        function registerPlugin(cls) {
-            Core.plugins.push(cls);
-        }
-        Core.registerPlugin = registerPlugin;
-    })(Core = Katrid.Core || (Katrid.Core = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var BI;
-    (function (BI) {
-        let QueryEditorPlugin = class QueryEditorPlugin extends Katrid.Core.Plugin {
-            hashChange(url) {
-                if (url.startsWith('#/query-viewer/')) {
-                    this.execute();
-                    return true;
-                }
-            }
-            async execute() {
-                let queryViewer = document.createElement('query-viewer');
-                queryViewer.className = 'content-container';
-                this.app.setView(queryViewer);
-            }
-        };
-        QueryEditorPlugin = __decorate([
-            Katrid.Core.registerPlugin
-        ], QueryEditorPlugin);
-        class QueryManager {
-            constructor(app) {
-                this.app = app;
-                this.app = app;
-                this.$scope.queryChange = (query) => this.queryChange(query);
-                this.$scope.search = {};
-                let me = this;
-                this.action = this.$scope.action = {
-                    context: {},
-                    views: {},
-                    async saveSearch(search) {
-                        let svc = new Katrid.Services.ModelService('ui.filter');
-                        let data = {};
-                        Object.assign(data, search);
-                        data.query = me.$scope.query.id;
-                        if (search.name === null) {
-                            search.name = prompt('Query name', 'current query namne');
-                            search.is_default = false;
-                            search.is_shared = true;
-                        }
-                        if (search.name)
-                            await svc.write([data]);
-                    },
-                    setSearchParams(params) {
-                        me.$scope.search.params = params;
-                        me.refresh(me.query);
-                    },
-                    switchView(viewType) {
-                        console.log('set view type', viewType);
-                    },
-                    orderBy(field) {
-                        if (me.$scope.ordering === field)
-                            me.$scope.reverse = !me.$scope.reverse;
-                        else {
-                            me.$scope.ordering = field;
-                            me.$scope.reverse = false;
-                        }
-                    }
-                };
-            }
-            getFilter(field) {
-                if (field.type === 'DateField')
-                    return "|date:'shortDate'";
-                else if (field.type === 'DateTimeField')
-                    return "|date:'short'";
-                else if (field.type === 'IntegerField')
-                    return "|number:0";
-                return "";
-            }
-            getSearchView(query) {
-                let s;
-                if (query.params)
-                    s = query.params;
-                else {
-                    s = `<search>`;
-                    for (let f of query.fields)
-                        s += `<field name="${f.name}"/>`;
-                    s += '</search>';
-                }
-                let fields = {};
-                for (let f of query.fields)
-                    fields[f.name] = Katrid.Data.Fields.Field.fromInfo(f);
-                this.fields = fields;
-                return { content: s, fields };
-            }
-            async queryChange(query) {
-                this.$scope.search = {
-                    viewMoreButtons: true,
-                };
-                this.query = query;
-                let res = await this.refresh(query);
-                query.fields = res.fields;
-                this.action.search = this.getSearchView(query);
-                this.action.fieldList = Object.values(this.fields);
-                this.$scope.action.views.search = this.$scope.action.search;
-                this.renderSearch();
-                this.renderTable(res);
-                this.$scope.$apply();
-            }
-            async refresh(query) {
-                let res = await Katrid.Services.Query.read({ id: query.id, details: true, params: this.$scope.search.params });
-                for (let f of res.fields)
-                    f.filter = this.getFilter(f);
-                let _toObject = (fields, values) => {
-                    let r = {}, i = 0;
-                    for (let f of fields) {
-                        r[f.name] = values[i];
-                        i++;
-                    }
-                    return r;
-                };
-                this.$scope.records = res.data.map(row => _toObject(res.fields, row));
-                this.$scope.$apply();
-                return res;
-            }
-            renderSearch() {
-            }
-            async render() {
-                let templ = document.createElement('query-editor');
-                templ = Katrid.Core.$compile(templ)(this.$scope);
-                this.$element = templ;
-                let queries = await Katrid.Services.Query.all();
-                this.$scope.queries = queries.data;
-                this.$scope.$apply();
-            }
-            renderTable(data) {
-            }
-        }
-        function initColumn(table) {
-        }
-        function reorder(index1, index2) {
-            $('table tr').each(function () {
-                var tr = $(this);
-                var td1 = tr.find(`td:eq(${index1})`);
-                var td2 = tr.find(`td:eq(${index2})`);
-                td1.detach().insertAfter(td2);
-            });
-        }
-    })(BI = Katrid.BI || (Katrid.BI = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var BI;
-    (function (BI) {
-        class QueryViewerElement extends Katrid.WebComponent {
-            create() {
-                this.queryViewer = new QueryViewer(this);
-            }
-        }
-        BI.QueryViewerElement = QueryViewerElement;
-        class QueryViewer {
-            constructor(el) {
-                this.el = el;
-                this.create();
-            }
-            create() {
-                this.el.className = 'query-viewer';
-                this.el.innerHTML = `
-        <div class="col-12 px-2"><h4 class="text-muted">Visualizador de Consultas</h4></div>
-        <div class="row px-3">
-          <div class="col-2 overflow-auto" id="query-viewer-treeview" style="max-height: 85vh"></div>
-          <div class="col-10 query-view card shadow flex-column overflow-auto" style="max-height: 85vh"></div>
-        </div>
-      `;
-                this.load();
-            }
-            async load() {
-                this.container = this.el.querySelector('.query-view');
-                let res = await Katrid.Services.Query.all();
-                if (res.data) {
-                    for (let item of res.data) {
-                        item.onclick = async () => {
-                            $(this.container).empty();
-                            this.query = new Katrid.Services.Query(item.id);
-                            window.history.pushState("", "", "#/query-viewer/?id=" + item.id.toString());
-                            let res = await this.query.getMetadata();
-                            this.metadata = res;
-                            let fields = res.fields;
-                            const params = res.params;
-                            this.params = null;
-                            if (params) {
-                                this.createParamsPanel(params);
-                            }
-                            if (fields)
-                                this.createQueryView(fields, res.data).ready();
-                            else if (res.type === "query") {
-                                const data = await this.query.execute({});
-                                this.createQueryView(data.fields, data.data).ready();
-                            }
-                        };
-                    }
-                    let treeView = new Katrid.WebComponent.TreeView(res.data, 'query-viewer-treeview');
-                    await treeView.makeTreeView();
-                }
-            }
-            createParamsPanel(params) {
-                const title = document.createElement('div');
-                title.className = 'col-12 px-3';
-                title.innerHTML = `<h4 class="text-muted mb-0">${this.metadata.name}</div>`;
-                this.container.appendChild(title);
-                this.params = Object.values(params).map(p => new Katrid.Reports.Param(p));
-                Katrid.Reports.createParamsPanel(this.container, this.params);
-                const div = document.createElement('div');
-                div.className = 'col-12 text-end toolbar-action-buttons px-3';
-                let btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary';
-                btn.title = Katrid.i18n.gettext('Print');
-                btn.innerHTML = '<i class="fas fa-print"></i>';
-                btn.addEventListener('click', () => this.print());
-                this.btnPrint = btn;
-                btn.style.display = 'none';
-                div.append(btn);
-                btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary';
-                btn.title = 'Export to Excel';
-                btn.innerHTML = '<i class="fas fa-download"></i>';
-                btn.addEventListener('click', () => this.exportToExcel());
-                this.btnExport = btn;
-                btn.style.display = 'none';
-                div.append(btn);
-                btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary';
-                btn.innerText = Katrid.i18n.gettext('Apply');
-                div.append(btn);
-                btn.addEventListener('click', () => this.applyParams());
-                this.container.append(div);
-            }
-            async applyParams() {
-                if (this.queryView) {
-                    this.queryView.destroy();
-                }
-                const params = this.params.map(p => p.dump());
-                const res = await this.query.execute({ params });
-                if (res.data && res.fields) {
-                    const qv = this.createQueryView(res.fields, res.data);
-                    qv.searchViewVisible = false;
-                    qv.ready();
-                    $(this.btnPrint).show();
-                }
-                else if (res.filename && res.content) {
-                    const a = document.createElement('a');
-                    const blob = new Blob([res.content], { type: 'text/json' });
-                    a.href = URL.createObjectURL(blob);
-                    a.download = res.filename;
-                    a.click();
-                    a.remove();
-                }
-            }
-            async print() {
-                this.queryView.reportTemplate = this.metadata?.template?.reportTemplate;
-                this.queryView.print();
-            }
-            createQueryView(fields, data, reportType = 'grid') {
-                let queryView = new BI.QueryView({ fields });
-                queryView.metadata = this.metadata;
-                queryView.data = data;
-                queryView.container = this.container;
-                this.queryView = queryView;
-                return queryView;
-            }
-        }
-        BI.QueryViewer = QueryViewer;
-        Katrid.define('query-viewer', QueryViewerElement);
-    })(BI = Katrid.BI || (Katrid.BI = {}));
-})(Katrid || (Katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        bi.QueryViewer = Katrid.BI.QueryViewer;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class ReportEditor {
-            constructor(container) {
-                this.container = container;
-                this.loading = false;
-                this._modified = false;
-                this.pages = [];
-                this.create();
-                if (container) {
-                    container.appendChild(this.el);
-                }
-            }
-            onSelectionChanged(selection) {
-                this.inspector.setSelection(selection);
-            }
-            objectNotification(obj, event) {
-                this.outlineExplorer.objectNotification(obj, event);
-            }
-            get reportName() {
-                return this._name || '';
-            }
-            set reportName(value) {
-                this._name = value;
-                this.el.querySelector('.report-editor-header span').textContent = value;
-            }
-            create() {
-                this.el = document.createElement('div');
-                this.el.style.display = 'flex';
-                this.el.style.flexDirection = 'column';
-                this.el.style.flex = '1 1 auto';
-                this.createWorkspace();
-            }
-            createWorkspace() {
-                const header = document.createElement('header');
-                header.innerHTML = `<table><tr><td><h1 class="back"><i class="fa-solid fa-fw fa-chevron-left"></i></h1></td><td><h3>Report Editor</h3>
-      <span>${this.reportName}</span>
-      </td></tr></table>`;
-                header.querySelector('.back').addEventListener('click', () => this.close());
-                header.className = 'report-editor-header';
-                this.el.appendChild(header);
-                this.createToolbar(this.el);
-                let elEditor = document.createElement('div');
-                elEditor.className = 'report-editor';
-                this.el.appendChild(elEditor);
-                this.leftNav = document.createElement('div');
-                elEditor.appendChild(this.leftNav);
-                this.leftNav.className = 'tool-window left-side';
-                let tb = new katrid.ui.Toolbar(this.leftNav);
-                tb.vertical = true;
-                let btn = tb.addButton('<i class="fa-duotone fa-2x fa-fw fa-tools"></i>');
-                btn.title = katrid.i18n.gettext('Tool Box');
-                btn.addEventListener('click', () => this.showToolBox());
-                btn = tb.addButton('<i class="fa-duotone fa-2x fa-database"></i>');
-                btn.title = katrid.i18n.gettext('Data Sources');
-                btn.addEventListener('click', () => this.showDataExplorer());
-                btn = tb.addButton('<i class="fa-duotone fa-2x fa-fw fa-sitemap">');
-                btn.title = katrid.i18n.gettext('Outline');
-                btn.addEventListener('click', () => this.showOutlineExplorer());
-                btn = tb.addButton('<i class="fa-duotone fa-2x fa-fw fa-files"></i>');
-                btn.title = katrid.i18n.gettext('Pages');
-                btn.addEventListener('click', () => this.showPageExplorer());
-                this.pageExplorer = new bi.PageExplorer(this.leftNav);
-                this.pageExplorer.reportEditor = this;
-                this.pageExplorer.hide();
-                this.dataExplorer = new bi.DataExplorer(this.leftNav);
-                this.dataExplorer.onRemoveDataSource = ds => this.report.removeDataSource(ds);
-                this.dataExplorer.onNewDataSource = () => {
-                    const ds = new katrid.bi.SqlDataSource(this.report.getValidName('datasource'));
-                    this.report.datasources.push(ds);
-                    return ds;
-                };
-                this.dataExplorer.onSelectionChange = ds => this.onSelectionChanged(ds ? [ds] : undefined);
-                this.dataExplorer.hide();
-                this.outlineExplorer = new bi.OutlineExplorer(this.leftNav);
-                this.outlineExplorer.hide();
-                this.outlineExplorer.onSelectItem = (obj) => this.onSelectionChanged([obj]);
-                this.toolBox = new bi.ToolBox(this.leftNav);
-                let div = document.createElement('div');
-                div.className = 'report-container';
-                elEditor.appendChild(div);
-                this.zoomTool = new bi.ZoomTool(div);
-                let workspace = document.createElement('div');
-                workspace.className = 'workspace';
-                let designer = document.createElement('div');
-                designer.className = 'designer';
-                designer.addEventListener('pointerdown', evt => {
-                    if (this.page.eventsDisabled) {
-                        return;
-                    }
-                    Katrid.Forms.ContextMenu.closeAll();
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    this.page?.clearSelection();
-                    if (!this.page.selection.length) {
-                        this.inspector.setSelection([this.page.page]);
-                    }
-                });
-                workspace.appendChild(designer);
-                div.appendChild(workspace);
-                this.workspaceElement = designer;
-                this.rightNav = document.createElement('div');
-                this.rightNav.className = 'tool-window data-tool-window';
-                this.inspector = new bi.ObjectInspector(this.rightNav);
-                this.paramExplorer = new bi.ParamExplorer(this.rightNav);
-                this.paramExplorer.reportEditor = this;
-                this.paramExplorer.hide();
-                tb = new katrid.ui.Toolbar(this.rightNav);
-                tb.vertical = true;
-                elEditor.appendChild(this.rightNav);
-                btn = tb.addButton('<i class="fa-duotone fa-solid fa-cog"></i>');
-                btn.title = katrid.i18n.gettext('Config page');
-                btn.addEventListener('click', (evt) => this.configCurrentPage(evt));
-                btn = tb.addButton('<i class="fa-duotone fa-solid fa-square-list"></i>');
-                btn.title = katrid.i18n.gettext('Properties');
-                btn.addEventListener('click', () => this.showPropertiesEditor());
-                btn = tb.addButton('<i class="fa-solid fa-list"></i>');
-                btn.title = katrid.i18n.gettext('Parameters');
-                btn.addEventListener('click', () => this.showParamExplorer());
-            }
-            createToolbar(container) {
-                let div = document.createElement('div');
-                div.className = 'main-toolbar';
-                let tb = new katrid.ui.Toolbar(div);
-                let btn = tb.addButton('<i class="fa-duotone fa-solid fa-2x fa-file"></i>');
-                btn.id = 'btn-new-report';
-                btn.title = katrid.i18n.gettext('New report');
-                btn.addEventListener('click', () => this.newReportWizard());
-                tb.addButton('<i class="fa-duotone fa-solid fa-2x fa-floppy-disk"></i>').addEventListener('click', () => this.save());
-                tb.addButton('<i class="fa-duotone fa-solid fa-2x fa-folder-open"></i>').addEventListener('click', () => this.openFile());
-                tb = new katrid.ui.Toolbar(div);
-                tb.el.style.flex = '0 0 auto';
-                tb.addButton({
-                    text: katrid.i18n.gettext('Preview'),
-                    iconClass: 'fa-regular fa-fw fa-file-pdf',
-                }).addEventListener('click', () => this.preview(Boolean(this.report.params)));
-                container.appendChild(div);
-                return tb;
-            }
-            async showParamsDialog() {
-                const params = this.report.params;
-                if (params) {
-                    const xml = jQuery.parseXML(params);
-                    let code = '';
-                    let cached = this.report.cache.params || {};
-                    const info = {};
-                    for (let param of xml.querySelector('params').children) {
-                        let paramName = param.getAttribute('name');
-                        let paramLabel = param.getAttribute('label');
-                        let paramType = param.getAttribute('type') || 'StringField';
-                        info[paramName] = { label: paramLabel, type: paramType };
-                        code += `${paramName}: ${cached[paramName] || 'null'}    # ${paramLabel} (${paramType})\n`;
-                    }
-                    const res = await katrid.bi.showCodeEditor(code.trimEnd(), 'yaml');
-                    if (res === false) {
-                        return false;
-                    }
-                    else {
-                        const values = jsyaml.load(res);
-                        const displayParams = {};
-                        for (let [k, v] of Object.entries(values)) {
-                            if (v != null) {
-                                if (info[k].type === 'DateField')
-                                    values[k] = moment.utc(v).format('YYYY-MM-DD');
-                            }
-                        }
-                        this.report.cache.params = values;
-                        return { values, info };
-                    }
-                }
-            }
-            async preview(showParams = false) {
-                let params;
-                if (showParams) {
-                    params = await this.showParamsDialog();
-                    if (params === false)
-                        return;
-                }
-                const model = new Katrid.Services.ModelService('ui.action.report');
-                const res = await model.rpc('preview', [JSON.stringify(this.report.dump()), {
-                        values: params?.values,
-                        info: params?.info
-                    }]);
-            }
-            activatePage(page) {
-                if (this._page) {
-                    this._page.onNotification = null;
-                }
-                this._page = page.designer;
-                this._page.onNotification = (obj, event) => this.objectNotification(obj, event);
-                this.workspaceElement.innerHTML = '';
-                this.workspaceElement.appendChild(page.designer.getElement());
-                this.inspector.designer = page.designer;
-                this.zoomTool.designer = page.designer;
-                if (page.isEmpty) {
-                    this._page.showConfigWizard();
-                }
-            }
-            get report() {
-                return this._report;
-            }
-            set report(value) {
-                this._report = value;
-                this.loadReport(value);
-            }
-            showToolBox() {
-                this.pageExplorer.hide();
-                this.dataExplorer.hide();
-                this.outlineExplorer.hide();
-                this.toolBox.show();
-            }
-            showPageExplorer() {
-                this.outlineExplorer.hide();
-                this.dataExplorer.hide();
-                this.toolBox.hide();
-                this.pageExplorer.show();
-            }
-            showOutlineExplorer() {
-                this.pageExplorer.hide();
-                this.dataExplorer.hide();
-                this.toolBox.hide();
-                this.outlineExplorer.show();
-            }
-            showDataExplorer() {
-                this.toolBox.hide();
-                this.pageExplorer.hide();
-                this.outlineExplorer.hide();
-                this.dataExplorer.show();
-            }
-            showParamExplorer() {
-                this.inspector.hide();
-                this.paramExplorer.show();
-            }
-            showPropertiesEditor() {
-                this.paramExplorer.hide();
-                this.inspector.show();
-            }
-            loadReport(report) {
-                try {
-                    this.loading = true;
-                    this.reportName = report.name;
-                    this.dataExplorer.clear();
-                    for (const ds of report.datasources) {
-                        this.dataExplorer.registerDataSource(ds);
-                    }
-                    for (const page of report.pages) {
-                        const pageDesign = this.addPage(page);
-                    }
-                    if (this.pages.length) {
-                        this.pages[0].activate();
-                    }
-                    this.outlineExplorer.loadReport(report);
-                }
-                finally {
-                    this.loading = false;
-                }
-            }
-            save() {
-                if (this.fileHandle) {
-                    this.saveFile();
-                }
-                else {
-                    if (this.onSave) {
-                        this.onSave(this.report.dump());
-                    }
-                    else {
-                        this.saveFile();
-                    }
-                }
-            }
-            close() {
-                this.el.remove();
-                this.onDestroy?.();
-            }
-            newReportWizard() {
-                const menu = new katrid.ui.ContextMenu();
-                menu.add(katrid.i18n.gettext('Query View'), () => {
-                    const rep = this.newReport(katrid.report.PageType.Query);
-                    this.newPage(katrid.report.PageType.Query);
-                });
-                menu.add(katrid.i18n.gettext('Banded Report'), () => {
-                    const rep = this.newReport(katrid.report.PageType.Banded);
-                    this.newPage();
-                    this.page.newBand('ReportTitle');
-                    this.page.newBand('DataBand');
-                    this.page.newBand('PageFooter');
-                });
-                const rect = this.el.querySelector('#btn-new-report').getBoundingClientRect();
-                menu.show(rect.right, rect.bottom);
-            }
-            newReport(repType = katrid.report.PageType.Banded) {
-                const rep = new katrid.report.Report(repType);
-                rep.name = 'No name';
-                this.clean();
-                this.report = rep;
-                return rep;
-            }
-            clean() {
-                if (this._page) {
-                    this._page.deactivate();
-                }
-                this.pages = [];
-                this._page = null;
-                this.modified = false;
-                this.zoomTool.designer = null;
-                this.outlineExplorer.clear();
-                this.dataExplorer.clear();
-                this.pageExplorer.clear();
-            }
-            addPage(page) {
-                let p = page.createDesigner();
-                p.reportDesigner = this;
-                this.pages.push(p);
-                if (!this.loading) {
-                    this.outlineExplorer.addObject(page);
-                }
-                this.pageExplorer.registerPage(page);
-                return p;
-            }
-            setModified() {
-                this.modified = true;
-            }
-            newPage(type, name) {
-                this.setModified();
-                const page = this.report.newPage(type || this.report.reportType);
-                page.name = this.report.getValidName(name || 'page');
-                const d = this.addPage(page);
-                d.activate();
-                return d;
-            }
-            get modified() {
-                return this._modified;
-            }
-            set modified(value) {
-                this._modified = value;
-                const header = this.el.querySelector('.report-editor-header');
-                if (this._modified) {
-                    header.classList.add('modified');
-                }
-                else {
-                    header.classList.remove('modified');
-                }
-            }
-            get page() {
-                return this._page;
-            }
-            set page(value) {
-                this._page?.deactivate();
-                this._page = value;
-                value?.activate();
-            }
-            load(data, filename) {
-                this.clean();
-                const rep = new katrid.report.Report();
-                rep.name = filename;
-                rep.load(data);
-                this.report = rep;
-            }
-            async openFile() {
-                [this.fileHandle] = await window.showOpenFilePicker({
-                    types: [{
-                            description: 'Reptile Report (*.json)',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                });
-                this.clean();
-                const file = await this.fileHandle.getFile();
-                const contents = await file.text();
-                this.load(JSON.parse(contents), file.name);
-            }
-            async saveFile() {
-                if (!this.fileHandle) {
-                    this.fileHandle = await window.showSaveFilePicker({
-                        types: [{
-                                description: 'Reptile Report (*.json)',
-                                accept: { 'application/json': ['.json'] }
-                            }]
-                    });
-                }
-                const file = await this.fileHandle.createWritable();
-                const blob = new Blob([JSON.stringify(this.report.dump())], { type: 'application/json' });
-                await file.write(blob);
-                await file.close();
-                this.modified = false;
-            }
-            setParams(params) {
-                this.report.params = params;
-                this.setModified();
-            }
-            configCurrentPage(evt) {
-                this.page.onConfigClick(evt);
-            }
-        }
-        bi.ReportEditor = ReportEditor;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        let ReportManagerPlugin = class ReportManagerPlugin extends katrid.core.Plugin {
-            hashChange(url) {
-                if (url.startsWith('#/report-manager/')) {
-                    this.execute();
-                    return true;
-                }
-            }
-            async execute() {
-                const div = document.createElement('div');
-                div.className = 'report-manager';
-                this.reportManager = new ReportManager(div);
-                this.app.setView(div);
-            }
-        };
-        ReportManagerPlugin = __decorate([
-            katrid.core.registerPlugin
-        ], ReportManagerPlugin);
-        class ReportManager {
-            constructor(container) {
-                this.container = container;
-                this.create();
-            }
-            create() {
-                this.el = document.createElement('div');
-                this.el.innerHTML = '<div class="report-editor-header"><h1>Report Manager</h1></div>';
-                this.el.className = 'report-explorer';
-                const tb = new katrid.ui.Toolbar(this.el.querySelector('.report-editor-header'));
-                tb.addButton('Report Editor').addEventListener('click', () => this.showReportEditor());
-                this.createExplorer();
-                this.container.appendChild(this.el);
-                this.load();
-            }
-            showContextMenu(node, event) {
-                if (node.data.isReport) {
-                    const menu = new katrid.ui.ContextMenu();
-                    menu.add('Novo...', () => {
-                        console.log('Editar', node.data);
-                    });
-                    menu.add('Editar', () => {
-                        this.editReport(node.data);
-                    });
-                    menu.add('Remover', () => {
-                        console.log('Eliminar', node.data);
-                    });
-                    menu.add('Vincular menu...', () => {
-                        console.log('Eliminar', node.data);
-                    });
-                    menu.show(event.clientX, event.clientY);
-                }
-                else {
-                    const menu = new katrid.ui.ContextMenu();
-                    menu.add('Novo relatório...', () => {
-                        console.log('Editar', node.data);
-                    });
-                    menu.add('Nova pasta...', () => {
-                        console.log('Editar', node.data);
-                    });
-                    menu.add('Remover', () => {
-                        console.log('Eliminar', node.data);
-                    });
-                    menu.show(event.clientX, event.clientY);
-                }
-            }
-            createExplorer() {
-                const input = document.createElement('input');
-                input.type = 'text';
-                this.treeView = new katrid.ui.TreeView(this.el, {
-                    options: {
-                        onContextMenu: (node, event) => {
-                            this.showContextMenu(node, event);
-                        }
-                    }
-                });
-            }
-            async load() {
-                const res = await Katrid.Services.Query.all();
-                this.reportCatalog = res.data;
-                let categories = {};
-                for (const rep of res.data) {
-                    const cat = categories[rep.category] ??= [];
-                    cat.push({ id: rep.id, text: rep.name, isReport: true });
-                }
-                let nodes = Object.entries(categories).map(([k, cat]) => ({
-                    id: k, text: k,
-                    children: cat,
-                }));
-                this.treeView.addNodes({ data: nodes });
-            }
-            hide() {
-                this.el.style.display = 'none';
-                document.querySelector('app-header').style.display = 'none';
-            }
-            show() {
-                this.el.style.display = '';
-                document.querySelector('app-header').style.display = '';
-            }
-            async editReport(data) {
-                const editor = new bi.ReportEditor(this.container);
-                editor.onDestroy = () => {
-                    this.show();
-                };
-                const repService = new Katrid.Services.Query(data.id);
-                const metadata = await repService.getMetadata(true);
-                editor.report = katrid.report.Report.fromMetadata(metadata);
-                this.hide();
-            }
-            async showReportEditor() {
-                const editor = new bi.ReportEditor(this.container);
-                editor.onDestroy = () => {
-                    this.show();
-                };
-                this.hide();
-            }
-        }
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var BI;
-    (function (BI) {
-        class TableWidget {
-            constructor(el, config) {
-                this.el = el;
-                this.config = config;
-                this._waiting = false;
-                if (!this.config)
-                    this.config = {};
-            }
-            get queryCommand() {
-                return this._queryCommand;
-            }
-            set queryCommand(value) {
-                this._queryCommand = value;
-                this.waiting = true;
-                Katrid.Services.post('/bi/query/', { query: value, withDescription: true, asDict: true })
-                    .then(res => this._refresh(res))
-                    .finally(() => this.waiting = false);
-            }
-            get waiting() {
-                return this._waiting;
-            }
-            set waiting(value) {
-                this._waiting = value;
-                if (value)
-                    this.el.innerHTML = `<div><i class="fas fa-spinner fa-spin"></i> <span>${Katrid.i18n.gettext('Loading...')}</span></div>`;
-                else {
-                    let spinner = this.el.querySelector('.fas.fa-spinner');
-                    if (spinner)
-                        spinner.remove();
-                }
-            }
-            _refresh(data) {
-                let fieldList = data.fields;
-                let fields = [];
-                if (this.config.fieldElements?.length) {
-                    let fieldByName = {};
-                    for (let f of fieldList)
-                        fieldByName[f.name] = f;
-                    fields = Array.from(this.config.fieldElements.map(el => {
-                        let name = el.getAttribute('name');
-                        let f;
-                        if (name)
-                            f = fieldByName[name];
-                        return new TableColumn(el, f);
-                    }));
-                }
-                else
-                    fields = Array.from(fieldList.map(f => new TableColumn(null, f)));
-                this.el.innerHTML = '';
-                if (this.config.caption)
-                    this.el.innerHTML = `<h4 class="widget-header">${this.config.caption}</h4>`;
-                let table = document.createElement('table');
-                table.classList.add('table');
-                let tr = document.createElement('tr');
-                table.createTHead().append(tr);
-                for (let f of fields) {
-                    let th = document.createElement('th');
-                    th.innerText = f.caption;
-                    th.className = f.type;
-                    tr.append(th);
-                }
-                let tbody = table.createTBody();
-                for (let row of data.data) {
-                    let tr = document.createElement('tr');
-                    for (let f of fields) {
-                        let td = document.createElement('td');
-                        td.className = f.type;
-                        let col;
-                        if (f.name) {
-                            col = row[f.name];
-                            if (Katrid.isNumber(col))
-                                col = Katrid.intl.number({ minimumFractionDigits: 0 }).format(col);
-                            else if (f.type === 'DateField')
-                                col = moment(col).format('DD/MM/YYYY');
-                            else if (f.type === 'DateTimeField')
-                                col = moment(col).format('DD/MM/YYYY HH:mm');
-                        }
-                        else
-                            col = '';
-                        if (f.type)
-                            td.className = f.type;
-                        td.innerText = col;
-                        tr.append(td);
-                    }
-                    tbody.append(tr);
-                }
-                this.el.append(table);
-            }
-        }
-        BI.TableWidget = TableWidget;
-        class TableWidgetElement extends Katrid.WebComponent {
-            create() {
-                super.create();
-                this.className = 'table-responsive';
-                let fieldElements = Array.from(this.querySelectorAll('field'));
-                for (let f of fieldElements)
-                    f.remove();
-                let tbl = new TableWidget(this, { caption: this.getAttribute('caption'), fieldElements });
-                tbl.queryCommand = this.getAttribute('query-command');
-            }
-        }
-        BI.TableWidgetElement = TableWidgetElement;
-        class TableColumn {
-            constructor(el, field) {
-                this.el = el;
-                this.field = field;
-                if (el) {
-                    this.name = el.getAttribute('name') || field?.name;
-                    this.caption = el.getAttribute('caption') || this.name;
-                    this.type = el.getAttribute('data-type') || field?.type;
-                }
-                else if (field) {
-                    this.caption = this.name = field.name;
-                    this.type = field.type;
-                }
-                if (!this.type)
-                    this.type = 'StringField';
-            }
-        }
-        Katrid.define('table-widget', TableWidgetElement);
-    })(BI = Katrid.BI || (Katrid.BI = {}));
-})(Katrid || (Katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Services;
-    (function (Services) {
-        let $fetch = window.fetch;
-        window['$fetch'] = $fetch;
-        window.fetch = function () {
-            let ajaxStart = new CustomEvent('ajax.start', { detail: document, bubbles: true, cancelable: false });
-            let ajaxStop = new CustomEvent('ajax.stop', { detail: document, bubbles: true, cancelable: false });
-            let promise = $fetch.apply(this, arguments);
-            document.dispatchEvent(ajaxStart);
-            promise.finally(() => {
-                document.dispatchEvent(ajaxStop);
-            });
-            return promise;
-        };
-        class Service {
-            static { this.url = '/api/rpc/'; }
-            constructor(name) {
-                this.name = name;
-            }
-            static $fetch(url, config, params = null) {
-                return this.adapter.$fetch(url, config, params);
-            }
-            static $post(url, data, params) {
-                return this.adapter.$fetch(url, {
-                    method: 'POST',
-                    credentials: "same-origin",
-                    body: JSON.stringify(data),
-                    headers: {
-                        'content-type': 'application/json',
-                    }
-                }, params)
-                    .then(res => res.json());
-            }
-            get(name, params) {
-                const methName = this.name ? this.name + '/' : '';
-                const rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
-                return $.get(rpcName, params);
-            }
-            post(name, data, params, config, context) {
-                if (!data)
-                    data = {};
-                if (context)
-                    data.context = context;
-                data = {
-                    method: name,
-                    params: data,
-                };
-                if (!config)
-                    config = {};
-                Object.assign(config, {
-                    method: 'POST',
-                    body: JSON.stringify(data),
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                    },
-                });
-                const methName = this.name ? this.name + '/' : '';
-                let rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
-                if (params) {
-                    rpcName += `?${$.param(params)}`;
-                }
-                return new Promise((resolve, reject) => {
-                    Service.adapter.$fetch(rpcName, config)
-                        .then(async (response) => {
-                        let contentType = response.headers.get('Content-Type');
-                        if (response.status === 500) {
-                            let res = await response.json();
-                            Katrid.Forms.Dialogs.ExceptionDialog.show(`Server Error 500`, res.error);
-                            return reject(res);
-                        }
-                        let res;
-                        if (contentType === 'application/json')
-                            res = await response.json();
-                        else
-                            return downloadBytes(response);
-                        if (res.error) {
-                            if ('message' in res.error)
-                                Katrid.Forms.Dialogs.Alerts.error(res.error.message);
-                            else if ('messages' in res.error)
-                                Katrid.Forms.Dialogs.Alerts.error(res.error.messages.join('<br>'));
-                            else
-                                Katrid.Forms.Dialogs.Alerts.error(res.error);
-                            reject(res.error);
-                        }
-                        else {
-                            for (let processor of katrid.admin.responseMiddleware)
-                                (new processor(response)).process(res);
-                            if (res.result) {
-                                let result = res.result;
-                                if (Array.isArray(result) && (result.length === 1))
-                                    result = result[0];
-                                let messages;
-                                if (result.messages)
-                                    messages = result.messages;
-                                else
-                                    messages = [];
-                                if (result.message) {
-                                    if (result.message.info)
-                                        messages.push({ type: 'info', message: result.message.info });
-                                    else
-                                        messages.push(result.message);
-                                }
-                                else if (result.warn)
-                                    messages.push({ type: 'warn', message: result.warn });
-                                else if (result.error) {
-                                    if (typeof result.error === 'string')
-                                        messages.push({ type: 'error', message: result.error });
-                                    else
-                                        messages.push({ type: 'error', message: result.error.message });
-                                }
-                                messages.forEach(function (msg) {
-                                    if (Katrid.isString(msg))
-                                        Katrid.Forms.Dialogs.Alerts.success(msg);
-                                    else if (msg.type === 'warn')
-                                        Katrid.Forms.Dialogs.Alerts.warn(msg.message);
-                                    else if (msg.type === 'info')
-                                        Katrid.Forms.Dialogs.Alerts.info(msg.message);
-                                    else if ((msg.type === 'error') || (msg.type === 'danger'))
-                                        Katrid.Forms.Dialogs.Alerts.error(msg.message);
-                                    else if (msg.type === 'toast')
-                                        Katrid.Forms.Dialogs.toast(msg.message);
-                                    else if (msg.type === 'alert')
-                                        Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
-                                });
-                                if (result) {
-                                    if (result.$open || result.open)
-                                        window.open(result.$open || result.open);
-                                    if (result.download) {
-                                        let a = document.createElement('a');
-                                        a.href = result.download;
-                                        a.target = '_blank';
-                                        a.click();
-                                        return;
-                                    }
-                                }
-                                resolve(result);
-                            }
-                            else
-                                resolve(res);
-                        }
-                    })
-                        .catch(res => {
-                        console.log('error', res);
-                        reject(res);
-                    });
-                });
-            }
-        }
-        Services.Service = Service;
-        class Data extends Service {
-            static get url() {
-                return '/web/data/';
-            }
-            ;
-            reorder(model, ids, field = 'sequence', offset = 0) {
-                return this.post('reorder', { args: [model, ids, field, offset] });
-            }
-        }
-        Services.Data = Data;
-        class Attachments {
-            static delete(id) {
-                let svc = new Katrid.Services.ModelService('content.attachment');
-                svc.delete(id);
-            }
-            static upload(file, config) {
-                return new Promise((resolve, reject) => {
-                    let data = new FormData();
-                    data.append('model', config.model.name);
-                    data.append('id', config.recordId);
-                    for (let f of file.files)
-                        data.append('attachment', f, f.name);
-                    return $.ajax({
-                        url: '/web/content/upload/',
-                        type: 'POST',
-                        data: data,
-                        processData: false,
-                        contentType: false
-                    })
-                        .done((res) => {
-                        resolve(res);
-                    });
-                });
-            }
-        }
-        Services.Attachments = Attachments;
-        class Auth extends Service {
-            static login(username, password) {
-                return this.$post('/web/login/', { username: username, password: password });
-            }
-        }
-        class Upload {
-            static callWithFiles(config) {
-                let { model, method, file, vm, data } = config;
-                let form = new FormData();
-                let files = file.files;
-                if (files.length === 1)
-                    form.append('files', file.files[0]);
-                else
-                    files.map(f => form.append('files[]', f));
-                let url = `/web/file/upload/${model.name}/${method}/`;
-                if (vm?.record?.id)
-                    form.append('id', vm.record.id);
-                console.debug('data', data);
-                if (data) {
-                    Object.entries(data).map(([k, v]) => {
-                        form.append(k, v);
-                        console.debug(k, v);
-                    });
-                }
-                return Service.$fetch(url, {
-                    url,
-                    method: 'POST',
-                    body: form,
-                }).then(res => res.json());
-            }
-            static sendFile(config) {
-                let { model, method, file, vm } = config;
-                let form = new FormData();
-                let files = file.files;
-                if (files.length === 1)
-                    form.append('files', file.files[0]);
-                else
-                    files.map(f => form.append('files[]', f));
-                let url = `/web/file/upload/${model.name}/${method}/`;
-                if (vm?.record?.id)
-                    form.append('id', vm.record.id);
-                let dataSource = vm?.dataSource;
-                $.ajax({
-                    url: url,
-                    data: form,
-                    processData: false,
-                    contentType: false,
-                    type: 'POST',
-                    success: (data) => {
-                        if (dataSource)
-                            dataSource.refresh();
-                        Katrid.Forms.Dialogs.Alerts.success('Operação realizada com sucesso.');
-                    }
-                });
-            }
-            static uploadTo(url, file) {
-                let form = new FormData();
-                form.append('files', file.files[0]);
-                return $.ajax({
-                    url: url,
-                    data: form,
-                    processData: false,
-                    contentType: false,
-                    type: 'POST',
-                    success: (data) => {
-                        Katrid.Forms.Dialogs.Alerts.success('Arquivo enviado com sucesso!');
-                    }
-                });
-            }
-        }
-        Services.Upload = Upload;
-        Services.data = new Data('');
-        function post(url, data) {
-            return fetch(url, {
-                method: 'POST',
-                body: JSON.stringify(data),
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-            }).then(res => res.json());
-        }
-        Services.post = post;
-        async function downloadBytes(res) {
-            let bytes = await res.blob();
-            let contentType = res.headers.get('Content-Type');
-            let name = res.headers.get('Content-Disposition');
-            let url = URL.createObjectURL(bytes);
-            if (name?.includes('filename='))
-                name = name.split('filename=', 2)[1];
-            if (contentType.indexOf('pdf') > -1) {
-                let viewer = window.open('/pdf-viewer/pdf/web/viewer.html');
-                viewer.addEventListener('load', async () => {
-                    await viewer.PDFViewerApplication.open({ url, originalUrl: name });
-                    URL.revokeObjectURL(url);
-                });
-            }
-            else {
-                let a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.target = '_blank';
-                a.download = name;
-                document.body.append(a);
-                a.click();
-                a.remove();
-                URL.revokeObjectURL(url);
-            }
-        }
-    })(Services = Katrid.Services || (Katrid.Services = {}));
-})(Katrid || (Katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class TableWidget extends katrid.drawing.BaseWidget {
-            dump() {
-                const d = super.dump();
-                d.datasource = this.datasource?.name;
-                return d;
-            }
-        }
-        bi.TableWidget = TableWidget;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class DataToolWindow {
-            constructor(container) {
-                this.container = container;
-                this.create();
-            }
-            create() {
-                this.el = document.createElement('div');
-                this.el.className = 'data-tool-window';
-            }
-            async createDataSourceDialog(opts) {
-                let templ = `
-      <div class="modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Data Source</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-        <div class="row">
-          <div class="form-group col-6">
-            <label for="id-name">Connection</label>
-            <select class="form-select"><option>(Default)</option></select>
-          </div>
-          <div class="form-group col-6">
-            <label for="id-name">Name</label>
-            <input id="id-name" class="form-control" v-model="dataSourceDialog_name" name="name" value="${opts?.name || ''}"/>
-          </div>
-</div>
-          <div class="form-group">
-            <label for="id-command">SQL Query</label>
-            <div class="code-editor" name="commandText"></div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-              type="button"
-              class="btn btn-outline-secondary btn-ok"
-              data-bs-dismiss="modal"
-              >
-            OK
-          </button>
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-      `;
-                let dlg = $(templ)[0];
-                dlg.addEventListener('hidden.bs.modal', () => {
-                    modal.dispose();
-                    dlg.remove();
-                });
-                let domCode = dlg.querySelector('.code-editor');
-                let codeEditor = await bi.createCodeEditor(domCode, opts?.sql || 'select col from tablename', 'sql');
-                let modal = new bootstrap.Modal(dlg);
-                modal.show();
-                return {
-                    dlg,
-                    modal,
-                    btnOk: dlg.querySelector('.btn-ok'),
-                    name: dlg.querySelector('input[name=name]'),
-                    codeEditor,
-                };
-            }
-            async newDataSource() {
-                let dlg = await this.createDataSourceDialog({ name: this.designer.getValidName('dataSource') });
-                dlg.btnOk.addEventListener('click', evt => this.createDataSource(dlg.name.value, dlg.codeEditor.getValue()));
-            }
-            async editDataSource(dataSource) {
-                let dlg = await this.createDataSourceDialog({ name: dataSource.name, sql: dataSource.sql });
-                dlg.name.value = dataSource.name;
-                dlg.btnOk.addEventListener('click', evt => {
-                    this.saveDataSource(dataSource, dlg.name.value, dlg.codeEditor.getValue());
-                });
-            }
-            createDataSource(name, sql) {
-                let ds = new bi.DataSource({ report: this.designer.report, name, sql });
-                this.addDataSource(ds);
-            }
-            saveDataSource(dataSource, name, sql) {
-                dataSource.name = name;
-                dataSource.sql = sql;
-                let i = this.designer.datasources.indexOf(dataSource);
-                this.table.querySelector(`tr:nth-child(${i + 1})`).querySelector('button').innerText = name;
-            }
-            registerDataSource(dataSource) {
-                let tr = document.createElement('tr');
-                $(tr).data('datasource', dataSource);
-                let td1 = document.createElement('td');
-                let td2 = document.createElement('td');
-                let btnEdit = document.createElement('button');
-                btnEdit.className = 'btn btn-light';
-                btnEdit.addEventListener('dblclick', evt => this.editDataSource($(evt.target.closest('tr')).data('datasource')));
-                btnEdit.addEventListener('click', evt => this.designer.onSelectionChange([dataSource]));
-                btnEdit.title = 'Double click to edit';
-                btnEdit.innerText = dataSource.name;
-                let btnDelete = document.createElement('button');
-                btnDelete.className = 'btn btn-light';
-                btnDelete.addEventListener('click', evt => {
-                    console.log(this.designer);
-                    this.designer.removeObjectNotification(dataSource);
-                    tr.remove();
-                });
-                btnDelete.innerHTML = '<i class="fa fas fa-times"></i>';
-                btnDelete.title = 'Remove Data Source';
-                tr.append(td1, td2);
-                td1.appendChild(btnEdit);
-                td2.append(btnDelete);
-                this.table.tBodies[0].appendChild(tr);
-            }
-            addDataSource(dataSource) {
-                this.datasources.push(dataSource);
-                this.registerDataSource(dataSource);
-            }
-            clear() {
-                this.table.tBodies[0].innerHTML = '';
-            }
-            get datasources() {
-                return this.designer.report.datasources;
-            }
-        }
-        bi.DataToolWindow = DataToolWindow;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class ToolWindow {
-            constructor(designer, container) {
-                this.designer = designer;
-                this.template = `
-      <div class="tool-window">
-        <div class="tool-window-header"><i class="fa fa-fw fa-database"></i> Data</div>
-        <div>
-          <button type="button" id="btn-new-datasource" class="btn btn-light new-datasource">
-            Novo Data Source
-          </button>
-        </div>
-        <hr>
-        <div class="row">
-          <div class="col-12">
-            <table><tbody></tbody></table>
-          </div>
-
-        </div>
-      </div>
-    `;
-                $(container).append(this.template);
-                $(container).append(`
-      <div class="right-bar">
-        <div class="tool-button">
-          <span class="fa fa-cog fa-2x"></span>
-        </div>
-        <div class="tool-button">
-          <span class="fa fa-database fa-2x"></span>
-        </div>
-        <div id="bi-btn-code-editor" class="tool-button">
-          <span class="fa fa-code fa-2x"></span>
-        </div>
-      </div>
-      `);
-                this.btnNew = container.querySelector('.new-datasource');
-                this.btnNew.addEventListener('click', evt => this.newDataSource());
-                this.table = container.querySelector('table');
-                const btnCodeEditor = container.querySelector('#bi-btn-code-editor');
-                btnCodeEditor.addEventListener('click', evt => this.showCodeEditor());
-            }
-            async showCodeEditor() {
-                const res = await katrid.bi.showCodeEditor(this.designer.report.params, 'xml', null);
-                if (res)
-                    this.designer.report.params = res;
-            }
-            async createDataSourceDialog(opts) {
-                let templ = `
-      <div class="modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Data Source</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-        <div class="row">
-          <div class="form-group col-6">
-            <label for="id-name">Connection</label>
-            <select class="form-select"><option>(Default)</option></select>
-          </div>
-          <div class="form-group col-6">
-            <label for="id-name">Name</label>
-            <input id="id-name" class="form-control" v-model="dataSourceDialog_name" name="name" value="${opts?.name || ''}"/>
-          </div>
-</div>
-          <div class="form-group">
-            <label for="id-command">SQL Query</label>
-            <div class="code-editor" name="commandText"></div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-              type="button"
-              class="btn btn-outline-secondary btn-ok"
-              data-bs-dismiss="modal"
-              >
-            OK
-          </button>
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-      `;
-                let dlg = $(templ)[0];
-                dlg.addEventListener('hidden.bs.modal', () => {
-                    modal.dispose();
-                    dlg.remove();
-                });
-                let domCode = dlg.querySelector('.code-editor');
-                let codeEditor = await bi.createCodeEditor(domCode, opts?.sql || 'select col from tablename', 'sql');
-                let modal = new bootstrap.Modal(dlg);
-                modal.show();
-                return {
-                    dlg,
-                    modal,
-                    btnOk: dlg.querySelector('.btn-ok'),
-                    name: dlg.querySelector('input[name=name]'),
-                    codeEditor,
-                };
-            }
-            async newDataSource() {
-                let dlg = await this.createDataSourceDialog({ name: this.designer.getValidName('dataSource') });
-                dlg.btnOk.addEventListener('click', evt => this.createDataSource(dlg.name.value, dlg.codeEditor.getValue()));
-            }
-            async editDataSource(dataSource) {
-                let dlg = await this.createDataSourceDialog({ name: dataSource.name, sql: dataSource.sql });
-                dlg.name.value = dataSource.name;
-                dlg.btnOk.addEventListener('click', evt => {
-                    this.saveDataSource(dataSource, dlg.name.value, dlg.codeEditor.getValue());
-                });
-            }
-            createDataSource(name, sql) {
-                let ds = new bi.DataSource({ report: this.designer.report, name, sql });
-                this.addDataSource(ds);
-            }
-            saveDataSource(dataSource, name, sql) {
-                dataSource.name = name;
-                dataSource.sql = sql;
-                let i = this.designer.datasources.indexOf(dataSource);
-                this.table.querySelector(`tr:nth-child(${i + 1})`).querySelector('button').innerText = name;
-            }
-            registerDataSource(dataSource) {
-                let tr = document.createElement('tr');
-                $(tr).data('datasource', dataSource);
-                let td1 = document.createElement('td');
-                let td2 = document.createElement('td');
-                let btnEdit = document.createElement('button');
-                btnEdit.className = 'btn btn-light';
-                btnEdit.addEventListener('dblclick', evt => this.editDataSource($(evt.target.closest('tr')).data('datasource')));
-                btnEdit.addEventListener('click', evt => this.designer.onSelectionChange([dataSource]));
-                btnEdit.title = 'Double click to edit';
-                btnEdit.innerText = dataSource.name;
-                let btnDelete = document.createElement('button');
-                btnDelete.className = 'btn btn-light';
-                btnDelete.addEventListener('click', evt => {
-                    console.log(this.designer);
-                    this.designer.removeObjectNotification(dataSource);
-                    tr.remove();
-                });
-                btnDelete.innerHTML = '<i class="fa fas fa-times"></i>';
-                btnDelete.title = 'Remove Data Source';
-                tr.append(td1, td2);
-                td1.appendChild(btnEdit);
-                td2.append(btnDelete);
-                this.table.tBodies[0].appendChild(tr);
-            }
-            addDataSource(dataSource) {
-                this.datasources.push(dataSource);
-                this.registerDataSource(dataSource);
-            }
-            clear() {
-                this.table.tBodies[0].innerHTML = '';
-            }
-            get datasources() {
-                return this.designer.report.datasources;
-            }
-        }
-        bi.ToolWindow = ToolWindow;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class QueryPageDesigner extends katrid.bi.PageDesigner {
-            get page() {
-                return super.page;
-            }
-            set page(value) {
-                super.page = value;
-            }
-            get queryView() {
-                return this.page.queryView;
-            }
-            create() {
-                this.pageContainer = document.createElement('div');
-                this.pageContainer.className = 'query-page-editor';
-                this.pageContainer.addEventListener('click', () => {
-                    console.debug('edit table');
-                });
-                this.createEmptyPage();
-            }
-            createEmptyPage() {
-                this.elEmptyPage = document.createElement('div');
-                this.elEmptyPage.className = 'empty-page';
-                this.elEmptyPage.innerHTML = '<h3>Select a data source or data model</h3>';
-                this.pageContainer.appendChild(this.elEmptyPage);
-                let btn = document.createElement('button');
-                btn.className = 'btn btn-primary';
-                btn.textContent = 'Add Query';
-            }
-            getElement() {
-                return this.pageContainer;
-            }
-        }
-        bi.QueryPageDesigner = QueryPageDesigner;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var report;
-    (function (report) {
-        class ReportElement extends katrid.drawing.BaseWidget {
-            applyStyle() {
-            }
-        }
-        report.ReportElement = ReportElement;
-    })(report = katrid.report || (katrid.report = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var report;
-    (function (report_1) {
-        class ReportDesigner {
-            constructor(container) {
-                this.container = container;
-                this._modified = false;
-                this.loading = false;
-                this.pages = [];
-                this.create();
-                katrid.report.reportDesigner = this;
-            }
-            create() {
-                this._datasources = [];
-                this.workspace = document.createElement('div');
-                this.workspace.className = 'katrid-studio workspace';
-                this.el = document.createElement('div');
-                this.el.className = 'katrid-report-designer workspace-area';
-                const tabset = document.createElement('div');
-                tabset.className = 'tabset';
-                const nav = document.createElement('ul');
-                nav.className = 'nav nav-tabs';
-                tabset.append(nav);
-                this.tabsetElement = tabset;
-                this.container.append(tabset);
-                this.container.append(this.workspace);
-                this.toolbox = new katrid.bi.Toolbox(this.workspace);
-                this.workspace.append(this.el);
-                this.toolWindow = new katrid.bi.ToolWindow(this, this.workspace);
-                this.container.classList.add('report-designer');
-                this.createDragEvents();
-                document.querySelectorAll('.toolbox-item')
-                    .forEach((el, idx) => {
-                    el.setAttribute('draggable', 'true');
-                    el.addEventListener('dragstart', (evt) => {
-                        this.page.clearSelection();
-                        evt.dataTransfer.setData('text', el.getAttribute('data-widget'));
-                    });
-                });
-                document.querySelectorAll('.toolbox-item img').forEach(el => el.setAttribute('draggable', 'false'));
-                let el = document.querySelector('#properties-editor');
-                this.propertiesEditor = new katrid.bi.ObjectInspector(this, el);
-            }
-            onSelectionChange(selection) {
-                if (selection)
-                    this.propertiesEditor.setSelection(selection);
-                else
-                    this.propertiesEditor.setSelection([]);
-                $(this).trigger('selectionChange', selection);
-            }
-            get datasources() {
-                return this._datasources;
-            }
-            createDragEvents() {
-                this.container.addEventListener('dragover', (evt) => {
-                    let target = evt.target;
-                    if (target.closest('.band-designer'))
-                        evt.preventDefault();
-                });
-                this.container.addEventListener('drop', (evt) => {
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    this.toolItemDrop(evt.dataTransfer.getData('text'), evt);
-                });
-            }
-            toolItemDrop(widget, evt) {
-                this.createWidget(widget, evt.target, evt.offsetX, evt.offsetY);
-            }
-            createWidget(widgetName, target, x, y) {
-                let band = target.closest('.band-designer')['$object'];
-                x = x - band.x;
-                y = y - band.clientY;
-                let obj;
-                switch (widgetName) {
-                    case 'text':
-                        let text = new katrid.drawing.Text();
-                        text.name = this.getValidName('text');
-                        text.text = text.name;
-                        text.x = x;
-                        text.y = y;
-                        band.addObject(text);
-                        obj = text;
-                        break;
-                    case 'image':
-                        obj = new katrid.bi.ImageObject();
-                        obj.name = this.getValidName('image');
-                        obj.x = x;
-                        obj.y = y;
-                        band.addObject(obj);
-                        break;
-                    case 'barcode':
-                        let img = new katrid.bi.Barcode();
-                        img.name = this.getValidName('image');
-                        img.left = x;
-                        img.top = y;
-                        band.addObject(img);
-                        obj = img;
-                        break;
-                }
-                this.page.addToSelection(obj);
-            }
-            newReport() {
-                const rep = new report_1.Report();
-                rep.newPage();
-                this.loadReport(rep);
-                return rep;
-            }
-            get report() {
-                return this._report;
-            }
-            set report(value) {
-                this._report = value;
-            }
-            get page() {
-                return this._page;
-            }
-            set page(value) {
-                if (value !== this._page) {
-                    if (this._page)
-                        this._page.deactivate();
-                    this._page = value;
-                    if (value) {
-                        value.activate();
-                        this.el.append(value.container);
-                    }
-                }
-            }
-            getValidName(prefix) {
-                let n = 0;
-                prefix = prefix[0].toLowerCase() + prefix.slice(1);
-                while (true) {
-                    n++;
-                    let found = false;
-                    let newName = prefix + n;
-                    for (let obj of Array.from(this._report.objects()))
-                        if (obj.name === newName) {
-                            found = true;
-                            break;
-                        }
-                    if (!found)
-                        return newName;
-                }
-            }
-            loadReport(report) {
-                this.clear();
-                this._report = report;
-                this._datasources = report.datasources;
-                for (let ds of this._datasources)
-                    this.toolWindow.registerDataSource(ds);
-                for (let page of report.pages)
-                    this.pages.push(this.addPage(page));
-                if (this.pages.length)
-                    this.page = this.pages[0];
-            }
-            async widgetExecuteEditor(widget) {
-                const editorCls = katrid.bi.getComponentEditor(widget.constructor);
-                if (editorCls) {
-                    const editor = new editorCls(widget);
-                    await editor.showEditor();
-                }
-            }
-            async showOpenFilePicker() {
-                [this.fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Reptile Report (*.report)', accept: { 'application/json': ['.report'] } }] });
-                const file = await this.fileHandle.getFile();
-                const contents = await file.text();
-                this.load(JSON.parse(contents), file.name);
-            }
-            async showSaveFilePicker() {
-                if (!this.fileHandle)
-                    this.fileHandle = await window.showSaveFilePicker({ types: [{ description: 'Reptile Report (*.report)', accept: { 'application/json': ['.report'] } }] });
-                const file = await this.fileHandle.createWritable();
-                console.log('content', this._report.dump);
-                const content = this.dump();
-                const blob = new Blob([JSON.stringify(this.dump())], { type: 'application/json' });
-                await file.write(blob);
-                await file.close();
-            }
-            removeObjectNotification(obj) {
-                if (!this.loading)
-                    for (let child of Array.from(this._report.objects()))
-                        child.onRemoveObjectNotification(obj);
-            }
-            dump() {
-                return this._report.dump();
-            }
-            load(info, filename) {
-                this.clear();
-                const rep = new report_1.Report();
-                rep.filename = this.filename = filename;
-                rep.load(info);
-                this.loadReport(rep);
-                return rep;
-            }
-            set filename(filename) {
-                document.title = filename ? filename + ' - Report Editor' : 'Report Editor';
-            }
-            clear() {
-                if (this._page)
-                    this._page.deactivate();
-                this.filename = '';
-                this.fileHandle = null;
-                this.pages = [];
-                this._report = null;
-            }
-            registerDataSource(ds) {
-                ds.report = this._report;
-                if (!this._datasources.includes(ds)) {
-                    this._datasources.push(ds);
-                    this.toolWindow.registerDataSource(ds);
-                }
-            }
-            removeObjectNotification(obj) {
-                if (!this.report.loading) {
-                    for (let child of Array.from(this.report.getObjects())) {
-                        child.onRemoveObjectNotification(obj);
-                    }
-                }
-            }
-            addPage(page) {
-                this.setModified();
-                let p = page.createDesigner();
-                this.pages.push(p);
-                return p;
-            }
-            newPage(type) {
-                const page = this.report.newPage(type);
-                const d = this.addPage(page);
-                page.name = this.report.getValidName('page');
-                return d;
-            }
-            setModified(modified = true) {
-                this._modified = modified;
-            }
-        }
-        report_1.ReportDesigner = ReportDesigner;
-    })(report = katrid.report || (katrid.report = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var report;
-    (function (report) {
-        class BasePage extends katrid.bi.BasePage {
-        }
-        report.BasePage = BasePage;
-    })(report = katrid.report || (katrid.report = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var report;
-    (function (report) {
-        let PageType;
-        (function (PageType) {
-            PageType["Banded"] = "banded";
-            PageType["Query"] = "query";
-            PageType["Dashboard"] = "dashboard";
-            PageType["Document"] = "document";
-            PageType["Spreadsheet"] = "spreadsheet";
-        })(PageType = report.PageType || (report.PageType = {}));
-        class Report {
-            constructor(pageType = PageType.Banded) {
-                this.pages = [];
-                this.datasources = [];
-                this.loading = false;
-                this.onLoadCallbacks = [];
-                this.cache = {};
-                this.reportType = pageType;
-            }
-            static fromMetadata(metadata) {
-                const rep = new this(PageType.Banded);
-                rep.name = metadata.name;
-                return rep;
-            }
-            addPage(page) {
-                this.pages.push(page);
-                page.report = this;
-            }
-            removeDataSource(ds) {
-                const idx = this.datasources.indexOf(ds);
-                if (idx > -1) {
-                    this.datasources.splice(idx, 1);
-                }
-            }
-            getValidName(prefix) {
-                let n = 0;
-                prefix = prefix[0].toLowerCase() + prefix.slice(1);
-                while (true) {
-                    n++;
-                    let newName = prefix + n;
-                    let found = false;
-                    for (let obj of Array.from(this.getObjects())) {
-                        if (obj.name === newName) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found)
-                        return newName;
-                }
-            }
-            findObject(name) {
-                for (let obj of this.getObjects())
-                    if (obj.name === name) {
-                        return obj;
-                    }
-            }
-            *getObjects() {
-                for (let ds of this.datasources) {
-                    yield ds;
-                }
-                for (let p of this.pages) {
-                    yield p;
-                    yield* p.allObjects();
-                }
-            }
-            newPage(type) {
-                type ??= PageType.Banded;
-                let page;
-                if (type === PageType.Banded) {
-                    page = new report.BandedPage();
-                }
-                else {
-                    page = new katrid.bi.QueryPage();
-                }
-                this.addPage(page);
-                return page;
-            }
-            addDataSource(datasource) {
-                this.datasources.push(datasource);
-            }
-            dump() {
-                return {
-                    report: {
-                        version: 1,
-                        type: this.reportType,
-                        pages: this.pages.map(page => page.dump()),
-                        datasources: this.datasources.map(datasource => datasource.dump()),
-                    }
-                };
-            }
-            loadPage(pageInfo) {
-                if (!pageInfo.pageType || pageInfo.pageType === PageType.Banded) {
-                    const p = new report.BandedPage();
-                    p.report = this;
-                    p.load(pageInfo);
-                    return p;
-                }
-            }
-            loadDataSource(ds) {
-                const datasource = new katrid.bi.DataSource();
-                datasource.load(ds);
-                return datasource;
-            }
-            clear() {
-                this.pages = [];
-                this.datasources = [];
-            }
-            load(data) {
-                this.clear();
-                try {
-                    this.loading = true;
-                    this.params = data.report.params;
-                    this.datasources = data.report.datasources.map((ds) => this.loadDataSource(ds));
-                    this.pages = data.report.pages.map((p, i) => this.loadPage(p));
-                    for (const cb of this.onLoadCallbacks) {
-                        cb(this);
-                    }
-                }
-                finally {
-                    this.loading = false;
-                }
-            }
-            addLoadCallback(cb) {
-                this.onLoadCallbacks.push(cb);
-            }
-        }
-        report.Report = Report;
-    })(report = katrid.report || (katrid.report = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var report;
-    (function (report) {
-        class BandedObject extends report.ReportElement {
-        }
-        report.BandedObject = BandedObject;
-        class Band extends report.ReportElement {
-            constructor() {
-                super(...arguments);
-                this._sizerHeight = 6;
-                this._resizing = false;
-                this._dy = 0;
-                this._minHeight = 0;
-            }
-            defaultProps() {
-                super.defaultProps();
-                this.canGrow = false;
-                this.canShrink = false;
-                this.objects = [];
-                this._headerHeight = 20;
-                this.height = 40;
-                this.width = 400;
-            }
-            onRemoveNotification(obj) {
-            }
-            getDesignRect() {
-                return new DOMRect(this.x, this.y, this.width, this.height + this._headerHeight + this._sizerHeight);
-            }
-            reorderBy(d) {
-            }
-            get clientY() {
-                return this.y + this._headerHeight;
-            }
-            get report() {
-                return this.page.report;
-            }
-            get background() {
-                return this._background;
-            }
-            set background(value) {
-                this._background = value;
-                this.applyStyle();
-            }
-            get totalHeight() {
-                return this.height + this._headerHeight + this._sizerHeight;
-            }
-            addObject(obj) {
-                if (!this.objects.includes(obj)) {
-                    this.objects.push(obj);
-                    obj.parent = this;
-                    return this.appendToDesigner(obj);
-                }
-            }
-            validateHeight() {
-                const minHeight = this.getMinHeight();
-                if (this.height < minHeight) {
-                    this.height = minHeight;
-                    this.pageDesigner.invalidateBands();
-                }
-            }
-            dump() {
-                const d = super.dump();
-                d.x = undefined;
-                d.y = undefined;
-                return d;
-            }
-            appendToDesigner(obj) {
-                if (this.pageDesigner) {
-                    const des = this.pageDesigner.addObject(obj);
-                    this.elBand.append(obj.graphic);
-                    return des;
-                }
-            }
-            getHeaderCaption() {
-                return this.name + ': ' + this.getType();
-            }
-            _createDesigner() {
-                this.pageDesigner ??= this.page.designer;
-                let bandDraw = katrid.drawing.g({ class: 'band-designer', transform: `translate(${this.x}, ${this.y})` });
-                const header = this._header = katrid.drawing.g({
-                    transform: `translate(${this.x}, ${this.y})`,
-                    class: 'band-header',
-                });
-                katrid.data(bandDraw.$el, 'band', this);
-                this.graphic = bandDraw;
-                this.elBand = katrid.drawing.g({ transform: `translate(0, ${this._headerHeight || 20})`, class: 'band' });
-                this._rect = this.elBand.rect(0, 0, this.width, this.height);
-                this._rect.attr('fill', 'url(#grid)');
-                let canvas = this.page.designer;
-                bandDraw.append(header);
-                bandDraw.append(this.elBand);
-                bandDraw.append(this.createSizer(bandDraw));
-                this.bandDesign = bandDraw;
-                this.pageDesigner.append(bandDraw);
-                const designer = this.page.designer;
-                let menu = this.createDesignerContextMenu(designer);
-                this.graphic.$el.addEventListener('contextmenu', (event) => {
-                    this.pageDesigner.selection = [];
-                    event.stopPropagation();
-                    event.preventDefault();
-                    menu.show(event.pageX, event.pageY);
-                });
-                for (let obj of this.objects) {
-                    obj.drawDesign(canvas);
-                }
-            }
-            createDesigner() {
-                this._createDesigner();
-                this.redraw();
-            }
-            createGroup() {
-                const band = this;
-                const groupHeader = new GroupHeader();
-                groupHeader.name = this.pageDesigner.getValidName('groupHeader');
-                if (band.groupHeader) {
-                    groupHeader.parentBand = band.groupHeader;
-                }
-                groupHeader.dataBand = band;
-                this.pageDesigner.addBand(groupHeader);
-                band.groupHeader = groupHeader;
-                groupHeader.footer = new GroupFooter();
-                groupHeader.footer.name = this.pageDesigner.getValidName('groupFooter');
-                groupHeader.footer.header = groupHeader;
-                this.pageDesigner.addBand(groupHeader.footer);
-            }
-            createSizer(bandDesigner) {
-                let sizer = katrid.drawing.rect(this.x, this._headerHeight + this.height, this.width, this._sizerHeight, { class: 'band-sizer' });
-                sizer.$el.addEventListener('pointerdown', event => this._sizerMouseDown(event));
-                sizer.$el.addEventListener('pointerup', event => this._sizerMouseUp(event));
-                sizer.$el.addEventListener('pointermove', event => this._sizerMouseMove(event));
-                this.sizer = sizer;
-                return sizer;
-            }
-            createDesignerContextMenu(designer) {
-                const menu = new katrid.ui.ContextMenu();
-                if (this instanceof DataBand) {
-                    menu.add('Add Group', () => this.createGroup());
-                    menu.add('Add Header', () => {
-                        const band = new HeaderBand();
-                        band.name = this.pageDesigner.getValidName('header');
-                        this.header = band;
-                        band.parentBand = this;
-                        designer.addBand(band);
-                    });
-                    menu.add('Add Footer', () => {
-                        const band = new FooterBand();
-                        band.name = this.pageDesigner.getValidName('footer');
-                        this.footer = band;
-                        band.parentBand = this;
-                        designer.addBand(band);
-                    });
-                    menu.add('Add Detail', () => {
-                        const band = new DataBand();
-                        band.name = this.pageDesigner.getValidName('detail');
-                        band.parent = this;
-                        designer.addBand(band);
-                    });
-                    menu.addSeparator();
-                }
-                menu.add('Delete', () => {
-                    this.destroyDesigner();
-                    this.pageDesigner.invalidateBands();
-                });
-                return menu;
-            }
-            getMinHeight() {
-                return Math.max(...this.objects.map(o => o.y + o.height), 0);
-            }
-            _sizerMouseDown(event) {
-                this._resizing = true;
-                event.target.setPointerCapture(event.pointerId);
-                this._dy = event.offsetY;
-                event.stopPropagation();
-                event.preventDefault();
-                this._minHeight = this.getMinHeight();
-                this.redraw();
-            }
-            _sizerMouseMove(event) {
-                if (this._resizing) {
-                    event.stopPropagation();
-                    event.preventDefault();
-                    this.sizerMoveBy(event.offsetY - this._dy);
-                    this._dy = event.offsetY;
-                }
-            }
-            _sizerMouseUp(event) {
-                this._resizing = false;
-                event.target.releasePointerCapture(event.pointerId);
-                event.stopPropagation();
-                if (this.height < this._minHeight) {
-                    this.height = this._minHeight;
-                }
-                this.pageDesigner.invalidateBands();
-            }
-            sizerMoveBy(dy) {
-                if (this.pageDesigner?.zoom !== 100) {
-                    dy = dy / (this.pageDesigner.zoom / 100);
-                }
-                if (this.height + dy < this._minHeight) {
-                    return false;
-                }
-                this.height += dy;
-                this.pageDesigner.invalidateBands();
-            }
-            destroyDesigner() {
-                if (this.pageDesigner) {
-                    this.pageDesigner.removeBand(this);
-                }
-            }
-            redraw() {
-                super.redraw();
-                this.width = this.page.width;
-                this.bandDesign.attr('transform', `translate(${this.x}, ${this.y})`);
-                this.sizer.attr('x', this.x);
-                this.sizer.attr('y', this._headerHeight + this.height);
-                this.sizer.attr('width', this.width);
-                this._rect.attr('height', this.height);
-                this._rect.attr('width', this.width);
-                this._header.clear();
-                this._header.rect(0, 0, this.width, this._headerHeight);
-                this._header.text(10, this._headerHeight - 6, this.getHeaderCaption(), { fill: 'white' });
-            }
-            getClassByName(name) {
-                let cls = katrid.bi.componentRegistry[name];
-                if (cls)
-                    return cls;
-                return super.getClassByName(name);
-            }
-        }
-        report.Band = Band;
-        class DataBand extends Band {
-            static { this.type = 'DataBand'; }
-            get datasource() {
-                return this._datasource;
-            }
-            set datasource(value) {
-                this._datasource = value;
-            }
-            load(info) {
-                super.load(info);
-                if (info.datasource || info.groupHeader || info.header || info.footer || info.parent) {
-                    this.report.addLoadCallback(() => this.onLoad(info));
-                }
-            }
-            onRemoveNotification(obj) {
-                super.onRemoveNotification(obj);
-                if (obj === this._datasource) {
-                    this._datasource = null;
-                }
-                else if (obj === this.header) {
-                    this.header = null;
-                }
-                else if (obj === this.groupHeader) {
-                    if (this.groupHeader.parentBand) {
-                        this.groupHeader = this.groupHeader.parentBand;
-                        this.groupHeader.dataBand = this;
-                    }
-                    else {
-                        this.groupHeader = null;
-                    }
-                }
-            }
-            dump() {
-                let d = super.dump();
-                if (this._datasource)
-                    d.datasource = this._datasource.name;
-                if (this.groupHeader)
-                    d.groupHeader = this.groupHeader.name;
-                if (this.header)
-                    d.header = this.header.name;
-                if (this.footer)
-                    d.footer = this.footer.name;
-                if (this.parentBand)
-                    d.parent = this.parentBand.name;
-                return d;
-            }
-            onLoad(info) {
-                const rep = this.report;
-                if (info.datasource)
-                    this._datasource = rep.findObject(info.datasource);
-                if (info.groupHeader)
-                    this.groupHeader = rep.findObject(info.groupHeader);
-                if (info.header)
-                    this.header = rep.findObject(info.header);
-                if (info.footer)
-                    this.footer = rep.findObject(info.footer);
-                if (info.parent)
-                    this.parentBand = rep.findObject(info.parent);
-            }
-        }
-        report.DataBand = DataBand;
-        class PageHeader extends Band {
-            static { this.type = 'PageHeader'; }
-        }
-        report.PageHeader = PageHeader;
-        class PageFooter extends Band {
-            static { this.type = 'PageFooter'; }
-        }
-        report.PageFooter = PageFooter;
-        class ReportTitle extends Band {
-            static { this.type = 'ReportTitle'; }
-        }
-        report.ReportTitle = ReportTitle;
-        class HeaderBand extends Band {
-            static { this.type = 'HeaderBand'; }
-            remove() {
-                super.remove();
-                if (this.parentBand)
-                    this.parentBand.header = null;
-            }
-        }
-        report.HeaderBand = HeaderBand;
-        class FooterBand extends Band {
-            static { this.type = 'FooterBand'; }
-            remove() {
-                super.remove();
-                if (this.parentBand)
-                    this.parentBand.footer = null;
-            }
-        }
-        report.FooterBand = FooterBand;
-        class GroupHeader extends Band {
-            static { this.type = 'GroupHeader'; }
-            remove() {
-                super.remove();
-                if (this.footer) {
-                    this.footer.destroyDesigner();
-                }
-            }
-            onRemoveNotification(obj) {
-                if (obj === this.footer) {
-                    this.remove();
-                }
-                else if (obj === this.parentBand) {
-                    if (this.parentBand.parentBand) {
-                        this.parentBand = this.parentBand.parentBand;
-                    }
-                    else {
-                        this.parentBand = null;
-                    }
-                }
-            }
-            dump() {
-                let d = super.dump();
-                if (this.expression)
-                    d.expression = this.expression;
-                if (this.footer)
-                    d.footer = this.footer.name;
-                if (this.parentBand)
-                    d.parent = this.parentBand.name;
-                return d;
-            }
-            load(info) {
-                super.load(info);
-                this.expression = info.expression || '';
-                if (info.parent || info.footer) {
-                    this.report.addLoadCallback(() => this.onLoad(info));
-                }
-            }
-            onLoad(info) {
-                if (info.parent) {
-                    this.parentBand = this.report.findObject(info.parent);
-                }
-                if (info.footer) {
-                    this.footer = this.report.findObject(info.footer);
-                }
-            }
-        }
-        report.GroupHeader = GroupHeader;
-        class GroupFooter extends Band {
-            static { this.type = 'GroupFooter'; }
-            remove() {
-                super.remove();
-                console.debug('remove', this);
-                if (this.header) {
-                    this.header.remove();
-                }
-            }
-            load(info) {
-                super.load(katrid.data);
-                if (info.header) {
-                    this.report.addLoadCallback(() => this.onLoad(info));
-                }
-            }
-            onLoad(info) {
-                if (info.header) {
-                    this.header = this.report.findObject(info.header);
-                }
-            }
-        }
-        report.GroupFooter = GroupFooter;
-        class SummaryBand extends Band {
-            static { this.type = 'SummaryBand'; }
-        }
-        report.SummaryBand = SummaryBand;
-    })(report = katrid.report || (katrid.report = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var report;
-    (function (report) {
-        class BandedObjectDesigner extends katrid.design.WidgetDesigner {
-            _mouseUp() {
-                if (this.moved) {
-                    for (let obj of this.designer.selection) {
-                        const py = this.pageY;
-                        if (!(py >= obj.parent.clientY && py <= (obj.parent.clientY + obj.parent.height))) {
-                            for (let b of this.page.bands)
-                                if (b !== obj.parent) {
-                                    if (py >= b.clientY && py <= (b.clientY + b.height)) {
-                                        this.moveToParent(b);
-                                    }
-                                }
-                        }
-                    }
-                }
-            }
-        }
-        report.BandedObjectDesigner = BandedObjectDesigner;
-        class BandDesigner extends katrid.bi.PageDesigner {
-            defaultProps() {
-                super.defaultProps();
-                this.snapToGrid = true;
-            }
-            removeObjectNotification() {
-            }
-            create() {
-                super.create();
-                let pattern = katrid.drawing.draw('pattern', {
-                    id: 'grid',
-                    width: this.gridX * 2,
-                    height: this.gridY * 2,
-                    patternUnits: 'userSpaceOnUse'
-                });
-                pattern.path({ d: 'M8 0 L0 0 0 8', fill: 'none', stroke: '#e9e9e9', 'stroke-width': 0.5 });
-                let defs = katrid.drawing.draw('defs');
-                this.append(defs);
-                defs.append(pattern);
-            }
-            loadBands() {
-                try {
-                    this.loading = true;
-                    for (const b of this.page.bands) {
-                        this.addBand(b);
-                    }
-                }
-                finally {
-                    this.loading = false;
-                }
-                this.invalidateBands();
-            }
-            addBand(band) {
-                const bandedPage = this.page;
-                band.page = bandedPage;
-                if (!bandedPage.bands.includes(band)) {
-                    bandedPage.addBand(band);
-                }
-                band.pageDesigner = this;
-                band.createDesigner();
-                if (!this.loading) {
-                    this.invalidateBands();
-                }
-                for (const obj of band.objects) {
-                    band.appendToDesigner(obj);
-                }
-                this.onNotification?.(band, 'add');
-            }
-            newBand(bandType) {
-                let b;
-                switch (bandType) {
-                    case 'PageHeader':
-                        b = new report.PageHeader();
-                        break;
-                    case 'ReportTitle':
-                        b = new report.ReportTitle();
-                        break;
-                    case 'DataBand':
-                        b = new report.DataBand();
-                        break;
-                    case 'GroupHeader':
-                        b = new report.GroupHeader();
-                        break;
-                    case 'GroupFooter':
-                        b = new report.GroupFooter();
-                        break;
-                    case 'SummaryBand':
-                        b = new report.SummaryBand();
-                        break;
-                    case 'PageFooter':
-                        b = new report.PageFooter();
-                        break;
-                    case 'TableBand':
-                        b = new report.TableBand();
-                        break;
-                }
-                b.name = this.getValidName(bandType);
-                this.addBand(b);
-                return b;
-            }
-            getValidName(prefix) {
-                return this.report.getValidName(prefix);
-            }
-            invalidate() {
-                this.invalidateBands();
-            }
-            invalidateBands() {
-                this.destroyGrabHandles();
-                let bands = [];
-                let page = this.page;
-                for (let b of page.bands)
-                    if (b instanceof report.PageHeader) {
-                        bands.push(b);
-                    }
-                for (let b of page.bands)
-                    if (b instanceof report.ReportTitle) {
-                        bands.push(b);
-                    }
-                for (let b of page.bands)
-                    if (b instanceof report.DataBand) {
-                        bands = bands.concat(this._rearrangeBand(b));
-                    }
-                for (let b of page.bands)
-                    if ((b instanceof report.SummaryBand) || (b instanceof report.TableBand)) {
-                        bands.push(b);
-                    }
-                for (let b of page.bands)
-                    if (b instanceof report.PageFooter) {
-                        bands.push(b);
-                    }
-                for (let b of page.bands) {
-                }
-                let y = 0;
-                for (let b of bands) {
-                    b.y = y;
-                    b.redraw();
-                    y += b.totalHeight;
-                }
-                page.bands = bands;
-                page.objects = bands;
-                this.adjustPageHeight();
-            }
-            getDesignerHeight() {
-                let page = this.page;
-                let h = 0;
-                for (let b of page.bands)
-                    h += b.totalHeight;
-                return h;
-            }
-            adjustPageHeight() {
-                this.resize(this.width, this.getDesignerHeight());
-            }
-            _resize() {
-                super._resize();
-                const page = this.page;
-                for (let b of page.bands) {
-                    b.width = this.width;
-                    b.redraw();
-                }
-            }
-            _rearrangeBand(b) {
-                let bands = [];
-                if (b.header)
-                    bands.push(b.header);
-                if (b.groupHeader) {
-                    let g = b.groupHeader;
-                    bands.push(g);
-                    while (g.parentBand) {
-                        bands.splice(0, 0, g.parentBand);
-                        g = g.parentBand;
-                    }
-                }
-                bands.push(b);
-                if (b.groupHeader) {
-                    let g = b.groupHeader;
-                    if (g.footer) {
-                        bands.push(g.footer);
-                        while (g.parentBand) {
-                            bands.push(g.parentBand.footer);
-                            g = g.parentBand;
-                        }
-                    }
-                }
-                if (b.footer)
-                    bands.push(b.footer);
-                return bands;
-            }
-            get selectedBand() {
-                return this._selectedBand;
-            }
-            set selectedBand(value) {
-                if (this._selectedBand) {
-                    this._selectedBand.bandDesign.$el.classList.remove('selected');
-                }
-                this._selectedBand = value;
-                if (value) {
-                    value.bandDesign.$el.classList.add('selected');
-                    this.selection.push(value);
-                    this.onSelectionChange();
-                }
-            }
-            createGrabHandles(obj) {
-                if (!(obj instanceof report.Band)) {
-                    super.createGrabHandles(obj);
-                }
-            }
-            removeBand(band) {
-                band.bandDesign.remove();
-                this.page.removeBand(band);
-                this.invalidateBands();
-            }
-            onKeyDown(event) {
-                if (this.selectedBand && event.key !== 'c' && event.key !== 'v' && event.key !== 'x' && event.key !== 'z') {
-                    switch (event.key) {
-                        case 'Delete':
-                            if (!event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey) {
-                                this.removeBand(this.selectedBand);
-                            }
-                            event.preventDefault();
-                            event.stopPropagation();
-                            break;
-                        case 'ArrowUp':
-                            if (event.shiftKey) {
-                                this.selectedBand.sizerMoveBy(-this.gridY);
-                            }
-                            else if (!event.ctrlKey) {
-                                this.selectedBand.reorderBy(-1);
-                            }
-                            event.preventDefault();
-                            event.stopPropagation();
-                            break;
-                        case 'ArrowDown':
-                            if (event.shiftKey) {
-                                this.selectedBand.sizerMoveBy(this.gridY);
-                            }
-                            else if (!event.ctrlKey) {
-                                this.selectedBand.reorderBy(-1);
-                            }
-                            event.preventDefault();
-                            event.stopPropagation();
-                            break;
-                    }
-                }
-                else {
-                    super.onKeyDown(event);
-                }
-            }
-            applySelectionBox(rect) {
-                super.applySelectionBox(rect);
-                if (!this.selection.length) {
-                    let selBand;
-                    for (let b of this.page.bands)
-                        if (katrid.drawing.rectInRect(rect, b.bandDesign.$el.getBoundingClientRect())) {
-                            selBand = b;
-                        }
-                    this.selectedBand = selBand;
-                }
-            }
-            onSelectionChange() {
-                super.onSelectionChange();
-                if (!this.selection.length || (this.selection.length === 1 && !(this.selection[0] instanceof report.Band))) {
-                    this.selectedBand = null;
-                }
-            }
-            moveObjectToBand(obj, band) {
-                let ny = obj.clientY - band.clientY;
-                obj.remove();
-                obj.y = ny;
-                obj.redraw();
-                band.addObject(obj);
-            }
-            onSelectionMoved() {
-                super.onSelectionMoved();
-                for (let obj of this.selection) {
-                    if (!obj.parent)
-                        continue;
-                    let py = obj.clientY;
-                    if (!(py >= obj.parent.clientY && py <= (obj.parent.clientY + obj.parent.height))) {
-                        for (let b of this.page.bands)
-                            if (b !== obj.parent) {
-                                if (py >= b.clientY && py <= (b.clientY + b.height)) {
-                                    this.moveObjectToBand(obj, b);
-                                    break;
-                                }
-                            }
-                    }
-                }
-            }
-            toolItemDragOver(evt) {
-                let target = evt.target;
-                if (target.closest('.band-designer'))
-                    evt.preventDefault();
-            }
-            createWidget(widgetName, target, x, y) {
-                let band = katrid.data(target.closest('.band-designer'), 'band');
-                x -= band.x;
-                y -= band.clientY;
-                let cls = katrid.bi.componentRegistry[widgetName];
-                let obj = new cls();
-                obj.name = this.getValidName(widgetName);
-                obj.x = x;
-                obj.y = y;
-                switch (widgetName.toLowerCase()) {
-                    case 'text':
-                        let text = obj;
-                        text.text = text.name;
-                        break;
-                    case 'subreport':
-                        let subreport = obj;
-                        subreport.page = this.reportDesigner.newPage(this.report.reportType, subreport.name).page;
-                        break;
-                }
-                band.addObject(obj);
-                band.validateHeight();
-                this.setSelection([obj]);
-            }
-            pasteObject(obj) {
-                if (this._selectedBand) {
-                    return this._selectedBand.addObject(obj);
-                }
-                else {
-                    const page = this.page;
-                    return page.bands[0].addObject(obj);
-                }
-            }
-            showConfigWizard() {
-                return;
-                let btn = document.createElement('button');
-                btn.innerHTML = '<i class="fa-duotone fa-fw fa-cog"></i> Config Bands';
-                btn.type = 'button';
-                btn.className = 'btn btn-primary';
-                this._configButton = btn;
-                this.$el.parentElement.appendChild(btn);
-            }
-            hideConfigWizard() {
-                this._configButton?.remove();
-            }
-            onConfigClick(event) {
-                const menu = new katrid.ui.ContextMenu();
-                menu.add('Add Report Title', () => this.newBand('ReportTitle'));
-                menu.add('Add Data Band', () => this.newBand('DataBand'));
-                menu.add('Add Table Band', () => this.newBand('TableBand'));
-                menu.add('Add Page Header', () => this.newBand('PageHeader'));
-                menu.add('Add Page Footer', () => this.newBand('PageFooter'));
-                menu.add('Add Summary', () => this.newBand('SummaryBand'));
-                menu.show(event.clientX, event.clientY);
-            }
-        }
-        report.BandDesigner = BandDesigner;
-    })(report = katrid.report || (katrid.report = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var report;
-    (function (report) {
-        class TableBand extends report.Band {
-            constructor() {
-                super(...arguments);
-                this.headerVisible = true;
-                this.footerVisible = true;
-            }
-            static { this.type = 'TableBand'; }
-            defaultProps() {
-                super.defaultProps();
-                this.canGrow = true;
-                this.canShrink = true;
-                this.height = 100;
-            }
-            get datasource() {
-                return this._datasource;
-            }
-            set datasource(value) {
-                this._datasource = value;
-            }
-            load(info) {
-                super.load(info);
-                this.headerVisible = info.headerVisible;
-                this.footerVisible = info.footerVisible;
-                if (info.datasource || info.groupHeader || info.header || info.footer || info.parent) {
-                    this.report.addLoadCallback(() => this.onLoad(info));
-                }
-            }
-            onLoad(info) {
-                const rep = this.report;
-                if (info.datasource)
-                    this._datasource = rep.findObject(info.datasource);
-            }
-            dump() {
-                let d = super.dump();
-                if (this._datasource)
-                    d.datasource = this._datasource.name;
-                d.headerVisible = this.headerVisible;
-                d.footerVisible = this.footerVisible;
-                return d;
-            }
-            _createDesigner() {
-                super._createDesigner();
-                this.table = document.createElement('table');
-                this.table.className = 'table table-sm table-striped table-bordered';
-                this.table.innerHTML = `
-      <thead>
-      <tr><th>Column 1</th><th>Column 2</th></tr>
-      </thead>
-      <tbody>
-      <tr><td>1</td><td>2</td></tr>
-      </tbody>
-      `;
-                this.table.querySelector('td').addEventListener('dblclick', evt => console.debug('dbl click'));
-                let foreign = katrid.drawing.draw('foreignObject', { x: 0, y: 0, width: this.width, height: this.height });
-                foreign.$el.append(this.table);
-                this.elBand.append(foreign);
-            }
-            createDesignerContextMenu(designer) {
-                const menu = new Katrid.Forms.ContextMenu();
-                menu.add('Table Editor', event => {
-                    this.showTableEditor(event);
-                });
-                menu.add('Columns...', () => {
-                    this.selectColumns();
-                });
-                menu.add('Group by...', () => {
-                    this.destroyDesigner();
-                    this.pageDesigner.invalidateBands();
-                });
-                menu.addSeparator();
-                menu.add('Delete', () => {
-                    this.destroyDesigner();
-                    this.pageDesigner.invalidateBands();
-                });
-                return menu;
-            }
-            createOutlineContextMenu() {
-                const menu = new Katrid.Forms.ContextMenu();
-            }
-            redraw() {
-                super.redraw();
-                this.table.parentElement.style.width = this.width + 'px';
-                this.table.parentElement.style.height = this.height + 'px';
-            }
-            showTableEditor(evt) {
-                new TableEditor(this.pageDesigner, this.table).showEditorToolbar();
-            }
-            selectColumns() {
-                console.error('Not implemented');
-            }
-            selectColumn(col) {
-            }
-        }
-        report.TableBand = TableBand;
-        function createTextToolbarEditor() {
-            const tb = new katrid.ui.Toolbar();
-            tb.addButton({ iconClass: 'fa fa-bold', onClick: () => { } });
-            tb.addButton({ iconClass: 'fa fa-italic', onClick: () => { } });
-            tb.addButton({ iconClass: 'fa fa-underline', onClick: () => { } });
-            return tb;
-        }
-        class Table {
-            constructor() {
-                this.allowCellSelection = true;
-                this.allowRangeSelection = true;
-            }
-            create() {
-                this.table = document.createElement('table');
-                this.table.className = 'table table-sm table-striped table-bordered';
-            }
-            addRow(data) {
-                const tr = document.createElement('tr');
-                this.table.appendChild(tr);
-                if (Array.isArray(data)) {
-                    for (const col of data) {
-                        const td = document.createElement('td');
-                        td.textContent = col;
-                        tr.appendChild(td);
-                    }
-                }
-                return tr;
-            }
-        }
-        class TableEditor {
-            constructor(designer, table) {
-                this.designer = designer;
-                this.table = table;
-                designer.disableEvents();
-            }
-            activate() {
-                const cellPointerDown = evt => this.cellMouseDown(evt);
-                this.table.querySelectorAll('td').forEach(td => td.addEventListener('pointerdown', cellPointerDown));
-            }
-            cellMouseDown(evt) {
-                evt.stopPropagation();
-                evt.preventDefault();
-                const cell = evt.target;
-                cell.classList.add('selected');
-            }
-            showEditorToolbar() {
-                const rect = this.table.getBoundingClientRect();
-                const tb = createTextToolbarEditor();
-                document.body.appendChild(tb.el);
-                tb.showFloating(rect.left, rect.bottom + 10);
-                document.addEventListener('pointerdown', () => {
-                    tb.el.remove();
-                    this.destroy();
-                }, { once: true });
-                this.activate();
-            }
-            destroy() {
-                this.designer.enableEvents();
-            }
-        }
-    })(report = katrid.report || (katrid.report = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var report;
-    (function (report) {
-        var ComponentEditor = katrid.design.ComponentEditor;
-        var ComponentProperty = katrid.design.ComponentProperty;
-        var BackgroundProperty = katrid.design.BackgroundProperty;
-        var BooleanProperty = katrid.design.BooleanProperty;
-        var SelectProperty = katrid.design.SelectProperty;
-        var SizeProperty = katrid.design.SizeProperty;
-        var StringProperty = katrid.design.StringProperty;
-        var WidgetEditor = katrid.design.WidgetEditor;
-        var registerComponentEditor = katrid.design.registerComponentEditor;
-        var HeightProperty = katrid.design.HeightProperty;
-        class BandEditor extends ComponentEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new HeightProperty('height', { title: 'Height' }), new SelectProperty('autoSize', {
-                    caption: 'Auto Size',
-                    options: {
-                        0: 'None', 1: 'Can shrink', 2: 'Can grow', 3: 'Auto'
-                    }
-                }), new BackgroundProperty('background'), new BooleanProperty('canGrow', { caption: 'Can Grow' }), new BooleanProperty('canShrink', { caption: 'Can Shrink' }));
-            }
-        }
-        report.BandEditor = BandEditor;
-        class DataBandEditor extends BandEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new katrid.design.ComponentProperty('datasource', {
-                    caption: 'Data Source',
-                    onGetValues: (typeEditor) => {
-                        return typeEditor.designer.report.datasources.map(ds => ({ value: ds, text: ds.name }));
-                    },
-                }), new ComponentProperty('parent', {
-                    caption: 'Master Band',
-                    onGetValues: (typeEditor) => typeEditor.targetObject.page.bands
-                        .filter(band => band !== typeEditor.targetObject)
-                        .map(band => ({ value: band, text: band.name })),
-                }));
-            }
-        }
-        report.DataBandEditor = DataBandEditor;
-        class GroupHeaderEditor extends BandEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new StringProperty('expression', { caption: 'Expression' }));
-            }
-        }
-        report.GroupHeaderEditor = GroupHeaderEditor;
-        class PageSizeProperty extends SizeProperty {
-            createEditor(typeEditor) {
-                const editor = super.createEditor(typeEditor);
-                const sel = document.createElement('select');
-                sel.className = 'form-select';
-                sel.innerHTML = `
-      <option></option>
-      <option value="Custom">Custom</option>
-      <option value="Responsive">Responsive</option>
-      <option value="A4">A4</option>
-      <option value="A3">A3</option>
-      <option value="WebSmall">Web Small</option>
-      <option value="WebMedium">Web Medium</option>
-      <option value="WebLarge">Web Large</option>
-      `;
-                let div = document.createElement('div');
-                div.className = 'col-12';
-                div.appendChild(sel);
-                sel.addEventListener('change', () => {
-                    typeEditor.targetObject['pageSize'] = sel.value;
-                });
-                sel.value = typeEditor.targetObject['pageSize'];
-                editor.insertAdjacentElement('afterbegin', div);
-                let selOrientation = document.createElement('select');
-                selOrientation.className = 'form-select';
-                selOrientation.innerHTML = `
-      <option value="0">Portrait</option>
-      <option value="1">Landscape</option>
-      `;
-                selOrientation.value = typeEditor.targetObject['orientation'];
-                selOrientation.addEventListener('change', () => {
-                    typeEditor.targetObject['orientation'] = selOrientation.value;
-                });
-                div.appendChild(selOrientation);
-                return editor;
-            }
-        }
-        class PageEditor extends ComponentEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new PageSizeProperty('size'), new StringProperty('margins', { caption: 'Margins' }));
-            }
-        }
-        report.PageEditor = PageEditor;
-        class SubReportEditor extends WidgetEditor {
-        }
-        report.SubReportEditor = SubReportEditor;
-        class TableBandEditor extends BandEditor {
-            static defineProperties() {
-                return super.defineProperties().concat(new katrid.design.DataSourceProperty('datasource', {
-                    caption: 'Data Source',
-                }), new katrid.design.TextProperty('columns'));
-            }
-        }
-        report.TableBandEditor = TableBandEditor;
-        registerComponentEditor(report.Band, BandEditor);
-        registerComponentEditor(report.DataBand, DataBandEditor);
-        registerComponentEditor(report.TableBand, TableBandEditor);
-        registerComponentEditor(report.GroupHeader, GroupHeaderEditor);
-        registerComponentEditor(katrid.report.BandedPage, PageEditor);
-        registerComponentEditor(report.SubReport, SubReportEditor);
-    })(report = katrid.report || (katrid.report = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var report;
-    (function (report) {
-        class GridBand extends report.Band {
-        }
-        report.GridBand = GridBand;
-    })(report = katrid.report || (katrid.report = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var report;
-    (function (report) {
-        class BandedPage extends report.BasePage {
-            constructor() {
-                super(...arguments);
-                this.bands = [];
-            }
-            defaultProps() {
-                super.defaultProps();
-                this._pageSize = 'A4';
-                const { width, height } = katrid.drawing.PageSize.A4;
-                this.width = width;
-                this.height = height;
-            }
-            _createDesigner() {
-                const des = new report.BandDesigner(this);
-                des.loadBands();
-                return des;
-            }
-            addBand(band) {
-                band.page = this;
-                band.parent = this;
-                this.bands.push(band);
-                band.width = this.width;
-            }
-            children() {
-                return this.bands;
-            }
-            *allObjects() {
-                for (let band of this.bands) {
-                    yield band;
-                    for (let obj of band.objects) {
-                        yield obj;
-                    }
-                }
-            }
-            removeBand(band) {
-                if (this.bands.indexOf(band) > -1) {
-                    this.bands.splice(this.bands.indexOf(band), 1);
-                }
-                this.bands.forEach(b => b.onRemoveNotification(band));
-            }
-            redraw() {
-                this.bands?.forEach(b => b.redraw());
-            }
-            dump() {
-                const d = super.dump();
-                d.bands = this.bands.map(b => b.dump());
-                return d;
-            }
-            load(info) {
-                super.load(info);
-                if (info.bands) {
-                    this.bands = info.bands.map((b) => {
-                        let cls = katrid.report[b.type];
-                        if (!cls)
-                            throw Error('Class not found ' + b.type);
-                        const band = new cls();
-                        band.parent = this;
-                        band.page = this;
-                        band.load(b);
-                        return band;
-                    });
-                }
-            }
-        }
-        report.BandedPage = BandedPage;
-    })(report = katrid.report || (katrid.report = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var report;
-    (function (report) {
-        var BaseWidget = katrid.drawing.BaseWidget;
-        class SubReport extends BaseWidget {
-            defaultProps() {
-                super.defaultProps();
-                this.width = 200;
-                this.height = 20;
-            }
-            get page() {
-                return this._page;
-            }
-            set page(value) {
-                this._page = value;
-            }
-            dump() {
-                const d = super.dump();
-                d.page = this.page?.name;
-                return d;
-            }
-            redraw() {
-                super.redraw();
-                this.graphic.clear();
-                this.graphic.rect(0, 0, this.width, this.height);
-                this.graphic.text(4, this.height / 2, this.name).attr('fill', 'black');
-            }
-        }
-        report.SubReport = SubReport;
-        katrid.bi.componentRegistry.SubReport = SubReport;
-        katrid.bi.componentRegistry.subreport = SubReport;
-    })(report = katrid.report || (katrid.report = {}));
-})(katrid || (katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var BI;
-    (function (BI) {
-        class ReportPreview {
-            loadReport(report) {
-                for (let p of report.pages) {
-                    let page = document.createElement('page');
-                    page.className = 'report-page';
-                    page.setAttribute('size', 'A4');
-                    for (let b of p.bands) {
-                        let band = document.createElement('div');
-                        band.className = 'report-band';
-                        page.append(band);
-                        for (let obj of b.objects) {
-                            if (obj.tag === 'text')
-                                band.append(this.loadText(obj));
-                            else if (obj.tag === 'image')
-                                band.append(this.loadImage(obj));
-                            else
-                                throw Error('tag not found');
-                        }
-                    }
-                }
-            }
-            loadBand(data) {
-                let el = document.createElement('div');
-                el.className = 'report-element report-band';
-                el.style.left = data.left + 'px';
-                el.style.top = data.top + 'px';
-                el.style.width = data.width + 'px';
-                el.style.height = data.height + 'px';
-            }
-            loadText(data) {
-                let el = document.createElement('span');
-                el.className = 'report-element report-text';
-                el.innerHTML = data.text;
-                el.style.left = data.left + 'px';
-                el.style.top = data.top + 'px';
-                el.style.width = data.width + 'px';
-                el.style.height = data.height + 'px';
-                return el;
-            }
-            loadImage(data) {
-                let el = document.createElement('img');
-                el.className = 'report-element report-image';
-                el.style.left = data.left + 'px';
-                el.style.top = data.top + 'px';
-                el.style.width = data.width + 'px';
-                el.style.height = data.height + 'px';
-                return el;
-            }
-        }
-        BI.ReportPreview = ReportPreview;
-    })(BI = Katrid.BI || (Katrid.BI = {}));
-})(Katrid || (Katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class AlignmentTool {
-            constructor() {
-                this.create();
-            }
-            create() {
-                this.el = document.createElement('div');
-                this.el.className = 'alignment-tool';
-                const tb = new katrid.ui.Toolbar(this.el);
-                let btn = tb.addButton('<i class="fa-duotone fa-objects-align-left"></i>');
-                btn.title = 'Align Left';
-                btn.addEventListener('click', () => this.alignLeft());
-                btn = tb.addButton('<i class="fa-duotone fa-objects-align-center-horizontal"></i>');
-                btn.title = 'Align Center Horizontal';
-                btn.addEventListener('click', () => this.alignCenterHorizontal());
-                btn = tb.addButton('<i class="fa-duotone fa-objects-align-right"></i>');
-                btn.title = 'Align Right';
-                btn.addEventListener('click', () => this.alignRight());
-                btn = tb.addButton('<i class="fa-duotone fa-objects-align-top"></i>');
-                btn.title = 'Align Top';
-                btn.addEventListener('click', () => this.alignTop());
-                btn = tb.addButton('<i class="fa-duotone fa-objects-align-center-vertical"></i>');
-                btn.title = 'Align Center Vertical';
-                btn.addEventListener('click', () => this.alignCenterVertical());
-                btn = tb.addButton('<i class="fa-duotone fa-objects-align-bottom"></i>');
-                btn.title = 'Align Bottom';
-                btn.addEventListener('click', () => this.alignBottom());
-            }
-            alignLeft() {
-                if (this.designer.selection.length <= 1)
-                    return;
-                const minX = Math.min(...this.designer.selection.map(s => s.x));
-                this.designer.beginChanges('move');
-                for (const s of this.designer.selection) {
-                    s.designer.moveTo(minX, s.y);
-                }
-                this.designer.endChanges();
-                this.designer.refreshGrabs();
-            }
-            alignCenterHorizontal() {
-                if (this.designer.selection.length <= 1)
-                    return;
-                const midX = Math.min(...this.designer.selection.map(s => s.x + s.width / 2));
-                this.designer.beginChanges('move');
-                for (const s of this.designer.selection) {
-                    s.designer.moveTo(midX - s.width / 2, s.y);
-                }
-                this.designer.endChanges();
-                this.designer.refreshGrabs();
-            }
-            alignRight() {
-                if (this.designer.selection.length <= 1)
-                    return;
-                const maxX = Math.max(...this.designer.selection.map(s => s.x + s.width));
-                this.designer.beginChanges('move');
-                for (const s of this.designer.selection) {
-                    s.designer.moveTo(maxX - s.width, s.y);
-                }
-                this.designer.endChanges();
-                this.designer.refreshGrabs();
-            }
-            alignTop() {
-                if (this.designer.selection.length <= 1)
-                    return;
-                const minY = Math.min(...this.designer.selection.map(s => s.y));
-                this.designer.beginChanges('move');
-                for (const s of this.designer.selection) {
-                    s.designer.moveTo(s.x, minY);
-                }
-                this.designer.endChanges();
-                this.designer.refreshGrabs();
-            }
-            alignCenterVertical() {
-                if (this.designer.selection.length <= 1)
-                    return;
-                const midY = Math.min(...this.designer.selection.map(s => s.y + s.height / 2));
-                this.designer.beginChanges('move');
-                for (const s of this.designer.selection) {
-                    s.designer.moveTo(s.x, midY - s.height / 2);
-                }
-                this.designer.endChanges();
-                this.designer.refreshGrabs();
-            }
-            alignBottom() {
-                if (this.designer.selection.length <= 1)
-                    return;
-                const maxY = Math.max(...this.designer.selection.map(s => s.y + s.height));
-                this.designer.beginChanges('move');
-                for (const s of this.designer.selection) {
-                    s.designer.moveTo(s.x, maxY - s.height);
-                }
-                this.designer.endChanges();
-                this.designer.refreshGrabs();
-            }
-            distributeHorizontally() {
-            }
-            distributeVertically() {
-            }
-        }
-        bi.AlignmentTool = AlignmentTool;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class BaseToolWindow {
-            constructor(container) {
-                this.container = container;
-                this.create();
-                if (container) {
-                    container.appendChild(this.el);
-                }
-            }
-            getHeaderTemplate() {
-                return `<div class="tool-window-header"></div><hr>`;
-            }
-            create() {
-                this.el = document.createElement('div');
-                this.el.className = 'tool-window-content';
-                this.el.innerHTML = this.getHeaderTemplate();
-            }
-            hide() {
-                this.el.style.display = 'none';
-            }
-            show() {
-                this.el.style.display = '';
-            }
-        }
-        bi.BaseToolWindow = BaseToolWindow;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class DataExplorer extends bi.BaseToolWindow {
-            getHeaderTemplate() {
-                return `
-      <div class="tool-window-header">
-        <i class="fa fa-fw fa-database"></i> Data
-      </div>
-      <div>
-          <button type="button" id="btn-new" class="btn btn-light new-datasource">
-            Novo Data Source
-          </button>
-      </div>
-      <hr>
-      `;
-            }
-            create() {
-                super.create();
-                this.el.classList.add('data-explorer');
-                this.table = document.createElement('div');
-                this.tv = new katrid.ui.TreeView(this.table, {
-                    options: {
-                        onDblClick: item => this.editDataSource(item.data.target),
-                        onSelect: item => this.onSelectionChange?.(item.data.target),
-                        onContextMenu: (item, evt) => this.nodeContextMenu(item, evt),
-                    }
-                });
-                this.el.appendChild(this.table);
-                this.el.querySelector('#btn-new').addEventListener('click', () => {
-                    if (this.onNewDataSource) {
-                        this.registerDataSource(this.onNewDataSource());
-                    }
-                });
-            }
-            registerDataSource(datasource) {
-                this.tv.addItem({ text: datasource.name, target: datasource, title: 'Double click to edit' });
-            }
-            saveDataSource(datasource, name, sql) {
-                datasource.name = name;
-                datasource.sql = sql;
-                for (const tr of this.tv.nodes) {
-                    if (katrid.data(tr, 'datasource') === datasource) {
-                        tr.setText(name);
-                        break;
-                    }
-                }
-            }
-            async editDataSource(datasource) {
-                let dlg = await this.createDataSourceDialog({ name: datasource.name, sql: datasource.sql });
-                dlg.name.value = datasource.name;
-                dlg.btnOk.addEventListener('click', evt => {
-                    this.saveDataSource(datasource, dlg.name.value, dlg.codeEditor.getValue());
-                });
-            }
-            async createDataSourceDialog(opts) {
-                let templ = `
-      <div class="modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Data Source</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-        <div class="row">
-          <div class="form-group col-6">
-            <label for="id-name">Connection</label>
-            <select class="form-select"><option>(Default)</option></select>
-          </div>
-          <div class="form-group col-6">
-            <label for="id-name">Name</label>
-            <input id="id-name" class="form-control" v-model="dataSourceDialog_name" name="name" value="${opts?.name || ''}"/>
-          </div>
-</div>
-          <div class="form-group">
-            <label for="id-command">SQL Query</label>
-            <div class="code-editor" name="commandText"></div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-              type="button"
-              class="btn btn-outline-secondary btn-ok"
-              data-bs-dismiss="modal"
-              >
-            OK
-          </button>
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-      `;
-                let dlg = $(templ)[0];
-                dlg.addEventListener('hidden.bs.modal', () => {
-                    modal.dispose();
-                    dlg.remove();
-                });
-                let domCode = dlg.querySelector('.code-editor');
-                let codeEditor = await bi.createCodeEditor(domCode, opts?.sql || 'select col from tablename', 'sql');
-                let modal = new bootstrap.Modal(dlg);
-                modal.show();
-                return {
-                    dlg,
-                    modal,
-                    btnOk: dlg.querySelector('.btn-ok'),
-                    name: dlg.querySelector('input[name=name]'),
-                    codeEditor,
-                };
-            }
-            clear() {
-                this.tv.clear();
-            }
-            nodeContextMenu(node, evt) {
-                let menu = new katrid.ui.ContextMenu();
-                menu.add('Edit', () => this.editDataSource(node.data.target));
-                menu.add('Delete', () => {
-                    this.onRemoveDataSource?.(node.data.target);
-                    node.remove();
-                });
-                menu.show(evt.clientX, evt.clientY);
-            }
-        }
-        bi.DataExplorer = DataExplorer;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        const CONTROL_TAGS = ['INPUT', 'SELECT', 'TEXTAREA'];
-        class ObjectInspector extends bi.BaseToolWindow {
-            getHeaderTemplate() {
-                return '<div class="tool-window-header"><i class="fa-duotone fa-solid fa-square-list"></i> Properties</div>';
-            }
-            create() {
-                super.create();
-                this.el.classList.add('properties-editor');
-                this.content = document.createElement('div');
-                this.el.appendChild(this.content);
-                this.alignmentTool = new bi.AlignmentTool();
-                this.el.insertAdjacentElement("afterbegin", this.alignmentTool.el);
-                this.el.addEventListener('keydown', this._keyDown);
-            }
-            _keyDown(evt) {
-                if (CONTROL_TAGS.includes(evt.target.tagName)) {
-                    evt.stopPropagation();
-                }
-            }
-            get designer() {
-                return this._designer;
-            }
-            set designer(value) {
-                this._designer = value;
-                this.alignmentTool.designer = value;
-            }
-            setSelection(selection) {
-                this.selection = selection;
-                if (selection.length) {
-                    for (let sel of selection) {
-                        this.editor = this.createComponentEditor(sel);
-                    }
-                }
-                else {
-                    this.content.innerHTML = '';
-                }
-            }
-            getComponentEditor(component) {
-                let typeEditor = katrid.design.getComponentEditor(component.constructor);
-                return new typeEditor(component, this.designer);
-            }
-            createComponentEditor(component) {
-                this.content.innerHTML = '';
-                let editor = this.getComponentEditor(component);
-                this.content.appendChild(editor.createEditor());
-                return editor;
-            }
-            refresh() {
-                this.setSelection(this.selection);
-            }
-        }
-        bi.ObjectInspector = ObjectInspector;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class OutlineExplorer extends bi.BaseToolWindow {
-            getHeaderTemplate() {
-                return `
-        <div class="tool-window-header"><i class="fa fa-fw fa-sitemap"></i> Outline</div>
-        <hr>
-      `;
-            }
-            create() {
-                super.create();
-                this.el.classList.add('outline-explorer');
-                this.treeView = new katrid.ui.TreeView(this.el.appendChild(document.createElement('div')));
-            }
-            objectNotification(obj, event) {
-                switch (event) {
-                    case 'add':
-                        this.addObject(obj);
-                        break;
-                    case 'remove':
-                        this.removeObject(obj);
-                        break;
-                    case 'rename':
-                        this.renameObject(obj);
-                }
-            }
-            clear() {
-                this.treeView.clear();
-            }
-            loadReport(report) {
-                for (const p of report.pages) {
-                    this.addObject(p);
-                }
-            }
-            _findNode(obj) {
-                for (let n of this.treeView.all()) {
-                    if (n.data.object === obj) {
-                        return n;
-                    }
-                }
-            }
-            addObject(obj) {
-                const name = this.getObjectText(obj);
-                let parentNode;
-                if (obj.parent) {
-                    parentNode = this._findNode(obj.parent);
-                }
-                let n = this.treeView.addItem({ id: obj.id, text: name, object: obj }, parentNode, { onSelect: () => this.selectObject(obj) });
-                const children = obj.children?.();
-                if (children) {
-                    for (const c of children) {
-                        this.addObject(c);
-                    }
-                }
-                return n;
-            }
-            removeObject(obj) {
-                let n = this._findNode(obj);
-                if (n) {
-                    n.remove();
-                }
-            }
-            renameObject(obj) {
-                let n = this._findNode(obj);
-                if (n) {
-                    n.setText(this.getObjectText(obj));
-                }
-            }
-            getObjectText(obj) {
-                return obj.name || `(${obj.constructor.name})`;
-            }
-            selectObject(obj) {
-                this.onSelectItem?.(obj);
-            }
-        }
-        bi.OutlineExplorer = OutlineExplorer;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class PageExplorer extends bi.BaseToolWindow {
-            getHeaderTemplate() {
-                return `<div class="tool-window-header"><i class="fa fa-fw fa-file"></i> Pages</div>
-<div>
-<button id="btn-new" class="btn btn-light">New Page</button>
-</div>
-      <hr>`;
-            }
-            create() {
-                super.create();
-                this.el.classList.add('page-explorer');
-                this.el.querySelector('#btn-new').addEventListener('click', () => this.reportEditor.newPage());
-                let div = document.createElement('div');
-                this.treeView = new katrid.ui.TreeView(div, { options: { onSelect: (node) => this.reportEditor.page = node.data.object.designer } });
-                this.el.appendChild(div);
-            }
-            registerPage(page) {
-                this.treeView.addItem({ id: page.name, text: page.name, object: page });
-            }
-            clear() {
-                this.treeView.clear();
-            }
-        }
-        bi.PageExplorer = PageExplorer;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class ParamExplorer extends bi.BaseToolWindow {
-            getHeaderTemplate() {
-                return `
-        <div class="tool-window-header"><i class="fa fa-fw fa-database"></i> Parameters</div>
-        <div>
-          <button type="button" id="btn-new-param" class="btn btn-light new-param">
-            Novo Parâmetro
-          </button>
-          <button type="button" id="btn-edit-params" class="btn btn-light new-param">
-            Params Editor
-          </button>
-        </div>
-        <hr>
-      `;
-            }
-            create() {
-                super.create();
-                this.el.classList.add('param-explorer');
-                this.el.querySelector('#btn-edit-params').addEventListener('click', async () => {
-                    const params = await katrid.bi.showCodeEditor(this.reportEditor.report.params, 'xml');
-                    if (params !== false) {
-                        this.reportEditor.setParams(params);
-                    }
-                });
-            }
-        }
-        bi.ParamExplorer = ParamExplorer;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class ToolBox extends bi.BaseToolWindow {
-            getHeaderTemplate() {
-                return `
-        <div class="tool-window-header"><i class="fa fa-fw fa-toolbox"></i> Objects</div>
-        <hr>
-      `;
-            }
-            create() {
-                super.create();
-                this.el.classList.add('toolbox');
-                let div = document.createElement('div');
-                div.innerHTML = `
-      <div>
-        <div class="toolbox-menu col-12">
-          <div class="row">
-            <div class="col-4 toolbox-item" data-widget="text">
-              <div>
-                <i class="fa-duotone fa-2x  fa-fw fa-text"></i>
-              </div>
-              <div class="widget-label">
-                ${katrid.i18n.gettext('Text')}
-              </div>
-            </div>
-            <div class="col-4 toolbox-item" data-widget="image">
-              <div>
-                 <i class="fa-duotone fa-2x fa-fw fa-image"></i>
-              </div>
-              <div class="widget-label">
-                ${katrid.i18n.gettext('Image')}
-              </div>
-            </div>
-
-            <div class="col-4 toolbox-item" data-widget="Grid">
-              <div>
-                 <i class="fa-duotone fa-regular fa-2x fa-fw fa-table"></i>
-              </div>
-              <div class="widget-label">
-                ${katrid.i18n.gettext('Grid')}
-              </div>
-            </div>
-
-            <div class="col-4 toolbox-item" data-widget="barcode">
-              <div>
-                 <i class="fa-duotone fa-2x fa-fw fa-barcode"></i>
-              </div>
-              <div class="widget-label">
-                ${katrid.i18n.gettext('Barcode')}
-              </div>
-            </div>
-
-            <div class="col-4 toolbox-item" data-widget="subreport">
-              <div>
-                <i class="fa-duotone fa-thin fa-2x fa-fw fa-file"></i>
-             </div>
-              <div class="widget-label">
-                ${katrid.i18n.gettext('Sub-Report')}
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <div class="toolbox-header">
-          <i class="fas fa-fw fa-vector-square"></i> Gráficos
-        </div>
-        <div class="toolbox-menu col-12">
-          <div class="row">
-
-            <div class="col-4 toolbox-item" data-widget="bar">
-              <div>
-<i class="fa-duotone fa-2x fa-fw fa-chart-column"></i>
-             </div>
-              <div class="widget-label">
-                ${katrid.i18n.gettext('Column')}
-              </div>
-            </div>
-
-            <div class="col-4 toolbox-item" data-widget="hbar">
-              <div>
-<i class="fa-duotone fa-2x fa-fw fa-chart-simple"></i>
-             </div>
-              <div class="widget-label">
-                ${katrid.i18n.gettext('Bar')}
-              </div>
-            </div>
-
-            <div class="col-4 toolbox-item" data-widget="area-chart">
-              <div>
-<i class="fa-duotone fa-2x fa-fw fa-chart-area"></i>
-             </div>
-              <div class="widget-label">
-                ${katrid.i18n.gettext('Area')}
-              </div>
-            </div>
-
-            <div class="col-4 toolbox-item" data-widget="line-chart">
-              <div>
-<i class="fa-duotone fa-2x fa-fw fa-chart-line-up"></i>
-             </div>
-              <div class="widget-label">
-                ${katrid.i18n.gettext('Line')}
-              </div>
-            </div>
-
-            <div class="col-4 toolbox-item" data-widget="pie">
-              <div>
-<i class="fa-duotone fa-2x fa-fw fa-chart-pie"></i>
-             </div>
-              <div class="widget-label">
-                 ${katrid.i18n.gettext('Pie')}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-                this.el.append(div);
-                this.el.querySelectorAll('.toolbox-item')
-                    .forEach((el, idx) => {
-                    el.setAttribute('draggable', 'true');
-                    el.addEventListener('dragstart', (evt) => {
-                        evt.dataTransfer.setData('text', el.getAttribute('data-widget'));
-                    });
-                });
-                this.el.querySelectorAll('.toolbox-item img').forEach(el => el.setAttribute('draggable', 'false'));
-            }
-        }
-        bi.ToolBox = ToolBox;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var bi;
-    (function (bi) {
-        class ZoomTool {
-            constructor(container, designer) {
-                this.container = container;
-                this.create();
-            }
-            create() {
-                let tb = new katrid.ui.Toolbar(this.container);
-                tb.el.classList.add('floating-toolbar', 'btn-group');
-                tb.el.classList.remove('toolbar-action-buttons');
-                tb.addButton('<i class="fa fa-fw fa-minus-square"></i>').addEventListener('click', () => this.zoomOut());
-                this.buttonReset = tb.addButton('100%');
-                this.buttonReset.addEventListener('click', () => this.zoomReset());
-                tb.addButton('<i class="fa fa-fw fa-plus-square"></i>').addEventListener('click', () => this.zoomIn());
-            }
-            get designer() {
-                return this._designer;
-            }
-            set designer(value) {
-                this._designer = value;
-                if (value) {
-                    this.setZoomText(value.zoom);
-                }
-                else {
-                    this.setZoomText(100);
-                }
-            }
-            setZoomText(value) {
-                this.buttonReset.textContent = `${value}%`;
-            }
-            zoomIn() {
-                this.designer.zoom += 5;
-                this.setZoomText(this.designer.zoom);
-            }
-            zoomOut() {
-                this.designer.zoom -= 5;
-                this.setZoomText(this.designer.zoom);
-            }
-            zoomReset() {
-                this.designer.zoom = 100;
-                this.setZoomText(this.designer.zoom);
-            }
-        }
-        bi.ZoomTool = ZoomTool;
-    })(bi = katrid.bi || (katrid.bi = {}));
-})(katrid || (katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Components;
-    (function (Components) {
-        class Component {
-        }
-        Components.Component = Component;
-        class Widget extends Component {
-        }
-        Components.Widget = Widget;
-    })(Components = Katrid.Components || (Katrid.Components = {}));
-})(Katrid || (Katrid = {}));
 var katrid;
 (function (katrid) {
     var exceptions;
@@ -11198,19 +2559,45 @@ var katrid;
         }
     }
     katrid.init = init;
-    katrid.elementDataSymbol = Symbol('data');
+    const dataSymbol = Symbol('data');
     function data(el, key, value) {
         if (!key && value === undefined) {
-            return el[katrid.elementDataSymbol];
+            return el[dataSymbol];
         }
         if (value === undefined) {
-            return el[katrid.elementDataSymbol]?.[key];
+            return el[dataSymbol]?.[key];
         }
-        el[katrid.elementDataSymbol] ??= {};
-        el[katrid.elementDataSymbol][key] = value;
+        el[dataSymbol] ??= {};
+        el[dataSymbol][key] = value;
     }
     katrid.data = data;
 })(katrid || (katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Core;
+    (function (Core) {
+        class Plugin {
+            constructor(app) {
+                this.app = app;
+            }
+            hashChange(url) {
+                return false;
+            }
+        }
+        Core.Plugin = Plugin;
+        class Plugins extends Array {
+            start(app) {
+                for (let plugin of this)
+                    app.plugins.push(new plugin(app));
+            }
+        }
+        Core.plugins = new Plugins();
+        function registerPlugin(cls) {
+            Core.plugins.push(cls);
+        }
+        Core.registerPlugin = registerPlugin;
+    })(Core = Katrid.Core || (Katrid.Core = {}));
+})(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Data;
@@ -13565,758 +4952,6 @@ var katrid;
 })(katrid || (katrid = {}));
 var katrid;
 (function (katrid) {
-    var design;
-    (function (design) {
-        class ClipboardManager {
-            constructor(designer) {
-                this.designer = designer;
-            }
-            async getClipboardData() {
-                let data = await navigator.clipboard.readText();
-                if (data) {
-                    data = JSON.parse(data);
-                    if (data.type === 'selection') {
-                        return data;
-                    }
-                }
-            }
-            prepareCopyData() {
-                const objects = this.designer.selection.map(obj => obj.dump());
-                return JSON.stringify({ type: 'selection', objects });
-            }
-            async copy() {
-                await navigator.clipboard.writeText(this.prepareCopyData());
-            }
-            pasteData(data) {
-                if (data.type !== 'selection') {
-                    console.error('Invalid clipboard data');
-                    return;
-                }
-                let objs = [];
-                for (let obj of data.objects) {
-                    const lo = this.designer.loadObject(obj);
-                    this.designer.pasteObject(lo).locked = false;
-                    this.designer.addToSelection(lo);
-                    objs.push(lo);
-                }
-                this.designer.clearSelection();
-                return objs;
-            }
-            async paste() {
-                const data = await this.getClipboardData();
-                if (data) {
-                    return this.pasteData(data);
-                }
-            }
-        }
-        design.ClipboardManager = ClipboardManager;
-    })(design = katrid.design || (katrid.design = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var design;
-    (function (design) {
-        class GrabHandle {
-            constructor(el) {
-                this.el = el;
-                this.width = 8;
-                this.height = 8;
-            }
-            set left(value) {
-                this.el.setAttribute('x', `${value}`);
-            }
-            set top(value) {
-                this.el.setAttribute('y', `${value}`);
-            }
-            set width(value) {
-                this.el.setAttribute('width', `${value}`);
-            }
-            set height(value) {
-                this.el.setAttribute('height', `${value}`);
-            }
-        }
-        class GrabHandles {
-            constructor(config) {
-                this._dragging = false;
-                this.gridX = 4;
-                this.gridY = 4;
-                this.snapToGrid = false;
-                this.container = config.container;
-                this.target = config.target;
-                this.onObjectResized = config.onObjectResized;
-                this.onObjectResizing = config.onObjectResizing;
-                this.designer = config.designer;
-                this.handles = [];
-                this.createHandles();
-                this.setPosition();
-                if (config.snapToGrid) {
-                    this.gridX = config.gridX;
-                    this.gridY = config.gridY;
-                    this.snapToGrid = true;
-                }
-            }
-            set dragging(value) {
-                this._dragging = value;
-                this.designer.resizing = value;
-            }
-            get dragging() {
-                return this._dragging;
-            }
-            createHandle() {
-                let h = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                h.classList.add('resize-handle');
-                this.handles.push(h);
-                return h;
-            }
-            clear() {
-                for (let handle of this.handles) {
-                    handle.remove();
-                }
-                this.handles = [];
-            }
-            setPosition() {
-                const rect = this.target.getDesignRect();
-                let handle = new GrabHandle(this.bottomLeft);
-                handle.left = rect.left - 3;
-                handle.top = rect.bottom - 5;
-                handle = new GrabHandle(this.middleLeft);
-                handle.left = rect.left - 3;
-                handle.top = rect.bottom - rect.height / 2 - 4;
-                handle = new GrabHandle(this.topLeft);
-                handle.left = rect.left - 3;
-                handle.top = rect.top - 3;
-                handle = new GrabHandle(this.topRight);
-                handle.left = rect.right - 4;
-                handle.top = rect.top - 3;
-                handle = new GrabHandle(this.middleRight);
-                handle.left = rect.right - 4;
-                handle.top = rect.bottom - rect.height / 2 - 4;
-                handle = new GrabHandle(this.bottomRight);
-                handle.left = rect.right - 4;
-                handle.top = rect.bottom - 5;
-                handle = new GrabHandle(this.topCenter);
-                handle.left = rect.right - rect.width / 2 - 4;
-                handle.top = rect.top - 3;
-                handle = new GrabHandle(this.bottomCenter);
-                handle.left = rect.right - rect.width / 2 - 4;
-                handle.top = rect.bottom - 5;
-            }
-            _setGrabHandle() {
-                this.topLeft.addEventListener('pointerdown', (evt) => {
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    const targetHandle = evt.target;
-                    let ox = evt.clientX;
-                    let oy = evt.clientY;
-                    if (this.snapToGrid) {
-                        ox = Math.trunc(ox / this.gridX) * this.gridX;
-                        oy = Math.trunc(oy / this.gridY) * this.gridY;
-                    }
-                    this.dragging = true;
-                    if (evt.pointerId)
-                        targetHandle.setPointerCapture(evt.pointerId);
-                    const onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let y = evt.clientY;
-                            let x = evt.clientX;
-                            if (this.snapToGrid) {
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            }
-                            let dx = x - ox;
-                            let dy = y - oy;
-                            if (dx || dy) {
-                                this.applyRect(dx, dy, -dx, -dy);
-                                if (dx)
-                                    ox = x;
-                                if (dy)
-                                    oy = y;
-                            }
-                        }
-                    };
-                    const onmouseup = (evt) => {
-                        if (evt.pointerId)
-                            targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            this.resized();
-                            targetHandle.removeEventListener('pointermove', onmousemove);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', onmousemove);
-                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
-                });
-                this.topRight.addEventListener('pointerdown', (evt) => {
-                    const targetHandle = evt.target;
-                    let ox = evt.clientX;
-                    let oy = evt.clientY;
-                    if (this.snapToGrid) {
-                        ox = Math.trunc(ox / this.gridX) * this.gridX;
-                        oy = Math.trunc(oy / this.gridY) * this.gridY;
-                    }
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    if (evt.pointerId)
-                        targetHandle.setPointerCapture(evt.pointerId);
-                    const onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let x = evt.clientX;
-                            let y = evt.clientY;
-                            if (this.snapToGrid) {
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            }
-                            let dx = x - ox;
-                            let dy = y - oy;
-                            if (dx || dy) {
-                                this.applyRect(0, dy, dx, -dy);
-                                if (dx)
-                                    ox = x;
-                                if (dy)
-                                    oy = y;
-                            }
-                        }
-                    };
-                    const onmouseup = (evt) => {
-                        if (evt.pointerId)
-                            targetHandle.setPointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            this.resized();
-                            targetHandle.removeEventListener('pointermove', onmousemove);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', onmousemove);
-                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
-                });
-                this.bottomRight.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    let ox = evt.clientX;
-                    let oy = evt.clientY;
-                    if (this.snapToGrid) {
-                        ox = Math.trunc(ox / this.gridX) * this.gridX;
-                        oy = Math.trunc(oy / this.gridY) * this.gridY;
-                    }
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    if (evt.pointerId)
-                        targetHandle.setPointerCapture(evt.pointerId);
-                    const onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let x = evt.clientX;
-                            let y = evt.clientY;
-                            if (this.snapToGrid) {
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            }
-                            let dx = x - ox;
-                            let dy = y - oy;
-                            if (dx || dy) {
-                                this.applyRect(0, 0, dx, dy);
-                                if (dx)
-                                    ox = x;
-                                if (dy)
-                                    oy = y;
-                            }
-                        }
-                    };
-                    let onmouseup = (evt) => {
-                        if (evt.pointerId)
-                            targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            this.resized();
-                            targetHandle.removeEventListener('pointermove', onmousemove);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', onmousemove);
-                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
-                });
-                this.middleLeft.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    let ox = evt.clientX;
-                    if (this.snapToGrid)
-                        ox = Math.trunc(ox / this.gridX) * this.gridX;
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    if (evt.pointerId)
-                        targetHandle.setPointerCapture(evt.pointerId);
-                    const onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let x = evt.clientX;
-                            if (this.snapToGrid) {
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                            }
-                            let dx = x - ox;
-                            if (dx) {
-                                this.applyRect(dx, 0, -dx, 0);
-                                ox = x;
-                            }
-                        }
-                    };
-                    const onmouseup = (evt) => {
-                        if (evt.pointerId)
-                            targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            this.resized();
-                            targetHandle.removeEventListener('pointermove', onmousemove);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', onmousemove);
-                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
-                });
-                this.middleRight.addEventListener('pointerdown', (evt) => {
-                    const targetHandle = evt.target;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    let ox = evt.clientX;
-                    if (this.snapToGrid)
-                        ox = Math.trunc(ox / this.gridX) * this.gridX;
-                    this.dragging = true;
-                    if (evt.pointerId)
-                        targetHandle.setPointerCapture(evt.pointerId);
-                    let onmousemove = (evt) => {
-                        evt.preventDefault();
-                        evt.stopPropagation();
-                        if (this.dragging) {
-                            let x = evt.clientX;
-                            if (this.snapToGrid) {
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                            }
-                            let dx = x - ox;
-                            if (dx) {
-                                this.applyRect(0, 0, dx, 0);
-                                ox = x;
-                            }
-                        }
-                    };
-                    let onmouseup = (evt) => {
-                        if (evt.pointerId)
-                            targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            this.resized();
-                            targetHandle.removeEventListener('pointermove', onmousemove);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', onmousemove);
-                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
-                });
-                this.bottomCenter.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    let oy = evt.clientY;
-                    if (this.snapToGrid)
-                        oy = Math.trunc(oy / this.gridY) * this.gridY;
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    if (evt.pointerId)
-                        targetHandle.setPointerCapture(evt.pointerId);
-                    let onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let y = evt.clientY;
-                            if (this.snapToGrid) {
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            }
-                            let dy = y - oy;
-                            if (dy) {
-                                this.applyRect(0, 0, 0, dy);
-                                oy = y;
-                            }
-                        }
-                    };
-                    const onmouseup = (evt) => {
-                        if (evt.pointerId)
-                            targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            this.resized();
-                            targetHandle.removeEventListener('pointermove', onmousemove);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', onmousemove);
-                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
-                });
-                this.topCenter.addEventListener('pointerdown', (evt) => {
-                    let targetHandle = evt.target;
-                    let oy = evt.clientY;
-                    if (this.snapToGrid)
-                        oy = Math.trunc(oy / this.gridY) * this.gridY;
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    if (evt.pointerId)
-                        targetHandle.setPointerCapture(evt.pointerId);
-                    const onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let y = evt.clientY;
-                            if (this.snapToGrid) {
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            }
-                            let dy = y - oy;
-                            if (dy) {
-                                this.applyRect(0, dy, 0, -dy);
-                                oy = y;
-                            }
-                        }
-                    };
-                    const onmouseup = (evt) => {
-                        if (evt.pointerId)
-                            targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            this.resized();
-                            targetHandle.removeEventListener('pointermove', onmousemove);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', onmousemove);
-                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
-                });
-                this.bottomLeft.addEventListener('pointerdown', (evt) => {
-                    const targetHandle = evt.target;
-                    let ox = evt.clientX;
-                    let oy = evt.clientY;
-                    if (this.snapToGrid) {
-                        ox = Math.trunc(ox / this.gridX) * this.gridX;
-                        oy = Math.trunc(oy / this.gridY) * this.gridY;
-                    }
-                    this.dragging = true;
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    if (evt.pointerId)
-                        targetHandle.setPointerCapture(evt.pointerId);
-                    const onmousemove = (evt) => {
-                        evt.preventDefault();
-                        if (this.dragging) {
-                            let x = evt.clientX;
-                            let y = evt.clientY;
-                            if (this.snapToGrid) {
-                                x = Math.trunc(x / this.gridX) * this.gridX;
-                                y = Math.trunc(y / this.gridY) * this.gridY;
-                            }
-                            let dx = x - ox;
-                            let dy = y - oy;
-                            if (dx || dy) {
-                                this.applyRect(dx, 0, -dx, dy);
-                                if (dx)
-                                    ox = x;
-                                if (dy)
-                                    oy = y;
-                            }
-                        }
-                    };
-                    const onmouseup = (evt) => {
-                        if (evt.pointerId)
-                            targetHandle.releasePointerCapture(evt.pointerId);
-                        if (this.dragging) {
-                            evt.preventDefault();
-                            this.dragging = false;
-                            this.resized();
-                            targetHandle.removeEventListener('pointermove', onmousemove);
-                        }
-                    };
-                    targetHandle.addEventListener('pointermove', onmousemove);
-                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
-                });
-            }
-            createHandles() {
-                let handle;
-                this.bottomLeft = handle = this.createHandle();
-                handle.classList.add('bottom-left');
-                this.middleLeft = handle = this.createHandle();
-                handle.classList.add('middle-left');
-                this.topLeft = handle = this.createHandle();
-                handle.classList.add('top-left');
-                this.topRight = handle = this.createHandle();
-                handle.classList.add('top-right');
-                this.middleRight = handle = this.createHandle();
-                handle.classList.add('middle-right');
-                this.bottomRight = handle = this.createHandle();
-                handle.classList.add('bottom-right');
-                this.topCenter = handle = this.createHandle();
-                handle.classList.add('top-center');
-                this.bottomCenter = handle = this.createHandle();
-                handle.classList.add('bottom-center');
-                this.container.append(...this.handles);
-                this.setPosition();
-                this._setGrabHandle();
-                return this;
-            }
-            resized() {
-                if (this.onObjectResized)
-                    this.onObjectResized({ target: this.target });
-            }
-            applyRect(dx = 0, dy = 0, dw = 0, dh = 0) {
-                if (this.designer && this.designer.zoom !== 100) {
-                    const factor = this.designer.zoom / 100;
-                    dx = dx / factor;
-                    dy = dy / factor;
-                    dw = dw / factor;
-                    dh = dh / factor;
-                }
-                if (this.target.designer) {
-                    this.target.designer.designApplyRect(dx, dy, dw, dh);
-                }
-                else {
-                    this.target.x += dx;
-                    this.target.y += dy;
-                    this.target.width += dw;
-                    this.target.height += dh;
-                }
-                this.setPosition();
-                this.onObjectResizing?.({ target: this.target });
-            }
-            destroy() {
-                for (let h of this.handles) {
-                    h.remove();
-                }
-                this.handles = [];
-            }
-        }
-        design.GrabHandles = GrabHandles;
-    })(design = katrid.design || (katrid.design = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var design;
-    (function (design) {
-        class Rule {
-            create() {
-            }
-            redraw() {
-            }
-        }
-        design.Rule = Rule;
-        class HorizontalRule extends Rule {
-        }
-        design.HorizontalRule = HorizontalRule;
-        class VerticalRule extends Rule {
-        }
-        design.VerticalRule = VerticalRule;
-    })(design = katrid.design || (katrid.design = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var design;
-    (function (design) {
-        class TextWidget extends katrid.drawing.BaseWidget {
-            constructor(text) {
-                super();
-                this.text = text;
-            }
-            defaultProps() {
-                super.defaultProps();
-                this.width = 100;
-                this.height = 20;
-            }
-            get font() {
-                if (!this._font)
-                    this._font = { name: 'Helvetica', size: '9pt', color: '#000000' };
-                return this._font;
-            }
-            set font(value) {
-                this._font = value;
-                this.applyStyle();
-            }
-            get hAlign() {
-                return this._hAlign;
-            }
-            set hAlign(value) {
-                this._hAlign = value;
-                this.applyStyle();
-            }
-            get vAlign() {
-                return this._vAlign;
-            }
-            set vAlign(value) {
-                this._vAlign = value;
-                this.applyStyle();
-            }
-            applyStyle() {
-                this.designer.redraw(this);
-            }
-        }
-        design.TextWidget = TextWidget;
-    })(design = katrid.design || (katrid.design = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var design;
-    (function (design) {
-        const DEFAULT_CAPACITY = 100;
-        class UndoManager {
-            constructor(designer) {
-                this.designer = designer;
-                this.enabled = true;
-                this.stack = [];
-                this.index = -1;
-                this.capacity = DEFAULT_CAPACITY;
-            }
-            beginUpdate() {
-                this.enabled = false;
-            }
-            endUpdate() {
-                this.enabled = true;
-            }
-            add(action, data, description) {
-                if (!this.enabled) {
-                    return;
-                }
-                this.stack.splice(this.index + 1);
-                this.stack.push({ action, data, description });
-                this.index++;
-                if (this.stack.length > this.capacity) {
-                    this.stack.shift();
-                }
-            }
-            undo() {
-                try {
-                    this.enabled = false;
-                    if (this.index > -1) {
-                        this.undoEntry(this.stack[this.index]);
-                        if (this._redoEntry) {
-                            this.stack[this.index] = this._redoEntry;
-                            this._redoEntry = null;
-                        }
-                        this.index--;
-                    }
-                }
-                finally {
-                    this.enabled = true;
-                }
-            }
-            redo() {
-                try {
-                    this.enabled = false;
-                    if (this.index < this.stack.length - 1) {
-                        this.index++;
-                        this.redoEntry(this.stack[this.index]);
-                    }
-                }
-                finally {
-                    this.enabled = true;
-                }
-            }
-            resizeSelection(selection) {
-                this.add('resize', selection.map(obj => ({ target: obj, x: obj.x, y: obj.y, w: obj.width, h: obj.height })));
-            }
-            moveSelection(selection) {
-                this.add('move', selection.map(obj => ({ target: obj, x: obj.x, y: obj.y })));
-            }
-            addRedo(redo) {
-                if (this._redoEntry) {
-                    this._redoEntry.data.push(redo.data);
-                }
-                else {
-                    this._redoEntry = redo;
-                }
-            }
-            undoMoveObject(undoEntry, description) {
-                this.addRedo({
-                    action: 'move',
-                    description,
-                    data: undoEntry.map(entry => ({ target: entry.target, x: entry.target.x, y: entry.target.y })),
-                });
-                for (let entry of undoEntry) {
-                    entry.target.designer.moveTo(entry.x, entry.y);
-                }
-            }
-            undoResizeObject(undoEntry) {
-                this.addRedo({
-                    action: 'resize',
-                    data: undoEntry.map(entry => ({ target: entry.target, x: entry.target.x, y: entry.target.y, w: entry.target.width, h: entry.target.height })),
-                });
-                for (let entry of undoEntry) {
-                    entry.target.designer.setRect(entry.x, entry.y, entry.w, entry.h);
-                }
-            }
-            undoPaste(undoEntry) {
-                for (let entry of undoEntry.reverse()) {
-                    this.undoEntry(entry);
-                }
-            }
-            undoProperty(undoEntry) {
-                for (let entry of undoEntry) {
-                    entry.target[entry.property] = entry.value;
-                    entry.target.redraw();
-                }
-            }
-            undoRemove(undoEntry) {
-                for (let entry of undoEntry) {
-                    if (entry.parent) {
-                        entry.parent.addObject(entry);
-                    }
-                    else {
-                        this.designer.addObject(entry);
-                    }
-                }
-            }
-            undoEntry(entry) {
-                switch (entry.action) {
-                    case 'add':
-                        this.designer.removeObjects(entry.data);
-                        break;
-                    case 'move':
-                        this.undoMoveObject(entry.data, entry.description);
-                        break;
-                    case 'resize':
-                        this.undoResizeObject(entry.data);
-                        break;
-                    case 'paste':
-                        this.undoPaste(entry.data);
-                        break;
-                    case 'property':
-                        this.undoProperty(entry.data);
-                        break;
-                    case 'remove':
-                        this.undoRemove(entry.data);
-                        break;
-                }
-            }
-            redoEntry(entry) {
-                switch (entry.action) {
-                    case 'add':
-                        for (let obj of entry.data) {
-                            this.designer.addObject(obj);
-                        }
-                        break;
-                    case 'move':
-                        this.undoMoveObject(entry.data);
-                        break;
-                    case 'resize':
-                        this.undoResizeObject(entry.data);
-                        break;
-                    case 'paste':
-                        this.redoPaste(entry.data);
-                        break;
-                    case 'property':
-                        this.redoProperty(entry.data);
-                        break;
-                }
-            }
-        }
-        design.UndoManager = UndoManager;
-    })(design = katrid.design || (katrid.design = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
     var ui;
     (function (ui) {
         function createDialogElement(config) {
@@ -14384,91 +5019,6 @@ var katrid;
         }
         ui.confirm = confirm;
     })(ui = katrid.ui || (katrid.ui = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        var editors;
-        (function (editors) {
-            var FontProperty = katrid.design.FontProperty;
-            var HAlignProperty = katrid.design.HAlignProperty;
-            var VAlignProperty = katrid.design.VAlignProperty;
-            var TextProperty = katrid.design.TextProperty;
-            var BorderProperty = katrid.design.BorderProperty;
-            var BackgroundProperty = katrid.design.BackgroundProperty;
-            var BooleanProperty = katrid.design.BooleanProperty;
-            var DisplayFormatProperty = katrid.design.DisplayFormatProperty;
-            class TextObjectEditor extends katrid.design.WidgetEditor {
-                static defineProperties() {
-                    return [
-                        new FontProperty('font', { caption: 'Font' }),
-                        new HAlignProperty('hAlign', { caption: 'H Alignment' }),
-                        new VAlignProperty('vAlign', { caption: 'V Alignment' }),
-                        new TextProperty('text', { caption: 'Text' }),
-                        new BorderProperty('border', { caption: 'Border' }),
-                        new BackgroundProperty('background'),
-                        new BooleanProperty('wrap', { caption: 'Word wrap' }),
-                        new BooleanProperty('canGrow', { caption: 'Can Grow' }),
-                        new BooleanProperty('allowTags', { caption: 'Allow HTML Tags' }),
-                        new BooleanProperty('allowExpression', { caption: 'Allow Expression' }),
-                        new DisplayFormatProperty('displayFormat'),
-                    ].concat(...super.defineProperties(), new katrid.design.StringProperty('margins', { caption: 'Margins' }));
-                }
-                async showEditor() {
-                    let res = await katrid.bi.showCodeEditor(this.targetObject.text, this.targetObject.allowTags ? 'html' : 'text');
-                    if (res !== false) {
-                        this.targetObject.text = res;
-                    }
-                }
-            }
-            editors.TextObjectEditor = TextObjectEditor;
-            class ImageEditor extends katrid.design.WidgetEditor {
-                static defineProperties() {
-                    return super.defineProperties().concat(new katrid.design.StringProperty('field', { caption: 'Field Name (Expression)' }), new katrid.design.ComponentProperty('datasource', {
-                        caption: 'Data Source',
-                        onGetValues: (typeEditor) => typeEditor.designer.report.datasources.map(ds => ({
-                            value: ds,
-                            text: ds.name
-                        })),
-                    }), new katrid.design.BooleanProperty('center', { caption: 'Center' }));
-                }
-            }
-            editors.ImageEditor = ImageEditor;
-            class BarcodeEditor extends katrid.design.WidgetEditor {
-                static defineProperties() {
-                    return super.defineProperties().concat(new katrid.design.StringProperty('field', { caption: 'Field Name (Expression)' }), new katrid.design.StringProperty('barcodeType', { caption: 'Barcode Type' }), new katrid.design.ComponentProperty('datasource', {
-                        caption: 'Data Source',
-                        onGetValues: (typeEditor) => typeEditor.designer.reportDesigner.report.datasources.map(ds => ({
-                            value: ds,
-                            text: ds.name
-                        })),
-                    }), new katrid.design.BooleanProperty('center', { caption: 'Center' }));
-                }
-            }
-            editors.BarcodeEditor = BarcodeEditor;
-            katrid.design.registerComponentEditor(katrid.drawing.Text, TextObjectEditor);
-            katrid.design.registerComponentEditor(katrid.drawing.Barcode, BarcodeEditor);
-            katrid.design.registerComponentEditor(katrid.drawing.Image, ImageEditor);
-        })(editors = drawing.editors || (drawing.editors = {}));
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
-})(katrid || (katrid = {}));
-var katrid;
-(function (katrid) {
-    var drawing;
-    (function (drawing) {
-        function pointInRect(x, y, rect) {
-            return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
-        }
-        drawing.pointInRect = pointInRect;
-        function rectInRect(rect1, rect2) {
-            return ((rect2.left >= rect1.left && rect2.left <= rect1.right) || (rect2.right >= rect1.left && rect2.right <= rect1.right) ||
-                (rect1.left >= rect2.left && rect1.left <= rect2.right) || (rect1.right >= rect2.left && rect1.right <= rect2.right)) &&
-                ((rect2.top >= rect1.top && rect2.top <= rect1.bottom) || (rect2.bottom >= rect1.top && rect2.bottom <= rect1.bottom) ||
-                    (rect1.top >= rect2.top && rect1.top <= rect2.bottom) || (rect1.bottom >= rect2.top && rect1.bottom <= rect2.bottom));
-        }
-        drawing.rectInRect = rectInRect;
-    })(drawing = katrid.drawing || (katrid.drawing = {}));
 })(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -15040,6 +5590,248 @@ var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
+        class BaseView {
+            constructor(config) {
+                this.config = config;
+                this.dialog = false;
+                this.create(config);
+                if (this.container)
+                    this.render();
+            }
+            create(info) {
+                if (info?.template instanceof HTMLTemplateElement)
+                    this.template = info.template;
+                else if (info?.template instanceof HTMLElement)
+                    this.html = info.template.outerHTML;
+                else if (typeof info?.template === 'string')
+                    this.html = info.template;
+                else if (typeof info?.info?.template === 'string')
+                    this.html = info.info.template;
+                if (info?.container)
+                    this.container = info.container;
+            }
+            _applyDataDefinition(data) {
+                if (this._readyEventListeners)
+                    for (let def of this._readyEventListeners)
+                        if (def.data)
+                            Object.assign(data, def.data);
+                return data;
+            }
+            getComponentData() {
+                let data = {
+                    data: null,
+                    ...Katrid.globalData,
+                };
+                this._applyDataDefinition(data);
+                return data;
+            }
+            createComponent() {
+                let me = this;
+                let computed = {};
+                if (this.parentVm)
+                    computed = {
+                        parent() {
+                            return me.parentVm;
+                        }
+                    };
+                return {
+                    data() {
+                        return me.getComponentData();
+                    },
+                    methods: {},
+                    computed,
+                    created() {
+                        for (let def of me._readyEventListeners)
+                            if (def.created)
+                                def.created.call(this);
+                    },
+                };
+            }
+            cloneTemplate() {
+                let templ, el;
+                if (this.template) {
+                    templ = this.template;
+                }
+                else {
+                    el = templ = Katrid.html(this.html);
+                }
+                if (templ instanceof HTMLTemplateElement) {
+                    templ = templ.content;
+                    el = templ.firstElementChild.cloneNode(true);
+                }
+                this.scripts = [];
+                for (let script of templ.querySelectorAll('script')) {
+                    this.scripts.push(script.text);
+                    script.parentNode.removeChild(script);
+                }
+                return el;
+            }
+            domTemplate() {
+                let templ = this.cloneTemplate();
+                return templ;
+            }
+            createDialogButtons(buttons) {
+                const defButtons = {
+                    close: {
+                        dismiss: 'modal',
+                        text: Katrid.i18n.gettext('Close'),
+                    },
+                    ok: {
+                        dismiss: 'modal',
+                        text: Katrid.i18n.gettext('OK'),
+                        modalResult: true,
+                    },
+                    cancel: {
+                        dismiss: 'modal',
+                        text: Katrid.i18n.gettext('Cancel'),
+                        modalResult: false,
+                    },
+                };
+                let res = [];
+                for (let b of buttons) {
+                    if (Katrid.isString(b))
+                        b = defButtons[b];
+                    let btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.innerText = b.text;
+                    if (b.modalResult)
+                        btn.setAttribute('v-on:click', '$result = ' + b.modalResult.toString());
+                    else if (b.click)
+                        btn.setAttribute('v-on:click', b.click);
+                    if (b.dismiss)
+                        btn.setAttribute('data-bs-dismiss', b.dismiss);
+                    if (b.class)
+                        btn.className = b.class;
+                    else
+                        btn.className = 'btn btn-outline-secondary';
+                    res.push(btn);
+                }
+                return res;
+            }
+            createDialog(content, buttons = ['close']) {
+                let templ = Katrid.html(`
+    <div class="modal" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              {{ title }}
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body data-form data-panel">
+               
+            <div class="clearfix"></div>
+          </div>
+          <div class="modal-footer">
+<!--buttons-->
+          </div>
+        </div>
+      </div>
+    </div>
+      `);
+                templ.querySelector('.modal-body').append(content);
+                let footer = templ.querySelector('.modal-footer');
+                for (let b of this.createDialogButtons(buttons))
+                    footer.append(b);
+                return templ;
+            }
+            createVm(el) {
+                let component = this.createComponent();
+                if (this.scripts) {
+                    this._readyEventListeners = [];
+                    for (let script of this.scripts) {
+                        let setup = eval(`(${script})`);
+                        if (setup && setup.call) {
+                            let def = setup.call(this);
+                            if (def.methods)
+                                Object.assign(component.methods, def.methods);
+                            if (def.ready || def.created || def.data)
+                                this._readyEventListeners.push(def);
+                            if (def.beforeMount)
+                                def.beforeMount.call(this, el);
+                        }
+                    }
+                }
+                let vm = Katrid.createVm(component).mount(el);
+                this.vm = vm;
+                return vm;
+            }
+            beforeRender(templ) {
+                return templ;
+            }
+            createElement() {
+                if (!this.element) {
+                    this.element = this.beforeRender(this.domTemplate());
+                    this.applyCustomTags(this.element);
+                }
+            }
+            applyCustomTags(template) {
+                Katrid.Forms.CustomTag.render(this, template);
+            }
+            render() {
+                this.createElement();
+                if (!this.vm)
+                    this.createVm(this.element);
+                if (this.container) {
+                    this.container.append(this.element);
+                    if (this._readyEventListeners) {
+                        for (let event of this._readyEventListeners)
+                            if (event.ready)
+                                event.ready.call(this.vm, this);
+                    }
+                }
+                return this.element;
+            }
+            closeDialog() {
+                this._modal.hide();
+            }
+            renderTo(container) {
+                this.container = container;
+                this.render();
+            }
+            async onHashChange(params) {
+            }
+        }
+        Forms.BaseView = BaseView;
+        function compileButtons(container) {
+            let sendFileCounter = 0;
+            return container.querySelectorAll('button').forEach((btn, index) => {
+                let $btn = $(btn);
+                let type = $btn.attr('type');
+                if (!$btn.attr('type') || ($btn.attr('type') === 'object'))
+                    $btn.attr('type', 'button');
+                if (type === 'object') {
+                    let sendFile = $btn.attr('send-file');
+                    $btn.attr('button-object', $btn.attr('name'));
+                    if (sendFile === undefined) {
+                        $btn.attr('v-on:click', `actionClick(selection, '${$btn.attr('name')}', $event)`);
+                    }
+                    else {
+                        let idSendFile = `__send_file_${++sendFileCounter}`;
+                        $btn.parent().append(`<input id="${idSendFile}" type="file" style="display: none" v-on:change="sendFile('${$btn.attr('name')}', $event.target)"/>`);
+                        $btn.attr('send-file', $btn.attr('name'));
+                        $btn.attr('onclick', `$('#${idSendFile}').trigger('click')`);
+                    }
+                }
+                else if (type === 'tag') {
+                    $btn.attr('button-tag', $btn.attr('name'));
+                    $btn.attr('onclick', `Katrid.Actions.ClientAction.tagButtonClick($(this))`);
+                }
+                if (!$btn.attr('class'))
+                    $btn.addClass('btn btn-outline-secondary');
+            });
+        }
+        Forms.compileButtons = compileButtons;
+        Forms.globalSettings = {
+            defaultGridInline: false,
+        };
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
         class ModelViewInfo {
             constructor(info) {
                 this.info = info;
@@ -15069,6 +5861,667 @@ var Katrid;
             }
         }
         Forms.ModelViewInfo = ModelViewInfo;
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        function x() {
+            return "";
+        }
+        Forms.searchModes = ['table', 'card'];
+        Forms.registry = {};
+        class ModelView extends Forms.BaseView {
+            constructor(info) {
+                super(info);
+                this.pendingOperation = 0;
+                this._active = false;
+            }
+            static fromTemplate(action, model, template) {
+                return new Katrid.Forms.Views.registry[this.viewType]({ action, model, template });
+            }
+            static createViewModeButton(container) {
+            }
+            async deleteSelection(sel) {
+                if ((((sel.length === 1) && confirm(Katrid.i18n.gettext('Confirm delete record?'))) ||
+                    ((sel.length > 1) && confirm(Katrid.i18n.gettext('Confirm delete records?')))) && sel) {
+                    let res = await this.datasource.delete(sel.map(rec => rec.id));
+                    Katrid.Forms.Dialogs.Alerts.success(Katrid.i18n.gettext('Record(s) deleted successfully'));
+                    this.refresh();
+                    return true;
+                }
+            }
+            create(info) {
+                this.action = info.action;
+                this._readonly = true;
+                let viewInfo = info.viewInfo;
+                if (info.model)
+                    this.model = info.model;
+                else if (info.name || info.action?.modelName) {
+                    console.warn('Please specify a model instance instead of name');
+                    this.model = new Katrid.Data.Model({
+                        name: info.name || info.action.modelName,
+                        fields: info.fields || viewInfo?.fields
+                    });
+                    if (info.action?.model)
+                        this.model.allFields = info.action.model.fields;
+                }
+                else if (info.fields) {
+                    this.model = new Katrid.Data.Model({ fields: info.fields, name: this.action?.modelName });
+                }
+                else if (viewInfo?.fields || viewInfo?.info?.fields) {
+                    this.model = new Katrid.Data.Model({ name: viewInfo.info.name, fields: viewInfo.fields || viewInfo.info.fields });
+                }
+                this.fields = this.model.fields;
+                this.datasource = new Katrid.Data.DataSource({
+                    model: this.model, context: this.action?.context, domain: this.action?.config?.domain,
+                    fields: this.fields,
+                });
+                this.datasource.dataCallback = (data) => this.dataSourceCallback(data);
+                if (info.records)
+                    this.records = this.model.fromArray(info.records);
+                else
+                    this.records = null;
+                if ((this.toolbarVisible == null) && this.action)
+                    this.toolbarVisible = true;
+                else
+                    this.toolbarVisible = info.toolbarVisible;
+                super.create(info);
+            }
+            dataSourceCallback(data) {
+                if (data.record)
+                    this.record = data.record;
+                else if (data.records)
+                    this.records = data.records;
+            }
+            createDialog(content, buttons = ['close']) {
+                let el = super.createDialog(content, buttons);
+                el.setAttribute('data-model', this.model.name);
+                return el;
+            }
+            get records() {
+                return this._records;
+            }
+            set records(value) {
+                this._records = value;
+                if (value)
+                    this.recordCount = value.length;
+                else
+                    this.recordCount = null;
+                if (this.vm)
+                    this.vm.records = value;
+            }
+            get recordCount() {
+                return this._recordCount;
+            }
+            set recordCount(value) {
+                this._recordCount = value;
+                if (this.vm)
+                    this.vm.recordCount = value;
+                if (this.action?.searchView?.vm)
+                    this.action.searchView.vm.recordCount = value;
+            }
+            get active() {
+                return this._active;
+            }
+            set active(value) {
+                this._active = value;
+                this.setActive(value);
+            }
+            setActive(value) {
+            }
+            getComponentData() {
+                let data = super.getComponentData();
+                data.records = this.records;
+                data.pendingRequest = false;
+                return data;
+            }
+            get readonly() {
+                return this._readonly;
+            }
+            set readonly(value) {
+                this._readonly = value;
+                if (value) {
+                    this.element.classList.add('readonly');
+                    this.element.classList.remove('editable');
+                }
+                else {
+                    this.element.classList.add('editable');
+                    this.element.classList.remove('readonly');
+                }
+            }
+            async ready() {
+            }
+            refresh() {
+                this.datasource.refresh();
+            }
+            _search(options) {
+                if (options.id)
+                    return this.datasource.get({ id: options.id, timeout: options.timeout });
+                return this.datasource.search({
+                    where: options.where,
+                    page: options.page,
+                    limit: options.limit,
+                    fields: Array.from(Object.keys(this.fields))
+                });
+            }
+            _mergeHeader(parent, header) {
+                for (let child of Array.from(header.children)) {
+                    if (child.tagName === 'HEADER')
+                        this._mergeHeader(parent, child);
+                    else {
+                        header.removeChild(child);
+                        parent.append(child);
+                    }
+                }
+            }
+            mergeHeader(parent, container) {
+                let headerEl = container.querySelector('header');
+                Forms.compileButtons(container);
+                if (headerEl) {
+                    headerEl.remove();
+                    this._mergeHeader(parent, headerEl);
+                }
+                return parent;
+            }
+            _vmCreated(vm) {
+                vm.$view = this;
+                vm.$fields = this.fields;
+                this.datasource.vm = vm;
+            }
+            async doViewAction(action, target) {
+                return this._evalResponseAction(await this.model.service.callAdminViewAction({ action: action, ids: [target] }));
+            }
+            async callSubAction(action, selection) {
+                return;
+            }
+            async _evalResponseAction(res) {
+                if (res?.open) {
+                    window.open(res.open);
+                }
+                return res;
+            }
+            getSelectedIds() {
+                return;
+            }
+            createComponent() {
+                let comp = super.createComponent();
+                let me = this;
+                Object.assign(comp.methods, {
+                    refresh() {
+                        me.refresh();
+                    },
+                    nextPage() {
+                        me.datasource.nextPage();
+                    },
+                    rpc(methodName, params) {
+                        if (Array.isArray(params))
+                            return me.model.service.rpc(methodName, params);
+                        return me.model.service.rpc(methodName, params.args, params.kwargs);
+                    },
+                    actionClick(selection, methodName, event) {
+                        me.action.formButtonClick(selection.map(obj => obj.id), methodName);
+                    },
+                    doViewAction(action, target) {
+                        return me.doViewAction(action, target);
+                    },
+                    async deleteSelection() {
+                        if (await me.deleteSelection(this.selection))
+                            this.selection = [];
+                    },
+                    sum(iterable, member) {
+                        let res = 0;
+                        if (iterable)
+                            for (let obj of iterable)
+                                res += obj[member] || 0;
+                        return res;
+                    },
+                    sendFile(name, file) {
+                        return Katrid.Services.Upload.sendFile({ model: me.model || me.action?.model, method: name, file, vm: this });
+                    },
+                    $closeDialog(result) {
+                        if (result !== undefined)
+                            this.$result = result;
+                        me.closeDialog();
+                    }
+                });
+                comp.methods.setViewMode = async function (mode) {
+                    return await me.action.showView(mode);
+                };
+                comp.methods.callAdminViewAction = async function (args) {
+                    let input;
+                    if (args.prompt) {
+                        input = prompt(args.prompt);
+                        if (!input)
+                            return;
+                    }
+                    if (!args.confirm || (args.confirm && confirm(args.confirm))) {
+                        const config = { action: args.action, ids: args.ids };
+                        if (!config.ids)
+                            config.ids = await me.getSelectedIds();
+                        if (input)
+                            config.prompt = input;
+                        let res = await me.model.service.callAdminViewAction(config);
+                        if (res.location)
+                            window.location.href = res.location;
+                    }
+                };
+                comp.methods.insert = async function (defaultValues) {
+                    let view = await this.setViewMode('form');
+                    view.vm.insert(defaultValues);
+                };
+                comp.computed.$fields = function () {
+                    return me.fields;
+                };
+                comp.created = function () {
+                    me._vmCreated(this);
+                };
+                return comp;
+            }
+            getViewType() {
+                return Object.getPrototypeOf(this).constructor.viewType;
+            }
+            autoCreateView() {
+                let el = document.createElement(this.getViewType() + '-view');
+                for (let f of Object.values(this.model.fields)) {
+                    let field = document.createElement('field');
+                    field.setAttribute('name', f.name);
+                    el.append(field);
+                }
+                return el;
+            }
+            domTemplate() {
+                if (!this.template && !this.html)
+                    return this.autoCreateView();
+                return super.domTemplate();
+            }
+            beforeRender(template) {
+                let header = template.querySelector(':scope > header');
+                Forms.compileButtons(template);
+                if (header)
+                    template.removeChild(header);
+                let actions = template.querySelector(':scope > actions');
+                if (actions)
+                    template.removeChild(actions);
+                let templ = this.renderTemplate(template);
+                if (this.dialog)
+                    return this.createDialog(templ, this.dialogButtons);
+                let actionView = document.createElement('div');
+                actionView.className = 'view-content';
+                let viewContent = document.createElement('div');
+                viewContent.classList.add('action-view-content', 'content-scroll');
+                if (this.toolbarVisible)
+                    actionView.append(this.createToolbar());
+                if (actions)
+                    actionView.append(actions);
+                let newHeader = document.createElement('div');
+                newHeader.className = 'content-container-heading';
+                if (header)
+                    this._mergeHeader(newHeader, header);
+                let content = document.createElement('div');
+                content.className = 'content no-padding';
+                content.append(newHeader);
+                content.append(templ);
+                viewContent.append(content);
+                actionView.append(viewContent);
+                return actionView;
+            }
+            renderTemplate(template) {
+                return template;
+            }
+            createToolbar() {
+                let el = document.createElement('div');
+                el.className = 'toolbar';
+                return el;
+            }
+            generateHelp(help) {
+                if (this.fields) {
+                    for (let f of Object.values(this.fields))
+                        if (f.visible) {
+                            let h4 = document.createElement('h4');
+                            h4.innerText = f.caption;
+                            help.element.append(h4);
+                            if (f.helpText) {
+                                let p = document.createElement('p');
+                                p.innerHTML = f.helpText;
+                                help.element.append(p);
+                                if (f.widgetHelp) {
+                                    p = document.createElement('p');
+                                    p.className = 'text-muted';
+                                    p.innerHTML = f.widgetHelp;
+                                    help.element.append(p);
+                                }
+                            }
+                        }
+                }
+            }
+        }
+        Forms.ModelView = ModelView;
+        class RecordCollectionView extends ModelView {
+            constructor(info) {
+                super(info);
+                this.autoLoad = true;
+            }
+            get orderBy() {
+                return this._orderBy;
+            }
+            set orderBy(value) {
+                this._orderBy = value;
+                this.datasource.orderBy = value;
+            }
+            async getSelectedIds() {
+                if (this.vm.allSelectionFilter)
+                    return this.model.service.listId({ where: this._lastSearch, limit: 99999 });
+                else
+                    return this.vm.selection.map(obj => obj.id);
+            }
+            async callSubAction(action, selection) {
+                if (!selection)
+                    selection = await this.getSelectedIds();
+                if (selection?.length)
+                    await this.model.service.callSubAction(action, selection);
+                return;
+            }
+            create(info) {
+                super.create(info);
+                this.recordGroups = info.recordGroups || null;
+            }
+            async _recordClick(record, index) {
+                if (this.dialog) {
+                    this.vm.$result = record;
+                    this.closeDialog();
+                }
+                else {
+                    this.record = record;
+                    if (this.action) {
+                        let formView = await this.action.showView('form', { params: { id: record.id } });
+                        console.debug('set records', this.groupLength);
+                        if (this.groupLength)
+                            formView.records = this.datasource.records;
+                        else
+                            formView.records = this.vm.records;
+                        formView.recordIndex = index;
+                    }
+                }
+            }
+            nextPage() {
+                this.datasource.nextPage();
+            }
+            prevPage() {
+                this.datasource.prevPage();
+            }
+            createComponent() {
+                let comp = super.createComponent();
+                let me = this;
+                comp.methods.recordClick = this.config.recordClick || async function (record, index, event) {
+                    await me._recordClick(record, index);
+                };
+                comp.methods.toggleGroup = function (group) {
+                    if (group.$expanded)
+                        me.collapseGroup(group);
+                    else
+                        me.expandGroup(group);
+                };
+                comp.methods.download = function (config) {
+                    if (config.format)
+                        return this.rpc('api_export', { kwargs: { where: me._lastSearch, fields: Array.from(Object.keys(me.fields)) } });
+                };
+                return comp;
+            }
+            setActive(value) {
+                if (this._searchView) {
+                    let btn = this._searchView.element.querySelector('.btn-view-' + Object.getPrototypeOf(this).constructor.viewType);
+                    if (btn) {
+                        if (value)
+                            btn.classList.add('active');
+                        else
+                            btn.classList.remove('active');
+                    }
+                }
+            }
+            get searchView() {
+                return this._searchView;
+            }
+            set searchView(value) {
+                this._searchView = value;
+                if (value && this.toolbarVisible) {
+                    this.setSearchView(value);
+                    value.resultView = this;
+                }
+            }
+            dataSourceCallback(data) {
+                super.dataSourceCallback(data);
+                if (this._searchView) {
+                    this._searchView.vm.dataOffset = this.datasource.offset;
+                    this._searchView.vm.dataOffsetLimit = this.datasource.offsetLimit;
+                    this._searchView.vm.recordCount = this.datasource.recordCount;
+                    this.vm.recordCount = this.datasource.recordCount;
+                }
+                this._invalidateSelection();
+            }
+            setSearchView(searchView) {
+                if (this.element) {
+                    let div = this.element.querySelector('.search-view-area');
+                    if (div) {
+                        div.innerHTML = '';
+                        div.append(searchView.element);
+                    }
+                }
+            }
+            getComponentData() {
+                let data = super.getComponentData();
+                data.selection = [];
+                data.groups = this.prepareGroup(this.recordGroups);
+                data.recordCount = this.recordCount;
+                data.$fields = this.fields;
+                data.allSelectionFilter = false;
+                return data;
+            }
+            prepareGroup(groups) {
+                return groups;
+            }
+            async groupBy(data) {
+                this.vm.records = this.vm.groups;
+            }
+            async applyGroups(groups, params) {
+                let res = await this.datasource.groupBy(groups, params);
+                await this.groupBy(res);
+            }
+            _addRecordsToGroup(index, list) {
+            }
+            async expandGroup(group) {
+                group.$expanded = true;
+                let idx = this.vm.groups.indexOf(group);
+                console.log(group);
+                let children = group.$children;
+                if (!children) {
+                    await this.datasource.expandGroup(idx, group);
+                }
+                else {
+                    let groups = this.vm.groups;
+                    this.vm.groups = [...groups.slice(0, idx + 1), ...children, ...groups.slice(idx + 1)];
+                }
+            }
+            expandAll() {
+                for (let g of this.vm.groups) {
+                    if (g.$hasChildren && !g.$expanded) {
+                        this.expandGroup(g);
+                    }
+                }
+            }
+            collapseAll() {
+                for (let g of this.vm.groups)
+                    if (g.$hasChildren && g.$expanded)
+                        this.collapseGroup(g);
+            }
+            collapseGroup(group) {
+                let idx = this.vm.groups.indexOf(group);
+                let groups = this.vm.groups;
+                for (let sub of group.$children) {
+                    if (!sub.$hasChildren)
+                        break;
+                    else if (sub.$expanded)
+                        this.collapseGroup(sub);
+                }
+                groups.splice(idx + 1, group.$children.length);
+                group.$expanded = false;
+            }
+            async setSearchParams(params) {
+                let p = {};
+                if (this.action?.info?.domain)
+                    p = JSON.parse(this.action.info.domain);
+                for (let [k, v] of Object.entries(p)) {
+                    let arg = {};
+                    arg[k] = v;
+                    params.push(arg);
+                }
+                this._lastSearch = params;
+                await this.datasource.search({ where: params });
+            }
+            _invalidateSelection() {
+                this.vm.selection = [];
+                this.vm.selectionLength = 0;
+                this.vm.allSelected = false;
+            }
+            createToolbar() {
+                let templ = `<div class="data-heading panel panel-default">
+      <div class="panel-body">
+        <div class="row">
+        <div class="col-md-6">
+        
+          <action-navbar></action-navbar>
+          <p class="help-block"></p>
+          <div class="toolbar">
+            <div class="toolbar-action-buttons"></div>
+        </div>
+      </div>
+          <div class="search-view-area col-md-6"></div>
+        </div>
+      </div>
+    </div>`;
+                let toolbar = Katrid.html(templ);
+                toolbar.querySelector('action-navbar').actionManager = this.action.actionManager;
+                this.createToolbarButtons(toolbar);
+                return toolbar;
+            }
+            createToolbarButtons(container) {
+                let parent = container.querySelector('.toolbar-action-buttons');
+                let btnCreate = document.createElement('button');
+                btnCreate.className = 'btn btn-primary btn-action-create';
+                btnCreate.innerText = Katrid.i18n.gettext('Create');
+                btnCreate.setAttribute('v-on:click', 'insert()');
+                parent.append(btnCreate);
+                let btnXls = document.createElement('button');
+                btnXls.innerHTML = '<i class="fas fa-download"></i>';
+                btnXls.title = 'Download as excel';
+                btnXls.className = 'btn btn-outline-secondary btn-export-xls';
+                btnXls.setAttribute('v-on:click', "download({format: 'xlsx'})");
+                parent.append(btnXls);
+                if (this.config?.toolbar?.print) {
+                    let btnPrint = document.createElement('div');
+                    btnPrint.classList.add('btn-group');
+                    btnPrint.innerHTML = `<button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" name="print" data-bs-toggle="dropdown" aria-haspopup="true">
+        ${Katrid.i18n.gettext('Print')} <span class="caret"></span>
+      </button>
+      <div class="dropdown-menu">
+        <a class="dropdown-item" v-on:click="autoReport()">${Katrid.i18n.gettext('Auto Report')}</a>
+      </div>`;
+                    let dropdown = btnPrint.querySelector('.dropdown-menu');
+                    for (let bindingAction of this.config?.toolbar?.print) {
+                        let a = document.createElement('a');
+                        a.classList.add('dropdown-item');
+                        a.setAttribute('data-id', bindingAction.id);
+                        a.innerText = bindingAction.name;
+                        dropdown.append(a);
+                    }
+                    parent.append(btnPrint);
+                }
+                let btnRefresh = document.createElement('button');
+                btnRefresh.type = 'button';
+                btnRefresh.classList.add('btn', 'toolbtn');
+                btnRefresh.innerHTML = '<i class="fas fa-redo-alt"></i>';
+                btnRefresh.title = Katrid.i18n.gettext('Refresh');
+                btnRefresh.setAttribute('v-on:click', 'refresh()');
+                parent.append(btnRefresh);
+                this.createSelectionInfo(parent);
+                let btnActions = document.createElement('div');
+                btnActions.classList.add('btn-group');
+                btnActions.innerHTML = `<div class="dropdown">
+        <button name="actions" type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown" v-show="selectionLength"
+                aria-haspopup="true">
+          ${Katrid.i18n.gettext('Action')} <span class="caret"></span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-actions">
+          <a class="dropdown-item" v-on:click="deleteSelection()">
+            <i class="fa fa-fw fa-trash-o"></i> ${Katrid.i18n.gettext('Delete')}
+          </a>
+          <!-- replace-actions -->
+        </div>
+      </div>`;
+                parent.append(btnActions);
+                return parent;
+            }
+            createSelectionInfo(parent) {
+            }
+            get $modalResult() {
+                return this.vm.$result;
+            }
+            set $modalResult(value) {
+                this.vm.$result = value;
+            }
+            showDialog(options) {
+                if (!options)
+                    options = {};
+                if (options.backdrop === undefined)
+                    options.backdrop = 'static';
+                this.dialog = true;
+                return new Promise(async (resolve, reject) => {
+                    let el = this.element;
+                    if (!el)
+                        el = this.render();
+                    $(el).modal(options)
+                        .on('hidden.bs.modal', () => {
+                        resolve(this.vm.$modalResult);
+                        $(el).data('bs.modal', null);
+                        el.remove();
+                    });
+                });
+            }
+            async ready() {
+                if (!this.records) {
+                    return this.datasource.open();
+                }
+                else {
+                    this.refresh();
+                }
+            }
+        }
+        Forms.RecordCollectionView = RecordCollectionView;
+        class ActionViewElement extends Katrid.WebComponent {
+            create() {
+                this.classList.add('action-view');
+            }
+        }
+        Forms.ActionViewElement = ActionViewElement;
+        Katrid.define('action-view', ActionViewElement);
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Views;
+        (function (Views) {
+            Views.registry = {};
+            function fromTemplates(action, model, templates) {
+                let res = {};
+                for (let [k, t] of Object.entries(templates)) {
+                    res[k] = Views.registry[k].fromTemplate(action, model, t);
+                }
+                return res;
+            }
+            Views.fromTemplates = fromTemplates;
+        })(Views = Forms.Views || (Forms.Views = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -17708,7 +9161,10 @@ var Katrid;
         let intl = _intlCache[key];
         if (!intl) {
             if (typeof config === 'number')
-                intl = new Intl.NumberFormat(Katrid.i18n.languageCode, { minimumFractionDigits: config, maximumFractionDigits: config, });
+                intl = new Intl.NumberFormat(Katrid.i18n.languageCode, {
+                    minimumFractionDigits: config,
+                    maximumFractionDigits: config,
+                });
             else
                 intl = new Intl.NumberFormat(Katrid.i18n.languageCode, config);
             _intlCache[key] = intl;
@@ -17760,8 +9216,9 @@ var Katrid;
             Katrid.i18n.plural = plural;
             Katrid.i18n.catalog = catalog;
             Katrid.i18n.formats = expandFormats(formats);
-            if (!Katrid.i18n.formats.reShortDateFormat)
+            if (!Katrid.i18n.formats.reShortDateFormat) {
                 Katrid.i18n.formats.reShortDateFormat = /\d+[-/]\d+[-/]\d+/;
+            }
             if (plural) {
                 Katrid.i18n.pluralidx = function (n) {
                     if (plural instanceof Boolean) {
@@ -17845,6 +9302,11 @@ var katrid;
 (function (katrid) {
     katrid.i18n = Katrid.i18n;
 })(katrid || (katrid = {}));
+var _;
+(function (_) {
+    _.i18n = Katrid.i18n;
+    _.gettext = _.i18n.gettext;
+})(_ || (_ = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -19866,18 +11328,23 @@ var Katrid;
         }
         UI.DropdownMenu = DropdownMenu;
         class BaseInputWidget {
-            constructor(options) {
-                this.el = options.el;
-                if (this.el)
+            constructor(_options) {
+                this._options = _options;
+                this.el = _options.el;
+                if (this.el) {
                     this._create(this.el);
+                }
             }
             _create(el) {
             }
         }
         UI.BaseInputWidget = BaseInputWidget;
         class BaseAutoComplete extends BaseInputWidget {
-            constructor() {
-                super(...arguments);
+            constructor(options) {
+                if (options instanceof HTMLElement) {
+                    options = { el: options };
+                }
+                super(options);
                 this.menu = null;
                 this.closeOnChange = true;
                 this.term = '';
@@ -19885,6 +11352,9 @@ var Katrid;
                 this.allowOpen = false;
                 this._tags = [];
                 this._facets = [];
+                if (options.source) {
+                    this.setSource(options.source);
+                }
             }
             _create(el) {
                 el.classList.add('input-autocomplete', 'input-dropdown');
@@ -20103,8 +11573,21 @@ var Katrid;
                 }
             }
             get selectedValue() {
-                if (this.$selectedItem)
+                if (this.$selectedItem) {
                     return this.$selectedItem.id;
+                }
+            }
+            get value() {
+                return this.selectedValue;
+            }
+            set value(value) {
+                if (Array.isArray(this._source)) {
+                    for (const item of this._source)
+                        if (item.id === value) {
+                            this.selectedItem = item;
+                            return;
+                        }
+                }
             }
         }
         UI.BaseAutoComplete = BaseAutoComplete;
@@ -20123,6 +11606,7 @@ var Katrid;
                 }
             }
         }
+        UI.InputAutoComplete = InputAutoComplete;
         Katrid.component('input-autocomplete', {
             props: ['modelValue', 'items'],
             template: '<input-autocomplete/>',
@@ -20147,6 +11631,13 @@ var Katrid;
         });
     })(UI = Katrid.UI || (Katrid.UI = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        ui.InputAutoComplete = Katrid.UI.InputAutoComplete;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -20999,6 +12490,305 @@ var Katrid;
         class JsonRpcAdapter extends Services.FetchAdapter {
         }
         Services.JsonRpcAdapter = JsonRpcAdapter;
+    })(Services = Katrid.Services || (Katrid.Services = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Services;
+    (function (Services) {
+        let $fetch = window.fetch;
+        window['$fetch'] = $fetch;
+        window.fetch = function () {
+            let ajaxStart = new CustomEvent('ajax.start', { detail: document, bubbles: true, cancelable: false });
+            let ajaxStop = new CustomEvent('ajax.stop', { detail: document, bubbles: true, cancelable: false });
+            let promise = $fetch.apply(this, arguments);
+            document.dispatchEvent(ajaxStart);
+            promise.finally(() => {
+                document.dispatchEvent(ajaxStop);
+            });
+            return promise;
+        };
+        class Service {
+            static { this.url = '/api/rpc/'; }
+            constructor(name) {
+                this.name = name;
+            }
+            static $fetch(url, config, params = null) {
+                return this.adapter.$fetch(url, config, params);
+            }
+            static $post(url, data, params) {
+                return this.adapter.$fetch(url, {
+                    method: 'POST',
+                    credentials: "same-origin",
+                    body: JSON.stringify(data),
+                    headers: {
+                        'content-type': 'application/json',
+                    }
+                }, params)
+                    .then(res => res.json());
+            }
+            get(name, params) {
+                const methName = this.name ? this.name + '/' : '';
+                const rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
+                return $.get(rpcName, params);
+            }
+            post(name, data, params, config, context) {
+                if (!data)
+                    data = {};
+                if (context)
+                    data.context = context;
+                data = {
+                    method: name,
+                    params: data,
+                };
+                if (!config)
+                    config = {};
+                Object.assign(config, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const methName = this.name ? this.name + '/' : '';
+                let rpcName = Katrid.settings.server + this.constructor.url + methName + name + '/';
+                if (params) {
+                    rpcName += `?${$.param(params)}`;
+                }
+                return new Promise((resolve, reject) => {
+                    Service.adapter.$fetch(rpcName, config)
+                        .then(async (response) => {
+                        let contentType = response.headers.get('Content-Type');
+                        if (response.status === 500) {
+                            let res = await response.json();
+                            Katrid.Forms.Dialogs.ExceptionDialog.show(`Server Error 500`, res.error);
+                            return reject(res);
+                        }
+                        let res;
+                        if (contentType === 'application/json')
+                            res = await response.json();
+                        else
+                            return downloadBytes(response);
+                        if (res.error) {
+                            if ('message' in res.error)
+                                Katrid.Forms.Dialogs.Alerts.error(res.error.message);
+                            else if ('messages' in res.error)
+                                Katrid.Forms.Dialogs.Alerts.error(res.error.messages.join('<br>'));
+                            else
+                                Katrid.Forms.Dialogs.Alerts.error(res.error);
+                            reject(res.error);
+                        }
+                        else {
+                            for (let processor of katrid.admin.responseMiddleware)
+                                (new processor(response)).process(res);
+                            if (res.result) {
+                                let result = res.result;
+                                if (Array.isArray(result) && (result.length === 1))
+                                    result = result[0];
+                                let messages;
+                                if (result.messages)
+                                    messages = result.messages;
+                                else
+                                    messages = [];
+                                if (result.message) {
+                                    if (result.message.info)
+                                        messages.push({ type: 'info', message: result.message.info });
+                                    else
+                                        messages.push(result.message);
+                                }
+                                else if (result.warn)
+                                    messages.push({ type: 'warn', message: result.warn });
+                                else if (result.error) {
+                                    if (typeof result.error === 'string')
+                                        messages.push({ type: 'error', message: result.error });
+                                    else
+                                        messages.push({ type: 'error', message: result.error.message });
+                                }
+                                messages.forEach(function (msg) {
+                                    if (Katrid.isString(msg))
+                                        Katrid.Forms.Dialogs.Alerts.success(msg);
+                                    else if (msg.type === 'warn')
+                                        Katrid.Forms.Dialogs.Alerts.warn(msg.message);
+                                    else if (msg.type === 'info')
+                                        Katrid.Forms.Dialogs.Alerts.info(msg.message);
+                                    else if ((msg.type === 'error') || (msg.type === 'danger'))
+                                        Katrid.Forms.Dialogs.Alerts.error(msg.message);
+                                    else if (msg.type === 'toast')
+                                        Katrid.Forms.Dialogs.toast(msg.message);
+                                    else if (msg.type === 'alert')
+                                        Katrid.Forms.Dialogs.alert(msg.message, msg.title, msg.alert);
+                                });
+                                if (result) {
+                                    if (result.$open || result.open)
+                                        window.open(result.$open || result.open);
+                                    if (result.download) {
+                                        let a = document.createElement('a');
+                                        a.href = result.download;
+                                        a.target = '_blank';
+                                        a.click();
+                                        return;
+                                    }
+                                }
+                                resolve(result);
+                            }
+                            else
+                                resolve(res);
+                        }
+                    })
+                        .catch(res => {
+                        console.log('error', res);
+                        reject(res);
+                    });
+                });
+            }
+        }
+        Services.Service = Service;
+        class Data extends Service {
+            static get url() {
+                return '/web/data/';
+            }
+            ;
+            reorder(model, ids, field = 'sequence', offset = 0) {
+                return this.post('reorder', { args: [model, ids, field, offset] });
+            }
+        }
+        Services.Data = Data;
+        class Attachments {
+            static delete(id) {
+                let svc = new Katrid.Services.ModelService('content.attachment');
+                svc.delete(id);
+            }
+            static upload(file, config) {
+                return new Promise((resolve, reject) => {
+                    let data = new FormData();
+                    data.append('model', config.model.name);
+                    data.append('id', config.recordId);
+                    for (let f of file.files)
+                        data.append('attachment', f, f.name);
+                    return $.ajax({
+                        url: '/web/content/upload/',
+                        type: 'POST',
+                        data: data,
+                        processData: false,
+                        contentType: false
+                    })
+                        .done((res) => {
+                        resolve(res);
+                    });
+                });
+            }
+        }
+        Services.Attachments = Attachments;
+        class Auth extends Service {
+            static login(username, password) {
+                return this.$post('/web/login/', { username: username, password: password });
+            }
+        }
+        class Upload {
+            static callWithFiles(config) {
+                let { model, method, file, vm, data } = config;
+                let form = new FormData();
+                let files = file.files;
+                if (files.length === 1)
+                    form.append('files', file.files[0]);
+                else
+                    files.map(f => form.append('files[]', f));
+                let url = `/web/file/upload/${model.name}/${method}/`;
+                if (vm?.record?.id)
+                    form.append('id', vm.record.id);
+                console.debug('data', data);
+                if (data) {
+                    Object.entries(data).map(([k, v]) => {
+                        form.append(k, v);
+                        console.debug(k, v);
+                    });
+                }
+                return Service.$fetch(url, {
+                    url,
+                    method: 'POST',
+                    body: form,
+                }).then(res => res.json());
+            }
+            static sendFile(config) {
+                let { model, method, file, vm } = config;
+                let form = new FormData();
+                let files = file.files;
+                if (files.length === 1)
+                    form.append('files', file.files[0]);
+                else
+                    files.map(f => form.append('files[]', f));
+                let url = `/web/file/upload/${model.name}/${method}/`;
+                if (vm?.record?.id)
+                    form.append('id', vm.record.id);
+                let dataSource = vm?.dataSource;
+                $.ajax({
+                    url: url,
+                    data: form,
+                    processData: false,
+                    contentType: false,
+                    type: 'POST',
+                    success: (data) => {
+                        if (dataSource)
+                            dataSource.refresh();
+                        Katrid.Forms.Dialogs.Alerts.success('Operação realizada com sucesso.');
+                    }
+                });
+            }
+            static uploadTo(url, file) {
+                let form = new FormData();
+                form.append('files', file.files[0]);
+                return $.ajax({
+                    url: url,
+                    data: form,
+                    processData: false,
+                    contentType: false,
+                    type: 'POST',
+                    success: (data) => {
+                        Katrid.Forms.Dialogs.Alerts.success('Arquivo enviado com sucesso!');
+                    }
+                });
+            }
+        }
+        Services.Upload = Upload;
+        Services.data = new Data('');
+        function post(url, data) {
+            return fetch(url, {
+                method: 'POST',
+                body: JSON.stringify(data),
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+            }).then(res => res.json());
+        }
+        Services.post = post;
+        async function downloadBytes(res) {
+            let bytes = await res.blob();
+            let contentType = res.headers.get('Content-Type');
+            let name = res.headers.get('Content-Disposition');
+            let url = URL.createObjectURL(bytes);
+            if (name?.includes('filename='))
+                name = name.split('filename=', 2)[1];
+            if (contentType.indexOf('pdf') > -1) {
+                let viewer = window.open('/pdf-viewer/pdf/web/viewer.html');
+                viewer.addEventListener('load', async () => {
+                    await viewer.PDFViewerApplication.open({ url, originalUrl: name });
+                    URL.revokeObjectURL(url);
+                });
+            }
+            else {
+                let a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.target = '_blank';
+                a.download = name;
+                document.body.append(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            }
+        }
     })(Services = Katrid.Services || (Katrid.Services = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;
@@ -22591,6 +14381,10 @@ var katrid;
             get children() {
                 return this._children;
             }
+            clear() {
+                this._ul.innerHTML = '';
+                this._children.length = 0;
+            }
             select() {
                 this.treeView.selection = [this];
                 this.options?.onSelect?.(this);
@@ -23353,6 +15147,64 @@ var katrid;
 (function (katrid) {
     var ui;
     (function (ui) {
+        class CellInput {
+            constructor(grid, cell) {
+                this.grid = grid;
+                this.cell = cell;
+                this.value = cell.content;
+                this.create();
+                this._prevElement = document.activeElement;
+            }
+            create() {
+                this.el = document.createElement('input');
+                if (this.value) {
+                    this.el.value = this.value;
+                }
+                this.el.className = 'grid-cell-input';
+                this.el.addEventListener('keydown', evt => {
+                    if (!evt.shiftKey) {
+                        if (evt.key === 'Enter') {
+                            evt.preventDefault();
+                            evt.stopPropagation();
+                            this.apply();
+                            return;
+                        }
+                    }
+                    if (!evt.ctrlKey && !evt.altKey && ui.RE_EDIT.test(evt.key)) {
+                        evt.stopPropagation();
+                    }
+                });
+                this.el.addEventListener('pointerdown', evt => evt.stopPropagation());
+                this._blurHandler = () => this.destroy();
+                this.el.addEventListener('blur', this._blurHandler);
+            }
+            apply() {
+                this.applyValue();
+                this.cell.touched = true;
+                this.destroy();
+            }
+            applyValue() {
+                this.grid.inputCellValue(this.cell, this.el.value);
+            }
+            destroy() {
+                this.el.removeEventListener('blur', this._blurHandler);
+                this.el.remove();
+                this._prevElement?.focus();
+            }
+            appendTo(parent) {
+                return parent.appendChild(this.el);
+            }
+            select() {
+                this.el.select();
+            }
+        }
+        ui.CellInput = CellInput;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
         class TableCell {
             constructor() {
                 this.touched = false;
@@ -23364,9 +15216,14 @@ var katrid;
         ui.TableColumn = TableColumn;
         class TableColumns extends katrid.OwnedCollection {
             notify(action, item) {
+                const owner = this.owner;
+                if (action === 'add') {
+                    owner?.refresh();
+                }
             }
         }
         ui.TableColumns = TableColumns;
+        ui.RE_EDIT = /^.$/u;
         class SelectionBox {
             constructor(container) {
                 this.create();
@@ -23401,17 +15258,17 @@ var katrid;
                 let endRow = null;
                 let endCol = null;
                 for (const cell of cells) {
-                    if (startRow === null || cell.row < startRow) {
-                        startRow = cell.row;
+                    if (startRow === null || cell.y < startRow) {
+                        startRow = cell.y;
                     }
-                    if (endRow === null || cell.row > endRow) {
-                        endRow = cell.row;
+                    if (endRow === null || cell.y > endRow) {
+                        endRow = cell.y;
                     }
-                    if (startCol === null || cell.col < startCol) {
-                        startCol = cell.col;
+                    if (startCol === null || cell.x < startCol) {
+                        startCol = cell.x;
                     }
-                    if (endCol === null || cell.col > endCol) {
-                        endCol = cell.col;
+                    if (endCol === null || cell.x > endCol) {
+                        endCol = cell.x;
                     }
                 }
                 const range = new CellsRange(startRow, startCol, endRow, endCol);
@@ -23453,6 +15310,50 @@ var katrid;
             }
         }
         ui.CellsRange = CellsRange;
+        let GridHeaderEnumerator;
+        (function (GridHeaderEnumerator) {
+            GridHeaderEnumerator[GridHeaderEnumerator["number"] = 1] = "number";
+            GridHeaderEnumerator[GridHeaderEnumerator["letter"] = 2] = "letter";
+        })(GridHeaderEnumerator = ui.GridHeaderEnumerator || (ui.GridHeaderEnumerator = {}));
+        class BaseGridHeaderItem {
+            createElement(counter) {
+                const el = document.createElement('div');
+                el.textContent = counter.toString();
+                return el;
+            }
+        }
+        ui.BaseGridHeaderItem = BaseGridHeaderItem;
+        class AutoGridHeaderItem extends BaseGridHeaderItem {
+            constructor(enumerator) {
+                super();
+                this.enumerator = enumerator;
+                this.initialCounter = 1;
+            }
+            createElement(counter) {
+                const el = document.createElement('div');
+                el.className = 'grid-header-cell';
+                if (this.enumerator === GridHeaderEnumerator.number) {
+                    el.textContent = this.getNextNumber(counter).toString();
+                }
+                else {
+                    el.textContent = this.getNextLetter(counter);
+                }
+                return el;
+            }
+            getNextNumber(counter) {
+                return counter + 1;
+            }
+            getNextLetter(counter) {
+                if (counter === 'Z') {
+                    return 'AA';
+                }
+                return String.fromCharCode(counter.charCodeAt(0) + 1);
+            }
+        }
+        ui.AutoGridHeaderItem = AutoGridHeaderItem;
+        class GridHeaderItem {
+        }
+        ui.GridHeaderItem = GridHeaderItem;
         class BaseGrid {
             constructor() {
                 this.rowHeight = 20;
@@ -23462,6 +15363,9 @@ var katrid;
                 this.loadedRows = 0;
                 this.incrementalLoad = true;
                 this._striped = false;
+                this._isEditing = false;
+                this._draggingSelection = false;
+                this.autoSaveCell = true;
                 this._visibleRows = [];
                 this._cells = [];
                 this.columns = new TableColumns(this);
@@ -23478,11 +15382,11 @@ var katrid;
             }
             create() {
                 this._create();
-                this.createSizeLayer();
                 this.createEvents();
                 this.createHeader();
-                this.calcSize();
                 this.createRowHeader();
+                this.createSizeLayer();
+                this.calcSize();
                 if (this.incrementalLoad) {
                     this.el.addEventListener('scroll', (event) => {
                         this._scroll();
@@ -23492,7 +15396,7 @@ var katrid;
             appendTo(container) {
                 this.create();
                 container.appendChild(this.el);
-                setTimeout(() => this.render());
+                this.render();
             }
             render() {
                 if (this.dataRows) {
@@ -23507,68 +15411,189 @@ var katrid;
             createEvents() {
                 this.el.tabIndex = 0;
                 this.el.addEventListener('keydown', (event) => this.keyDown(event));
+                this.el.addEventListener('dblclick', (event) => this.dblClick(event));
             }
             keyDown(event) {
-                if (event.shiftKey) {
-                    switch (event.key) {
-                        case 'ArrowUp':
-                            this.moveBy(0, -1, true);
+                switch (event.key) {
+                    case 'ArrowUp':
+                        this.moveBy(0, -1, event.shiftKey);
+                        event.stopPropagation();
+                        event.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                        this.moveBy(0, 1, event.shiftKey);
+                        event.stopPropagation();
+                        event.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                        this.moveBy(-1, 0, event.shiftKey);
+                        event.stopPropagation();
+                        event.preventDefault();
+                        break;
+                    case 'ArrowRight':
+                        this.moveBy(1, 0, event.shiftKey);
+                        event.stopPropagation();
+                        event.preventDefault();
+                        break;
+                    case 'F2':
+                        this.editCell(this._selectedCell);
+                        event.stopPropagation();
+                        event.preventDefault();
+                        break;
+                    case 'Tab':
+                        if (event.shiftKey)
+                            this.gotoPrevCell(this._selectedCell);
+                        else
+                            this.gotoNextCell(this._selectedCell);
+                        event.stopPropagation();
+                        event.preventDefault();
+                        break;
+                    case 'Escape':
+                        if (this.isEditing) {
                             event.stopPropagation();
-                            event.preventDefault();
-                            break;
-                        case 'ArrowDown':
-                            this.moveBy(0, 1, true);
+                            this.cancelEdit();
+                        }
+                        break;
+                    default:
+                        if (!event.ctrlKey && ui.RE_EDIT.test(event.key)) {
+                            this.editCell(this._selectedCell, true);
                             event.stopPropagation();
-                            event.preventDefault();
-                            break;
-                        case 'ArrowLeft':
-                            this.moveBy(-1, 0, true);
-                            event.stopPropagation();
-                            event.preventDefault();
-                            break;
-                        case 'ArrowRight':
-                            this.moveBy(1, 0, true);
-                            event.stopPropagation();
-                            event.preventDefault();
-                            break;
-                    }
+                        }
                 }
-                else {
-                    switch (event.key) {
-                        case 'ArrowUp':
-                            this.moveBy(0, -1);
-                            event.stopPropagation();
-                            event.preventDefault();
-                            break;
-                        case 'ArrowDown':
-                            this.moveBy(0, 1);
-                            event.stopPropagation();
-                            event.preventDefault();
-                            break;
-                        case 'ArrowLeft':
-                            this.moveBy(-1, 0);
-                            event.stopPropagation();
-                            event.preventDefault();
-                            break;
-                        case 'ArrowRight':
-                            this.moveBy(1, 0);
-                            event.stopPropagation();
-                            event.preventDefault();
-                            break;
-                    }
+            }
+            gotoPrevCell(cell) {
+                if (!cell) {
+                    cell = this._selectedCell;
+                }
+                this.moveTo(cell.x - 1, cell.y);
+            }
+            gotoNextCell(cell) {
+                if (!cell) {
+                    cell = this._selectedCell;
+                }
+                this.moveTo(cell.x + 1, cell.y);
+            }
+            dblClick(event) {
+                if (this._selectedCell) {
+                    this.editCell(this._selectedCell);
+                }
+            }
+            _createCellEditor(cell) {
+                return new ui.CellInput(this, cell);
+            }
+            inputCellValue(cell, value) {
+                cell.content = value;
+                cell.el.textContent = value;
+            }
+            get isEditing() {
+                return this._isEditing;
+            }
+            editCell(cell, selectAll = false) {
+                if (!cell) {
+                    cell = this.selectedCell;
+                }
+                if (cell.el) {
+                    this._cellEditors ??= [];
+                    cell.el.classList.add('editing');
+                    const editor = this._createCellEditor(cell);
+                    if (selectAll)
+                        editor.select();
+                    this._cellEditors.push(editor);
+                    editor.appendTo(cell.el).focus();
+                    this._isEditing = true;
+                }
+            }
+            applyInput() {
+                this._cellEditors?.forEach(e => e.apply());
+                this._cellEditors = null;
+                this._isEditing = false;
+            }
+            cancelEdit() {
+                this._selectedCell?.el?.classList.remove('editing');
+                this._isEditing = false;
+                this._cellEditors?.forEach(e => e.destroy());
+                this._cellEditors = null;
+            }
+            unselectAll() {
+                this.selectedCells = [];
+                this._updateSelectionBox();
+            }
+            moveTo(x, y) {
+                const cell = this.getCell(y, x);
+                if (cell) {
+                    this.selectCell(cell);
                 }
             }
             moveBy(dx, dy, shift = false) {
-                let cell = shift ? this.selectedCells?.at(-1) || this.selectedCell : this.selectedCell;
-                cell = this.getCell(cell.row + dy, cell.col + dx);
+                const refCell = (shift && this._lastCell) || this._selectedCell;
+                let cell = this.getCell(refCell.y + dy, refCell.x + dx);
                 if (cell) {
                     if (shift) {
-                        this.addToSelection(cell);
+                        if (dy) {
+                            if (this._selectedCell.y <= cell.y) {
+                                if (dy > 0) {
+                                    this.addToSelection(cell);
+                                }
+                                else {
+                                    this.unselectRow(refCell.y);
+                                }
+                            }
+                            else {
+                                if (dy > 0) {
+                                    this.unselectRow(refCell.y);
+                                }
+                                else {
+                                    this.addToSelection(cell);
+                                }
+                            }
+                        }
+                        if (dx) {
+                            if (this._selectedCell.x <= cell.x) {
+                                if (dx > 0) {
+                                    this.addToSelection(cell);
+                                }
+                                else {
+                                    this.unselectCol(refCell.x);
+                                }
+                            }
+                            else {
+                                if (dx > 0) {
+                                    this.unselectCol(refCell.x);
+                                }
+                                else {
+                                    this.addToSelection(cell);
+                                }
+                            }
+                        }
                     }
                     else {
                         this.selectCell(cell);
                     }
+                    this._lastCell = cell;
                 }
+                else if (!shift) {
+                    this.selectCell(this._selectedCell);
+                }
+            }
+            unselectRow(row) {
+                if (this._selMaxRow === row) {
+                    this._selMaxRow--;
+                }
+                else if (this._selMinRow === row) {
+                    this._selMinRow++;
+                }
+                this.selectedCells = this._getCellsInRange(new CellsRange(this._selMinRow, this._selMinCol, this._selMaxRow, this._selMaxCol));
+                this._updateSelectionBox();
+            }
+            unselectCol(col) {
+                if (this._selMaxCol === col) {
+                    this._selMaxCol--;
+                }
+                else if (this._selMinCol === col) {
+                    this._selMinCol++;
+                }
+                this.selectedCells = this._getCellsInRange(new CellsRange(this._selMinRow, this._selMinCol, this._selMaxRow, this._selMaxCol));
+                this._updateSelectionBox();
             }
             goto(row, col) {
                 const cell = this.getCell(row, col);
@@ -23587,14 +15612,33 @@ var katrid;
                 this.sizeLayer.style.height = this.rows * this.rowHeight + "px";
             }
             createRowHeader() {
+                const el = document.createElement("div");
+                el.className = 'grid-vertical-header';
                 this.rowHeaderElement = document.createElement("div");
-                this.rowHeaderElement.className = "row-header";
+                this.rowHeaderElement.className = 'grid-header';
+                el.appendChild(this.rowHeaderElement);
+                this.rowHeaderElement.style.width = el.style.width = "30px";
+                this.rowHeaderElement.style.height = this.rows * this.rowHeight + "px";
+                if (this.rowHeader?.length) {
+                    for (const item of this.rowHeader) {
+                        item.height = this.rowHeight;
+                        item.width = 30;
+                    }
+                    this.el.appendChild(el);
+                }
             }
             createHeader() {
-                this.headerElement = document.createElement("div");
-                this.headerElement.className = "header";
+                this.headerElement = document.createElement('div');
+                this.headerElement.className = 'grid-horizontal-header grid-header';
+                if (this.header) {
+                    for (const item of this.header) {
+                        item.height = this.rowHeight;
+                        item.width = this.colWidth;
+                    }
+                }
             }
             cellMouseDown(cell, event) {
+                this._draggingSelection = true;
                 this.el.focus();
                 this.selectCell(cell);
             }
@@ -23620,9 +15664,22 @@ var katrid;
                 this.selectCell(cell);
             }
             addToSelection(cell) {
-                this.selectedCells ??= [];
-                this.selectedCells.push(cell);
+                const range = CellsRange.fromCells([this._selectedCell, cell]);
+                this._selMinRow = range.startRow;
+                this._selMaxRow = range.endRow;
+                this._selMinCol = range.startCol;
+                this._selMaxCol = range.endCol;
+                this.selectedCells = this._getCellsInRange(range);
                 this._updateSelectionBox();
+            }
+            _getCellsInRange(range) {
+                const res = [];
+                for (let y = range.startRow; y <= range.endRow; ++y) {
+                    for (let x = range.startCol; x <= range.endCol; ++x) {
+                        res.push(this._cells[y][x]);
+                    }
+                }
+                return res;
             }
             _updateSelectionBox() {
                 this._selBox ??= new SelectionBox(this.el);
@@ -23637,6 +15694,10 @@ var katrid;
                 }
             }
             selectCell(cell) {
+                if (this.isEditing && this.autoSaveCell) {
+                    this.applyInput();
+                }
+                this._lastCell = null;
                 this.selectedCells = [];
                 this._updateSelectionBox();
                 this._selectedCell?.el?.classList.remove("selected");
@@ -23654,7 +15715,7 @@ var katrid;
                 }
             }
             getCell(row, col) {
-                return this.getRowCells(row)[col];
+                return this.getRowCells(row)?.[col];
             }
             getRowCells(row) {
                 if (this.incrementalLoad && row >= this.loadedRows && this.rows > this.loadedRows) {
@@ -23674,8 +15735,8 @@ var katrid;
                     for (let j = 0; j < this.cols; j++) {
                         const dataCol = dataRow[j];
                         cells.push({
-                            row: this.loadedRows,
-                            col: j,
+                            y: this.loadedRows,
+                            x: j,
                             content: dataCol || "",
                             touched: false,
                         });
@@ -23712,18 +15773,18 @@ var katrid;
                         continue;
                     }
                     for (const cell of r) {
-                        if (!newRange.cellInRange(cell.row, cell.col)) {
+                        if (!newRange.cellInRange(cell.y, cell.x)) {
                             cell.el?.remove();
                         }
                     }
                 }
                 return this._visibleRows = newRows;
             }
-            renderRowHeader(rowElement) {
+            renderRowHeader(row) {
                 if (this.rowHeader) {
                     for (const rh of this.rowHeader) {
-                        const th = document.createElement("th");
-                        rowElement.appendChild(th);
+                        const th = rh.createElement(row.rowIndex);
+                        this.rowHeaderElement.appendChild(th);
                     }
                 }
             }
@@ -23731,7 +15792,7 @@ var katrid;
                 const tr = document.createElement(this._rowTag);
                 tr.className = "grid-row";
                 tr.style.height = this.rowHeight + "px";
-                this.renderRowHeader(tr);
+                this.renderRowHeader(rowCells);
                 let i = 0;
                 const startCol = this._visibleRange?.startCol || 0;
                 const endCol = Math.min(this._visibleRange?.endCol, this.cols);
@@ -23748,15 +15809,44 @@ var katrid;
             renderCell(cell) {
                 const td = document.createElement(this._cellTag);
                 td.style.width = `${this.colWidth}px`;
-                td.className = "cell";
+                td.className = 'cell';
                 td.textContent = cell?.content || "";
-                td.addEventListener("pointerdown", (event) => this.cellMouseDown(cell || { el: td }, event));
+                td.addEventListener('pointerdown', event => {
+                    if (event.button === 0) {
+                        this.cellMouseDown(cell || { el: td }, event);
+                    }
+                    document.addEventListener('mouseup', event => {
+                        this._draggingSelection = false;
+                    }, { once: true });
+                });
+                td.addEventListener('pointermove', event => {
+                    if (this._draggingSelection) {
+                        event.preventDefault();
+                        this.addToSelection(cell);
+                    }
+                });
                 return td;
             }
-            addColumn() {
+            addColumn(col) {
+                col ??= new TableColumn();
+                this.columns.add(col);
+                return col;
             }
             addRow(data) {
                 this.dataRows.push(data);
+            }
+            destroyCells() {
+                for (const row of this._cells) {
+                    for (const cell of row) {
+                        cell.el?.remove();
+                    }
+                }
+                this._cells = [];
+                this.loadedRows = 0;
+            }
+            refresh() {
+                this.destroyCells();
+                this.render();
             }
             redrawGrid() {
                 const range = this._getVisibleRange();
@@ -23796,6 +15886,8 @@ var katrid;
                 this._visibleRows.push(...rows);
             }
             _scroll() {
+                if (!this.el?.isConnected)
+                    return;
                 this.visibleRect = new DOMRect(this.el.scrollLeft, this.el.scrollTop, this.el.clientWidth, this.el.clientHeight);
                 this.redrawGrid();
                 if (this.incrementalLoad) {
@@ -23809,6 +15901,7 @@ var katrid;
                 this.dataRows ??= [];
                 this.dataRows.push(data);
                 this.rows = this.dataRows.length;
+                this.refresh();
             }
         }
         ui.BaseGrid = BaseGrid;
@@ -23825,6 +15918,7 @@ var katrid;
             constructor(options) {
                 super();
                 this.incrementalLoad = true;
+                this.rowHeader = [new ui.AutoGridHeaderItem(ui.GridHeaderEnumerator.number)];
                 this.rows = options?.rows || 100;
                 this.cols = options?.cols || 20;
             }
@@ -23833,7 +15927,7 @@ var katrid;
                 this.table.classList.add("spreadsheet");
             }
             render() {
-                this.loadMore(this.rows);
+                this._scroll();
             }
         }
         ui.Spreadsheet = Spreadsheet;
@@ -23846,6 +15940,7 @@ var katrid;
         class DataColumn {
             constructor(collection) {
                 this.collection = collection;
+                collection.add(this);
             }
             dump() {
                 return {

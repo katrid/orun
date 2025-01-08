@@ -2,7 +2,7 @@ from collections import defaultdict
 from operator import or_
 
 from orun import SUPERUSER
-from orun.apps import apps
+from orun import api
 from orun.db import models
 from orun.http import HttpRequest
 import orun.contrib.auth.models
@@ -90,6 +90,17 @@ class Menu(models.Model):
 
 class Group(orun.contrib.auth.models.Group, helper=True):
     menus = models.ManyToManyField(Menu, through='ui.menu.groups.rel')
+
+    @api.classmethod
+    def admin_get_permissions(cls):
+        menu = Menu.objects.all()
+        return {
+            'menu': [
+                {'id': m.id, 'name': m.name, 'parent': m.parent_id, 'groups': [g.id for g in m.groups]}
+                for m in menu
+            ],
+            'groups': [{'id': g.id, 'name': g.name, 'menus': [m.id for m in g.menus]} for g in cls.objects.all()]
+        }
 
 
 class MenuGroup(models.Model):
