@@ -2,6 +2,7 @@
 <data>
   <menuitem id="menu.settings" name="Settings" sequence="999" icon="/static/erp/gears.svg">
     <menuitem id="menu.settings.auth" name="Authentication">
+      <menuitem id="menu.settings.auth.permission-manager" name="Permission Manager" action="action.view.auth.permission-manager"/>
       <menuitem id="menu.settings.auth.user" name="Users" action="action.view.auth.user"/>
       <menuitem id="menu.settings.auth.group" name="Groups" action="action.view.auth.group"/>
       <menuitem id="menu.settings.auth.company" name="Companies" action="action.view.res.company"/>
