@@ -658,13 +658,6 @@ declare namespace katrid.admin {
 declare namespace Katrid.BI {
     function newPlot(el: any, data: any, layout: any, config: any): any;
 }
-declare namespace Katrid.Components {
-    class Component {
-        name: string;
-    }
-    class Widget extends Component {
-    }
-}
 declare namespace Katrid.Core {
     import ActionManager = Katrid.Actions.ActionManager;
     interface IMenuInfo {
@@ -744,6 +737,296 @@ declare namespace Katrid {
 declare namespace katrid {
     const core: typeof Katrid.Core;
 }
+declare namespace Katrid.Core {
+    export class Plugin {
+        app: Application;
+        constructor(app: Application);
+        hashChange(url: string): boolean;
+    }
+    class Plugins extends Array<typeof Plugin> {
+        start(app: Application): void;
+    }
+    export let plugins: Plugins;
+    export function registerPlugin(cls: typeof Plugin): void;
+    export {};
+}
+declare namespace Katrid.BI {
+}
+declare namespace Katrid.Forms {
+    import IViewInfo = Katrid.Specification.UI.IViewInfo;
+    interface IView {
+        template?: string | HTMLElement;
+        container?: HTMLElement;
+        info?: Katrid.Specification.UI.IViewInfo;
+    }
+    class BaseView {
+        config: IView;
+        dialog: boolean;
+        vm: any;
+        parentVm: any;
+        container: HTMLElement;
+        element: HTMLElement;
+        template: HTMLTemplateElement;
+        html: string;
+        protected info: IViewInfo;
+        constructor(config: IView);
+        protected create(info: IView): void;
+        protected _applyDataDefinition(data: any): any;
+        protected getComponentData(): any;
+        protected createComponent(): any;
+        protected cloneTemplate(): HTMLElement;
+        domTemplate(): HTMLElement;
+        protected createDialogButtons(buttons: string[] | any[]): HTMLButtonElement[];
+        protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
+        scripts: string[];
+        _readyEventListeners: any[];
+        protected createVm(el: HTMLElement): any;
+        beforeRender(templ: HTMLElement): HTMLElement;
+        createElement(): void;
+        applyCustomTags(template: HTMLElement): void;
+        render(): HTMLElement;
+        protected _modal: bootstrap.Modal;
+        closeDialog(): void;
+        renderTo(container: HTMLElement): void;
+        onHashChange(params: any): Promise<void>;
+    }
+    function compileButtons(container: HTMLElement): void;
+    interface ISetupScript {
+        methods: any;
+        computed: any;
+        created(): unknown;
+        ready(view: BaseView): unknown;
+    }
+    let globalSettings: any;
+}
+declare namespace Katrid.Forms {
+    interface ISearchOptions {
+        id?: number | string;
+        index?: number;
+        where?: Record<string, any>;
+        page?: number;
+        limit?: number;
+        timeout?: number;
+    }
+    let searchModes: string[];
+    let registry: any;
+    interface IModelViewInfo extends IView {
+        name?: string;
+        model?: Katrid.Data.Model;
+        fields?: Record<string, Katrid.Data.IFieldInfo>;
+        toolbar?: any;
+        toolbarVisible?: boolean;
+        autoLoad?: boolean;
+        record?: any;
+        records?: any[];
+        recordGroups?: any[];
+        action?: Katrid.Actions.WindowAction;
+        recordClick?: (record: any, index: number, event: Event) => void;
+        multiple?: boolean;
+        viewInfo?: Katrid.Forms.ModelViewInfo;
+    }
+    class ModelView extends BaseView {
+        datasource: Katrid.Data.DataSource;
+        model: Katrid.Data.Model;
+        fields: Record<string, Katrid.Data.Field>;
+        action: Katrid.Actions.WindowAction;
+        toolbarVisible: boolean;
+        pendingOperation: number;
+        protected _record: any;
+        record: any;
+        config: IModelViewInfo;
+        dialogButtons: string[] | any[];
+        protected _readonly: boolean;
+        protected _loadingHandle: any;
+        protected info: IModelViewInfo;
+        constructor(info: IModelViewInfo);
+        static viewType: string;
+        static fromTemplate(action: Katrid.Actions.WindowAction, model: Katrid.Data.Model, template: string): ModelView;
+        static createViewModeButton(container: HTMLElement): void;
+        deleteSelection(sel: any[]): Promise<boolean>;
+        protected create(info: Katrid.Forms.IModelViewInfo): void;
+        protected dataSourceCallback(data: Katrid.Data.IDataCallback): void;
+        protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
+        protected _records: any[];
+        get records(): any[];
+        set records(value: any[]);
+        private _recordCount;
+        get recordCount(): number;
+        set recordCount(value: number);
+        private _active;
+        get active(): boolean;
+        set active(value: boolean);
+        protected setActive(value: boolean): void;
+        protected getComponentData(): any;
+        get readonly(): boolean;
+        set readonly(value: boolean);
+        ready(): Promise<any>;
+        refresh(): void;
+        protected _search(options: ISearchOptions): Promise<any>;
+        private _mergeHeader;
+        mergeHeader(parent: HTMLElement, container: HTMLElement): HTMLElement;
+        protected _vmCreated(vm: any): void;
+        doViewAction(action: string, target: any): Promise<any>;
+        callSubAction(action: string, selection?: any[]): Promise<void>;
+        protected _evalResponseAction(res: any): Promise<any>;
+        protected getSelectedIds(): Promise<any[]>;
+        protected createComponent(): any;
+        getViewType(): any;
+        autoCreateView(): HTMLElement;
+        domTemplate(): HTMLElement;
+        beforeRender(template: HTMLElement): HTMLElement;
+        protected renderTemplate(template: HTMLElement): HTMLElement;
+        createToolbar(): HTMLElement;
+        dialogPromise: Promise<any>;
+        generateHelp(help: any): void;
+    }
+    interface IRecordGroup {
+        $str: string;
+        $count: number;
+        $children?: any[];
+        $expanded?: boolean;
+        $hasChildren?: boolean;
+    }
+    abstract class RecordCollectionView extends ModelView {
+        private _searchView;
+        autoLoad: boolean;
+        recordGroups: IRecordGroup[];
+        groupLength: number;
+        private _orderBy;
+        constructor(info: IModelViewInfo);
+        get orderBy(): string[];
+        set orderBy(value: string[]);
+        getSelectedIds(): Promise<any[]>;
+        callSubAction(action: string, selection?: any[]): Promise<void>;
+        protected create(info: Katrid.Forms.IModelViewInfo): void;
+        protected _recordClick(record: any, index?: number): Promise<void>;
+        nextPage(): void;
+        prevPage(): void;
+        protected createComponent(): any;
+        protected setActive(value: boolean): void;
+        get searchView(): SearchView;
+        set searchView(value: SearchView);
+        protected dataSourceCallback(data: Katrid.Data.IDataCallback): void;
+        protected setSearchView(searchView: SearchView): void;
+        protected getComponentData(): any;
+        protected prepareGroup(groups: IRecordGroup[]): IRecordGroup[];
+        groupBy(data: any[]): Promise<any>;
+        applyGroups(groups: any, params: any): Promise<void>;
+        private _addRecordsToGroup;
+        expandGroup(group: IRecordGroup): Promise<void>;
+        expandAll(): void;
+        collapseAll(): void;
+        collapseGroup(group: IRecordGroup): void;
+        private _lastSearch;
+        setSearchParams(params: any): Promise<void>;
+        protected _invalidateSelection(): void;
+        createToolbar(): HTMLElement;
+        protected createToolbarButtons(container: HTMLElement): HTMLElement;
+        protected createSelectionInfo(parent: HTMLElement): void;
+        get $modalResult(): any;
+        set $modalResult(value: any);
+        showDialog(options?: any): Promise<unknown>;
+        ready(): Promise<unknown>;
+    }
+    class ActionViewElement extends Katrid.WebComponent {
+        action: Katrid.Actions.WindowAction;
+        view: ModelView;
+        protected create(): void;
+    }
+}
+declare namespace Katrid.Forms.Views {
+    export let registry: Record<string, typeof ModelView>;
+    interface ITemplates {
+        form?: string | HTMLTemplateElement;
+        list?: string | HTMLTemplateElement;
+        card?: string | HTMLTemplateElement;
+        [key: string]: any;
+    }
+    export function fromTemplates(action: Katrid.Actions.WindowAction, model: Katrid.Data.Model, templates: ITemplates): Record<string, ModelView>;
+    export {};
+}
+declare namespace Katrid.BI {
+    export class QueryView extends Katrid.Forms.RecordCollectionView {
+        static viewType: string;
+        private _queryId;
+        searchViewVisible: boolean;
+        fieldList: Katrid.Data.Field[];
+        table: HTMLTableElement;
+        data: any;
+        metadata: any;
+        get queryId(): string | number;
+        set queryId(value: string | number);
+        queryChange(query: any): Promise<void>;
+        refreshQuery(query: any, params?: any): Promise<any>;
+        loadData(data: any): void;
+        private _loadedRows;
+        private _lastGroup;
+        private _lastGroupValues;
+        groups: string[];
+        groupsIndex: number[];
+        evalTotal(col: Column, values: any[]): number;
+        addGroupHeader(grouper: any, record: any, data: any[]): void;
+        addGroupFooter(): void;
+        more(count: number): number;
+        params: any[];
+        columns: Column[];
+        ready(): Promise<void>;
+        tableScroll(evt: any): void;
+        contextMenu(evt: any): void;
+        copyToClipboard(formatting?: boolean): Promise<void>;
+        export(): void;
+        get orientation(): "landscape" | "portrait";
+        reportTemplate: string;
+        print(): Promise<void>;
+        destroy(): void;
+    }
+    class Column {
+        name: string | number;
+        label: string;
+        type: string;
+        visible: boolean;
+        dataIndex: number;
+        total: string;
+        width: number;
+        cols: number;
+        constructor(info: any);
+    }
+    export {};
+}
+declare namespace Katrid.BI {
+    class QueryViewerElement extends Katrid.WebComponent {
+        queryViewer: QueryViewer;
+        protected create(): void;
+    }
+    class QueryViewer {
+        el: HTMLElement;
+        container: HTMLElement;
+        constructor(el: HTMLElement);
+        protected create(): void;
+        queryId: number | string;
+        query: Katrid.Services.Query;
+        load(): Promise<void>;
+        metadata: any;
+        params: Katrid.Reports.Param[];
+        btnPrint: HTMLButtonElement;
+        btnExport: HTMLButtonElement;
+        createParamsPanel(params: any): void;
+        applyParams(): Promise<void>;
+        queryView: QueryView;
+        print(): Promise<void>;
+        createQueryView(fields: any, data: any, reportType?: string): QueryView;
+    }
+}
+declare namespace katrid.bi {
+    const QueryViewer: typeof Katrid.BI.QueryViewer;
+}
+declare namespace Katrid.Components {
+    class Component {
+        name: string;
+    }
+    class Widget extends Component {
+    }
+}
 declare namespace katrid.exceptions {
     class Exception extends Error {
         constructor(message: any);
@@ -768,19 +1051,6 @@ declare namespace Katrid {
 declare namespace katrid {
     function init(): void;
     function data(el: any, key?: string, value?: any): any;
-}
-declare namespace Katrid.Core {
-    export class Plugin {
-        app: Application;
-        constructor(app: Application);
-        hashChange(url: string): boolean;
-    }
-    class Plugins extends Array<typeof Plugin> {
-        start(app: Application): void;
-    }
-    export let plugins: Plugins;
-    export function registerPlugin(cls: typeof Plugin): void;
-    export {};
 }
 declare namespace katrid.data {
     interface IDataSource {
@@ -1456,53 +1726,6 @@ declare namespace Katrid.Forms {
     }
 }
 declare namespace Katrid.Forms {
-    import IViewInfo = Katrid.Specification.UI.IViewInfo;
-    interface IView {
-        template?: string | HTMLElement;
-        container?: HTMLElement;
-        info?: Katrid.Specification.UI.IViewInfo;
-    }
-    class BaseView {
-        config: IView;
-        dialog: boolean;
-        vm: any;
-        parentVm: any;
-        container: HTMLElement;
-        element: HTMLElement;
-        template: HTMLTemplateElement;
-        html: string;
-        protected info: IViewInfo;
-        constructor(config: IView);
-        protected create(info: IView): void;
-        protected _applyDataDefinition(data: any): any;
-        protected getComponentData(): any;
-        protected createComponent(): any;
-        protected cloneTemplate(): HTMLElement;
-        domTemplate(): HTMLElement;
-        protected createDialogButtons(buttons: string[] | any[]): HTMLButtonElement[];
-        protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
-        scripts: string[];
-        _readyEventListeners: any[];
-        protected createVm(el: HTMLElement): any;
-        beforeRender(templ: HTMLElement): HTMLElement;
-        createElement(): void;
-        applyCustomTags(template: HTMLElement): void;
-        render(): HTMLElement;
-        protected _modal: bootstrap.Modal;
-        closeDialog(): void;
-        renderTo(container: HTMLElement): void;
-        onHashChange(params: any): Promise<void>;
-    }
-    function compileButtons(container: HTMLElement): void;
-    interface ISetupScript {
-        methods: any;
-        computed: any;
-        created(): unknown;
-        ready(view: BaseView): unknown;
-    }
-    let globalSettings: any;
-}
-declare namespace Katrid.Forms {
     class ModelViewInfo {
         info: IModelViewInfo;
         fields: Record<string, Katrid.Data.Field>;
@@ -1514,152 +1737,6 @@ declare namespace Katrid.Forms {
         loadPendingViews(): Promise<void>;
         get template(): HTMLElement;
     }
-}
-declare namespace Katrid.Forms {
-    interface ISearchOptions {
-        id?: number | string;
-        index?: number;
-        where?: Record<string, any>;
-        page?: number;
-        limit?: number;
-        timeout?: number;
-    }
-    let searchModes: string[];
-    let registry: any;
-    interface IModelViewInfo extends IView {
-        name?: string;
-        model?: Katrid.Data.Model;
-        fields?: Record<string, Katrid.Data.IFieldInfo>;
-        toolbar?: any;
-        toolbarVisible?: boolean;
-        autoLoad?: boolean;
-        record?: any;
-        records?: any[];
-        recordGroups?: any[];
-        action?: Katrid.Actions.WindowAction;
-        recordClick?: (record: any, index: number, event: Event) => void;
-        multiple?: boolean;
-        viewInfo?: Katrid.Forms.ModelViewInfo;
-    }
-    class ModelView extends BaseView {
-        datasource: Katrid.Data.DataSource;
-        model: Katrid.Data.Model;
-        fields: Record<string, Katrid.Data.Field>;
-        action: Katrid.Actions.WindowAction;
-        toolbarVisible: boolean;
-        pendingOperation: number;
-        protected _record: any;
-        record: any;
-        config: IModelViewInfo;
-        dialogButtons: string[] | any[];
-        protected _readonly: boolean;
-        protected _loadingHandle: any;
-        protected info: IModelViewInfo;
-        constructor(info: IModelViewInfo);
-        static viewType: string;
-        static fromTemplate(action: Katrid.Actions.WindowAction, model: Katrid.Data.Model, template: string): ModelView;
-        static createViewModeButton(container: HTMLElement): void;
-        deleteSelection(sel: any[]): Promise<boolean>;
-        protected create(info: Katrid.Forms.IModelViewInfo): void;
-        protected dataSourceCallback(data: Katrid.Data.IDataCallback): void;
-        protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
-        protected _records: any[];
-        get records(): any[];
-        set records(value: any[]);
-        private _recordCount;
-        get recordCount(): number;
-        set recordCount(value: number);
-        private _active;
-        get active(): boolean;
-        set active(value: boolean);
-        protected setActive(value: boolean): void;
-        protected getComponentData(): any;
-        get readonly(): boolean;
-        set readonly(value: boolean);
-        ready(): Promise<any>;
-        refresh(): void;
-        protected _search(options: ISearchOptions): Promise<any>;
-        private _mergeHeader;
-        mergeHeader(parent: HTMLElement, container: HTMLElement): HTMLElement;
-        protected _vmCreated(vm: any): void;
-        doViewAction(action: string, target: any): Promise<any>;
-        callSubAction(action: string, selection?: any[]): Promise<void>;
-        protected _evalResponseAction(res: any): Promise<any>;
-        protected getSelectedIds(): Promise<any[]>;
-        protected createComponent(): any;
-        getViewType(): any;
-        autoCreateView(): HTMLElement;
-        domTemplate(): HTMLElement;
-        beforeRender(template: HTMLElement): HTMLElement;
-        protected renderTemplate(template: HTMLElement): HTMLElement;
-        createToolbar(): HTMLElement;
-        dialogPromise: Promise<any>;
-        generateHelp(help: any): void;
-    }
-    interface IRecordGroup {
-        $str: string;
-        $count: number;
-        $children?: any[];
-        $expanded?: boolean;
-        $hasChildren?: boolean;
-    }
-    abstract class RecordCollectionView extends ModelView {
-        private _searchView;
-        autoLoad: boolean;
-        recordGroups: IRecordGroup[];
-        groupLength: number;
-        private _orderBy;
-        constructor(info: IModelViewInfo);
-        get orderBy(): string[];
-        set orderBy(value: string[]);
-        getSelectedIds(): Promise<any[]>;
-        callSubAction(action: string, selection?: any[]): Promise<void>;
-        protected create(info: Katrid.Forms.IModelViewInfo): void;
-        protected _recordClick(record: any, index?: number): Promise<void>;
-        nextPage(): void;
-        prevPage(): void;
-        protected createComponent(): any;
-        protected setActive(value: boolean): void;
-        get searchView(): SearchView;
-        set searchView(value: SearchView);
-        protected dataSourceCallback(data: Katrid.Data.IDataCallback): void;
-        protected setSearchView(searchView: SearchView): void;
-        protected getComponentData(): any;
-        protected prepareGroup(groups: IRecordGroup[]): IRecordGroup[];
-        groupBy(data: any[]): Promise<any>;
-        applyGroups(groups: any, params: any): Promise<void>;
-        private _addRecordsToGroup;
-        expandGroup(group: IRecordGroup): Promise<void>;
-        expandAll(): void;
-        collapseAll(): void;
-        collapseGroup(group: IRecordGroup): void;
-        private _lastSearch;
-        setSearchParams(params: any): Promise<void>;
-        protected _invalidateSelection(): void;
-        createToolbar(): HTMLElement;
-        protected createToolbarButtons(container: HTMLElement): HTMLElement;
-        protected createSelectionInfo(parent: HTMLElement): void;
-        get $modalResult(): any;
-        set $modalResult(value: any);
-        showDialog(options?: any): Promise<unknown>;
-        ready(): Promise<unknown>;
-    }
-    class ActionViewElement extends Katrid.WebComponent {
-        action: Katrid.Actions.WindowAction;
-        view: ModelView;
-        protected create(): void;
-    }
-}
-declare namespace Katrid.Forms.Views {
-    export let registry: Record<string, typeof ModelView>;
-    interface ITemplates {
-        form?: string | HTMLTemplateElement;
-        list?: string | HTMLTemplateElement;
-        card?: string | HTMLTemplateElement;
-        [key: string]: any;
-    }
-    export function fromTemplates(action: Katrid.Actions.WindowAction, model: Katrid.Data.Model, templates: ITemplates): Record<string, ModelView>;
-    export {};
 }
 declare namespace Katrid.Forms {
     function selectionSelectToggle(record: any): void;
