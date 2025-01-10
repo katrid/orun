@@ -3822,14 +3822,23 @@ var Katrid;
             }
             async copyToClipboard(formatting = false) {
                 if (formatting)
-                    navigator.clipboard.writeText(Katrid.UI.Utils.toTsv(this.data));
+                    navigator.clipboard.writeText(this.toText());
                 else {
                     await this.more(this.data.length - this._loadedRows);
                     navigator.clipboard.writeText(Katrid.UI.Utils.tableToText(this.table));
                 }
             }
+            toText(options) {
+                const output = [];
+                options = Object.assign({ newLine: '\n', separator: '\t', withHeader: true }, options || {});
+                if (options.withHeader) {
+                    output.push(this.columns.map(col => col.label || col.name.toString()).join(options.separator));
+                }
+                output.push(...this.data.map((o) => Object.values(o).map(v => v == null ? '' : v.toString()).join(options.separator)));
+                return output.join(options.newLine);
+            }
             export() {
-                Katrid.UI.Utils.textToDownload(Katrid.UI.Utils.tableToText(this.table), `${this._queryId}.tsv`);
+                Katrid.UI.Utils.textToDownload(this.toText(), `${this._queryId}.tsv`);
             }
             get orientation() {
                 if (this.metadata?.orientation == 2)

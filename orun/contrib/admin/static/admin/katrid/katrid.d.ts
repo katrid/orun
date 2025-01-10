@@ -974,6 +974,11 @@ declare namespace Katrid.BI {
         tableScroll(evt: any): void;
         contextMenu(evt: any): void;
         copyToClipboard(formatting?: boolean): Promise<void>;
+        toText(options?: {
+            newLine?: string;
+            separator?: string;
+            withHeader?: boolean;
+        }): string;
         export(): void;
         get orientation(): "landscape" | "portrait";
         reportTemplate: string;
