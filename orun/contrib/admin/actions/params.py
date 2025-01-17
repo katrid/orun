@@ -66,6 +66,8 @@ class Param:
                 dt = 'ModelChoices'
             else:
                 dt = 'StringField'
+        if self.options:
+            dt = 'SelectionField'
         return {
             'name': self.name,
             'type': dt,
