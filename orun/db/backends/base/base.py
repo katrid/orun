@@ -271,6 +271,10 @@ class BaseDatabaseWrapper:
         """Create a cursor, opening a connection if necessary."""
         return self._cursor()
 
+    def fetchall_as_dict(self, cursor):
+        cols = [col[0] for col in cursor.description]
+        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+
     def commit(self):
         """Commit a transaction and reset the dirty flag."""
         self.validate_thread_sharing()
