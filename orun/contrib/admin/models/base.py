@@ -438,9 +438,14 @@ class AdminModel(models.Model, helper=True):
 
     @api.classmethod
     def admin_on_field_change(cls, field, record, *args, **kwargs):
+        res = {}
         for fn in cls._meta.field_change_event[field]:
-            record = fn(cls, record)
-        return record
+            d = fn(cls, record)
+            if isinstance(d, dict) and 'values' in d:
+                if 'values' not in res:
+                    res['values'] = {}
+                res['values'].update(d['values'])
+        return res
 
     def _proxy_field_change(self, field):
         obj = getattr(self, field.proxy_field[0])
@@ -677,3 +682,6 @@ def _resolve_fk_search(field: models.Field, exact=False):
             else:
                 return [f'{t}__icontains']
     return [field.name]
+
+
+
