@@ -441,10 +441,13 @@ class AdminModel(models.Model, helper=True):
         res = {}
         for fn in cls._meta.field_change_event[field]:
             d = fn(cls, record)
-            if isinstance(d, dict) and 'values' in d:
+            if isinstance(d, dict):
                 if 'values' not in res:
                     res['values'] = {}
-                res['values'].update(d['values'])
+                if 'values' in d:
+                    res['values'].update(d['values'])
+                if 'value' in d:
+                    res['values'].update(d['value'])
         return res
 
     def _proxy_field_change(self, field):
