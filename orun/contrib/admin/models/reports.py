@@ -391,7 +391,7 @@ class ReportAction(Action):
             from orun.reports.data import default_connection
             rep = Report(json.loads(content), default_connection=default_connection)
             company = Company.objects.filter(active=True).first()
-            if company:
+            if company and company.image and company.image.file:
                 params_values['company_logo'] = company.image.read()
             rep.variables = params_values
             doc = rep.prepare()

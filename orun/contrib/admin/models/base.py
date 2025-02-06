@@ -439,15 +439,16 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def admin_on_field_change(cls, field, record, *args, **kwargs):
         res = {}
+        vals = {}
         for fn in cls._meta.field_change_event[field]:
             d = fn(cls, record)
             if isinstance(d, dict):
-                if 'values' not in res:
-                    res['values'] = {}
                 if 'values' in d:
-                    res['values'].update(d['values'])
+                    vals.update(d['values'])
                 if 'value' in d:
-                    res['values'].update(d['value'])
+                    vals.update(d['value'])
+        if vals:
+            res['values'] = vals
         return res
 
     def _proxy_field_change(self, field):

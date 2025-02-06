@@ -102,7 +102,10 @@ class Group(orun.contrib.auth.models.Group, helper=True):
                 {'id': m.id, 'name': m.name, 'parent': m.parent_id}
                 for m in menu
             ],
-            'groups': [{'id': g.id, 'name': g.name, 'menus': [m.id for m in g.menus]} for g in cls.objects.all()]
+            'groups': [
+                {'id': g.id, 'name': g.name, 'menus': [m.id for m in g.menus]}
+                for g in cls.objects.all()
+            ]
         }
 
     @api.classmethod

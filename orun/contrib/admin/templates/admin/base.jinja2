@@ -19,7 +19,6 @@
 <body class="{% block body_class %}{% endblock %}" {% block body_attrs %}{% endblock %}>
 
 {% block content %}{% endblock %}
-
 <script src="/static/admin/katrid/katrid.deps.js"></script>
 {% if i18n_js_catalog %}
   <script>
@@ -32,6 +31,14 @@
 
 {% block page_loaded %}{% endblock %}
 {% block additional_assets %}{% endblock %}
+<script src="/static/admin/require.js"></script>
+<script>
+  require.config({
+    paths: {
+      vs: '/static/admin/monaco/min/vs',
+    }
+  });
+</script>
 
 </body>
 {% block additional_content %}{% endblock %}

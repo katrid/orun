@@ -6,6 +6,7 @@ from orun.http import HttpRequest
 from orun.utils.translation import gettext
 from orun.contrib.contenttypes.models import ContentType, Object, Registrable
 from orun.db import models
+from orun.conf import settings
 
 
 class Action(Registrable):
@@ -65,6 +66,7 @@ class ViewAction(Action):
         from orun.contrib.admin.models.ui import exec_query, exec_scalar, ref, query
         ctx = cls.get_context(request)
         ctx['env'] = apps
+        ctx['settings'] = settings
         ctx['_'] = gettext
         ctx['exec_query'] = exec_query
         ctx['query'] = query
@@ -72,5 +74,5 @@ class ViewAction(Action):
         ctx['models'] = apps
         ctx['ref'] = ref
         return {
-            'content': get_template(cls.template_name).render(ctx),
+            'template': get_template(cls.template_name).render(ctx),
         }
