@@ -1321,7 +1321,7 @@ var katrid;
         }
         add(item) {
             this.items.push(item);
-            this.notify('add', item);
+            this.notify('insert', item);
         }
         dump() {
         }
@@ -2185,7 +2185,7 @@ var Katrid;
             constructor(config) {
                 this.config = config;
                 this.plugins = [];
-                Katrid.app = this;
+                katrid['app'] = Katrid.app = this;
                 if (config.adapter)
                     Katrid.Services.Service.adapter = config.adapter;
                 else
@@ -2833,7 +2833,7 @@ var Katrid;
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body data-form data-panel">
-               
+
             <div class="clearfix"></div>
           </div>
           <div class="modal-footer">
@@ -2855,7 +2855,7 @@ var Katrid;
                     this._readyEventListeners = [];
                     for (let script of this.scripts) {
                         let setup = eval(`(${script})`);
-                        if (setup && setup.call) {
+                        if (setup?.call) {
                             let def = setup.call(this);
                             if (def.methods)
                                 Object.assign(component.methods, def.methods);
@@ -7425,30 +7425,30 @@ var Katrid;
                     return `<div><input id="rep-param-id-${param.id}" v-model="param.value1" type="text" class="form-control"></div>`;
                 },
                 IntegerField(param) {
-                    let secondField = '';
+                    let field2 = '';
                     if (param.operation === 'between') {
-                        secondField = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" type="number" class="form-control"></div>`;
+                        field2 = `<div class="col-sm-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" type="number" class="form-control"></div>`;
                     }
-                    return `<div class="row"><div class="col-sm-6"><input id="rep-param-id-${param.id}" type="number" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                    return `<div class="row"><div class="col-sm-6"><input id="rep-param-id-${param.id}" type="number" v-model="param.value1" class="form-control"></div>${field2}</div>`;
                 },
                 DecimalField(param) {
-                    let secondField = '';
+                    let field2 = '';
                     if (param.operation === 'between') {
-                        secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" input-decimal class="form-control"></div>`;
+                        field2 = `<div class="col-6"><input id="rep-param-id-${param.id}-2" v-model="param.value2" input-decimal class="form-control"></div>`;
                     }
-                    return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" input-decimal v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                    return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" input-decimal v-model="param.value1" class="form-control"></div>${field2}</div>`;
                 },
                 DateTimeField(param) {
-                    let secondField = '';
+                    let field2 = '';
                     if (param.operation === 'between') {
-                        secondField = `<div class="col-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" v-model="param.value2" class="form-control"></div>`;
+                        field2 = `<div class="col-6"><input id="rep-param-id-${param.id}-2" type="text" date-picker="L" v-model="param.value2" class="form-control"></div>`;
                     }
-                    return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" v-model="param.value1" class="form-control"></div>${secondField}</div>`;
+                    return `<div class="col-sm-12 row"><div class="col-6"><input id="rep-param-id-${param.id}" type="text" date-picker="L" v-model="param.value1" class="form-control"></div>${field2}</div>`;
                 },
                 DateField(param) {
-                    let secondField = '';
+                    let field2 = '';
                     if (param.operation === 'between') {
-                        secondField = `<div class="col-6">
+                        field2 = `<div class="col-6">
 <input-date class="input-group date" v-model="param.value2" date-picker="L">
 <input id="rep-param-id-${param.id}-2" type="text" class="form-control form-field" inputmode="numeric" autocomplete="off">
       <label class="input-group-text btn-calendar"><i class="fa fa-calendar fa-sm"></i></label>
@@ -7460,7 +7460,7 @@ var Katrid;
 <input id="rep-param-id-${param.id}" type="text" class="form-control" inputmode="numeric" autocomplete="off">
       <label class="input-group-text btn-calendar"><i class="fa fa-calendar fa-sm"></i></label>
 </input-date>
-</div>${secondField}</div>`;
+</div>${field2}</div>`;
                 },
                 ForeignKey(param) {
                     const serviceName = param.info.field.attr('model') || param.params.model;
@@ -7531,7 +7531,11 @@ var Katrid;
             createControls() {
                 const el = this.el.find(".param-widget");
                 el.empty();
-                let widget = Params.Widgets[this.type](this);
+                let type = this.type;
+                if (this.choices) {
+                    type = 'SelectionField';
+                }
+                let widget = Params.Widgets[type](this);
                 widget = $(widget);
                 return el.append(widget);
             }
@@ -8924,6 +8928,53 @@ var Katrid;
 (function (Katrid) {
     var Forms;
     (function (Forms) {
+        class Widget {
+            constructor(options) {
+                this.options = options;
+                this.options ??= {};
+                this._create();
+            }
+            _create() {
+            }
+            appendTo(parent) {
+                return parent.appendChild(this.el);
+            }
+        }
+        Forms.Widget = Widget;
+        class CheckBox extends Widget {
+            constructor(options) {
+                super(options);
+                this.options = options;
+                this._create();
+            }
+            _create() {
+                let el = this.options.el;
+                let label = document.createElement('label');
+                this.el = label;
+                let checkbox = this.options.el?.tagName === 'input' ? this.options.el : document.createElement('input');
+                checkbox.type = 'checkbox';
+                label.className = 'checkbox';
+                label.appendChild(document.createElement('span'));
+                label.appendChild(checkbox);
+                let span = this._span = document.createElement('i');
+                span.className = 'fas';
+                if (this.options.text) {
+                    span.innerText = this.options.text;
+                }
+                label.appendChild(span);
+                if (el?.parentElement) {
+                    el.parentElement.replaceChild(label, el);
+                }
+                return label;
+            }
+            set text(value) {
+                this._span.innerText = value;
+            }
+            appendTo(parent) {
+                return parent.appendChild(this.el);
+            }
+        }
+        Forms.CheckBox = CheckBox;
         class SearchView extends Forms.ModelView {
             static { this.viewType = 'search'; }
             constructor(info, action) {
@@ -9127,14 +9178,14 @@ var Katrid;
       <div class="btn-group search-groupby-button"></div>
       <div class="btn-group search-filter-favorites"></div>
     </div>
-    
+
     <div class="btn-group search-view-more-area">
       <div custom-filter class="btn-group">
         <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button" aria-expanded="false">
           <span class="fa fa-filter"></span> ${Katrid.i18n.gettext('Filters')} <span class="caret"></span>
         </button>
-        
-    
+
+
 <div class="dropdown-menu search-view-filter-menu">
       <div>
         <div v-for="group in filterGroups">
@@ -9208,15 +9259,15 @@ var Katrid;
 </div>
         </div>
       </div>
-</div>    
-    
+</div>
+
       </div>
       <div class="btn-group">
         <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button">
           <span class="fa fa-bars"></span> ${Katrid.i18n.gettext('Group By')} <span class="caret"></span>
         </button>
         <ul class="dropdown-menu search-view-groups-menu">
-        
+
           <div v-for="group in groups">
             <a class="dropdown-item" :class="{'selected': item.selected}" v-on:click.stop="item.toggle()" v-for="item in group.items">
               {{ item.toString() }}
@@ -9230,7 +9281,7 @@ var Katrid;
                class="fa expandable"></i>
             <span>${Katrid.i18n.gettext('Add Custom Group')}</span>
           </a>
-          
+
 
           <div v-if="groupByExpanded" v-on:click.stop.prevent>
             <div class="col-12">
@@ -9248,10 +9299,18 @@ var Katrid;
             </div>
           </div>
 </ul>
+
       </div>
-      <button class="btn btn-outline-secondary">
-        <span class="fa fa-star"></span> ${Katrid.i18n.gettext('Favorites')} <span class="caret"></span>
-      </button>
+
+      <div class="btn-group">
+        <button id="btn-favorites" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button">
+          <span class="fa fa-star"></span> ${Katrid.i18n.gettext('Favorites')} <span class="caret"></span>
+        </button>
+        <div class="dropdown-menu" role="menu">
+        </div>
+      </div>
+
+
     </div>
             <div class="float-end">
               <div class="btn-group pagination-area">
@@ -9272,7 +9331,7 @@ var Katrid;
               </div>
               <div class="btn-view-modes btn-group" role="group"></div>
             </div>
-    
+
     </div>`);
                 if (this.action)
                     this.action.createViewsButtons(el.querySelector('.btn-view-modes'));
@@ -9289,9 +9348,39 @@ var Katrid;
                 }
                 if (this.container)
                     this.container.append(this.element);
+                this._createFavoritesMenu();
                 return this.element;
             }
             load(query) {
+            }
+            _createFavoritesMenu() {
+                let menu = this.element.querySelector('#btn-favorites').parentElement.querySelector('.dropdown-menu');
+                let el = document.createElement('a');
+                el.className = 'dropdown-item';
+                el.innerText = _.gettext('Save current search');
+                el.addEventListener('click', () => this.saveSearch());
+                menu.appendChild(el);
+                let div = document.createElement('div');
+                div = document.createElement('div');
+                menu.appendChild(div);
+                div.className = 'col-12';
+                div.setAttribute('style', 'padding: 0 10px;');
+                let checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'form-field form-control';
+                let label = document.createElement('label');
+                label.className = 'checkbox';
+                label.appendChild(checkbox);
+                label.innerText = _.gettext('Save as default');
+                let span = document.createElement('i');
+                span.className = 'fas';
+                label.appendChild(span);
+                div.appendChild(label);
+                div = document.createElement('div');
+                div.className = 'dropdown-divider';
+                menu.appendChild(div);
+            }
+            saveSearch() {
             }
             renderTo(container) {
                 super.renderTo(container);

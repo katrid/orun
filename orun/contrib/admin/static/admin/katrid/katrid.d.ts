@@ -418,7 +418,19 @@ declare namespace katrid {
     interface Persistent {
         dump(): any;
     }
-    type CollectionNotifyEvents = 'add' | 'remove';
+    type OperationNotification = 'insert' | 'remove';
+    type CollectionNotifyEvents = 'insert' | 'remove';
+    interface IComponent {
+        name: string;
+        owner: IComponent;
+        components: Set<IComponent>;
+        destroy(): void;
+        insertComponent(component: IComponent): void;
+        removeComponent(component: IComponent): void;
+        findComponent(name: string): IComponent;
+        notification(obj: IComponent, operation: OperationNotification): void;
+        freeNotification(obj: IComponent): void;
+    }
     interface CollectionItem {
         collection: Collection<any>;
         dump(): any;
@@ -1981,6 +1993,28 @@ declare namespace Katrid.Forms {
     export {};
 }
 declare namespace Katrid.Forms {
+    export interface WidgetOptions {
+        el?: Element;
+        parent?: Element;
+    }
+    export class Widget {
+        options?: WidgetOptions;
+        el: HTMLElement;
+        constructor(options?: WidgetOptions);
+        protected _create(): void;
+        appendTo(parent: Element): HTMLElement;
+    }
+    export interface CheckBoxOptions extends WidgetOptions {
+        text?: string;
+    }
+    export class CheckBox extends Widget {
+        options?: CheckBoxOptions;
+        protected _span: HTMLElement;
+        constructor(options?: CheckBoxOptions);
+        protected _create(): HTMLLabelElement;
+        set text(value: string);
+        appendTo(parent: Element): HTMLElement;
+    }
     interface ISearchModelViewInfo extends IModelViewInfo {
         resultView?: RecordCollectionView;
     }
@@ -2010,6 +2044,8 @@ declare namespace Katrid.Forms {
         controller: Katrid.Forms.Views.Search.SearchViewController;
         render(): HTMLElement;
         load(query: any): void;
+        protected _createFavoritesMenu(): void;
+        saveSearch(): void;
         renderTo(container: HTMLElement): void;
         protected getFieldConditions(field: Katrid.Data.Field): any;
     }
