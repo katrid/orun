@@ -335,3 +335,6 @@ msgstr "Hoje"
 
 msgid "Technical information"
 msgstr "Informações técnicas"
+
+msgid "selected"
+msgstr "selecionado"
