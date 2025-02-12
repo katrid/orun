@@ -537,7 +537,7 @@ var Katrid;
                 toolbar.className = 'homepage-toolbar';
                 div.append(toolbar);
                 let btn = document.createElement('a');
-                btn.classList.add('btn', 'btn-edit', 'btn-outline-secondary');
+                btn.classList.add('btn', 'btn-edit', 'btn-secondary');
                 btn.innerHTML = '<i class="fas fa-pen"></i>';
                 toolbar.append(btn);
                 div.append(toolbar);
@@ -1686,7 +1686,7 @@ var Katrid;
                     });
                     let btn = document.createElement('button');
                     btn.innerText = Katrid.i18n.gettext('Add');
-                    btn.classList.add('btn', 'btn-outline-secondary');
+                    btn.classList.add('btn', 'btn-secondary');
                     toolbar.append(sel);
                     toolbar.append(btn);
                     toolbar.querySelector('button').addEventListener('click', evt => this.addPortletClick(evt.target));
@@ -1974,7 +1974,7 @@ var katrid;
                 btn.innerText = _.gettext('Save');
                 btn.addEventListener('click', () => this.saveChanges());
                 btn = div.appendChild(document.createElement('button'));
-                btn.className = 'btn btn-outline-secondary';
+                btn.className = 'btn btn-secondary';
                 btn.innerText = _.gettext('Cancel');
                 let container = this.el.appendChild(document.createElement('div'));
                 container.className = 'row';
@@ -2282,7 +2282,7 @@ var Katrid;
             render() {
                 let appHeader = document.createElement('app-header');
                 appHeader.id = 'app-header';
-                appHeader.classList.add('navbar', 'navbar-expand-lg', 'navbar-dark', 'bg-primary', 'bg-gradient', 'flex-row');
+                appHeader.classList.add('navbar', 'navbar-expand-lg', 'navbar-dark', 'bg-primary', 'flex-row');
                 appHeader.innerHTML = `<div class="dropdown dropdown-apps">
         <a id="apps-button" class="header-link" data-bs-toggle="dropdown">
           <i class="fa fa-th"></i>
@@ -2816,7 +2816,7 @@ var Katrid;
                     if (b.class)
                         btn.className = b.class;
                     else
-                        btn.className = 'btn btn-outline-secondary';
+                        btn.className = 'btn btn-secondary';
                     res.push(btn);
                 }
                 return res;
@@ -2932,7 +2932,7 @@ var Katrid;
                     $btn.attr('onclick', `Katrid.Actions.ClientAction.tagButtonClick($(this))`);
                 }
                 if (!$btn.attr('class'))
-                    $btn.addClass('btn btn-outline-secondary');
+                    $btn.addClass('btn btn-secondary');
             });
         }
         Forms.compileButtons = compileButtons;
@@ -3467,7 +3467,7 @@ var Katrid;
       <div class="panel-body">
         <div class="row">
         <div class="col-md-6">
-        
+
           <action-navbar></action-navbar>
           <p class="help-block"></p>
           <div class="toolbar">
@@ -3493,13 +3493,13 @@ var Katrid;
                 let btnXls = document.createElement('button');
                 btnXls.innerHTML = '<i class="fas fa-download"></i>';
                 btnXls.title = 'Download as excel';
-                btnXls.className = 'btn btn-outline-secondary btn-export-xls';
+                btnXls.className = 'btn btn-secondary btn-export-xls';
                 btnXls.setAttribute('v-on:click', "download({format: 'xlsx'})");
                 parent.append(btnXls);
                 if (this.config?.toolbar?.print) {
                     let btnPrint = document.createElement('div');
                     btnPrint.classList.add('btn-group');
-                    btnPrint.innerHTML = `<button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" name="print" data-bs-toggle="dropdown" aria-haspopup="true">
+                    btnPrint.innerHTML = `<button type="button" class="btn btn-secondary dropdown-toggle btn-actions" name="print" data-bs-toggle="dropdown" aria-haspopup="true">
         ${Katrid.i18n.gettext('Print')} <span class="caret"></span>
       </button>
       <div class="dropdown-menu">
@@ -3526,7 +3526,7 @@ var Katrid;
                 let btnActions = document.createElement('div');
                 btnActions.classList.add('btn-group');
                 btnActions.innerHTML = `<div class="dropdown">
-        <button name="actions" type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown" v-show="selectionLength"
+        <button name="actions" type="button" class="btn btn-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown" v-show="selectionLength"
                 aria-haspopup="true">
           ${Katrid.i18n.gettext('Action')} <span class="caret"></span>
         </button>
@@ -3831,10 +3831,9 @@ var Katrid;
             toText(options) {
                 const output = [];
                 options = Object.assign({ newLine: '\n', separator: '\t', withHeader: true }, options || {});
-                if (options.withHeader) {
+                if (options.withHeader)
                     output.push(this.columns.map(col => col.label || col.name.toString()).join(options.separator));
-                }
-                output.push(...this.data.map((o) => Object.values(o).map(v => v == null ? '' : v.toString()).join(options.separator)));
+                output.push(...this.data.map((o) => Object.values(o).map(v => v == null ? '' : v.toString().replaceAll("\n", ";")).join(options.separator)));
                 return output.join(options.newLine);
             }
             export() {
@@ -3948,7 +3947,7 @@ var Katrid;
                 div.className = 'col-12 text-end toolbar-action-buttons px-3';
                 let btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary';
+                btn.className = 'btn btn-secondary';
                 btn.title = Katrid.i18n.gettext('Print');
                 btn.innerHTML = '<i class="fas fa-print"></i>';
                 btn.addEventListener('click', () => this.print());
@@ -3957,7 +3956,7 @@ var Katrid;
                 div.append(btn);
                 btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary';
+                btn.className = 'btn btn-secondary';
                 btn.title = 'Export to Excel';
                 btn.innerHTML = '<i class="fas fa-download"></i>';
                 btn.addEventListener('click', () => this.exportToExcel());
@@ -3966,7 +3965,7 @@ var Katrid;
                 div.append(btn);
                 btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary';
+                btn.className = 'btn btn-secondary';
                 btn.innerText = Katrid.i18n.gettext('Apply');
                 div.append(btn);
                 btn.addEventListener('click', () => this.applyParams());
@@ -6525,7 +6524,7 @@ var katrid;
                 let footer = dialog.querySelector('.modal-footer');
                 let btn = document.createElement('button');
                 btn.innerText = Katrid.i18n.gettext('OK');
-                btn.classList.add('btn', 'btn-outline-secondary');
+                btn.classList.add('btn', 'btn-secondary');
                 btn.type = 'button';
                 btn.addEventListener('click', () => {
                     modal.hide();
@@ -6535,7 +6534,7 @@ var katrid;
                 btn = document.createElement('button');
                 btn.innerText = Katrid.i18n.gettext('Cancel');
                 btn.type = 'button';
-                btn.classList.add('btn', 'btn-outline-secondary', 'ms-1');
+                btn.classList.add('btn', 'btn-secondary', 'ms-1');
                 btn.addEventListener('click', () => {
                     modal.hide();
                     resolve(false);
@@ -6750,7 +6749,7 @@ var Katrid;
                     else {
                         actionsButton = document.createElement('div');
                         actionsButton.classList.add('btn-group');
-                        actionsButton.innerHTML = '<div class="dropdown"><button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown"></button><div class="dropdown-menu custom-actions"></div></div>';
+                        actionsButton.innerHTML = '<div class="dropdown"><button type="button" class="btn btn-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown"></button><div class="dropdown-menu custom-actions"></div></div>';
                         btn = actionsButton.querySelector('button');
                         if (name)
                             btn.setAttribute('name', name);
@@ -6872,7 +6871,7 @@ var Katrid;
       ${msg || ''}
       </div>
       <div class="modal-footer">
-        <button type="button" name="btn-cancel" class="btn btn-outline-secondary" data-bs-dismiss="modal">${Katrid.i18n.gettext('Close')}</button>
+        <button type="button" name="btn-cancel" class="btn btn-secondary" data-bs-dismiss="modal">${Katrid.i18n.gettext('Close')}</button>
       </div>
     </div>
   </div>`;
@@ -6955,7 +6954,7 @@ var Katrid;
             }
             Dialogs.createDialog = createDialog;
             function getButtonFromName(buttonName) {
-                let button = `<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">`;
+                let button = `<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">`;
                 switch (buttonName) {
                     case 'close':
                         button += Katrid.i18n.gettext('Close');
@@ -7944,7 +7943,7 @@ var Katrid;
             <button class="btn btn-primary" type="button" v-on:click="report.preview()"><span class="fa fa-print fa-fw"></span> ${Katrid.i18n.gettext('Preview')}</button>
 
             <div class="btn-group">
-              <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+              <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
                       aria-expanded="false">${Katrid.i18n.gettext('Export')} <span class="caret"></span></button>
               <div class="dropdown-menu">
                 <a class="dropdown-item" v-on:click="Katrid.Reports.Reports.preview()">PDF</a>
@@ -7958,14 +7957,14 @@ var Katrid;
             </div>
 
             <div class="btn-group">
-              <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+              <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
                       aria-expanded="false">${Katrid.i18n.gettext('My reports')} <span class="caret"></span></button>
               <ul class="dropdown-menu">
               </ul>
             </div>
 
           <div class="pull-right btn-group">
-            <button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+            <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
                     aria-expanded="false"><i class="fa fa-sliders-h"></i></button>
             <div class="dropdown-menu">
               <a class="dropdown-item" v-on:click="report.saveDialog()">${Katrid.i18n.gettext('Save')}</a>
@@ -8033,7 +8032,7 @@ var Katrid;
             </td>
             <td class="col-sm-8">
               <button
-                  class="btn btn-outline-secondary" type="button"
+                  class="btn btn-secondary" type="button"
                   v-on:click="report.addParam(newParam)">
                 <i class="fa fa-plus fa-fw"></i> ${Katrid.i18n.gettext('Add Parameter')}
               </button>
@@ -8096,7 +8095,7 @@ var Katrid;
             static createViewModeButton(container) {
                 let btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary btn-view-list';
+                btn.className = 'btn btn-secondary btn-view-list';
                 btn.innerHTML = '<i class="fas fa-calendar"></i>';
                 btn.setAttribute('v-on:click', `setViewMode('calendar')`);
                 container.append(btn);
@@ -8180,7 +8179,7 @@ var Katrid;
                 let templ = Katrid.html(`
     <div class="content no-padding">
       <div class="data-panel col-12">
-      
+
         <div class="card-view kanban" v-if="groups && groups.length" card-draggable=".card-group" card-group>
 
           <div v-for="group in groups" class="card-group sortable-item">
@@ -8189,14 +8188,14 @@ var Katrid;
               <button class="btn" v-on:click="showQuickAddDlg(group, $event)"><i class="fa fa-plus"></i></button>
 
             </div>
-            
+
               <form id="card-add-group-item-dlg" v-on:submit.prevent="submitItem(group)" v-if="group.$cardShowAddGroupItemDlg">
                 <div class="form-group">
                   <input type="text" v-model="newName" class="form-control" placeholder="${Katrid.i18n.gettext('Add')}" v-on:blur="cardHideAddGroupItemDlg(group)" v-on:keydown.esc="cardHideAddGroupItemDlg(group)">
                 </div>
                 <button type="submit" class="btn btn-primary" v-on:mousedown.prevent.stop>${Katrid.i18n.gettext('Add')}</button>
                 <button type="submit" class="btn btn-primary" v-on:mousedown.prevent.stop>${Katrid.i18n.gettext('Edit')}</button>
-                <button type="button" class="btn btn-outline-secondary" v-on:click="cardHideAddGroupItemDlg(group)" title="${Katrid.i18n.gettext('Discard record changes')}">${Katrid.i18n.gettext('Discard')}</button>
+                <button type="button" class="btn btn-secondary" v-on:click="cardHideAddGroupItemDlg(group)" title="${Katrid.i18n.gettext('Discard record changes')}">${Katrid.i18n.gettext('Discard')}</button>
               </form>
 
             <div class="card-items" card-draggable=".card-items" card-item>
@@ -8229,7 +8228,7 @@ var Katrid;
           </div>
 
         <div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div><div class="card-item card-ghost"></div>
-          
+
         </div>
       </div>
     </div>
@@ -8256,7 +8255,7 @@ var Katrid;
             static createViewModeButton(container) {
                 let btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary btn-view-card';
+                btn.className = 'btn btn-secondary btn-view-card';
                 btn.innerHTML = '<i class="fas fa-table"></i>';
                 btn.setAttribute('v-on:click', `setViewMode('card')`);
                 container.append(btn);
@@ -8298,7 +8297,7 @@ var Katrid;
             static createViewModeButton(container) {
                 let btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary btn-view-list';
+                btn.className = 'btn btn-secondary btn-view-list';
                 btn.innerHTML = '<i class="fas fa-chart-pie"></i>';
                 btn.setAttribute('v-on:click', `setViewMode('calendar')`);
                 container.append(btn);
@@ -8503,10 +8502,10 @@ var Katrid;
               </span>
               </div>
               <div class="btn-group" role="group">
-                <button id="btn-form-prior" class="btn btn-outline-secondary" type="button" @click="prior()">
+                <button id="btn-form-prior" class="btn btn-secondary" type="button" @click="prior()">
                   <i class="fa fa-chevron-left"></i>
                 </button>
-                <button id="btn-form-next" class="btn btn-outline-secondary" type="button" @click="next()">
+                <button id="btn-form-next" class="btn btn-secondary" type="button" @click="next()">
                   <i class="fa fa-chevron-right"></i>
                 </button>
               </div>
@@ -8534,19 +8533,27 @@ var Katrid;
                 let div = document.createElement('div');
                 div.classList.add('btn-toolbar');
                 div.innerHTML = `
-    <button class="btn btn-primary btn-action-save" type="button" v-bind:disabled="loadingRecord"
-      v-on:click="save()" v-show="changing">
+    <div class="btn-group btn-group-split" v-show="changing">
+      <button class="btn btn-primary btn-action-save" type="button" v-bind:disabled="loadingRecord"
+        v-on:click="save()" v-show="changing">
         ${Katrid.i18n.gettext('Save')}
       </button>
+      <button class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" type="button"
+        :disabled="loadingRecord">
+      </button>
+      <ul class="dropdown-menu">
+        <li><a class="dropdown-item">${Katrid.i18n.gettext('Save as draft')}</a></li>
+      </ul>
+    </div>
       <button class="btn btn-primary btn-action-edit" type="button" v-bind:disabled="loadingRecord"
       v-on:click="edit()" v-show="!changing">
         ${Katrid.i18n.gettext('Edit')}
       </button>
-      <button class="btn btn-outline-secondary btn-action-create" type="button" v-bind:disabled="loadingRecord"
+      <button class="btn btn-secondary btn-action-create" type="button" v-bind:disabled="loadingRecord"
       v-on:click="insert()" v-show="!changing">
         ${Katrid.i18n.gettext('Create')}
       </button>
-      <button class="btn btn-outline-secondary btn-action-cancel" type="button" v-on:click="discard()"
+      <button class="btn btn-secondary btn-action-cancel" type="button" v-on:click="discard()"
       v-show="changing">
         ${Katrid.i18n.gettext('Discard')}
       </button>
@@ -8555,7 +8562,7 @@ var Katrid;
         <button type="button" class="btn toolbtn btn-action-refresh" v-if="!changing" v-on:click="refresh()" title="${Katrid.i18n.gettext('Refresh')}">
           <i class="fa fa-fw fa-redo-alt"></i>
         </button>
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle btn-actions" name="actions" data-bs-toggle="dropdown"
+        <button type="button" class="btn btn-secondary dropdown-toggle btn-actions" name="actions" data-bs-toggle="dropdown"
                 aria-haspopup="true">
           ${Katrid.i18n.gettext('Action')} <span class="caret"></span>
         </button>
@@ -9181,7 +9188,7 @@ var Katrid;
 
     <div class="btn-group search-view-more-area">
       <div custom-filter class="btn-group">
-        <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button" aria-expanded="false">
+        <button class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button" aria-expanded="false">
           <span class="fa fa-filter"></span> ${Katrid.i18n.gettext('Filters')} <span class="caret"></span>
         </button>
 
@@ -9252,7 +9259,7 @@ var Katrid;
               <button class="btn btn-primary" type="button" v-on:click="applyFilter()">
                 ${Katrid.i18n.gettext('Apply')}
               </button>
-              <button class="btn btn-outline-secondary" type="button" v-on:click="newCondition()">
+              <button class="btn btn-secondary" type="button" v-on:click="newCondition()">
                 ${Katrid.i18n.gettext('Add a condition')}
               </button>
             </div>
@@ -9263,7 +9270,7 @@ var Katrid;
 
       </div>
       <div class="btn-group">
-        <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button">
+        <button class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button">
           <span class="fa fa-bars"></span> ${Katrid.i18n.gettext('Group By')} <span class="caret"></span>
         </button>
         <ul class="dropdown-menu search-view-groups-menu">
@@ -9303,7 +9310,7 @@ var Katrid;
       </div>
 
       <div class="btn-group">
-        <button id="btn-favorites" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button">
+        <button id="btn-favorites" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button">
           <span class="fa fa-star"></span> ${Katrid.i18n.gettext('Favorites')} <span class="caret"></span>
         </button>
         <div class="dropdown-menu" role="menu">
@@ -9322,10 +9329,10 @@ var Katrid;
                 </div>
               </div>
               <div class="btn-group">
-                <button class="btn btn-outline-secondary" type="button" v-on:click="prevPage()">
+                <button class="btn btn-secondary" type="button" v-on:click="prevPage()">
                   <i class="fa fa-chevron-left"></i>
                 </button>
-                <button class="btn btn-outline-secondary" type="button" v-on:click="nextPage()">
+                <button class="btn btn-secondary" type="button" v-on:click="nextPage()">
                   <i class="fa fa-chevron-right"></i>
                 </button>
               </div>
@@ -9603,7 +9610,7 @@ var Katrid;
             static createViewModeButton(container) {
                 let btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary btn-view-list';
+                btn.className = 'btn btn-secondary btn-view-list';
                 btn.innerHTML = '<i class="fas fa-list"></i>';
                 btn.setAttribute('v-on:click', `setViewMode('list')`);
                 container.append(btn);
@@ -9658,7 +9665,7 @@ var Katrid;
                 let btn = document.createElement('button');
                 div.appendChild(btn);
                 btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary';
+                btn.className = 'btn btn-secondary';
                 btn.setAttribute('v-if', '(selection.length < recordCount) && allSelected && !allSelectionFilter');
                 btn.innerHTML = '<i class="fas fa-arrow-right"></i> <span>Selecionar todos {{recordCount}}</span>';
                 btn.setAttribute('v-on:click', 'allSelectionFilter = true');
@@ -10718,7 +10725,7 @@ var Katrid;
                 class CustomFilterHelper {
                     constructor(searchView, container) {
                         this.searchView = searchView;
-                        container.innerHTML = `<button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" type="button"
+                        container.innerHTML = `<button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" type="button"
                 aria-expanded="false">
           <span class="fa fa-filter fa-fw"></span> ${Katrid.i18n.gettext('Filters')} <span class="caret"></span>
         </button>
@@ -10772,7 +10779,7 @@ var Katrid;
               <button class="btn btn-primary" type="button" v-on:click="applyFilter(field, condition, searchValue)" v-show="conditionName">
                 ${Katrid.i18n.gettext('Apply')}
               </button>
-              <button class="btn btn-outline-secondary" type="button"
+              <button class="btn btn-secondary" type="button"
                       v-on:click="addCondition(field, condition, searchValue);fieldName='';" v-show="conditionName">
                 ${Katrid.i18n.gettext('Add a condition')}
               </button>
@@ -10841,7 +10848,7 @@ var Katrid;
                 Search.CustomFilterHelper = CustomFilterHelper;
                 class GroupFilterHelper {
                     constructor(searchView, container) {
-                        container.innerHTML = `<button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" type="button">
+                        container.innerHTML = `<button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" type="button">
           <span class="fa fa-bars fa-fw"></span> ${Katrid.i18n.gettext('Group By')} <span class="caret"></span>
         </button>
         <div class="dropdown-menu search-view-groups-menu">
@@ -10883,7 +10890,7 @@ var Katrid;
                 Search.GroupFilterHelper = GroupFilterHelper;
                 class SaveFilterHelper {
                     constructor(searchView, container) {
-                        container.innerHTML = `<button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" type="button"
+                        container.innerHTML = `<button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" type="button"
                 aria-expanded="false">
           <span class="fa fa-star fa-fw"></span> ${Katrid.i18n.gettext('Favorites')} <span class="caret"></span>
         </button>
@@ -11258,7 +11265,7 @@ var Katrid;
                 render() {
                     let templ = `<div class="dropdown">
         <button id="attachments-button"
-                type="button" class="btn btn-outline-secondary dropdown-toggle"
+                type="button" class="btn btn-secondary dropdown-toggle"
                 data-bs-toggle="dropdown" aria-haspopup="true">
           <span v-if="!attachments.length">${Katrid.i18n.gettext('Attachments')} </span>
           <span
@@ -12568,8 +12575,8 @@ var Katrid;
             let toolbar = document.createElement('div');
             toolbar.classList.add('grid-toolbar');
             toolbar.innerHTML = `
-<button class="btn btn-sm btn-outline-secondary btn-action-add" type="button" v-on:click="createNew()" v-show="$parent.changing && !readonly">${Katrid.i18n.gettext('Add')}</button>
-<button class="btn btn-sm btn-outline-secondary btn-action-delete" type="button" v-on:click="deleteSelection()" v-show="$parent.changing && !readonly && selectionLength">${Katrid.i18n.gettext('Delete')}</button>
+<button class="btn btn-sm btn-secondary btn-action-add" type="button" v-on:click="createNew()" v-show="$parent.changing && !readonly">${Katrid.i18n.gettext('Add')}</button>
+<button class="btn btn-sm btn-secondary btn-action-delete" type="button" v-on:click="deleteSelection()" v-show="$parent.changing && !readonly && selectionLength">${Katrid.i18n.gettext('Delete')}</button>
 `;
             header.append(toolbar);
             let table = document.createElement('div');
@@ -12873,8 +12880,8 @@ var Katrid;
                 let toolbar = document.createElement('div');
                 toolbar.classList.add('grid-toolbar');
                 toolbar.innerHTML = `
-  <button class="btn btn-sm btn-outline-secondary btn-action-add" type="button" v-show="$parent.changing && !readonly">${Katrid.i18n.gettext('Add')}</button>
-  <button class="btn btn-sm btn-outline-secondary btn-action-delete" type="button" v-on:click="deleteSelection()" v-show="$parent.changing && !readonly && selectionLength">${Katrid.i18n.gettext('Delete')}</button>
+  <button class="btn btn-sm btn-secondary btn-action-add" type="button" v-show="$parent.changing && !readonly">${Katrid.i18n.gettext('Add')}</button>
+  <button class="btn btn-sm btn-secondary btn-action-delete" type="button" v-on:click="deleteSelection()" v-show="$parent.changing && !readonly && selectionLength">${Katrid.i18n.gettext('Delete')}</button>
   `;
                 toolbar.querySelector('.btn-action-add').addEventListener('click', () => this.newRecord());
                 header.append(toolbar);
@@ -13055,8 +13062,8 @@ var katrid;
       <div class="container">
           <h3>${Katrid.i18n.gettext('Comments')}</h3>
           <div class="form-group">
-          <button class="btn btn-outline-secondary btn-show-editor">${Katrid.i18n.gettext('New message')}</button>
-          <button class="btn btn-outline-secondary">${Katrid.i18n.gettext('Log note')}</button>
+          <button class="btn btn-secondary btn-show-editor">${Katrid.i18n.gettext('New message')}</button>
+          <button class="btn btn-secondary">${Katrid.i18n.gettext('Log note')}</button>
           </div>
           <div id="mail-editor" style="display: none;">
             <div class="form-group">
@@ -13074,7 +13081,7 @@ var katrid;
               <button class="btn btn-primary btn-send">${Katrid.i18n.gettext('Send')}</button>
             </div>
           </div>
-  
+
           <hr>`;
                 this._textEditor = div.querySelector('textarea');
                 this._file = div.querySelector('input');
@@ -13151,7 +13158,7 @@ var katrid;
                 div.innerHTML = `
         <div class="flex-shrink-0"><img src="/static/admin/assets/img/avatar.png" class="avatar rounded"></div>
         <div class="flex-grow-1 ms-3">
-          <strong>${comment.author_name}</strong> - 
+          <strong>${comment.author_name}</strong> -
           <span class="timestamp text-muted" title="${moment(comment.date_time).format('LLLL')}"> ${moment(comment.date_time).fromNow()}</span>
           <div class="form-group">
             ${comment.content}
@@ -14864,7 +14871,7 @@ var katrid;
             addButton(text) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'btn btn-outline-secondary tool-button';
+                btn.className = 'btn btn-secondary tool-button';
                 if (typeof text === 'string') {
                     btn.innerHTML = text;
                 }
@@ -15664,7 +15671,7 @@ var katrid;
       ${msg || ''}
       </div>
       <div class="modal-footer">
-        <button type="button" name="btn-cancel" class="btn btn-outline-secondary" data-bs-dismiss="modal">${katrid.i18n.gettext('Close')}</button>
+        <button type="button" name="btn-cancel" class="btn btn-secondary" data-bs-dismiss="modal">${katrid.i18n.gettext('Close')}</button>
       </div>
     </div>
   </div>`;
@@ -15736,7 +15743,7 @@ var katrid;
             DialogResult["close"] = "close";
         })(DialogResult = ui.DialogResult || (ui.DialogResult = {}));
         function getButtonFromName(buttonName) {
-            let button = `<button type="button" class="btn btn-outline-secondary">`;
+            let button = `<button type="button" class="btn btn-secondary">`;
             switch (buttonName) {
                 case DialogResult.close:
                     button += katrid.i18n.gettext('Close');
@@ -15939,9 +15946,8 @@ var katrid;
         class TableColumns extends katrid.OwnedCollection {
             notify(action, item) {
                 const owner = this.owner;
-                if (action === 'add') {
+                if (action === 'insert')
                     owner?.refresh();
-                }
             }
         }
         ui.TableColumns = TableColumns;
