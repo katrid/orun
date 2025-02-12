@@ -14757,7 +14757,7 @@ var Katrid;
                 for (let tr of table.querySelectorAll('tr')) {
                     row = [];
                     for (let td of tr.querySelectorAll('td'))
-                        row.push(td.innerText);
+                        row.push(td.innerText.replaceAll('\n', ';'));
                     if (row.length)
                         output.push(row.join('\t'));
                 }
