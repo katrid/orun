@@ -11173,7 +11173,14 @@ var Katrid;
                     const serviceName = this.$attrs['ajax-choices'];
                     let field = this.$attrs.field;
                     let _timeout = null;
-                    let domain;
+                    let domain = this.$attrs['filter'];
+                    if (typeof domain === 'string')
+                        try {
+                            domain = JSON.parse(domain);
+                        }
+                        catch (e) {
+                            console.error(e);
+                        }
                     let nameFields = this.$attrs['name-fields'];
                     let modelChoices = this.$attrs['model-choices'];
                     const cfg = {
