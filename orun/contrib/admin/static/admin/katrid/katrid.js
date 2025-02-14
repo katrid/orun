@@ -1434,7 +1434,6 @@ var Katrid;
                 this.report.loadFromXml(self.config.info.content);
                 this.report.render(el);
                 this.report.loadParams();
-                console.debug(this.report.params);
                 let vm = Katrid.createVm({
                     data() {
                         return {
@@ -11180,9 +11179,10 @@ var Katrid;
                     let domain = this.$attrs['filter'];
                     if (typeof domain === 'string')
                         try {
-                            domain = eval(domain);
+                            domain = new Function(`return ${domain}`)();
                         }
                         catch (e) {
+                            console.debug('Error in domain', domain);
                             console.error(e);
                         }
                     let nameFields = this.$attrs['name-fields'];
