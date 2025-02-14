@@ -1434,6 +1434,7 @@ var Katrid;
                 this.report.loadFromXml(self.config.info.content);
                 this.report.render(el);
                 this.report.loadParams();
+                console.debug(this.report.params);
                 let vm = Katrid.createVm({
                     data() {
                         return {
@@ -7474,7 +7475,7 @@ var Katrid;
                     if (param.operation === 'in') {
                         multiple = 'multiple';
                     }
-                    let filter = ` filter="${param.info.filter}"` ? param.info.filter : '';
+                    let filter = param.info.filter ? ` filter="${param.info.filter}"` : param.info.filter;
                     return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ui.action.report" model-choices="${param.info.modelChoices}" ${filter} v-model="param.value1" ${multiple}></div>`;
                 },
                 SelectionField(param) {
