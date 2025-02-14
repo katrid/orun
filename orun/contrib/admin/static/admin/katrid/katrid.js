@@ -11177,7 +11177,7 @@ var Katrid;
                     let domain = this.$attrs['filter'];
                     if (typeof domain === 'string')
                         try {
-                            domain = JSON.parse(domain);
+                            domain = eval(domain);
                         }
                         catch (e) {
                             console.error(e);
