@@ -7474,7 +7474,7 @@ var Katrid;
                     if (param.operation === 'in') {
                         multiple = 'multiple';
                     }
-                    let filter = ` domain="${param.filter}"` ? param.filter : '';
+                    let filter = ` filter="${param.info.filter}"` ? param.info.filter : '';
                     return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ui.action.report" model-choices="${param.info.modelChoices}" ${filter} v-model="param.value1" ${multiple}></div>`;
                 },
                 SelectionField(param) {
@@ -7733,6 +7733,7 @@ var Katrid;
                     const autoCreate = f.getAttribute('autoCreate') || required || (param === 'static');
                     const operation = f.getAttribute('operation');
                     const defaultValue = f.getAttribute('default');
+                    const filter = f.getAttribute('filter');
                     let type = f.getAttribute('type') || $(f).data('type') || (fld && fld.type);
                     if (type in dataTypeDict)
                         type = dataTypeDict[type];
@@ -7757,6 +7758,7 @@ var Katrid;
                         type,
                         autoCreate,
                         defaultValue,
+                        filter,
                         field: f,
                     });
                 }
