@@ -7474,7 +7474,8 @@ var Katrid;
                     if (param.operation === 'in') {
                         multiple = 'multiple';
                     }
-                    return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ui.action.report" model-choices="${param.info.modelChoices}" v-model="param.value1" ${multiple}></div>`;
+                    let filter = ` domain="${param.filter}"` ? param.filter : '';
+                    return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ui.action.report" model-choices="${param.info.modelChoices}" ${filter} v-model="param.value1" ${multiple}></div>`;
                 },
                 SelectionField(param) {
                     let multiple = '';
