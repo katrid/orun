@@ -11199,7 +11199,7 @@ var Katrid;
                                 }
                             };
                             if (domain)
-                                data.domain = domain;
+                                data.kwargs.domain = domain;
                             const f = () => {
                                 let svc = new Katrid.Services.ModelService(serviceName);
                                 let res;
