@@ -2084,6 +2084,12 @@ var katrid;
                     this.group.menu.add(node.data.menuItem);
                 else
                     this.group.menu.delete(node.data.menuItem);
+                let parent = node.parent;
+                while (parent) {
+                    if (parent.checked === 'indeterminate')
+                        this.group.menu.add(parent.data.menuItem);
+                    parent = parent.parent;
+                }
                 for (const child of node.children) {
                     this.nodeMenuCheck(child);
                 }
