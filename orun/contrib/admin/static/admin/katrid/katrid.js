@@ -1992,7 +1992,12 @@ var katrid;
                 panel.className = 'left-panel col-6';
                 h = document.createElement('h4');
                 tvEl = document.createElement('div');
-                this._treeViewMenu = new katrid.ui.TreeView(tvEl, { options: { checkbox: true, onCheckChange: (node) => this.nodeMenuCheck(node) } });
+                this._treeViewMenu = new katrid.ui.TreeView(tvEl, {
+                    options: {
+                        checkbox: true, onCheckChange: (node) => this.nodeMenuCheck(node),
+                        onChecked: (node) => this.afterChecked(node)
+                    }
+                });
                 h.innerText = _.gettext('Menu');
                 panel.appendChild(h);
                 panel.appendChild(tvEl);
@@ -2000,9 +2005,8 @@ var katrid;
             loadMenu(data, parentNode) {
                 for (const item of data) {
                     item.treeNode = this._treeViewMenu.addItem({ id: item.id, text: item.name, menuItem: item }, parentNode);
-                    if (item.children) {
+                    if (item.children)
                         this.loadMenu(item.children, item.treeNode);
-                    }
                 }
             }
             loadGroups(data) {
@@ -2068,7 +2072,8 @@ var katrid;
                     }
                     if (group.menu) {
                         for (const item of group.menu) {
-                            item.treeNode.checked = true;
+                            if (item.children.length === 0)
+                                item.treeNode.checked = true;
                         }
                     }
                 }
@@ -2084,22 +2089,25 @@ var katrid;
                     this.group.menu.add(node.data.menuItem);
                 else
                     this.group.menu.delete(node.data.menuItem);
+                for (const child of node.children)
+                    this.nodeMenuCheck(child);
+            }
+            afterChecked(node) {
                 let parent = node.parent;
                 while (parent) {
-                    if (parent.checked === 'indeterminate')
+                    if (parent.checked)
                         this.group.menu.add(parent.data.menuItem);
+                    else
+                        this.group.menu.delete(parent.data.menuItem);
+                    console.debug('parent', parent.checked);
                     parent = parent.parent;
-                }
-                for (const child of node.children) {
-                    this.nodeMenuCheck(child);
                 }
             }
             async saveChanges() {
                 let data = [];
                 for (const g of this.groupMap.values()) {
-                    if (!g.modified) {
+                    if (!g.modified)
                         continue;
-                    }
                     const add = [];
                     const remove = [];
                     for (const m of this.menuMap.values()) {
@@ -15183,6 +15191,7 @@ var katrid;
             set checked(value) {
                 this.setCheckAll(value === true);
                 this._parent?.updateCheckboxState();
+                this.options?.onChecked?.(this);
             }
             updateCheckboxState() {
                 let anyChecked = false;
