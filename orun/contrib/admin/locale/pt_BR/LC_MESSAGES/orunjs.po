@@ -338,3 +338,6 @@ msgstr "Informações técnicas"
 
 msgid "selected"
 msgstr "selecionado"
+
+msgid "Save as draft"
+msgstr "Salvar como rascunho"

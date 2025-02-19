@@ -4,10 +4,10 @@ from orun.apps import apps
 from orun.contrib import auth
 from orun.conf import settings
 from orun.contrib.auth.hashers import check_password
-from orun.core.exceptions import PermissionDenied
+from orun.core.exceptions import PermissionDenied, ValidationError
 from orun.http import HttpRequest
 from orun.db import models
-from orun.utils.translation import gettext_lazy as _
+from orun.utils.translation import gettext_lazy as _, gettext
 from orun.contrib.auth.models import AbstractUser
 from .partner import Partner
 
@@ -99,16 +99,15 @@ class User(AbstractUser, Partner):
         if usr and check_password(password, usr.password):
             return usr
 
-    @api.method
-    def change_password(self, old_password, new_password):
+    @api.classmethod
+    def change_password(cls, request: HttpRequest, old_password, new_password):
         # check user password
-        print(self.env.user)
-        user = auth.authenticate(username=self.env.user.username, password=old_password)
-        if user and new_password:
+        user = auth.authenticate(username=request.user.username, password=old_password)
+        if user and new_password and user.is_active:
             user.set_password(new_password)
             user.save()
-            return self.env.user_id
-        raise PermissionDenied(_('Invalid password!'))
+            return {'message': gettext('Password changed successfully'), 'success': True}
+        raise ValidationError(_('Invalid password'))
 
     def user_info(self):
         return {

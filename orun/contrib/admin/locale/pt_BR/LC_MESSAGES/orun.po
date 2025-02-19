@@ -17,3 +17,12 @@ msgstr "Preferências"
 
 msgid "(Undefined)"
 msgstr "(Indefinido)"
+
+msgid "Old Password"
+msgstr "Senha Antiga"
+
+msgid "New Password"
+msgstr "Nova Senha"
+
+msgid "Confirm Password"
+msgstr "Confirmar Senha"

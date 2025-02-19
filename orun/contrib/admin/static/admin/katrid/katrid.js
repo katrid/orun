@@ -2171,6 +2171,61 @@ var katrid;
         admin.responseMiddleware = [ResponseMessagesProcessor];
     })(admin = katrid.admin || (katrid.admin = {}));
 })(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var admin;
+    (function (admin) {
+        class UserPreferences {
+            static async showModal() {
+                const pref = new UserPreferences();
+                await pref.execute();
+            }
+            async changePassword() {
+                const change = async () => {
+                    const oldPassword = changeDialog.dialog.querySelector('input[name="old_password"]').value;
+                    const newPassword = changeDialog.dialog.querySelector('input[name="new_password"]').value;
+                    const confirmPassword = changeDialog.dialog.querySelector('input[name="confirm_password"]').value;
+                    if (newPassword !== confirmPassword) {
+                        Katrid.Forms.Dialogs.Alerts.error('Passwords do not match');
+                        throw new Error('Passwords do not match');
+                    }
+                    const svc = new Katrid.Services.ModelService('auth.user');
+                    const res = await svc.rpc('change_password', null, {
+                        old_password: oldPassword, new_password: newPassword,
+                    });
+                    if (res.success) {
+                        Katrid.Forms.Dialogs.Alerts.info(Katrid.i18n.gettext('Logging out...'));
+                        setTimeout(() => window.location.reload(), 2000);
+                    }
+                };
+                const changeDialog = new katrid.ui.Dialog({
+                    title: Katrid.i18n.gettext('Change Password'),
+                    content: `<form>
+          <label>${Katrid.i18n.gettext('Old Password')}</label><input type="password" class="form-control" name="old_password" autocomplete="current-password">
+          <label>${Katrid.i18n.gettext('New Password')}</label><input type="password" class="form-control" name="new_password" autocomplete="new-password">
+          <label>${Katrid.i18n.gettext('Confirm Password')}</label><input type="password" class="form-control" name="confirm_password" autocomplete="new-password">
+            </form>`,
+                    buttons: [{ text: 'OK', click: () => change() }, 'cancel'],
+                });
+                return await changeDialog.showModal();
+            }
+            async execute() {
+                const dlg = new katrid.ui.Dialog({
+                    title: Katrid.i18n.gettext('Preferences'),
+                    content: `<form><h3>${Katrid.webApp.userInfo.name}</h3>
+            <button type="button" class="btn btn-secondary" id="btn-change-password">${Katrid.i18n.gettext('Change Password')}</button>
+          </form>`,
+                    buttons: ['ok', 'cancel'],
+                });
+                dlg.dialog.querySelector('#btn-change-password').addEventListener('click', async () => this.changePassword());
+                if (await dlg.showModal() === 'ok') {
+                }
+                dlg.close();
+            }
+        }
+        admin.UserPreferences = UserPreferences;
+    })(admin = katrid.admin || (katrid.admin = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var BI;
@@ -2350,7 +2405,7 @@ var Katrid;
               <img class="user-avatar" src="/static/admin/assets/img/avatar.png"> <span/>
             </a>
             <div class="dropdown-menu dropdown-menu-end">
-              <a class="dropdown-item"><i class="fa fa-fw"></i> ${Katrid.i18n.gettext('Preferences')}</a>
+              <a class="dropdown-item" onclick="katrid.admin.UserPreferences.showModal()"><i class="fa fa-fw"></i> ${Katrid.i18n.gettext('Preferences')}</a>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="/web/logout/"><i class="fa fa-lg fa-fw fa-sign-out-alt"></i> ${Katrid.i18n.gettext('Logout')}</a>
             </div>
@@ -15658,6 +15713,18 @@ var katrid;
                     });
                     container.appendChild(button);
                 }
+                else if (btn instanceof HTMLElement) {
+                    container.appendChild(btn);
+                }
+                else if (btn.text) {
+                    const button = document.createElement('button');
+                    button.className = 'btn btn-secondary';
+                    button.textContent = btn.text;
+                    button.type = 'button';
+                    if (btn.click)
+                        button.addEventListener('click', btn.click);
+                    container.appendChild(button);
+                }
             }
         }
         function createDialogElement(config) {
@@ -15801,6 +15868,7 @@ var katrid;
                     this.reject = reject;
                     this.dialog.addEventListener('close', (evt) => {
                         this.resolve(this.dialog.returnValue);
+                        this.dialog.remove();
                     });
                 });
             }
