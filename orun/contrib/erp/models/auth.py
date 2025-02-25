@@ -138,7 +138,7 @@ class Rule(models.Model):
 
     @classmethod
     def get_rules(cls, model: str):
-        return cls.objects.filter(model__name=model)
+        return cls.objects.filter(model__name=model, active=True)
 
     def eval_rule(self, context: dict):
         context['__builtins__'] = None
