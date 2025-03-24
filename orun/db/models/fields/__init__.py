@@ -1,4 +1,5 @@
 from typing import Optional, Union, Callable, TYPE_CHECKING
+import re
 import copy
 import datetime
 import decimal
@@ -1787,6 +1788,10 @@ class EmailField(CharField):
         # We do not exclude max_length if it matches default as we want to change
         # the default in future.
         return name, path, args, kwargs
+
+    @staticmethod
+    def is_valid(value: str):
+        return re.match(r'[\w.]+@[\w.]+',value) is not None
 
 
 class FilePathField(Field):
