@@ -5532,9 +5532,9 @@ var Katrid;
             }
             renderTo(fieldEl, view) {
                 if (view.getViewType() === 'form')
-                    this.formCreate(fieldEl);
+                    this.formCreate(fieldEl, view);
             }
-            formCreate(fieldEl) {
+            formCreate(fieldEl, view) {
                 let attrs = this.attrs = this.getFieldAttributes(fieldEl);
                 let widget;
                 let widgetType = attrs.widget || this.widget;
@@ -5544,9 +5544,9 @@ var Katrid;
                 if (widgetType) {
                     widget = this.createWidget(widgetType);
                     if (widget.renderToForm)
-                        return widget.renderToForm(fieldEl);
+                        return widget.renderToForm(fieldEl, view);
                     else if (widget.formControl)
-                        control = widget.formControl();
+                        control = widget.formControl(fieldEl);
                     if (widget.formLabel)
                         label = widget.formLabel();
                 }
@@ -8015,7 +8015,7 @@ var Katrid;
             <button class="btn btn-primary" type="button" v-on:click="report.preview()"><span class="fa fa-print fa-fw"></span> ${Katrid.i18n.gettext('Preview')}</button>
 
             <div class="btn-group">
-              <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+              <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
                       aria-expanded="false">${Katrid.i18n.gettext('Export')} <span class="caret"></span></button>
               <div class="dropdown-menu">
                 <a class="dropdown-item" v-on:click="Katrid.Reports.Reports.preview()">PDF</a>
@@ -8029,14 +8029,14 @@ var Katrid;
             </div>
 
             <div class="btn-group">
-              <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+              <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
                       aria-expanded="false">${Katrid.i18n.gettext('My reports')} <span class="caret"></span></button>
               <ul class="dropdown-menu">
               </ul>
             </div>
 
           <div class="pull-right btn-group">
-            <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+            <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
                     aria-expanded="false"><i class="fa fa-sliders-h"></i></button>
             <div class="dropdown-menu">
               <a class="dropdown-item" v-on:click="report.saveDialog()">${Katrid.i18n.gettext('Save')}</a>
@@ -12984,6 +12984,61 @@ var Katrid;
         }
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var forms;
+    (function (forms) {
+        var widgets;
+        (function (widgets) {
+            Katrid.component('record-collection-field', {
+                template: '<div class="table-responsive"></div>',
+                mounted() {
+                    console.debug('rec collection field', arguments);
+                }
+            });
+            class TabularDocumentList extends Katrid.Forms.Widgets.Widget {
+                constructor() {
+                    super(...arguments);
+                    this.formControl = (fieldEl) => {
+                        const fields = fieldEl.querySelector('fields');
+                        const table = document.createElement('table');
+                        table.className = 'table';
+                        table.innerHTML = `<thead><tr></tr></thead><tbody><tr v-for="subRecord in record.${this.field.name}"></tr></tbody>`;
+                        if (fields) {
+                            for (const fEl of fields.children) {
+                                if (fEl.tagName === 'FIELD') {
+                                    this.createFieldControl(fEl, table);
+                                }
+                            }
+                        }
+                        let th = document.createElement('th');
+                        th.innerHTML = `<button type="button" class="btn btn-sm btn-danger" v-on:click="record.${this.field.name}.splice($index, 1)"><span class="fa fa-remove"></span></button>`;
+                        table.tBodies[0].rows[0].append(th);
+                        const div = document.createElement('div');
+                        const btnAdd = document.createElement('button');
+                        btnAdd.className = 'btn btn-sm btn-secondary';
+                        btnAdd.innerText = katrid.i18n.gettext('Add');
+                        btnAdd.type = 'button';
+                        btnAdd.setAttribute('v-if', 'editing');
+                        btnAdd.setAttribute('v-on:click', `record.${this.field.name} ??= [];record.${this.field.name}.push({})`);
+                        div.append(btnAdd);
+                        div.append(table);
+                        return div;
+                    };
+                }
+                createFieldControl(fieldEl, table) {
+                    const th = document.createElement('th');
+                    const td = document.createElement('td');
+                    th.innerHTML = fieldEl.getAttribute('label') || fieldEl.getAttribute('name');
+                    td.innerHTML = `<span class="form-field" v-text="subRecord.${fieldEl.getAttribute('name')}"></span><input type="text" v-model="record.${fieldEl.getAttribute('name')}" class="form-control">`;
+                    table.tHead.rows[0].append(th);
+                    table.tBodies[0].rows[0].append(td);
+                }
+            }
+            Katrid.Forms.Widgets.registry['TabularDocumentList'] = TabularDocumentList;
+        })(widgets = forms.widgets || (forms.widgets = {}));
+    })(forms = katrid.forms || (katrid.forms = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
