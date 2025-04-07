@@ -20,6 +20,9 @@ var katrid;
             }
             create() {
                 this._created = true;
+                this._create();
+            }
+            _create() {
             }
         }
         ui.WebComponent = WebComponent;
@@ -1948,6 +1951,97 @@ var katrid;
 (function (katrid) {
     var admin;
     (function (admin) {
+        class ModelPermissionsWidget {
+            constructor(el) {
+                this.el = el;
+                this.allowByDefault = false;
+                this._loading = false;
+                this.create();
+            }
+            get allowed() {
+                return this._allowed;
+            }
+            create() {
+                const tv = this.el.appendChild(document.createElement('div'));
+                this.treeView = new katrid.ui.TreeView(tv);
+                this.treeView.el.classList.add('model-permissions');
+            }
+            async load() {
+                this.permNodes = new Map();
+                try {
+                    this._loading = true;
+                    const svc = new Katrid.Services.ModelService('auth.permission');
+                    const params = {};
+                    if (this.model)
+                        params['model'] = this.model;
+                    let res = await svc.rpc('list_model_permissions', null, params);
+                    const perms = Object.groupBy(res.permissions, ({ model }) => model);
+                    for (const model of res.models) {
+                        if (!perms[model.id])
+                            continue;
+                        const modelNode = this.treeView.addItem(model.name, null, { checkbox: true });
+                        modelNode.data = model;
+                        for (const perm of perms[model.id]) {
+                            const item = this.treeView.addItem(perm.name, modelNode, { checkbox: true, onCheckChange: (evt) => this._permChange(evt) });
+                            item.data = perm;
+                            this.permNodes.set(perm.id.toString(), item);
+                        }
+                    }
+                }
+                finally {
+                    this._loading = false;
+                }
+            }
+            _permChange(node) {
+                if (!this._loading) {
+                    this._allowed[node.data.id] = node.checked;
+                    if (this.onDidChange)
+                        this.onDidChange();
+                }
+            }
+            async loadGroup(group) {
+            }
+            loadPerms(idList) {
+                try {
+                    this._loading = true;
+                    this._allowed = new Map();
+                    if (this.allowByDefault)
+                        for (const item of this.treeView.nodes)
+                            item.checked = true;
+                    if (idList)
+                        for (const [k, v] of Object.entries(idList)) {
+                            const n = this.permNodes.get(k);
+                            n.checked = v;
+                        }
+                }
+                finally {
+                    this._loading = false;
+                }
+            }
+        }
+        admin.ModelPermissionsWidget = ModelPermissionsWidget;
+        class ModelPermissionsManager {
+            create() {
+                this.tvGroup = new katrid.ui.TreeView(this.el.appendChild(document.createElement('div')), { options: { onSelect: () => console.debug('sel item') } });
+            }
+            async load() {
+                const svc = new Katrid.Services.ModelService('auth.permission');
+                const params = {};
+                let res = await svc.rpc('list_groups', null, params);
+                this.tvGroup.clear();
+                for (const group of res) {
+                    let item = this.tvGroup.addItem(group[1], group[0]);
+                    item.data = group;
+                }
+            }
+        }
+        admin.ModelPermissionsManager = ModelPermissionsManager;
+    })(admin = katrid.admin || (katrid.admin = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var admin;
+    (function (admin) {
         class MenuItem {
         }
         class GroupItem {
@@ -2099,7 +2193,6 @@ var katrid;
                         this.group.menu.add(parent.data.menuItem);
                     else
                         this.group.menu.delete(parent.data.menuItem);
-                    console.debug('parent', parent.checked);
                     parent = parent.parent;
                 }
             }
@@ -4785,13 +4878,13 @@ var Katrid;
                 let defaults = {};
                 if (this.masterSource && this.field && this.field.defaultValue)
                     Object.assign(defaults, this.field.defaultValue);
+                if (res)
+                    Object.assign(defaults, res);
                 for (let v of Object.values(this.fields))
                     if (v.defaultValue)
                         defaults[v.name] = v.defaultValue;
                 if (this.defaultValues)
                     Object.assign(defaults, this.defaultValues);
-                if (res)
-                    Object.assign(defaults, res);
                 if (defaultValues)
                     Object.assign(defaults, defaultValues);
                 for (let [k, v] of Object.entries(defaults))
@@ -5304,7 +5397,9 @@ var Katrid;
                     if (k.startsWith('$'))
                         continue;
                     let field = model.allFields ? model.allFields[k] : model.fields[k];
-                    if (field && !(field instanceof Data.OneToManyField)) {
+                    if (field && (!(field instanceof Data.OneToManyField)) || (field instanceof Data.OneToManyField && v && v.$valid)) {
+                        if (v && v.$valid)
+                            v.$valid = undefined;
                         data[k] = field.toJSON(v);
                     }
                 }
@@ -5541,12 +5636,20 @@ var Katrid;
                 let control;
                 let label;
                 let span;
+                if (fieldEl.hasAttribute('default-value')) {
+                    console.debug('Default value', this.defaultValue);
+                    let value = fieldEl.getAttribute('default-value');
+                    if (value)
+                        this.defaultValue = value;
+                }
                 if (widgetType) {
                     widget = this.createWidget(widgetType);
                     if (widget.renderToForm)
                         return widget.renderToForm(fieldEl, view);
                     else if (widget.formControl)
                         control = widget.formControl(fieldEl);
+                    if (widget.spanTemplate)
+                        span = widget.spanTemplate(fieldEl, view);
                     if (widget.formLabel)
                         label = widget.formLabel();
                 }
@@ -8679,6 +8782,7 @@ ${Katrid.i18n.gettext('Delete')}
                 return data;
             }
             async ready() {
+                console.debug('ready', this.element);
                 if (this.action?.params)
                     this.onHashChange(this.action.params);
             }
@@ -9676,6 +9780,7 @@ var Katrid;
                 this.forms = {};
                 this._readonly = true;
                 this.rowSelector = true;
+                this._systemContextMenuCreated = false;
                 this.allowGrouping = true;
             }
             static { this.viewType = 'list'; }
@@ -9742,6 +9847,24 @@ var Katrid;
                 btn.innerHTML = '<i class="fas fa-arrow-right"></i> <span>Selecionar todos {{recordCount}}</span>';
                 btn.setAttribute('v-on:click', 'allSelectionFilter = true');
                 parent.appendChild(div);
+            }
+            _createSystemContextMenu(target) {
+                if (this._systemContextMenuCreated)
+                    return;
+                this._systemContextMenuCreated = true;
+                target.addEventListener('contextmenu', (evt) => {
+                    evt.preventDefault();
+                    const menu = new katrid.ui.ContextMenu();
+                    menu.add('Permissions', () => console.debug('show permission control'));
+                    menu.show(evt.clientX, evt.clientY);
+                });
+            }
+            render() {
+                let el = super.render();
+                let h = el.querySelector('.data-heading');
+                if (h)
+                    this._createSystemContextMenu(h);
+                return el;
             }
             showDialog(options) {
                 if (!options)
@@ -9915,7 +10038,6 @@ var Katrid;
                 }
             }
             renderTemplate(template) {
-                console.debug('list render', template);
                 template.setAttribute('data-options', JSON.stringify({ rowSelector: this.rowSelector }));
                 let renderer = new ListRenderer({ model: this.model }, { allowGrouping: this.allowGrouping });
                 let div = document.createElement('div');
@@ -11415,6 +11537,148 @@ var Katrid;
 })(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Widgets;
+        (function (Widgets) {
+            class Widget {
+                constructor(field, fieldEl) {
+                    this.field = field;
+                    this.fieldEl = fieldEl;
+                }
+                formLabel() {
+                    return this.field.formLabel(this.fieldEl);
+                }
+                afterRender(el) {
+                    return el;
+                }
+            }
+            Widgets.Widget = Widget;
+            Widgets.registry = {};
+        })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var katrid;
+(function (katrid) {
+    var forms;
+    (function (forms) {
+        var widgets;
+        (function (widgets) {
+            class CodeEditor extends katrid.ui.WebComponent {
+                _create() {
+                    this.el = document.createElement('div');
+                    this.el.className = 'editor';
+                    this.append(this.el);
+                    return new Promise((resolve, reject) => {
+                        require(['vs/editor/editor.main'], () => {
+                            setTimeout(() => {
+                                this.codeEditor = monaco.editor.create(this.el, {
+                                    language: this.lang,
+                                    automaticLayout: true,
+                                    readOnly: this.readonly,
+                                    value: this.value || '',
+                                });
+                                this.codeEditor.getModel().updateOptions({ tabSize: 2 });
+                                let parent = this.closest('.form-view');
+                                if ((this.readonly == null) && parent) {
+                                    this._observer = new MutationObserver(() => this._checkReadonly(parent));
+                                    this._observer.observe(parent, {
+                                        attributes: true,
+                                        attributeFilter: ['class'],
+                                    });
+                                }
+                                this.codeEditor.getModel().onDidChangeContent(() => this.dispatchEvent(new Event('change')));
+                                this.codeEditor.onDidBlurEditorWidget(() => this.dispatchEvent(new Event('blur')));
+                                if (this.readonly == null)
+                                    this._checkReadonly(parent);
+                                resolve(this.codeEditor);
+                            }, 1000);
+                        });
+                    });
+                }
+                _checkReadonly(parent) {
+                    if (parent.classList.contains('readonly'))
+                        this.codeEditor.updateOptions({ readOnly: true });
+                    else
+                        this.codeEditor.updateOptions({ readOnly: false });
+                }
+                setValue(value) {
+                    this.value = value;
+                    console.debug('set valu');
+                    if (this.codeEditor)
+                        this.codeEditor.setValue(value);
+                }
+            }
+            widgets.CodeEditor = CodeEditor;
+            Katrid.component('code-editor', {
+                props: ['modelValue'],
+                emits: ['update:modelValue'],
+                template: `<code-editor class="code-editor-widget"></code-editor>`,
+                watch: {
+                    modelValue: function (value) {
+                        if (!this._changing)
+                            this.$el.setValue(value);
+                    }
+                },
+                mounted() {
+                    if (this.$attrs['code-editor-lang'])
+                        this.$el.lang = this.$attrs['code-editor-lang'];
+                    if (this.$attrs.readonly)
+                        this.$el.readonly = this.$attrs.readonly === 'true';
+                    this._changing = false;
+                    let timeout;
+                    this.$el.addEventListener('change', evt => {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(async () => {
+                            try {
+                                this._changing = true;
+                                this.$emit('update:modelValue', this.$el.codeEditor.getValue());
+                                await this.$nextTick();
+                            }
+                            finally {
+                                this._changing = false;
+                            }
+                            timeout = null;
+                        }, 1000);
+                    });
+                    this.$el.addEventListener('blur', async (evt) => {
+                        if (timeout) {
+                            clearTimeout(timeout);
+                            timeout = null;
+                            try {
+                                this._changing = true;
+                                this.$emit('update:modelValue', this.$el.codeEditor.getValue());
+                                await this.$nextTick();
+                            }
+                            finally {
+                                this._changing = false;
+                            }
+                        }
+                    });
+                }
+            });
+            class CodeEditorWidget extends Katrid.Forms.Widgets.Widget {
+                constructor() {
+                    super(...arguments);
+                    this.formControl = (fieldEl) => {
+                        const div = document.createElement('code-editor');
+                        div.className = 'code-editor-widget';
+                        div.setAttribute('v-model', `record.${this.field.name}`);
+                        div.setAttribute('code-editor-lang', fieldEl.getAttribute('code-editor-lang') || 'javascript');
+                        return div;
+                    };
+                    this.spanTemplate = (fieldEl) => {
+                        return document.createElement('div');
+                    };
+                }
+            }
+            Katrid.Forms.Widgets.registry['CodeEditor'] = CodeEditorWidget;
+            Katrid.define('code-editor', CodeEditor);
+        })(widgets = forms.widgets || (forms.widgets = {}));
+    })(forms = katrid.forms || (katrid.forms = {}));
+})(katrid || (katrid = {}));
+var Katrid;
+(function (Katrid) {
     var UI;
     (function (UI) {
         class InputMask {
@@ -11838,29 +12102,6 @@ var katrid;
         ui.InputDecimal = Katrid.Forms.InputDecimal;
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
-var Katrid;
-(function (Katrid) {
-    var Forms;
-    (function (Forms) {
-        var Widgets;
-        (function (Widgets) {
-            class Widget {
-                constructor(field, fieldEl) {
-                    this.field = field;
-                    this.fieldEl = fieldEl;
-                }
-                formLabel() {
-                    return this.field.formLabel(this.fieldEl);
-                }
-                afterRender(el) {
-                    return el;
-                }
-            }
-            Widgets.Widget = Widget;
-            Widgets.registry = {};
-        })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
-    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
-})(Katrid || (Katrid = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;
@@ -12644,6 +12885,60 @@ var katrid;
             }
         });
     })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var forms;
+    (function (forms) {
+        var widgets;
+        (function (widgets) {
+            class ModelPermissionsWidget extends katrid.admin.ModelPermissionsWidget {
+            }
+            widgets.ModelPermissionsWidget = ModelPermissionsWidget;
+            Katrid.component('model-permissions', {
+                props: ['modelValue'],
+                emits: ['update:modelValue'],
+                template: '<div class="model-permissions-widget"></div>',
+                watch: {
+                    modelValue: function (value) {
+                        if (!this._changing)
+                            this._modelPermissions.loadPerms(value);
+                    }
+                },
+                mounted() {
+                    this._modelPermissions = new ModelPermissionsWidget(this.$el);
+                    this._modelPermissions.allowByDefault = true;
+                    this._modelPermissions.load();
+                    this._modelPermissions.onDidChange = async () => {
+                        try {
+                            this._changing = true;
+                            let val = this._modelPermissions.allowed;
+                            if (val)
+                                val.$valid = true;
+                            this.$emit('update:modelValue', val);
+                            await this.$nextTick();
+                        }
+                        finally {
+                            this._changing = false;
+                        }
+                    };
+                }
+            });
+            class ModelPermissions extends Katrid.Forms.Widgets.Widget {
+                constructor() {
+                    super(...arguments);
+                    this.formControl = (fieldEl) => {
+                        const div = document.createElement('model-permissions');
+                        div.className = 'model-permissions-widget';
+                        div.setAttribute('v-model', `record.${this.field.name}`);
+                        div.setAttribute('readonly', `${this.field.readonly}`);
+                        return div;
+                    };
+                }
+            }
+            Katrid.Forms.Widgets.registry['ModelPermissions'] = ModelPermissions;
+        })(widgets = forms.widgets || (forms.widgets = {}));
+    })(forms = katrid.forms || (katrid.forms = {}));
 })(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -15504,6 +15799,7 @@ var katrid;
                 this.options = options;
                 this._selection = [];
                 this._striped = false;
+                this.readonly = false;
                 this.el = el;
                 this.nodes = [];
                 this.el.classList.add('tree-view');
@@ -15517,9 +15813,13 @@ var katrid;
                     switch (evt.key) {
                         case 'ArrowDown':
                             this.next();
+                            evt.stopPropagation();
+                            evt.preventDefault();
                             break;
                         case 'ArrowUp':
                             this.previous();
+                            evt.stopPropagation();
+                            evt.preventDefault();
                             break;
                         case 'ArrowRight':
                             n = this.currentNode;
@@ -15543,9 +15843,11 @@ var katrid;
                                 this.firstNode.select();
                             break;
                         case ' ':
-                            if (this.currentNode?.checkbox) {
+                            if (!this.readonly && this.currentNode?.checkbox) {
                                 this.currentNode.checked = !this.currentNode.checked;
                             }
+                            evt.stopPropagation();
+                            evt.preventDefault();
                             break;
                     }
                 });

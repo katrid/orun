@@ -5,7 +5,7 @@ from orun.apps import apps
 from orun.conf import settings
 from orun.core import checks
 
-from .management import _get_builtin_permissions
+# from .management import _get_builtin_permissions
 
 
 def check_user_model(app_configs=None, **kwargs):

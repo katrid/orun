@@ -17,7 +17,12 @@ class MenuItem(Registrable):
         if not name:
             name = re_camel_case.sub(r' \1', item.__name__).strip()
         action = getattr(item, 'action', None)
-        if action:
+        if isinstance(action, str):
+            # find action by name
+            action = ref(action)
+            if action is None:
+                raise ValueError(f'Action "{action}" not found')
+        elif action:
             # find action id
             action = action.get_id()
         if parent is None and hasattr(item, 'parent') and item.parent is not None:

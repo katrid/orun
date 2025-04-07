@@ -442,3 +442,6 @@ msgstr "Fornecedores"
 
 msgid "Customers"
 msgstr "Clientes"
+
+msgid "Owner Type"
+msgstr "Tipo de Proprietário"

@@ -99,7 +99,7 @@ class ModelBackend:
 
     def get_user(self, user_id):
         try:
-            user = UserModel._default_manager.only('pk').get(pk=user_id)
+            user = UserModel._default_manager.only('pk', 'name', 'image', 'username', 'language_id', 'last_login', 'password').get(pk=user_id)
         except UserModel.DoesNotExist:
             return None
         return user if self.user_can_authenticate(user) else None

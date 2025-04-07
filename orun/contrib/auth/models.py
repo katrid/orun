@@ -1,6 +1,8 @@
 from orun.apps import apps
+from orun import api
 from orun.contrib import auth
 from orun.conf import settings
+from orun.http import HttpRequest
 from orun.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from orun.core.exceptions import PermissionDenied
 from orun.core.mail import send_mail
@@ -9,7 +11,7 @@ from orun.db.models.manager import EmptyManager
 from orun.utils import timezone
 from orun.utils.translation import gettext_lazy as _
 from orun.core.mail import send_mail
-from orun.contrib.auth.hashers import is_password_usable, make_password
+from orun.contrib.contenttypes.models import ContentType
 
 from .validators import UnicodeUsernameValidator
 
@@ -19,8 +21,7 @@ def update_last_login(sender, user, **kwargs):
     A signal receiver which updates the last_login date for
     the user logging in.
     """
-    user.last_login = timezone.now()
-    user.save(update_fields=['last_login'])
+    user.update(last_login=timezone.now())
 
 
 class PermissionManager(models.Manager):
@@ -59,10 +60,7 @@ class Permission(models.Model):
     """
     name = models.CharField(_('name'), max_length=255, null=False)
     content_type = models.ForeignKey(
-        'content.type',
-        models.CASCADE,
-        verbose_name=_('content type'),
-        null=False,
+        'content.type', models.CASCADE, verbose_name=_('content type'), db_index=True, null=False,
     )
     codename = models.CharField(_('codename'), max_length=100, null=False)
 
@@ -83,6 +81,62 @@ class Permission(models.Model):
 
     def natural_key(self):
         return (self.codename,) + self.content_type.natural_key()
+
+    @classmethod
+    def has_group_perm(cls, group: str | int, model: str, perm: str):
+        """
+        Check if the group has the given permission for a model.
+        :param str | int group: Group name or id
+        :param str model: Model name
+        :param perm: Permission codename
+        :return: Returns True if the group has the given permission for a model.
+        """
+        perms = list(GroupPermissions.objects.only('allow').filter(
+            group__name=group, permission__content_type__name=model, permission__codename=perm
+        ))
+        if not perms:
+            return False
+        return perms[0].allow
+
+    @classmethod
+    def has_perm(cls, user: int, model: str, perm: str):
+        """
+        Check if the user has the given permission for a model.
+        :param user: User id
+        :param model: Model name
+        :param perm: Permission codename
+        :return: Returns True if the user has the given permission for a model.
+        """
+        perms = GroupPermissions.objects.only('allow').filter(
+            group__users__user_id=user, permission__content_type__name=model, permission__codename=perm,
+        )
+        if not perms:
+            # allowed by default
+            return True
+        return any(p.allow for p in perms)
+
+    @api.classmethod
+    def list_model_permissions(cls, model: str = None):
+        """
+        List all permissions for a model.
+        :param model: Model name
+        :return: Returns a list of permissions for the given model.
+        """
+        objects = cls.objects
+        if model:
+            objects = objects.filter(content_type__name=model)
+        models = [{'id': ct.pk, 'name': ct.name} for ct in ContentType.objects.only('pk', 'name').all()]
+        return {
+            'models': models,
+            'permissions': [
+                {'id': o[0], 'codename': o[1], 'name': o[2], 'model': o[3]}
+                for o in objects.values_list('pk', 'codename', 'name', 'content_type')
+            ]
+        }
+
+    @api.classmethod
+    def list_groups(cls):
+        return Group.objects.filter(active=True).values('pk', 'name', 'description')
 
 
 class GroupManager(models.Manager):
@@ -112,27 +166,86 @@ class Group(models.Model):
     members-only portion of your site, or sending them members-only email
     messages.
     """
-    name = models.CharField(_('name'), max_length=150, null=False, unique=True, translate=True)
+    name = models.CharField(label=_('Name'), max_length=150, null=False, unique=True, translate=True)
+    description = models.CharField(label=_('Description'), max_length=200)
     active = models.BooleanField(verbose_name=_('active'), default=True)
-    permissions = models.ManyToManyField(
-        Permission,
-        verbose_name=_('permissions'),
-    )
-
+    allow_by_default = models.BooleanField(default=True, help_text='Group has all models permissions by default')
+    permissions = models.OneToManyField('auth.group.permissions', verbose_name=_('permissions'))
     users = models.ManyToManyField(settings.AUTH_USER_MODEL, through='auth.user.groups.rel')
+    object_type = models.ChoiceField(
+        {'system': _('System'), 'user': _('User')}, label=_('Object Type'), default='system',
+    )
 
     objects = GroupManager()
 
     class Meta:
         name = 'auth.group'
-        verbose_name = _('group')
-        verbose_name_plural = _('groups')
+        verbose_name = _('Group')
+        verbose_name_plural = _('Group')
 
     def __str__(self):
         return self.name
 
     def natural_key(self):
         return (self.name,)
+
+    def has_perm(self, model: str, perm: str):
+        """
+        Get the permission for a model and a permission name.
+        :param model:
+        :param perm:
+        :return: Returns True if the group has the given permission for a model.
+        """
+        perms = list(GroupPermissions.objects.only('allow').filter(
+            group=self, permission__content_type__name=model, permission__codename=perm
+        ))
+        if not perms:
+            if self.allow_by_default:
+                return True
+            return False
+        return perms[0].allow
+
+    @classmethod
+    def _from_json(cls, instance, data, **kwargs):
+        permissions = data.pop('permissions', None)
+        # normalize model permissions
+        super()._from_json(instance, data, **kwargs)
+        if isinstance(permissions, dict):
+            GroupPermissions.create_all(instance.pk, [int(k) for k in permissions.keys()])
+            allowed = (k for k, v in permissions.items() if v)
+            disallowed = (k for k, v in permissions.items() if not v)
+            if disallowed:
+                GroupPermissions.objects.filter(group=instance, permission_id__in=disallowed).update(allow=False)
+            if allowed:
+                GroupPermissions.objects.filter(group=instance, permission_id__in=allowed).update(allow=True)
+        return instance
+
+    @api.classmethod
+    def api_get(cls, request: HttpRequest, id, fields=None):
+        res = super().api_get(request, id, fields)
+        res['data']['permissions'] = {p.permission_id: p.allow for p in GroupPermissions.objects.filter(group_id=id)}
+        return res
+
+
+class GroupPermissions(models.Model):
+    permission = models.ForeignKey(Permission, null=False)
+    group = models.ForeignKey(Group, null=False)
+    allow = models.BooleanField(default=True)
+
+    class Meta:
+        name = 'auth.group.permissions'
+        verbose_name = _('Group Permission')
+        verbose_name_plural = _('Group Permissions')
+        unique_together = (('permission', 'group'),)
+
+    @classmethod
+    def create_all(cls, group_id, perms):
+        exist = list(cls.objects.filter(group_id=group_id, permission_id__in=perms).values_list('permission', flat=True))
+        must_create = set(perms) - set(exist)
+        if must_create:
+            cls.objects.bulk_create(
+                [cls(permission_id=perm, group_id=group_id) for perm in must_create]
+            )
 
 
 class UserManager(BaseUserManager):
@@ -221,24 +334,25 @@ class PermissionsMixin(models.Model):
         ),
         null=False,
     )
-    groups = models.ManyToManyField(
-        Group,
-        verbose_name=_('groups'),
-        help_text=_(
-            'The groups this user belongs to. A user will get all permissions '
-            'granted to each of their groups.'
-        ),
-        related_name="user_set",
-        related_query_name="user",
-    )
-    user_permissions = models.ManyToManyField(
-        Permission,
-        verbose_name=_('user permissions'),
-        blank=True,
-        help_text=_('Specific permissions for this user.'),
-        related_name="user_set",
-        related_query_name="user",
-    )
+
+    # groups = models.ManyToManyField(
+    #     Group,
+    #     verbose_name=_('groups'),
+    #     help_text=_(
+    #         'The groups this user belongs to. A user will get all permissions '
+    #         'granted to each of their groups.'
+    #     ),
+    #     related_name="user_set",
+    #     related_query_name="user",
+    # )
+    # user_permissions = models.ManyToManyField(
+    #     Permission,
+    #     verbose_name=_('user permissions'),
+    #     blank=True,
+    #     help_text=_('Specific permissions for this user.'),
+    #     related_name="user_set",
+    #     related_query_name="user",
+    # )
 
     class Meta:
         abstract = True
@@ -257,21 +371,6 @@ class PermissionsMixin(models.Model):
 
     def get_all_permissions(self, obj=None):
         return _user_get_all_permissions(self, obj)
-
-    def has_perm(self, perm, obj=None):
-        """
-        Return True if the user has the specified permission. Query all
-        available auth backends, but return immediately if any backend returns
-        True. Thus, a user who has permission from a single auth backend is
-        assumed to have permission in general. If an object is provided, check
-        permissions for that object.
-        """
-        # Active superusers have all permissions.
-        if self.is_active and self.is_superuser:
-            return True
-
-        # Otherwise we need to check the backends.
-        return _user_has_perm(self, perm, obj)
 
     def has_perms(self, perm_list, obj=None):
         """
@@ -426,4 +525,4 @@ class UserGroups(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, null=False)
 
     class Meta:
-        name = 'auth.user.group.rel'
+        name = 'auth.user.groups.rel'

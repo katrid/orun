@@ -8,7 +8,7 @@ from orun.core.exceptions import PermissionDenied, ValidationError
 from orun.http import HttpRequest
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _, gettext
-from orun.contrib.auth.models import AbstractUser
+from orun.contrib.auth.models import AbstractUser, Permission
 from .partner import Partner
 
 
@@ -62,6 +62,7 @@ class User(AbstractUser, Partner):
     companies = models.ManyToManyField('res.company', verbose_name=_('Companies'))
     groups = models.ManyToManyField(
         'auth.group',
+        through='auth.user.groups.rel',
         verbose_name=_('groups'),
         help_text=_(
             'The groups this user belongs to. A user will get all permissions '
@@ -79,14 +80,15 @@ class User(AbstractUser, Partner):
         from orun.contrib.auth.hashers import make_password
         self.password = make_password(password)
 
-    def has_perm(self, perm, obj=None):
-        return True
-
-    def has_perms(self, perm_list, obj=None):
-        for perm in perm_list:
-            if not self.has_perm(perm, obj):
-                return False
-        return True
+    def has_perm(self, perm: str, model: str = None, obj=None):
+        """
+        Check if the user has a specific permission.
+        """
+        if not self.is_active:
+            return False
+        if self.is_superuser:
+            return True
+        return Permission.has_perm(self.pk, model, perm)
 
     def has_group(self, group: str | int):
         if isinstance(group, int):
@@ -110,7 +112,7 @@ class User(AbstractUser, Partner):
         raise ValidationError(_('Invalid password'))
 
     def user_info(self):
-        return {
+        res = {
             'id': self.pk,
             'name': self.name,
             'avatar': (self.image and self.image.url) or None,
@@ -118,6 +120,9 @@ class User(AbstractUser, Partner):
             'last_login': self.__class__._meta.fields['last_login'].value_to_json(self.last_login),
             'language': (self.language and self.language.code) or settings.LANGUAGE_CODE,
         }
+        if self.is_superuser:
+            res['superuser'] = True
+        return res
 
 
 class Rule(models.Model):

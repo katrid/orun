@@ -1,0 +1,21 @@
+<form>
+  <field name="name"/>
+  <field name="description"/>
+  <field name="active"/>
+  <field name="allow_by_default"/>
+  <field name="object_type" default-value="user"/>
+  <tabset>
+    <tab>
+      <tab-heading>{{ _('Users') }}</tab-heading>
+      <field name="users"/>
+    </tab>
+    <tab>
+      <tab-heading>Menus</tab-heading>
+      <field name="menus"/>
+    </tab>
+    <tab>
+      <tab-heading>{{ _('Permissions') }}</tab-heading>
+      <field name="permissions" widget="ModelPermissions"/>
+    </tab>
+  </tabset>
+</form>

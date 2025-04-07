@@ -13,7 +13,7 @@ from orun.db import models, connection
 from orun.utils.translation import gettext, gettext_lazy as _
 from orun.utils.xml import etree
 from orun.core.serializers.json import OrunJSONEncoder
-
+from orun.contrib.auth.models import Permission
 
 logger = logging.getLogger('orun')
 
@@ -52,26 +52,26 @@ def get_template(self, template):
 
 views_env = Environment()
 
+VIEW_TYPE = {
+    'list': 'List',
+    'form': 'Form',
+    'card': 'Card',
+    'chart': 'Chart',
+    'calendar': 'Calendar',
+    'search': 'Search',
+    'template': 'Template',
+    'report': 'Report',
+    'dashboard': 'Dashboard',
+    'custom': 'Custom',
+    'class': 'Class',
+}
+
 
 class View(models.Model):
     name = models.CharField(max_length=100)
     active = models.BooleanField(label=_('Active'), default=True)
     parent = models.ForeignKey('self')
-    view_type = models.ChoiceField(
-        (
-            ('list', 'List'),
-            ('form', 'Form'),
-            ('card', 'Card'),
-            ('chart', 'Chart'),
-            ('calendar', 'Calendar'),
-            ('search', 'Search'),
-            ('template', 'Template'),
-            ('report', 'Report'),
-            ('dashboard', 'Dashboard'),
-            ('custom', 'Custom'),
-            ('class', 'Class'),
-        ), default='form', null=False
-    )
+    view_type = models.ChoiceField(VIEW_TYPE, default='form', null=False)
     mode = models.ChoiceField(
         (
             ('primary', _('Primary')),
@@ -82,16 +82,17 @@ class View(models.Model):
     priority = models.IntegerField(_('Priority'), default=99, null=False)
     template_name = models.CharField(max_length=256)
     content = models.TextField(caption=_('Content'))
-    # ref_id = models.CharField(caption=_('Reference ID'), getter='_get_xml_id')
+    ref_id = models.CharField(caption=_('Reference ID'), getter='_get_xml_id')
     # children = models.OneToManyField('self', 'parent')
     class_name = models.CharField(max_length=256, verbose_name='Python Class Name')
+    object_type = models.ChoiceField({'system': 'System', 'user': 'User'}, default='system')
 
     class Meta:
         name = 'ui.view'
-        ordering = ('name', 'priority')
+        ordering = ('priority', 'id')
 
     def save(self, *args, **kwargs):
-        if self.parent_id is None:
+        if not self.pk and self.parent_id is None:
             self.mode = 'primary'
         if self.view_type is None:
             xml = etree.fromstring(self.render({}))
@@ -161,13 +162,16 @@ class View(models.Model):
 
     def compile(self, context, parent=None):
         view_cls = self.__class__
-        children = view_cls.objects.filter(parent_id=self.pk, mode='extension')
+        # in special cases, extensions without a parent should work as extension for all actions of a given model
+        children = view_cls.objects.filter(
+            models.Q(parent_id=self.pk) | models.Q(parent_id=None), mode='extension', model=self.model,
+            view_type=self.view_type, active=True,
+        )
         context['ref'] = ref
         context['exec_scalar'] = exec_scalar
         context['exec_query'] = exec_query
         context['query'] = query
         context['models'] = apps
-        xml = self._get_content(context)
         xml = etree.fromstring(self._get_content(context))
         if self.parent:
             parent_xml = etree.fromstring(self.parent.render(context))
@@ -177,36 +181,45 @@ class View(models.Model):
         for child in children:
             self.merge(xml, etree.fromstring(child._get_content(context)))
 
-        self._eval_permissions(xml)
+        self._eval_permissions(context['user'], xml)
         resolve_refs(xml)
         return xml
 
-    def _eval_permissions(self, xml):
+    def _eval_permissions(self, user_id, xml):
+        """Remove elements without properly permissions"""
+
         _groups = {}
-        return
-        user = self.env.user
-        if not user.is_superuser:
-            objects = self.env['ir.object']
-            children = xml.xpath("//*[@groups]")
-            for child in children:
-                groups = child.attrib['groups']
-                if groups not in _groups:
-                    has_groups = len(list(objects.objects.only('id').filter(
-                        objects.c.model == 'auth.group', objects.c.name.in_(groups.split(',')),
-                        objects.c.object_id.in_(user.groups)
-                    )[:1])) > 0
-                    _groups[groups] = has_groups
-                if not _groups[groups]:
-                    child.getparent().remove(child)
+        children = xml.xpath("//*[@groups]")
+        for child in children:
+            pass
+            # groups = child.attrib['groups']
+            # if groups not in _groups:
+            #     has_groups = len(list(objects.objects.only('id').filter(
+            #         objects.c.model == 'auth.group', objects.c.name.in_(groups.split(',')),
+            #         objects.c.object_id.in_(user.groups)
+            #     )[:1])) > 0
+            #     _groups[groups] = has_groups
+            # if not _groups[groups]:
+            #     child.getparent().remove(child)
+        # python has permissions
+        children = xml.xpath("//*[@if-permission]")
+        for child in children:
+            perm = child.attrib['if-permission']
+            child.attrib.pop('if-permission')
+            if perm and Permission.has_perm(user_id, self.model, perm):
+                child.getparent().remove(child)
 
     def _get_content(self, context):
-        if self.view_type == 'report':
-            templ = loader.get_template(self.template_name.split(':')[-1])
+        if self.template_name:
+            if self.view_type == 'report':
+                templ = loader.get_template(self.template_name.split(':')[-1])
+            else:
+                templ = loader.get_template(self.template_name.split(':')[-1])
+                # templ = apps.jinja_env.get_or_select_template(self.template_name.split(':')[-1])
+                return templ.render(context)
+            res = open(templ.template.filename, encoding='utf-8').read()
         else:
-            templ = loader.get_template(self.template_name.split(':')[-1])
-            # templ = apps.jinja_env.get_or_select_template(self.template_name.split(':')[-1])
-            return templ.render(context)
-        res = open(templ.template.filename, encoding='utf-8').read()
+            res = self.content
         return res
 
     def to_string(self):
@@ -312,3 +325,20 @@ def resolve_refs(xml: etree.HtmlElement):
         else:
             raise apps['ui.action'].ObjectDoesNotExists
     pass
+
+# class UserDefinedFunctions(models.Model):
+#     """User custom functions for client-side admin operations"""
+#     model = models.ForeignKey('content.type')
+#     action = models.ForeignKey('ui.action')
+#     view_type = models.ChoiceField(VIEW_TYPE)
+#     name = models.CharField(250, label=_('Function Name'))
+#     active = models.BooleanField(default=True)
+#     description = models.TextField(label=_('Description'), help_text=_('Description of the function purpose'))
+#     language = models.CharField(default='js')
+#     use_preprocess = models.BooleanField(
+#         default=False, help_text=_('Preprocess the code using template processor before function execution')  # the code will be preprocessed using jinja2 before sent to client
+#     )
+#     code = models.TextField()
+#
+#     class Meta:
+#         name = 'ui.udf'

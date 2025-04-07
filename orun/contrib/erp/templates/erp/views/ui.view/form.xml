@@ -7,6 +7,7 @@
   <field name="model"/>
   <field name="priority"/>
   <field name="ref_id"/>
+  <field name="object_type" default-value="user" readonly="true"/>
   <field name="template_name"/>
-  <field name="content" cols="12"/>
+  <field name="content" widget="CodeEditor" code-editor-lang="html" cols="12"/>
 </form>

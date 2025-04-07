@@ -69,6 +69,7 @@ declare namespace katrid.ui {
         protected _created: boolean;
         connectedCallback(): void;
         protected create(): void;
+        protected _create(): any | Promise<any>;
     }
     class Widget {
         render(): void;
@@ -605,6 +606,33 @@ declare namespace katrid.admin {
     }
 }
 declare namespace katrid.admin {
+    class ModelPermissionsWidget {
+        el: HTMLElement;
+        model: string;
+        permissions: string[];
+        treeView: katrid.ui.TreeView;
+        models: Map<number, katrid.ui.TreeNode>;
+        permNodes: Map<string, katrid.ui.TreeNode>;
+        allowByDefault: boolean;
+        onDidChange: () => void;
+        private _loading;
+        protected _allowed: Map<number, boolean>;
+        constructor(el: HTMLElement);
+        get allowed(): Map<number, boolean>;
+        create(): void;
+        load(): Promise<void>;
+        protected _permChange(node: katrid.ui.TreeNode): void;
+        loadGroup(group: string): Promise<void>;
+        loadPerms(idList: Record<number, boolean>): void;
+    }
+    class ModelPermissionsManager {
+        tvGroup: katrid.ui.TreeView;
+        el: HTMLElement;
+        create(): void;
+        load(): Promise<void>;
+    }
+}
+declare namespace katrid.admin {
     import TreeView = katrid.ui.TreeView;
     import TreeNode = katrid.ui.TreeNode;
     class MenuItem {
@@ -653,6 +681,7 @@ declare namespace katrid.admin {
         selectGroupNode(node: katrid.ui.TreeNode): void;
         selectGroup(group: GroupItem): void;
         nodeMenuCheck(node: katrid.ui.TreeNode): void;
+        afterChecked(node: katrid.ui.TreeNode): void;
         onCommit: (data: any) => Promise<any>;
         saveChanges(): Promise<void>;
     }
@@ -666,6 +695,13 @@ declare namespace katrid.admin {
     }
     let requestMiddleware: any[];
     let responseMiddleware: any[];
+}
+declare namespace katrid.admin {
+    class UserPreferences {
+        static showModal(): Promise<void>;
+        changePassword(): Promise<any>;
+        execute(): Promise<void>;
+    }
 }
 declare namespace Katrid.BI {
     function newPlot(el: any, data: any, layout: any, config: any): any;
@@ -1391,7 +1427,7 @@ declare namespace Katrid.Data {
         getValue(value: any): any;
         protected getFieldAttributes(fieldEl: Element): any;
         renderTo(fieldEl: Element, view: Katrid.Forms.ModelView): void;
-        formCreate(fieldEl: Element): any;
+        formCreate(fieldEl: Element, view: Katrid.Forms.ModelView): HTMLElement;
         widgetHelp: string;
         getTooltip(el: HTMLElement): Katrid.ui.Tooltip;
         createTooltip(section: HTMLElement): void;
@@ -1937,7 +1973,7 @@ declare namespace Katrid.Forms {
         get inserting(): boolean;
         get editing(): boolean;
         get changing(): boolean;
-        renderField(fld: Katrid.Data.Field, fieldEl: HTMLElement): any;
+        renderField(fld: Katrid.Data.Field, fieldEl: HTMLElement): HTMLElement;
         protected sumHooks: Record<string, ISumHookFieldInfo[]>;
         protected addSumHook(field: Katrid.Data.Field, el: HTMLElement): void;
         private _attributes;
@@ -2079,6 +2115,9 @@ declare namespace Katrid.Forms {
         static createSearchDialog(config?: any): Promise<TableView>;
         protected create(info: Katrid.Forms.IModelViewInfo): void;
         protected createSelectionInfo(parent: HTMLElement): void;
+        _systemContextMenuCreated: boolean;
+        protected _createSystemContextMenu(target: HTMLElement): void;
+        render(): HTMLElement;
         showDialog(options?: any): Promise<any>;
         createInlineEditor(): HTMLTableRowElement;
         protected _recordClick(record: any, index: number): Promise<void>;
@@ -2387,6 +2426,32 @@ declare namespace Katrid.Forms.Controls {
 }
 declare namespace Katrid.Forms.Controls {
 }
+declare namespace Katrid.Forms.Widgets {
+    class Widget {
+        field: Katrid.Data.Field;
+        fieldEl: Element;
+        constructor(field: Katrid.Data.Field, fieldEl: Element);
+        renderToForm: (fieldEl: Element, view?: any) => HTMLElement;
+        formControl: (fieldEl: Element) => HTMLElement;
+        formLabel(): HTMLLabelElement;
+        spanTemplate: (fieldEl: Element, view?: any) => HTMLElement;
+        afterRender(el: HTMLElement): HTMLElement;
+    }
+    let registry: Record<string, any>;
+}
+declare namespace katrid.forms.widgets {
+    class CodeEditor extends katrid.ui.WebComponent {
+        codeEditor: any;
+        el: HTMLElement;
+        value: string;
+        lang: string;
+        readonly: boolean;
+        private _observer;
+        protected _create(): Promise<unknown>;
+        protected _checkReadonly(parent: Element): void;
+        setValue(value: string): void;
+    }
+}
 declare namespace Katrid.UI {
     class InputMask {
         el: HTMLInputElement;
@@ -2436,17 +2501,6 @@ declare namespace Katrid.Forms {
 }
 declare namespace katrid.ui {
     let InputDecimal: typeof Katrid.Forms.InputDecimal;
-}
-declare namespace Katrid.Forms.Widgets {
-    class Widget {
-        field: Katrid.Data.Field;
-        fieldEl: Element;
-        constructor(field: Katrid.Data.Field, fieldEl: Element);
-        renderToForm: any;
-        formLabel(): HTMLLabelElement;
-        afterRender(el: HTMLElement): HTMLElement;
-    }
-    let registry: Record<string, any>;
 }
 declare namespace Katrid.Forms.Widgets {
     class StatusField extends Widget {
@@ -2584,7 +2638,13 @@ declare namespace Katrid.Forms {
 declare namespace katrid.ui {
     function inputRegexPattern(el: HTMLElement, pattern: string): void;
 }
+declare namespace katrid.forms.widgets {
+    class ModelPermissionsWidget extends katrid.admin.ModelPermissionsWidget {
+    }
+}
 declare namespace Katrid.Forms {
+}
+declare namespace katrid.forms.widgets {
 }
 declare namespace Katrid.Forms.Controls {
 }
@@ -3010,6 +3070,7 @@ declare namespace katrid.ui {
         onExpand?: (node: TreeNode) => Promise<boolean>;
         onCollapse?: (node: TreeNode) => Promise<boolean>;
         onCheckChange?: (node: TreeNode) => void;
+        onChecked?: (node: TreeNode) => void;
     };
     export type TreeViewOptions = {
         data?: NodeData | NodeData[];
@@ -3041,8 +3102,8 @@ declare namespace katrid.ui {
         createCheckbox(): void;
         setCheckAll(value: boolean): void;
         setText(value: string): void;
-        protected setChecked(value: boolean | string): void;
-        get checked(): boolean | string;
+        protected setChecked(value: boolean | 'indeterminate'): void;
+        get checked(): boolean | 'indeterminate';
         set checked(value: boolean | string);
         protected updateCheckboxState(): void;
         expand(): Promise<void>;
@@ -3077,6 +3138,7 @@ declare namespace katrid.ui {
         private _ul;
         private _selection;
         private _striped;
+        readonly: boolean;
         constructor(el: HTMLElement, options?: TreeViewOptions);
         get selection(): TreeNode[];
         set selection(value: TreeNode[]);
@@ -3150,7 +3212,6 @@ declare namespace katrid.ui {
     export class Dialog {
         dialog: HTMLDialogElement;
         dialogPromise: Promise<any>;
-        result: any;
         protected resolve: any;
         protected reject: any;
         constructor(config: DialogConfig);
