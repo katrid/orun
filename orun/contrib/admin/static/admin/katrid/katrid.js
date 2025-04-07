@@ -3573,7 +3573,6 @@ var Katrid;
             async expandGroup(group) {
                 group.$expanded = true;
                 let idx = this.vm.groups.indexOf(group);
-                console.log(group);
                 let children = group.$children;
                 if (!children) {
                     await this.datasource.expandGroup(idx, group);
@@ -5035,13 +5034,12 @@ var Katrid;
                 if (row.$params)
                     Object.assign(params, row.$params);
                 if (row.$level === (this.groups.length - 1)) {
-                    let res = await this.model.service.search({ params });
+                    let res = await this.model.service.search({ params, limit: -1 });
                     if (res.data) {
                         row.$children = res.data;
                         this.vm.groups.splice.apply(this.vm.groups, [index + 1, 0].concat(res.data));
                     }
                     this._records = this._chain();
-                    console.debug('expand group', this._records);
                 }
                 else {
                     let rows = await this._loadGroup(this.groups, row.$level + 1, this._params, row);
