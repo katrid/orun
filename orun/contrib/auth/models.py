@@ -125,7 +125,8 @@ class Permission(models.Model):
         objects = cls.objects
         if model:
             objects = objects.filter(content_type__name=model)
-        models = [{'id': ct.pk, 'name': ct.name} for ct in ContentType.objects.only('pk', 'name').all()]
+        labels = {k: v._meta.verbose_name for k, v in apps.models.items() if v._meta and v._meta.verbose_name}
+        models = [{'id': ct.pk, 'name': ct.name, 'label': labels.get(ct.name)} for ct in ContentType.objects.only('pk', 'name').all()]
         return {
             'models': models,
             'permissions': [
