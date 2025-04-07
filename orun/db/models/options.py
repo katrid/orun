@@ -107,8 +107,8 @@ class Options:
     field_groups = None
     log_changes = True
     select_on_save = False
-    default_permissions = ('create', 'read', 'update', 'delete')
-    permissions = ()
+    default_permissions = {'create': 'Create', 'read': 'Read', 'update': 'Update', 'delete': 'Delete'}
+    permissions = {}
     unique_together: List[str] = None
     parent_path_field: str = None
 
@@ -344,22 +344,22 @@ class Options:
                     model.add_to_class('created_by', ForeignKey(
                         user_model, verbose_name=_('Created by'),
                         on_insert_value=current_user_id,
-                        auto_created=True, editable=False, deferred=True, db_index=False, copy=False,
+                        auto_created=True, editable=False, defer=True, db_index=False, copy=False,
                         db_constraint=False,
                     ))
                     model.add_to_class('created_on', DateTimeField(
                         auto_now_add=True, verbose_name=_('Created on'),
-                        auto_created=True, editable=False, deferred=True, copy=False
+                        auto_created=True, editable=False, defer=True, copy=False
                     ))
                     model.add_to_class('updated_by', ForeignKey(
                         user_model, verbose_name=_('Updated by'),
                         on_update_value=current_user_id,
-                        auto_created=True, editable=False, deferred=True, db_index=False, copy=False,
+                        auto_created=True, editable=False, defer=True, db_index=False, copy=False,
                         db_constraint=False,
                     ))
                     model.add_to_class('updated_on', DateTimeField(
                         auto_now=True, verbose_name=_('Updated on'),
-                        auto_created=True, editable=False, deferred=True, copy=False
+                        auto_created=True, editable=False, defer=True, copy=False
                     ))
 
     @classmethod
@@ -619,7 +619,7 @@ class Options:
         Return a list of deferred fields on the model.
         """
         return make_immutable_fields_list(
-            "deferred_fields", (f.name for f in self.local_fields if f.defer)
+            "deferred_fields", (f.name for f in self.fields if f.defer)
         )
 
     @property
@@ -630,8 +630,13 @@ class Options:
     def list_fields(self):
         if self.field_groups and 'list_fields' in self.field_groups:
             return [self.fields[field_name] for field_name in self.field_groups['list_fields']]
-        else:
-            return [f for f in self.editable_fields if not f.one_to_many]
+        return [f for f in self.editable_fields if not f.one_to_many]
+
+    @property
+    def available_fields(self):
+        """Fields available for list customization"""
+        if self.field_groups and 'available_fields' in self.field_groups:
+            return [self.fields[field_name] for field_name in self.field_groups['available_fields']]
 
     @property
     def form_fields(self):

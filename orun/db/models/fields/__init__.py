@@ -44,7 +44,7 @@ __all__ = [
     'PositiveSmallIntegerField', 'SlugField', 'SmallIntegerField', 'TextField',
     'TimeField', 'URLField', 'UUIDField', 'ChoiceField', 'SelectionField', 'StringField',
     'XmlField', 'HtmlField', 'PasswordField',
-    'NotNullIntegerField',
+    'NotNullIntegerField', 'DocumentField',
 ]
 
 
@@ -1039,12 +1039,6 @@ class Field(BaseField):
             'label': capfirst(self.label),
             'help_text': self.help_text,
         }
-        if self.has_default():
-            if callable(self.default):
-                defaults['initial'] = self.default
-                defaults['show_hidden_initial'] = True
-            else:
-                defaults['initial'] = self.get_default()
         if self.choices is not None:
             # Fields with choices get special treatment.
             include_blank = (self.required or
@@ -2271,9 +2265,7 @@ class SlugField(CharField):
 class TextField(Field):
     description = _("Text")
 
-    def __init__(
-            self, *args, **kwargs
-    ):
+    def __init__(self, *args, **kwargs):
         self.trim = kwargs.pop('trim', True)
         super().__init__(*args, **kwargs)
 
@@ -2291,6 +2283,12 @@ class TextField(Field):
         value = None if value == '' else value
         value = super().get_prep_value(value)
         return self.to_python(value)
+
+
+class DocumentField(TextField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('trim', False)
+        super().__init__(*args, **kwargs)
 
 
 class TimeField(DateTimeCheckMixin, Field):

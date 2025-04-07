@@ -1,4 +1,4 @@
-import datetime
+from typing import Self
 import inspect
 import warnings
 import copy
@@ -1966,7 +1966,7 @@ class Model(metaclass=ModelBase):
         else:
             deferred_fields = opts.deferred_fields
         for f in opts.fields:
-            if f in deferred_fields:
+            if f.name in deferred_fields:
                 continue
             if not f.serialize:
                 continue
@@ -2054,7 +2054,7 @@ class Model(metaclass=ModelBase):
         self.after_update(None, values)
 
     @classmethod
-    def get(cls, id):
+    def get(cls, id) -> Self:
         return cls.objects.get(pk=id)
 
     @classmethod
