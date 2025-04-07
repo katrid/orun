@@ -1976,10 +1976,10 @@ var katrid;
                         params['model'] = this.model;
                     let res = await svc.rpc('list_model_permissions', null, params);
                     const perms = Object.groupBy(res.permissions, ({ model }) => model);
-                    for (const model of res.models) {
+                    for (const model of res.models.sort((a, b) => a.name.localeCompare(b.name))) {
                         if (!perms[model.id])
                             continue;
-                        const modelNode = this.treeView.addItem(model.name, null, { checkbox: true });
+                        const modelNode = this.treeView.addItem(model.name + ' (' + model.label + ')', null, { checkbox: true });
                         modelNode.data = model;
                         for (const perm of perms[model.id]) {
                             const item = this.treeView.addItem(perm.name, modelNode, { checkbox: true, onCheckChange: (evt) => this._permChange(evt) });
