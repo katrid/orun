@@ -89,7 +89,7 @@ class View(models.Model):
 
     class Meta:
         name = 'ui.view'
-        ordering = ('priority', 'id')
+        ordering = ('priority', 'name')
 
     def save(self, *args, **kwargs):
         if not self.pk and self.parent_id is None:
@@ -121,8 +121,10 @@ class View(models.Model):
         expr = element.attrib.get('expr')
         target = source
         if expr:
-            target = target.xpath(expr)[0]
-        self._merge(target, pos, element)
+            val = target.xpath(expr)
+            if val:
+                target = val[0]
+                self._merge(target, pos, element)
 
     def _merge(self, target: etree.HtmlElement, pos: str, element: etree.HtmlElement):
         if pos == 'append':
@@ -181,7 +183,7 @@ class View(models.Model):
         for child in children:
             self.merge(xml, etree.fromstring(child._get_content(context)))
 
-        self._eval_permissions(context['user'], xml)
+        # self._eval_permissions(context['user'], xml)
         resolve_refs(xml)
         return xml
 
