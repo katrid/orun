@@ -2444,14 +2444,8 @@ var Katrid;
             render() {
                 let appHeader = document.createElement('app-header');
                 appHeader.id = 'app-header';
-                appHeader.classList.add('navbar', 'navbar-expand-lg', 'navbar-dark', 'bg-primary', 'flex-row');
-                appHeader.innerHTML = `<div class="dropdown dropdown-apps">
-        <a id="apps-button" class="header-link" data-bs-toggle="dropdown">
-          <i class="fa fa-th"></i>
-        </a>
-        <div class="dropdown-menu apps-menu">
-        </div>
-      </div>
+                appHeader.classList.add('app-header', 'navbar', 'navbar-expand-lg', 'navbar-dark', 'flex-row');
+                appHeader.innerHTML = `
       <nav class="navbar no-padding">
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-target="#navbar"
                 aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -2459,12 +2453,40 @@ var Katrid;
         </button>
       </nav>
       <div id="navbar-menu" class="mr-auto"></div>
+      `;
+                let homeBar = document.createElement('div');
+                homeBar.classList.add('home-header', 'navbar-dark', 'navbar-expand-lg');
+                homeBar.innerHTML = `
+  <div class="dropdown dropdown-apps">
+        <a id="apps-button" class="header-link" data-bs-toggle="dropdown">
+          <i class="fa fa-th"></i>
+        </a>
+        <div class="dropdown-menu apps-menu">
+        </div>
+      </div>
+
+<div class="home-bar">
+  <div class="app-header navbar">
+
+    <div class="navbar-nav company-selector dropdown">
+
+      <a class="dropdown-toggle" data-bs-toggle="dropdown" href="#">
+        <span>${this.userInfo.company?.name || 'Select company'}</span>
+      </a>
+
+      <div class="dropdown-menu">
+        <a class="dropdown-item">My Company</a>
+      </div>
+
+    </div>
       <div id="navbar" class="collapse navbar-collapse navbar-tools">
         <div class="navbar-search">
           <i class="fa fw fa-search"></i>
           <input id="navbar-search" type="search" class="form-control form-control-dark typeahead" spellcheck="false" autocomplete="off"
                  placeholder="${Katrid.i18n.gettext('Find resources here...')}">
         </div>
+      </div>
+
         <ul class="navbar-nav">
           <li class="nav-item">
             <a class="dropdown-toggle nav-link button-notification-messages" href="javascript:void(0);" data-action="messages"
@@ -2490,12 +2512,12 @@ var Katrid;
           <li class="nav-item d-none d-sm-block">
             <a class="nav-link" href="javascript:void(0);" data-action="helpCenter" title="Help Center"
                onclick="Katrid.UI.helpCenter()">
-              <i class="fa fa-question"></i>
+              <i class="fa fa-fw fa-question"></i> <span>${Katrid.i18n.gettext('Help')}</span>
             </a>
           </li>
           <li class="nav-item user-menu dropdown">
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
-              <img class="user-avatar" src="/static/admin/assets/img/avatar.png"> <span/>
+              <img class="user-avatar" src="/static/admin/assets/img/avatar.png"> <span class="user-name">${this.userInfo.name}</span>
             </a>
             <div class="dropdown-menu dropdown-menu-end">
               <a class="dropdown-item" onclick="katrid.admin.UserPreferences.showModal()"><i class="fa fa-fw"></i> ${Katrid.i18n.gettext('Preferences')}</a>
@@ -2504,8 +2526,37 @@ var Katrid;
             </div>
           </li>
         </ul>
-      </div>`;
-                this.rootElement.append(appHeader);
+        </div>
+        </div>
+      `;
+                homeBar.querySelector('.home-bar').appendChild(appHeader);
+                this.rootElement.appendChild(homeBar);
+                const companySelector = homeBar.querySelector('.company-selector');
+                companySelector.addEventListener('click', async () => {
+                    const menu = companySelector.querySelector('.dropdown-menu');
+                    menu.innerHTML = `<span class="dropdown-item">${Katrid.i18n.gettext('Loading...')}</span>`;
+                    const model = new Katrid.Services.ModelService('auth.user');
+                    let res = await model.rpc('get_companies');
+                    menu.innerHTML = '';
+                    const companyClick = async (evt) => {
+                        const target = evt.target;
+                        const companyId = target.dataset.companyId;
+                        if (companyId) {
+                            const res = await model.rpc('set_user_company', null, { company_id: companyId });
+                            if (res === true) {
+                                const companyName = target.innerText;
+                                companySelector.querySelector('span').innerText = companyName;
+                                this.userInfo.company = { id: companyId, name: companyName };
+                            }
+                        }
+                    };
+                    if (res)
+                        for (const c of res) {
+                            const cEl = menu.appendChild($(`<a class="dropdown-item" data-company-id="${c.id}">${c.name}</a>`)[0]);
+                            cEl['companyInfo'] = c;
+                            cEl.addEventListener('click', companyClick);
+                        }
+                });
                 let mainContent = document.createElement('div');
                 mainContent.className = 'main-content';
                 mainContent.setAttribute('role', 'main');
@@ -8624,11 +8675,11 @@ var Katrid;
         <div class="page-sheet">
           <div class="content container">
             <div class="form-sheet panel-default data-panel">
+              <a class="maximize-button" role="button" title="${Katrid.i18n.gettext('Maximize')}"
+                 onclick="$(this).closest('div.form-sheet').toggleClass('box-fullscreen');$(this).find('i').toggleClass('fa-compress fa-expand')">
+                <i class=" fa fa-expand"></i>
+              </a>
               <div class="template-placeholder">
-                <a class="maximize-button" role="button" title="${Katrid.i18n.gettext('Maximize')}"
-                   onclick="$(this).closest('div.card.data-panel').toggleClass('box-fullscreen');$(this).find('i').toggleClass('fa-compress fa-expand')">
-                  <i class=" fa fa-expand"></i>
-                </a>
               </div>
             </div>
           </div>

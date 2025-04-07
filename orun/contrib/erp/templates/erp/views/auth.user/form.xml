@@ -13,5 +13,14 @@
   <field name="date_joined"/>
   <field name="signature"/>
   <field name="user_company"/>
-  <field name="groups"/>
+  <tabset>
+    <tab>
+      <tab-heading>{{ gettext('Groups') }}</tab-heading>
+      <field name="groups" nolabel/>
+    </tab>
+    <tab>
+      <tab-heading>{{ gettext('Companies') }}</tab-heading>
+      <field name="companies" nolabel/>
+    </tab>
+  </tabset>
 </form>

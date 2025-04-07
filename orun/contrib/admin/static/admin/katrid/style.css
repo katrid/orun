@@ -12257,72 +12257,101 @@ a.user-dropdown {
   display: block;
 }
 
-app-header {
-  background: linear-gradient(125deg, #6b5d81, #8875aa, #3784c1);
+.app-header {
+  height: 32px;
 }
 
-app-header.navbar {
+.home-header {
+  display: flex;
+  flex-direction: row;
+  background: linear-gradient(125deg, #6b5d81, #8875aa, #3784c1);
+  height: 64px;
+}
+.home-header .home-bar {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
+.app-header.navbar {
   padding: 0;
   justify-content: flex-end;
   flex-flow: nowrap;
   flex: 0 1;
 }
-app-header.navbar #navbar-menu {
+.app-header.navbar #navbar-menu {
   flex: 1 0 200px;
 }
-app-header.navbar .navbar-search {
+.app-header.navbar .navbar-search {
   background-color: rgba(255, 255, 255, 0.1);
   border: 0;
   white-space: nowrap;
   overflow: hidden;
+  flex: 1 1 auto;
 }
-app-header.navbar .navbar-search i.fa-search {
+.app-header.navbar .navbar-search i.fa-search {
   color: #fff;
 }
-app-header.navbar .navbar-tools {
-  max-width: 500px;
-  flex: 0 1 auto;
+.app-header.navbar .navbar-tools {
+  flex: 0 1 500px;
 }
-app-header.navbar #navbar-search {
+.app-header.navbar #navbar-search {
   display: inline;
   background-color: rgba(255, 255, 255, 0);
   border-width: 0;
   border-radius: 0;
   font-size: 0.8rem;
 }
-app-header.navbar #navbar-search::placeholder {
+.app-header.navbar #navbar-search::placeholder {
   color: #fff;
 }
-app-header.navbar #navbar-search:focus {
+.app-header.navbar #navbar-search:focus {
   border: 0;
   outline: 0;
   box-shadow: none;
 }
-app-header.navbar .navbar-nav {
+.app-header.navbar .navbar-nav {
   flex-direction: row;
 }
-app-header.navbar .navbar-collapse .nav-link {
+.app-header.navbar .navbar-collapse .nav-link {
   padding: 0 10px;
 }
-app-header.navbar .navbar-nav .nav-link {
-  line-height: 42px;
+.app-header.navbar .navbar-nav .nav-link {
+  line-height: 30px;
   padding-top: 0;
   padding-bottom: 0;
   vertical-align: middle;
-  font-size: 0.9rem;
   white-space: nowrap;
 }
-app-header.navbar .navbar-menu-header h3, app-header.navbar .navbar-menu-header .h3 {
-  display: inline;
-}
-app-header.navbar .dropdown-apps {
+.app-header.navbar .dropdown-apps {
   height: 100%;
 }
-app-header.navbar #apps-button {
-  color: #FFFFFF;
+.app-header.navbar .company-selector {
+  color: #fff;
+  flex: 1 1 auto;
+}
+
+.home-header .home-bar {
+  padding-left: 10px;
+}
+.home-header span.user-name {
+  font-size: x-small;
+}
+.home-header .company-selector {
+  padding-top: 5px;
+}
+.home-header .company-selector a.dropdown-toggle {
+  color: #fff;
+}
+.home-header .company-selector span {
+  font-size: x-small;
+  text-transform: uppercase;
+}
+.home-header #apps-button {
+  color: #f8fdff;
   height: 100%;
 }
-app-header.navbar #apps-button:hover {
+.home-header #apps-button:hover {
   color: #FFFFFF;
 }
 
@@ -12908,7 +12937,7 @@ fieldset legend {
 .box-fullscreen {
   display: block;
   z-index: 9999;
-  position: fixed;
+  position: fixed !important;
   width: 100%;
   height: 100%;
   top: 0;
@@ -12918,9 +12947,12 @@ fieldset legend {
   overflow: auto;
 }
 
-.maximize-button {
+.form-sheet {
+  position: relative;
+}
+.form-sheet .maximize-button {
   position: absolute;
-  right: 10px;
+  right: 8px;
   top: 4px;
   color: #3c3c3c;
   cursor: pointer;
@@ -13500,7 +13532,6 @@ dialog.dialog .dialog-footer .btn {
 }
 
 .navbar-menu-header {
-  padding: 11px 10px 12px;
   margin-right: 10px;
 }
 .navbar-menu-header h3, .navbar-menu-header .h3 {

@@ -1,6 +1,4 @@
-from typing import ClassVar
 from orun import api
-from orun.apps import apps
 from orun.contrib import auth
 from orun.conf import settings
 from orun.contrib.auth.hashers import check_password
@@ -9,7 +7,9 @@ from orun.http import HttpRequest
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _, gettext
 from orun.contrib.auth.models import AbstractUser, Permission
+
 from .partner import Partner
+from .company import Company
 
 
 # class ModelAccess(models.Model):
@@ -57,9 +57,9 @@ class User(AbstractUser, Partner):
     # date_joined = models.DateTimeField(_('Date Joined'), auto_now=True)
     signature = models.HtmlField(_('Signature'))
     user_action = models.ForeignKey('ui.action', verbose_name=_('Home Action'))
-    user_company = models.ForeignKey('res.company')
+    user_company = models.ForeignKey('res.company', label=_('Default Company'))
     # groups = models.ManyToManyField(Group, verbose_name=_('Groups'))
-    companies = models.ManyToManyField('res.company', verbose_name=_('Companies'))
+    companies = models.OneToManyField('auth.user.companies.rel', label=_('Companies'))
     groups = models.ManyToManyField(
         'auth.group',
         through='auth.user.groups.rel',
@@ -112,6 +112,13 @@ class User(AbstractUser, Partner):
         raise ValidationError(_('Invalid password'))
 
     def user_info(self):
+        company = self.get_current_company()
+        if company:
+            company = {
+                'id': company.pk,
+                'name': company.name,
+                'logo': (company.image and company.image.url) or None,
+            }
         res = {
             'id': self.pk,
             'name': self.name,
@@ -119,9 +126,67 @@ class User(AbstractUser, Partner):
             'username': self.username,
             'last_login': self.__class__._meta.fields['last_login'].value_to_json(self.last_login),
             'language': (self.language and self.language.code) or settings.LANGUAGE_CODE,
+            'company': company,
         }
         if self.is_superuser:
             res['superuser'] = True
+        return res
+
+    def get_current_company(self):
+        if self.user_company:
+            return self.user_company
+        company = self.companies.first()
+        if company:
+            return self.companies.first()
+        return Company.objects.filter(active=True).first()
+
+    @classmethod
+    def get_default_company(cls):
+        return Company.objects.order_by('pk').filter(active=True).first()
+
+    @api.classmethod
+    def get_companies(cls, request: HttpRequest):
+        user_id = request.user_id
+        user = cls.objects.get(id=user_id, active=True)
+        if not user:
+            raise PermissionDenied(_('User not found'))
+        if user.is_superuser:
+            companies = Company.objects.filter(active=True)
+        else:
+            companies = user.companies.filter(active=True)
+        if companies:
+            return [{'id': c.pk, 'name': c.name} for c in companies]
+
+    @api.classmethod
+    def set_user_company(cls, request: HttpRequest, company_id):
+        user = cls.objects.get(id=request.user_id, active=True)
+        if not user:
+            raise PermissionDenied(_('User not found'))
+        if user.is_superuser:
+            company = Company.objects.get(id=company_id, active=True)
+            if not company:
+                raise PermissionDenied(_('Company not found'))
+        else:
+            company = user.companies.filter(id=company_id, active=True).first()
+            if not company:
+                raise PermissionDenied(_('Company not found'))
+        user.update(user_company_id=company.pk)
+        return True
+
+    def after_insert(self, modified_fields):
+        super().after_insert(modified_fields)
+        if self.user_company_id:
+            self.companies.add(self.user_company)
+
+    @api.classmethod
+    def api_get_defaults(cls, request: HttpRequest, context=None, *args, **kwargs):
+        res = super().api_get_defaults(context, *args, **kwargs)
+        # send default company as the current user company
+        user = request.user
+        default_company = user.get_current_company()
+        if default_company:
+            res['user_company'] = {'id': default_company.pk, 'text': default_company.name}
+        print(res)
         return res
 
 
@@ -179,3 +244,12 @@ class UserData(models.Model):
     def get_data(cls, user_id: int, key: str):
         d = cls.objects.filter(user_id=user_id, key=key).first()
         return d and d.value
+
+
+class UserCompanies(models.Model):
+    user = models.ForeignKey('auth.user', on_delete=models.CASCADE, null=False)
+    company = models.ForeignKey('res.company', on_delete=models.CASCADE, null=False)
+
+    class Meta:
+        name = 'auth.user.companies.rel'
+        unique_together = ('user', 'company')
