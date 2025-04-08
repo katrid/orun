@@ -12707,6 +12707,24 @@ label.radio > i:after {
   font-weight: 400;
   border: none;
   margin-bottom: 0;
+  position: relative;
+}
+.data-heading .btn-settings {
+  position: absolute;
+  right: 0;
+  top: 0;
+  cursor: pointer;
+  border-radius: 0.375rem;
+  border: 1px solid var(--bs-border-color);
+  border-right: none;
+  color: #6e6e6f;
+  background: #ffffff;
+}
+.data-heading .btn-settings .dropdown-toggle::after {
+  display: none;
+}
+.data-heading .btn-settings .dropdown-toggle:hover::after {
+  display: inline-block;
 }
 
 .data-heading h4, .data-heading .h4, .data-heading ol.breadcrumb {

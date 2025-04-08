@@ -3551,6 +3551,20 @@ var Katrid;
             renderTemplate(template) {
                 return template;
             }
+            createSettingsMenu(toolbar) {
+                let btn = document.createElement('div');
+                btn.innerHTML = `<span class="dropdown-toggle" data-bs-offset="-8,0" data-bs-toggle="dropdown" title="${katrid.i18n.gettext('Settings')}"><i class="fa fa-fw fa-cog"></i></span>`;
+                btn.classList.add('btn-settings');
+                let menu = document.createElement('ul');
+                menu.classList.add('dropdown-menu');
+                menu.innerHTML = `
+        <li><a class="dropdown-item">${Katrid.i18n.gettext('Add User Defined Function')}</a></li>
+        <li><a class="dropdown-item">${Katrid.i18n.gettext('Custom Template')}</a></li>
+        <li><a class="dropdown-item">${Katrid.i18n.gettext('Permissions')}</a></li>
+        `;
+                btn.appendChild(menu);
+                toolbar.appendChild(btn);
+            }
             createToolbar() {
                 let el = document.createElement('div');
                 el.className = 'toolbar';
@@ -3783,6 +3797,8 @@ var Katrid;
                 let toolbar = Katrid.html(templ);
                 toolbar.querySelector('action-navbar').actionManager = this.action.actionManager;
                 this.createToolbarButtons(toolbar);
+                if (Katrid.webApp.userInfo.superuser)
+                    this.createSettingsMenu(toolbar);
                 return toolbar;
             }
             createToolbarButtons(container) {
@@ -8829,6 +8845,8 @@ var Katrid;
     </div>`;
                 let toolbar = Katrid.html(templ);
                 this.createToolbarButtons(toolbar);
+                if (Katrid.webApp.userInfo.superuser)
+                    this.createSettingsMenu(toolbar);
                 return toolbar;
             }
             createElement() {
@@ -9201,9 +9219,9 @@ ${Katrid.i18n.gettext('Delete')}
             getDisplayText() {
                 return '{{record.$str}}';
             }
-            saveAndClose(commit) {
+            async saveAndClose(commit) {
                 if (commit) {
-                    this.$result = this.datasource.save();
+                    this.$result = await this.datasource.save();
                 }
                 else {
                     this.datasource.flush();
@@ -9999,6 +10017,7 @@ var Katrid;
                 parent.appendChild(div);
             }
             _createSystemContextMenu(target) {
+                return;
                 if (this._systemContextMenuCreated)
                     return;
                 this._systemContextMenuCreated = true;

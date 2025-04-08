@@ -937,6 +937,7 @@ declare namespace Katrid.Forms {
         domTemplate(): HTMLElement;
         beforeRender(template: HTMLElement): HTMLElement;
         protected renderTemplate(template: HTMLElement): HTMLElement;
+        protected createSettingsMenu(toolbar: HTMLElement): void;
         createToolbar(): HTMLElement;
         dialogPromise: Promise<any>;
         generateHelp(help: any): void;
@@ -2019,7 +2020,7 @@ declare namespace Katrid.Forms {
         $onFieldChange(field: Katrid.Data.Field, value: any): void;
         static createNew(config: ICreateNewConfig): Promise<FormView>;
         getDisplayText(): string;
-        saveAndClose(commit?: boolean): void;
+        saveAndClose(commit?: boolean): Promise<void>;
         discardAndClose(): void;
         recordClick(event: any, index: any, record: any): void;
         focus(fieldName?: string): void;
