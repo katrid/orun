@@ -13,7 +13,7 @@ class FileProxyMixin:
     flush = property(lambda self: self.file.flush)
     isatty = property(lambda self: self.file.isatty)
     newlines = property(lambda self: self.file.newlines)
-    read = property(lambda self: self.file.read)
+    read = property(lambda self: self.file and self.file.read)
     readinto = property(lambda self: self.file.readinto)
     readline = property(lambda self: self.file.readline)
     readlines = property(lambda self: self.file.readlines)

@@ -192,4 +192,3 @@ class Command(BaseCommand):
             emit_post_migrate_signal(
                 self.verbosity, self.interactive, connection.alias, app_models=post_model_list.items()
             )
-

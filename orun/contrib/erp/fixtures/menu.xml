@@ -25,6 +25,7 @@
     <menuitem id="menu.settings.db" name="Database Dictionary">
       <menuitem id="menu.settings.ir.models" name="Models" action="action.view.ir.model"/>
       <menuitem id="menu.settings.ir.fields" name="Fields" action="action.view.ir.field"/>
+      <menuitem id="menu.settings.ui.query" name="User Defined Query" action="action.view.ui.query"/>
     </menuitem>
   </menuitem>
   <delete id="menu.settings.ir.query"/>

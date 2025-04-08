@@ -58,6 +58,5 @@
   <action id="action.view.auth.permission-manager" type="ui.action.client" name="Permission Manager">
     <field name="tag">katrid.admin.PermissionManager</field>
   </action>
-  <delete id="action.view.ir.query"/>
   <delete id="action.view.ir.query.category"/>
 </data>

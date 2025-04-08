@@ -54,7 +54,7 @@ def include(arg, namespace=None):
     return (urlconf_module, app_name, namespace)
 
 
-def _path(route, view, kwargs=None, name=None, Pattern=None):
+def _path(route: str, view, kwargs=None, name=None, Pattern=None):
     if isinstance(view, (list, tuple)):
         # For include(...) processing.
         pattern = Pattern(route, is_endpoint=False)

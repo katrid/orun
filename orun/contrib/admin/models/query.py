@@ -11,24 +11,28 @@ from .action import Action
 
 
 class Category(models.Model):
-    name = models.CharField(label=_('Name'), translate=True)
+    name = models.CharField(label=_('Name'))
 
     class Meta:
         title_field = 'name'
-        name = 'ir.query.category'
+        name = 'ui.query.category'
 
 
 class Query(models.Model):
-    name = models.CharField(label=_('Name'), localize=True)
+    name = models.CharField(label=_('Name'))
+    object_type = models.ChoiceField(
+        {
+            'system': _('System'),
+            'user': _('User'),
+        }, default='user',
+    )
     category = models.ForeignKey(Category)
     sql = models.TextField()
-    context = models.TextField()
-    params = models.TextField()
-    public = models.BooleanField(default=False, label='Public/External access', help_text='Has public external/anonymous access')
-    published = models.BooleanField(default=True)
+    # context = models.TextField()
+    # params = models.TextField()
 
     class Meta:
-        name = 'ir.query'
+        name = 'ui.query'
 
     def get_by_natural_key(self, category, name):
         return self.objects.filter({'category': category, 'name': name}).one()

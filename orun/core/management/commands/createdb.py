@@ -18,7 +18,7 @@ class Command(BaseCommand):
             schema = no_conn.schema_editor()
         schema.create_database(db)
         connection.schema_editor().post_create_database()
-        self.stdout.write('Database "%s" has been created succesfully' % db)
+        self.stdout.write('Database "%s" has been created successfully' % db)
 
     def handle(self, *args, **options):
         self.create(options['database'])

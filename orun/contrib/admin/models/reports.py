@@ -98,12 +98,13 @@ class ReportAction(Action):
                                 data['fields'] = model.get_fields_info(xml)
                         data['content'] = doc
                 elif rep_type == 'pug':
-                    templ = loader.find_template(self.view.template_name)
-                    if templ:
-                        with open(templ, 'r', encoding='utf-8') as f:
-                            params = engine.extract_params(f.read())
-                        if params is not None:
-                            data['content'] = params.tostring()
+                    if self.view:
+                        templ = loader.find_template(self.view.template_name)
+                        if templ:
+                            with open(templ, 'r', encoding='utf-8') as f:
+                                params = engine.extract_params(f.read())
+                            if params is not None:
+                                data['content'] = params.tostring()
                 elif xml is None:
                     if rep_type == 'xml' or rep_type == 'json':
                         templ = loader.find_template(template_name)
@@ -119,24 +120,28 @@ class ReportAction(Action):
                             data['action_type'] = 'ui.action.report'
                             return data
                         else:
-                            xml = etree.fromstring(xml)
+                            try:
+                                xml = etree.fromstring(xml)
+                            except:
+                                pass
                     # xml = self.view.get_xml(model)
                     if model:
                         data['fields'] = model.get_fields_info(xml=xml)
-                    params = xml.find('params')
-                    if params is not None:
-                        if xml.tag == 'report' and 'model' in xml.attrib:
-                            params.attrib['model'] = xml.attrib['model']
-                            if not model:
-                                model = apps[xml.attrib['model']]
-                                data['fields'] = model.get_fields_info(params)
+                    if xml and not isinstance(xml, str):
+                        params = xml.find('params')
+                        if params is not None:
+                            if xml.tag == 'report' and 'model' in xml.attrib:
+                                params.attrib['model'] = xml.attrib['model']
+                                if not model:
+                                    model = apps[xml.attrib['model']]
+                                    data['fields'] = model.get_fields_info(params)
 
-                            # model = app[model]
-                            # for field in params:
-                            #     if field.tag == 'field' and 'name' in field.attrib:
-                            #         fld = model._meta.fields[field.attrib['name']]
-                        xml = params
-                        data['content'] = etree.tostring(xml, encoding='utf-8').decode('utf-8')
+                                # model = app[model]
+                                # for field in params:
+                                #     if field.tag == 'field' and 'name' in field.attrib:
+                                #         fld = model._meta.fields[field.attrib['name']]
+                            xml = params
+                            data['content'] = etree.tostring(xml, encoding='utf-8').decode('utf-8')
         if 'content' not in data:
             data['content'] = '<params/>'
         return data

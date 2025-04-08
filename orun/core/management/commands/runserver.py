@@ -4,7 +4,7 @@ import re
 import socket
 import sys
 from datetime import datetime
-import uvicorn
+# import uvicorn
 
 from orun.conf import settings
 from orun.core.management.base import BaseCommand, CommandError

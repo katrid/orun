@@ -13,9 +13,8 @@ __all__ = [
     'get_language_info', 'get_language_bidi',
     'check_for_language', 'to_language', 'to_locale', 'templatize',
     'gettext', 'gettext_lazy', 'gettext_noop',
-    'ugettext', 'ugettext_lazy', 'ugettext_noop',
-    'ngettext', 'ngettext_lazy',
-    'ungettext', 'ungettext_lazy',
+    'ugettext', 'ngettext', 'ngettext_lazy',
+    'ungettext_lazy',
     'pgettext', 'pgettext_lazy',
     'npgettext', 'npgettext_lazy',
     'LANGUAGE_SESSION_KEY',
@@ -72,21 +71,12 @@ def gettext_noop(message):
     return _trans.gettext_noop(message)
 
 
-ugettext_noop = gettext_noop
-
-
 def gettext(message):
     return _trans.gettext(message)
 
 
-ugettext = gettext
-
-
 def ngettext(singular, plural, number):
     return _trans.ngettext(singular, plural, number)
-
-
-ungettext = ngettext
 
 
 def pgettext(context, message):
@@ -97,7 +87,7 @@ def npgettext(context, singular, plural, number):
     return _trans.npgettext(context, singular, plural, number)
 
 
-gettext_lazy = ugettext_lazy = lazy(gettext, str)
+gettext_lazy = lazy(gettext, str)
 pgettext_lazy = lazy(pgettext, str)
 
 
@@ -154,10 +144,6 @@ def _lazy_number_unpickle(func, resultclass, number, kwargs):
 
 def ngettext_lazy(singular, plural, number=None):
     return lazy_number(ngettext, str, singular=singular, plural=plural, number=number)
-
-
-# An alias since Orun 2.0
-ungettext_lazy = ngettext_lazy
 
 
 def npgettext_lazy(context, singular, plural, number=None):
