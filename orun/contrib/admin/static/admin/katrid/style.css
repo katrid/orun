@@ -13281,6 +13281,7 @@ h3.popover-title, .popover-title.h3 {
 .katrid-app dialog.dialog {
   display: flex;
   flex-direction: column;
+  width: 500px;
 }
 .katrid-app dialog.dialog .dialog-body {
   flex: 1;
@@ -13295,6 +13296,9 @@ h3.popover-title, .popover-title.h3 {
   margin-top: 10px;
   text-align: right;
   flex: 0;
+}
+.katrid-app dialog.dialog.dialog-lg {
+  width: 800px;
 }
 
 dialog.dialog {

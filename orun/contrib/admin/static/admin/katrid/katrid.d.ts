@@ -697,6 +697,19 @@ declare namespace katrid.admin {
     let responseMiddleware: any[];
 }
 declare namespace katrid.admin {
+    class UserDefinedValue {
+        fieldName: string;
+        el: HTMLElement;
+        constructor(fieldName: string, el: HTMLElement);
+        protected createFieldValue(): void;
+        protected createValue(): void;
+        protected createList(): void;
+        protected createQuery(): void;
+        protected createUDF(): void;
+        static showDialog(): Promise<any>;
+    }
+}
+declare namespace katrid.admin {
     class UserPreferences {
         static showModal(): Promise<void>;
         changePassword(): Promise<any>;
@@ -3191,6 +3204,7 @@ declare namespace katrid.ui {
         static info(msg: string): bootstrap.Toast;
         static error(msg: string): bootstrap.Toast;
     }
+    export function createDialogElement(config: DialogConfig): HTMLDialogElement;
     export class ExceptionDialog {
         static show(title: string, msg: string, traceback?: string): void;
         static showValidationError(title: string, msg: string, model: katrid.data.Model, errors: katrid.data.ValidationResult): string;

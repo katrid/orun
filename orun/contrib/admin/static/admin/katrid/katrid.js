@@ -2268,6 +2268,96 @@ var katrid;
 (function (katrid) {
     var admin;
     (function (admin) {
+        class UserDefinedValue {
+            constructor(fieldName, el) {
+                this.fieldName = fieldName;
+                this.el = el;
+            }
+            createFieldValue() {
+                this.el.innerHTML = `
+      <hr>
+      <div class="form-group">
+        <label for="field-value">${katrid.i18n.gettext('Field value')}</label>
+        <input type="text" id="field-value" class="form-control">
+      </div>
+      `;
+            }
+            createValue() {
+                this.el.innerHTML = `
+      <hr>
+      <div class="form-group">
+        <label for="field-value">${katrid.i18n.gettext('Field value')}</label>
+        <input type="text" id="value" class="form-control">
+      </div>
+      `;
+            }
+            createList() {
+                this.el.innerHTML = `
+      <hr>
+      <div class="form-group">
+        <label for="field-value">${katrid.i18n.gettext('Field value')}</label>
+        <textarea id="list" class="form-control"></textarea>
+      </div>
+      `;
+            }
+            createQuery() {
+                this.el.innerHTML = `
+      <hr>
+      <div class="form-group">
+        <label for="field-value">${katrid.i18n.gettext('Select the user query')}</label>
+        <input type="text" id="query" class="form-control">
+      </div>
+      `;
+            }
+            createUDF() {
+            }
+            static showDialog() {
+                const dlg = new katrid.ui.Dialog({ title: 'User Defined Value', buttons: ['ok', 'cancel'] });
+                dlg.dialog.classList.add('dialog-lg');
+                dlg.dialog.querySelector('.dialog-body').innerHTML = `
+      <select class="form-select">
+        <option value="none">${katrid.i18n.gettext('None')}</option>
+        <option value="field value">${katrid.i18n.gettext('Current value')}</option>
+        <option value="value">${katrid.i18n.gettext('Value')}</option>
+        <option value="list">${katrid.i18n.gettext('List of values')}</option>
+        <option value="query">${katrid.i18n.gettext('User query')}</option>
+        <option value="udf">${katrid.i18n.gettext('User defined function')}</option>
+      </select>
+      <div class="udv-panel"></div>
+      `;
+                const select = dlg.dialog.querySelector('select');
+                const panel = dlg.dialog.querySelector('.udv-panel');
+                let udv = new UserDefinedValue('fieldName', panel);
+                select.addEventListener('change', (evt) => {
+                    panel.innerHTML = '';
+                    switch (select.value) {
+                        case 'field value':
+                            udv.createFieldValue();
+                            break;
+                        case 'value':
+                            udv.createValue();
+                            break;
+                        case 'list':
+                            udv.createList();
+                            break;
+                        case 'query':
+                            udv.createQuery();
+                            break;
+                        case 'udf':
+                            udv.createUDF();
+                            break;
+                    }
+                });
+                return dlg.showModal();
+            }
+        }
+        admin.UserDefinedValue = UserDefinedValue;
+    })(admin = katrid.admin || (katrid.admin = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var admin;
+    (function (admin) {
         class UserPreferences {
             static async showModal() {
                 const pref = new UserPreferences();
@@ -6738,7 +6828,6 @@ var katrid;
             }
             return div;
         }
-        ui.createDialogElement = createDialogElement;
         function confirm(config) {
             return new Promise(resolve => {
                 let dialog = createDialogElement({ header: config.title, autoDestroy: true });
@@ -8831,9 +8920,21 @@ ${Katrid.i18n.gettext('Delete')}
                 return data;
             }
             async ready() {
-                console.debug('ready', this.element);
                 if (this.action?.params)
                     this.onHashChange(this.action.params);
+                const onCtxMenu = (event) => {
+                    if (!(event.target instanceof HTMLInputElement)) {
+                        event.preventDefault();
+                        const menu = new katrid.ui.ContextMenu();
+                        menu.add(katrid.i18n.gettext('Config user default value'), () => {
+                            katrid.admin.UserDefinedValue.showDialog();
+                        });
+                        menu.show(event.clientX, event.clientY);
+                    }
+                };
+                this.element.querySelectorAll('section').forEach((section) => {
+                    section.addEventListener('contextmenu', onCtxMenu);
+                });
             }
             async onHashChange(params) {
                 let id = params.id;
