@@ -2549,7 +2549,7 @@ var Katrid;
                 homeBar.innerHTML = `
   <div class="dropdown dropdown-apps">
         <a id="apps-button" class="header-link" data-bs-toggle="dropdown">
-          <i class="fa fa-th"></i>
+          <i class="fa fa-grip-vertical"></i>
         </a>
         <div class="dropdown-menu apps-menu">
         </div>

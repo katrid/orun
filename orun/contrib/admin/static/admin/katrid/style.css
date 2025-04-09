@@ -11864,6 +11864,19 @@ textarea.form-control-lg {
     display: none !important;
   }
 }
+fieldset {
+  margin-top: 0;
+  padding-bottom: 0;
+}
+
+fieldset legend {
+  font-size: 15px;
+  font-weight: bold;
+  color: #7a79aa;
+  padding-top: 8px;
+  border-bottom: 2px solid #cecdf8;
+}
+
 body.hide-left-menu #main-content,
 body.page-small.show-left-menu #left-menu,
 body.page-small #main-content {
@@ -12350,6 +12363,8 @@ a.user-dropdown {
 .home-header #apps-button {
   color: #f8fdff;
   height: 100%;
+  padding-top: 20px;
+  font-size: 1.4em;
 }
 .home-header #apps-button:hover {
   color: #FFFFFF;
@@ -12742,11 +12757,6 @@ label.radio > i:after {
   color: silver;
 }
 
-.data-panel fieldset {
-  margin-top: 0;
-  padding-bottom: 0;
-}
-
 .data-panel .image-box {
   margin: 0 0 8px 0;
   height: 100px;
@@ -12770,13 +12780,6 @@ label.radio > i:after {
 
 .data-form.changing .image-box:hover .image-box-buttons {
   visibility: visible;
-}
-
-fieldset legend {
-  font-size: 15px;
-  font-weight: bold;
-  color: #7a79aa;
-  padding-top: 8px;
 }
 
 .katrid-app .content-container-heading {
@@ -14063,6 +14066,9 @@ table-field .table tbody tr {
   overflow: hidden;
   min-height: 26px;
   border-bottom: 1px solid #e4e4e4;
+  background-color: #f6f6f6;
+  padding: 3px 8px;
+  border-radius: 0.375rem;
 }
 .katrid-app .multiple-tags {
   width: 100%;
