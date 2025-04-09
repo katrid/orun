@@ -3558,8 +3558,8 @@ var Katrid;
                 let menu = document.createElement('ul');
                 menu.classList.add('dropdown-menu');
                 menu.innerHTML = `
-        <li><a class="dropdown-item">${Katrid.i18n.gettext('Add User Defined Function')}</a></li>
-        <li><a class="dropdown-item">${Katrid.i18n.gettext('Custom Template')}</a></li>
+        <li><a class="dropdown-item">${Katrid.i18n.gettext('User Defined Function')}</a></li>
+        <li><a class="dropdown-item">${Katrid.i18n.gettext('User Defined Template')}</a></li>
         <li><a class="dropdown-item">${Katrid.i18n.gettext('Permissions')}</a></li>
         `;
                 btn.appendChild(menu);
@@ -8941,10 +8941,11 @@ ${Katrid.i18n.gettext('Delete')}
                 if (this.action?.params)
                     this.onHashChange(this.action.params);
                 const onCtxMenu = (event) => {
-                    if (!(event.target instanceof HTMLInputElement)) {
+                    const target = event.target;
+                    if ((target.tagName === 'SECTION') || (target.tagName === 'LABEL')) {
                         event.preventDefault();
                         const menu = new katrid.ui.ContextMenu();
-                        menu.add(katrid.i18n.gettext('Config user default value'), () => {
+                        menu.add(katrid.i18n.gettext('User Defined Value'), () => {
                             katrid.admin.UserDefinedValue.showDialog();
                         });
                         menu.show(event.clientX, event.clientY);
@@ -14630,7 +14631,7 @@ var Katrid;
                         this.hideMenu();
                     });
                 }
-                this.inputSearch = this.querySelector('#navbar-search');
+                this.inputSearch = document.querySelector('#navbar-search');
                 this.autocomplete = new AppGlobalSearch(this.inputSearch, this.app.config.menu);
                 const toolTip = new Katrid.ui.Tooltip(this.querySelector('.navbar-search'), { helpText: `<h5>Pesquisa rápida</h5>Cliente: <strong>cli: &lt;nome do cliente&gt;</strong>
 <br>Forncedor: <strong>for: &lt;nome do cliente&gt;</strong>
