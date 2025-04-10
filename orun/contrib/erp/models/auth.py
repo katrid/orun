@@ -113,7 +113,7 @@ class User(AbstractUser, Partner):
         if user.is_superuser:
             companies = Company.objects.filter(active=True)
         else:
-            companies = user.companies.filter(active=True)
+            companies = user.companies.filter(company__active=True)
         if companies:
             return [{'id': c.pk, 'name': c.name} for c in companies]
 
