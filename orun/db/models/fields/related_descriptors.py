@@ -830,6 +830,7 @@ def create_forward_many_to_many_manager(superclass, rel, reverse):
 
             self.core_filters = {}
             self.pk_field_names = {}
+            print(self.source_field)
             for lh_field, rh_field in self.source_field.related_fields:
                 core_filter_key = '%s__%s' % (self.query_field_name, rh_field.name)
                 self.core_filters[core_filter_key] = getattr(instance, rh_field.attname)
@@ -858,8 +859,7 @@ def create_forward_many_to_many_manager(superclass, rel, reverse):
             filters = Q(**{self.source_field_name: self.related_val})
             # No need to add a subquery condition if removed_vals is a QuerySet without
             # filters.
-            removed_vals_filters = (not isinstance(removed_vals, QuerySet) or
-                                    removed_vals._has_filters())
+            removed_vals_filters = (not isinstance(removed_vals, QuerySet) or removed_vals._has_filters())
             if removed_vals_filters:
                 filters &= Q(**{'%s__in' % self.target_field_name: removed_vals})
             if self.symmetrical:

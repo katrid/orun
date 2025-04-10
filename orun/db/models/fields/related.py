@@ -1592,7 +1592,9 @@ class ManyToManyField(RelatedField):
         return {"type": None, "check": None}
 
     def value_to_json(self, value):
-        return list(obj._api_format_choice() for obj in value.all())
+        if value is not None:
+            print(self)
+            return list(obj._api_format_choice() for obj in value.all())
 
     def get_data_type(self) -> str:
         return 'manytomany'
