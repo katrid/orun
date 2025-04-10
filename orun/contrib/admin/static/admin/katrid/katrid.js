@@ -9152,7 +9152,7 @@ ${Katrid.i18n.gettext('Delete')}
                         me.copy();
                     },
                     confirm(msg) {
-                        confirm(msg);
+                        return confirm(msg);
                     },
                     readonly(ro, fields, exclude) {
                         if (ro) {
