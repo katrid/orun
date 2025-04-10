@@ -9151,6 +9151,9 @@ ${Katrid.i18n.gettext('Delete')}
                     copy() {
                         me.copy();
                     },
+                    confirm(msg) {
+                        confirm(msg);
+                    },
                     readonly(ro, fields, exclude) {
                         if (ro) {
                             if (fields === '*') {
