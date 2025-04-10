@@ -2,16 +2,20 @@
   <field name="name"/>
   <field name="description"/>
   <field name="active"/>
-  <field name="allow_by_default"/>
-  <field name="object_type" default-value="user"/>
+  <field name="object_type" default-value="user" cols="3"/>
+  <field name="allow_by_default" cols="6"/>
   <tabset>
     <tab>
       <tab-heading>{{ _('Users') }}</tab-heading>
-      <field name="users"/>
+      <field name="users" cols="12"/>
     </tab>
     <tab>
       <tab-heading>Menus</tab-heading>
-      <field name="menus"/>
+      <field name="menus" cols="12"/>
+    </tab>
+    <tab>
+      <tab-heading>{{ _('Actions') }}</tab-heading>
+      <field name="actions"/>
     </tab>
     <tab>
       <tab-heading>{{ _('Permissions') }}</tab-heading>

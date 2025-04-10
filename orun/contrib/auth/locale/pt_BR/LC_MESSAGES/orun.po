@@ -318,3 +318,6 @@ msgstr "Alteração de Senha"
 
 msgid "Password change successful"
 msgstr "Mudança de senha bem sucedida"
+
+msgid "Allow by default"
+msgstr "Permitir por padrão"

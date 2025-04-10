@@ -169,10 +169,10 @@ class Group(models.Model):
     """
     name = models.CharField(label=_('Name'), max_length=150, null=False, unique=True, translate=True)
     description = models.CharField(label=_('Description'), max_length=200)
-    active = models.BooleanField(verbose_name=_('active'), default=True)
-    allow_by_default = models.BooleanField(default=True, help_text='Group has all models permissions by default')
+    active = models.BooleanField(verbose_name=_('Active'), default=True)
+    allow_by_default = models.BooleanField(label=_('Allow by default'), default=True, help_text='Group has all models permissions by default')
     permissions = models.OneToManyField('auth.group.permissions', verbose_name=_('permissions'))
-    users = models.ManyToManyField(settings.AUTH_USER_MODEL, through='auth.user.groups.rel')
+    users = models.ManyToManyField(settings.AUTH_USER_MODEL, label=_('Users'), through='auth.user.groups.rel')
     object_type = models.ChoiceField(
         {'system': _('System'), 'user': _('User')}, label=_('Object Type'), default='system',
     )
@@ -220,12 +220,6 @@ class Group(models.Model):
             if allowed:
                 GroupPermissions.objects.filter(group=instance, permission_id__in=allowed).update(allow=True)
         return instance
-
-    @api.classmethod
-    def api_get(cls, request: HttpRequest, id, fields=None):
-        res = super().api_get(request, id, fields)
-        res['data']['permissions'] = {p.permission_id: p.allow for p in GroupPermissions.objects.filter(group_id=id)}
-        return res
 
 
 class GroupPermissions(models.Model):

@@ -6,51 +6,11 @@ from orun.core.exceptions import PermissionDenied, ValidationError
 from orun.http import HttpRequest
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _, gettext
-from orun.contrib.auth.models import AbstractUser, Permission
+from orun.contrib.auth.models import AbstractUser, Permission, Group, GroupPermissions
 
 from .partner import Partner
 from .company import Company
-
-
-# class ModelAccess(models.Model):
-#     name = models.CharField(null=False)
-#     active = models.BooleanField(default=True)
-#     model = models.ForeignKey('content.type', on_delete=models.CASCADE, null=False)
-#     group = models.ForeignKey('auth.group', on_delete=models.CASCADE)
-#     perm_read = models.BooleanField(default=True)
-#     perm_change = models.BooleanField()
-#     perm_create = models.BooleanField()
-#     perm_delete = models.BooleanField()
-#     perm_full = models.BooleanField()
-#
-#     class Meta:
-#         name = 'auth.model.access'
-#
-#     @classmethod
-#     def has_permission(cls, model, operation, user=None):
-#         if user is None:
-#             if g.user_id == SUPERUSER or g.user.is_superuser:
-#                 return True
-#             user = g.user_id
-#         return True
-#         args = []
-#         if operation == 'read':
-#             args.append(cls.c.perm_read == True)
-#         elif operation == 'create':
-#             args.append(cls.c.perm_create == True)
-#         elif operation == 'change':
-#             args.append(cls.c.perm_change == True)
-#         elif operation == 'delete':
-#             args.append(cls.c.perm_delete == True)
-#         else:
-#             args.append(cls.c.perm_full == True)
-#         User = app['auth.user']
-#         Model = app['content.type']
-#         Group = app['auth.group']
-#         # qs = session.query(cls.c.pk).join(Model).outerjoin(Group).filter(
-#         #     Model.c.name == model, cls.c.active == True, *args
-#         # )
-#         return bool(len(qs))
+from ...admin.models import ActionGroups
 
 
 class User(AbstractUser, Partner):
@@ -253,3 +213,14 @@ class UserCompanies(models.Model):
     class Meta:
         name = 'auth.user.companies.rel'
         unique_together = ('user', 'company')
+
+
+class _Group(Group, helper=True):
+    actions = models.OneToManyField('ui.action.groups.rel', label=_('Actions'))
+
+    # @api.classmethod
+    # def api_get(cls, request: HttpRequest, super_, id, fields=None):
+    #     res = super_.api_get(cls, request, id, fields)
+    #     res['data']['permissions'] = {p.permission_id: p.allow for p in GroupPermissions.objects.filter(group_id=id)}
+    #     res['data']['actions'] = {a.action_id: a.allow for a in ActionGroups.objects.filter(group_id=id)}
+    #     return res
