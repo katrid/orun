@@ -601,6 +601,26 @@ declare namespace Katrid.Actions.Portlets {
     let registry: any;
 }
 declare namespace katrid.admin {
+    class ActionPermissionsWidget {
+        el: HTMLElement;
+        model: string;
+        permissions: string[];
+        treeView: katrid.ui.TreeView;
+        actions: Map<number, katrid.ui.TreeNode>;
+        allowByDefault: boolean;
+        onDidChange: () => void;
+        private _loading;
+        protected _allowed: Map<number, boolean>;
+        constructor(el: HTMLElement);
+        get allowed(): Map<number, boolean>;
+        create(): void;
+        load(): Promise<void>;
+        protected _permChange(node: katrid.ui.TreeNode): void;
+        loadGroup(group: string): Promise<void>;
+        loadPerms(idList: Record<number, boolean>): void;
+    }
+}
+declare namespace katrid.admin {
     class Messages {
         static message(info: any): void;
     }
@@ -2771,6 +2791,7 @@ declare namespace Katrid.Services {
         groupBy(grouping: any, params: any): any;
         autoReport(): Promise<unknown>;
         rpc(meth: any, args?: any, kwargs?: any): Promise<unknown>;
+        call(meth: string, kwargs: any, params?: any): Promise<unknown>;
     }
     export class Query extends ModelService {
         id?: number | string;

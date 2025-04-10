@@ -12012,6 +12012,7 @@ input[type=number].form-control, input[type=TIME].form-control {
 .nav-tabs .nav-link {
   background-color: #f7f7ff;
   border: 1px solid #eeeeee;
+  padding: 6px 10px;
 }
 
 .navbar {
@@ -12742,11 +12743,6 @@ label.radio > i:after {
   display: inline-block;
 }
 
-.data-heading h4, .data-heading .h4, .data-heading ol.breadcrumb {
-  padding: 0;
-  margin: 0;
-}
-
 .data-heading .help-block {
   margin-top: 0;
   margin-bottom: 4px;
@@ -12792,22 +12788,18 @@ label.radio > i:after {
 .katrid-app .content-container-heading:empty {
   display: none;
 }
-
-.data-panel h1, .data-panel .h1 {
+.katrid-app .data-panel h1, .katrid-app .data-panel .h1 {
   padding-bottom: 16px;
 }
-
-.panel-body.no-padding > .dataTables_wrapper .dataTables_length,
-.panel-body.no-padding > .dataTables_wrapper .dataTables_info,
-.panel-body.no-padding > .dataTables_wrapper .dataTables_filter {
+.katrid-app .panel-body.no-padding > .dataTables_wrapper .dataTables_length,
+.katrid-app .panel-body.no-padding > .dataTables_wrapper .dataTables_info,
+.katrid-app .panel-body.no-padding > .dataTables_wrapper .dataTables_filter {
   margin: 10px 15px 9px 15px;
 }
-
-.panel-body.no-padding > .dataTables_wrapper .dataTables_filter label input {
+.katrid-app .panel-body.no-padding > .dataTables_wrapper .dataTables_filter label input {
   margin-left: 6px;
 }
-
-.search-area .search-view {
+.katrid-app .search-area .search-view {
   background: #ffffff;
   padding: 2px 25px 3px 4px;
   border: 1px solid #cccccc;
@@ -12824,7 +12816,7 @@ label.radio > i:after {
   position: relative;
   margin-bottom: 10px;
 }
-.search-area .search-view .search-view-more {
+.katrid-app .search-area .search-view .search-view-more {
   font-size: 16px;
   cursor: pointer;
   position: absolute;
@@ -12833,7 +12825,7 @@ label.radio > i:after {
   left: auto;
   bottom: auto;
 }
-.search-area .search-view .search-view-input {
+.katrid-app .search-area .search-view .search-view-input {
   border: none;
   padding: 0 0 0 4px;
   width: 100px;
@@ -12845,7 +12837,7 @@ label.radio > i:after {
   outline: none;
   display: block;
 }
-.search-area .facet-view {
+.katrid-app .search-area .facet-view {
   border: 1px solid #777777;
   background: #e9e9f1;
   display: -ms-flexbox;
@@ -12861,10 +12853,10 @@ label.radio > i:after {
   flex: 0 0 auto;
   max-width: 100%;
 }
-.search-area .facet-view .facet-values-separator {
+.katrid-app .search-area .facet-view .facet-values-separator {
   font-style: italic;
 }
-.search-area .facet-view .facet-label {
+.katrid-app .search-area .facet-view .facet-label {
   background-color: #777777;
   -ms-flex: 0 0 auto;
   -webkit-box-flex: 0;
@@ -12886,10 +12878,10 @@ label.radio > i:after {
   -webkit-align-items: center;
   align-items: center;
 }
-.search-area .facet-view .facet-value {
+.katrid-app .search-area .facet-view .facet-value {
   padding: 0 18px 0 6px;
 }
-.search-area .facet-view .facet-remove {
+.katrid-app .search-area .facet-view .facet-remove {
   cursor: pointer;
   color: #777777;
   -ms-flex: 0 0 auto;
@@ -12912,16 +12904,16 @@ label.radio > i:after {
   right: 0;
   width: 18px;
 }
-.search-area .facet-view .facet-remove:hover {
+.katrid-app .search-area .facet-view .facet-remove:hover {
   color: #555555;
 }
-.search-area .search-view-menu li {
+.katrid-app .search-area .search-view-menu li {
   position: relative;
 }
-.search-area .search-view-menu li .indent {
+.katrid-app .search-area .search-view-menu li .indent {
   padding-left: 40px;
 }
-.search-area .search-view-menu li .expandable {
+.katrid-app .search-area .search-view-menu li .expandable {
   position: absolute;
   top: auto;
   left: 6px;
@@ -12929,7 +12921,7 @@ label.radio > i:after {
   right: auto;
   padding: 3px 5px;
 }
-.search-area .search-view-menu li .expanded {
+.katrid-app .search-area .search-view-menu li .expanded {
   position: absolute;
   top: auto;
   left: 6px;
@@ -12937,25 +12929,21 @@ label.radio > i:after {
   right: auto;
   padding: 3px;
 }
-
-.comments {
+.katrid-app .comments {
   background-color: #ffffff;
   padding: 5px 16px 20px 15px;
 }
-.comments h3, .comments .h3 {
+.katrid-app .comments h3, .katrid-app .comments .h3 {
   font-size: 16px;
   text-align: center;
 }
-
-.table thead {
+.katrid-app .table thead {
   background-color: #f8f9fa;
 }
-
-.box-shadow {
+.katrid-app .box-shadow {
   box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.05);
 }
-
-.box-fullscreen {
+.katrid-app .box-fullscreen {
   display: block;
   z-index: 9999;
   position: fixed !important;
@@ -12967,25 +12955,30 @@ label.radio > i:after {
   bottom: 0;
   overflow: auto;
 }
-
-.form-sheet {
+.katrid-app .form-sheet {
   position: relative;
 }
-.form-sheet .maximize-button {
+.katrid-app .form-sheet .maximize-button {
   position: absolute;
   right: 8px;
   top: 4px;
   color: #3c3c3c;
   cursor: pointer;
 }
-
-.dropdown-search-item .expandable {
+.katrid-app .dropdown-search-item .expandable {
   position: absolute;
   top: auto;
   left: 6px;
   bottom: auto;
   right: auto;
   padding: 3px 5px;
+}
+.katrid-app .data-heading h4, .katrid-app .data-heading .h4 {
+  padding: 0;
+  margin: 0;
+}
+.katrid-app .data-heading .breadcrumb-nav {
+  margin-bottom: 4px;
 }
 
 .dashboard-panel h1, .dashboard-panel .h1, .dashboard-panel h2, .dashboard-panel .h2 {
@@ -13308,9 +13301,9 @@ h3.popover-title, .popover-title.h3 {
   flex: 1;
 }
 .katrid-app dialog.dialog .dialog-header {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 400;
-  margin: 8px 0;
+  margin: 0 0 10px 0;
   flex: 0;
 }
 .katrid-app dialog.dialog .dialog-footer {

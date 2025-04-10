@@ -1923,6 +1923,81 @@ var katrid;
 (function (katrid) {
     var admin;
     (function (admin) {
+        class ActionPermissionsWidget {
+            constructor(el) {
+                this.el = el;
+                this.allowByDefault = false;
+                this._loading = false;
+                this.create();
+            }
+            get allowed() {
+                return this._allowed;
+            }
+            create() {
+                const tv = this.el.appendChild(document.createElement('div'));
+                this.treeView = new katrid.ui.TreeView(tv);
+                this.treeView.el.classList.add('action-permissions');
+            }
+            async load() {
+                this.actions = new Map();
+                try {
+                    this._loading = true;
+                    const svc = new Katrid.Services.ModelService('auth.permission');
+                    const params = {};
+                    if (this.model)
+                        params['model'] = this.model;
+                    let res = await svc.call('admin.list_actions', null, params);
+                    const perms = Object.groupBy(res.actions, ({ model }) => model);
+                    for (const model of res.models.sort((a, b) => a.name.localeCompare(b.name))) {
+                        if (!perms[model.id])
+                            continue;
+                        const modelNode = this.treeView.addItem(model.name + ' (' + model.label + ')', null, { checkbox: true });
+                        modelNode.data = model;
+                        for (const perm of perms[model.id]) {
+                            const item = this.treeView.addItem(perm.name, modelNode, { checkbox: true, onCheckChange: (evt) => this._permChange(evt) });
+                            item.data = perm;
+                            this.permNodes.set(perm.id.toString(), item);
+                        }
+                    }
+                }
+                finally {
+                    this._loading = false;
+                }
+            }
+            _permChange(node) {
+                if (!this._loading) {
+                    this._allowed[node.data.id] = node.checked;
+                    if (this.onDidChange)
+                        this.onDidChange();
+                }
+            }
+            async loadGroup(group) {
+            }
+            loadPerms(idList) {
+                try {
+                    this._loading = true;
+                    this._allowed = new Map();
+                    if (this.allowByDefault)
+                        for (const item of this.treeView.nodes)
+                            item.checked = true;
+                    if (idList)
+                        for (const [k, v] of Object.entries(idList)) {
+                            const n = this.permNodes.get(k);
+                            n.checked = v;
+                        }
+                }
+                finally {
+                    this._loading = false;
+                }
+            }
+        }
+        admin.ActionPermissionsWidget = ActionPermissionsWidget;
+    })(admin = katrid.admin || (katrid.admin = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var admin;
+    (function (admin) {
         class Messages {
             static message(info) {
                 switch (info.type) {
@@ -3220,8 +3295,12 @@ var Katrid;
                 if (type === 'object') {
                     let sendFile = $btn.attr('send-file');
                     $btn.attr('button-object', $btn.attr('name'));
+                    const confirmation = $btn.attr('confirmation');
+                    let onclick = `actionClick(selection, '${$btn.attr('name')}', $event)`;
+                    if (confirmation)
+                        onclick = `confirm('${confirmation}') && ` + onclick;
                     if (sendFile === undefined) {
-                        $btn.attr('v-on:click', `actionClick(selection, '${$btn.attr('name')}', $event)`);
+                        $btn.attr('v-on:click', onclick);
                     }
                     else {
                         let idSendFile = `__send_file_${++sendFileCounter}`;
@@ -8940,20 +9019,22 @@ ${Katrid.i18n.gettext('Delete')}
             async ready() {
                 if (this.action?.params)
                     this.onHashChange(this.action.params);
-                const onCtxMenu = (event) => {
-                    const target = event.target;
-                    if ((target.tagName === 'SECTION') || (target.tagName === 'LABEL')) {
-                        event.preventDefault();
-                        const menu = new katrid.ui.ContextMenu();
-                        menu.add(katrid.i18n.gettext('User Defined Value'), () => {
-                            katrid.admin.UserDefinedValue.showDialog();
-                        });
-                        menu.show(event.clientX, event.clientY);
-                    }
-                };
-                this.element.querySelectorAll('section').forEach((section) => {
-                    section.addEventListener('contextmenu', onCtxMenu);
-                });
+                if (Katrid.webApp.userInfo.superuser) {
+                    const onCtxMenu = (event) => {
+                        const target = event.target;
+                        if ((target.tagName === 'SECTION') || (target.tagName === 'LABEL')) {
+                            event.preventDefault();
+                            const menu = new katrid.ui.ContextMenu();
+                            menu.add(katrid.i18n.gettext('User Defined Value'), () => {
+                                katrid.admin.UserDefinedValue.showDialog();
+                            });
+                            menu.show(event.clientX, event.clientY);
+                        }
+                    };
+                    this.element.querySelectorAll('section').forEach((section) => {
+                        section.addEventListener('contextmenu', onCtxMenu);
+                    });
+                }
             }
             async onHashChange(params) {
                 let id = params.id;
@@ -14231,6 +14312,28 @@ var Katrid;
             rpc(meth, args, kwargs) {
                 return new Promise((resolve, reject) => {
                     this.post(meth, { args: args, kwargs: kwargs })
+                        .then((res) => {
+                        resolve(res);
+                    })
+                        .catch(res => {
+                        if (res?.error && (typeof res.error === 'string'))
+                            Katrid.Forms.Dialogs.Alerts.error(res.error);
+                        else if (res.messages && Katrid.isObject(res.messages)) {
+                            for (let msg of Object.values(res.messages))
+                                if (typeof msg === 'string')
+                                    Katrid.Forms.Dialogs.Alerts.error(msg);
+                                else if (msg instanceof Array)
+                                    Katrid.Forms.Dialogs.Alerts.error(msg.join('\n'));
+                        }
+                        else
+                            Katrid.Forms.Dialogs.Alerts.error(res.message);
+                        reject(res);
+                    });
+                });
+            }
+            call(meth, kwargs, params) {
+                return new Promise((resolve, reject) => {
+                    this.post(meth, { kwargs: kwargs })
                         .then((res) => {
                         resolve(res);
                     })

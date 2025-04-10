@@ -9,7 +9,6 @@ from orun.utils.module_loading import import_string
 from orun.http import HttpRequest
 
 from orun.contrib.contenttypes.models import ContentType, ref
-#from ..fields import GenericForeignKey
 
 
 class Action(models.Model):
@@ -18,7 +17,7 @@ class Action(models.Model):
     usage = models.TextField(label=_('Usage'))
     description = models.TextField(label=_('Description'))
     # external_id = models.CharField(label=_('External ID'), getter='get_external_id')
-    groups = models.ManyToManyField('auth.group')
+    groups = models.OneToManyField('ui.action.groups.rel')
     binding_model = models.ForeignKey('content.type', on_delete=models.CASCADE)
     binding_type = models.SelectionField(
         (
@@ -69,6 +68,16 @@ class Action(models.Model):
 
     def _get_info(self, request, context):
         return self.to_dict(exclude=['groups'])
+
+
+class ActionGroups(models.Model):
+    action = models.ForeignKey(Action, null=False, on_delete=models.DB_CASCADE)  # permissions must be removed by cascade
+    group = models.ForeignKey('auth.group', null=False, on_delete=models.DB_CASCADE)
+    allow = models.BooleanField(default=True, label=_('Allow'))
+
+    class Meta:
+        name = 'ui.action.groups.rel'
+        unique_together = ('action', 'group')
 
 
 class WindowAction(Action):
