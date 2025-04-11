@@ -341,3 +341,9 @@ msgstr "selecionado"
 
 msgid "Save as draft"
 msgstr "Salvar como rascunho"
+
+msgid "Permissions"
+msgstr "Permissões"
+
+msgid "Query Viewer"
+msgstr "Visualizador de Consultas"

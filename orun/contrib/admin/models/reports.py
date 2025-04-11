@@ -61,6 +61,26 @@ class ReportCategoryGroups(models.Model):
 
     class Meta:
         name = 'ui.action.report.category.groups'
+        unique_together = ('category', 'group')
+
+    @classmethod
+    def get_user_perms(cls, user):
+        groups =  {g.pk: g.allow_by_default for g in user.groups.filter(active=True)}
+        cats = ReportCategory.objects.values('id', 'name')
+        cats_id = {c['id']: {g for g, v in groups.items() if v} for c in cats}
+        perms = [
+            {
+                'group_id': g.group_id, 'category_id': g.category_id, 'allow': g.allow,
+            }
+            for g in cls.objects.only('group_id').filter(group_id__in=list(groups.keys()), group__active=True)
+        ]
+        for g in cls.objects.only('group_id', 'allow').filter(group_id__in=list(groups.keys()), group__active=True):
+            if g.allow:
+                cats_id[g.category_id].add(g.group_id)
+            else:
+                cats_id[g.category_id].discard(g.group_id)
+        cats_is = [k for k, v in cats_id.items() if v]
+        return cats_is
 
 
 class ReportAction(Action):
@@ -336,7 +356,13 @@ class ReportAction(Action):
         return info
 
     @api.classmethod
-    def list_all(cls):
+    def list_all(cls, request: HttpRequest):
+        user = request.user
+        qs = cls.objects.all()
+        if not user.is_superuser:
+            # apply permissions
+            categories = ReportCategoryGroups.get_user_perms(user)
+            qs = qs.filter(category_id__in=categories)
         return {
             'data': [
                 {
@@ -347,7 +373,7 @@ class ReportAction(Action):
                     # 'params': q.params,
                 }
                 # todo check permission
-                for q in cls.objects.all()
+                for q in qs
             ]
         }
 

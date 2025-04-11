@@ -4394,6 +4394,8 @@ var Katrid;
                     const treeView = new katrid.ui.TreeView(this.el.querySelector('#report-explorer'));
                     const categories = Object.groupBy(res.data, ({ category_id }) => category_id);
                     const catCtxMenu = (node, evt) => {
+                        if (!Katrid.webApp.userInfo.superuser)
+                            return;
                         if (!node.data?.id)
                             return;
                         const menu = new katrid.ui.ContextMenu();
@@ -4408,6 +4410,8 @@ var Katrid;
                         menu.show(evt.clientX, evt.clientY);
                     };
                     const repCtxMenu = (node, evt) => {
+                        if (!Katrid.webApp.userInfo.superuser)
+                            return;
                         const menu = new katrid.ui.ContextMenu();
                         menu.add(katrid.i18n.gettext('Permissions'), async () => {
                             const repMdel = new Katrid.Services.ModelService('ui.action.report');
