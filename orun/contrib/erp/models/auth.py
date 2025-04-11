@@ -224,3 +224,8 @@ class _Group(Group, helper=True):
     #     res['data']['permissions'] = {p.permission_id: p.allow for p in GroupPermissions.objects.filter(group_id=id)}
     #     res['data']['actions'] = {a.action_id: a.allow for a in ActionGroups.objects.filter(group_id=id)}
     #     return res
+
+    @api.classmethod
+    def admin_list_groups(cls, request: HttpRequest):
+        return [{'id': g.pk, 'name': g.name} for g in Group.objects.filter(active=True)]
+

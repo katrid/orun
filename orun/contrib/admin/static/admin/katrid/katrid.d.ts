@@ -626,6 +626,20 @@ declare namespace katrid.admin {
     }
 }
 declare namespace katrid.admin {
+    class GroupsPermissionWidget {
+        el: Element;
+        treeView: katrid.ui.TreeView;
+        groups: Map<string, katrid.ui.TreeNode>;
+        private _loading;
+        constructor(el: Element);
+        create(): void;
+        load(): Promise<void>;
+        setPerms(groups: Record<number, boolean>): void;
+        getPerms(): number[];
+        static showDialog(groups: Record<number, boolean>): Promise<any>;
+    }
+}
+declare namespace katrid.admin {
     class ModelPermissionsWidget {
         el: HTMLElement;
         model: string;

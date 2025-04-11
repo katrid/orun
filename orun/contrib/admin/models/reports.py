@@ -19,6 +19,7 @@ from orun.db import models, connection
 from orun.template import loader
 from orun.utils.translation import gettext_lazy as _
 from orun.utils.module_loading import import_string
+from orun.contrib.auth.models import Group
 from .action import Action
 
 try:
@@ -30,9 +31,36 @@ except:
 
 class ReportCategory(models.Model):
     name = models.CharField(128, translate=True)
+    groups = models.OneToManyField('ui.action.report.category.groups')
 
     class Meta:
         name = 'ui.action.report.category'
+
+    @api.classmethod
+    def admin_get_groups(cls, category_id):
+        groups = {g.pk: g.allow_by_default for g in Group.objects.only('pk', 'allow_by_default').filter(active=True)}
+        groups.update({g.group_id: g.allow for g in ReportCategoryGroups.objects.only('group_id').filter(category_id=category_id)})
+        return groups
+
+    @api.classmethod
+    def admin_set_groups(cls, category_id, groups: dict):
+        ReportCategoryGroups.objects.filter(category_id=category_id).delete()
+        ReportCategoryGroups.objects.bulk_create([
+            ReportCategoryGroups(category_id=category_id, group_id=g, allow=v)
+            for g, v in groups.items()
+        ])
+        return {
+            'message': _('Permissions updated'),
+        }
+
+
+class ReportCategoryGroups(models.Model):
+    category = models.ForeignKey(ReportCategory, null=False, on_delete=models.DB_CASCADE)
+    group = models.ForeignKey('auth.group', null=False, on_update=models.DB_CASCADE)
+    allow = models.BooleanField(default=True)
+
+    class Meta:
+        name = 'ui.action.report.category.groups'
 
 
 class ReportAction(Action):
@@ -313,6 +341,7 @@ class ReportAction(Action):
             'data': [
                 {
                     'id': q.pk,
+                    'category_id': q.category_id,
                     'category': str(q.category) if q.category else 'Uncategorized',
                     'name': q.name + ' (User Report)' if q.owner_type == 'user' else q.name,
                     # 'params': q.params,

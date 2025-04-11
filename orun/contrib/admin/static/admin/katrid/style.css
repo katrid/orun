@@ -13303,8 +13303,10 @@ h3.popover-title, .popover-title.h3 {
 .katrid-app dialog.dialog .dialog-header {
   font-size: 1rem;
   font-weight: 400;
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
+  padding-bottom: 6px;
   flex: 0;
+  border-bottom: 1px solid #e9ecef;
 }
 .katrid-app dialog.dialog .dialog-footer {
   margin-top: 10px;
@@ -14872,24 +14874,28 @@ dashboard-view {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-query-viewer {
+.query-viewer {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
+  align-items: stretch;
   background-color: #ffffff;
   overflow: hidden;
 }
-query-viewer .query-view {
+.query-viewer #report-explorer {
+  overflow: auto !important;
+}
+.query-viewer .query-view {
   display: flex;
   flex-direction: row;
 }
-query-viewer .query-view .table-responsive {
+.query-viewer .query-view .table-responsive {
   flex: 1 1 500px;
 }
-query-viewer #select-query {
+.query-viewer #select-query {
   margin-bottom: 20px;
 }
-query-viewer .table {
+.query-viewer .table {
   margin-top: 16px;
 }
 
@@ -15510,6 +15516,7 @@ page[size=A4] {
   cursor: pointer;
   padding: 3px 8px 3px 15px;
   height: 25px;
+  white-space: nowrap;
 }
 .tree-view .tree-node .tree-item .checkbox {
   margin-right: 5px;

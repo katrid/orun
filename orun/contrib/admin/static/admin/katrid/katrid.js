@@ -1946,7 +1946,7 @@ var katrid;
                     const params = {};
                     if (this.model)
                         params['model'] = this.model;
-                    let res = await svc.call('admin.list_actions', null, params);
+                    let res = await svc.call('admin.list_actions', params);
                     const perms = Object.groupBy(res.actions, ({ model }) => model);
                     for (const model of res.models.sort((a, b) => a.name.localeCompare(b.name))) {
                         if (!perms[model.id])
@@ -2020,6 +2020,66 @@ var katrid;
             }
         }
         admin.Messages = Messages;
+    })(admin = katrid.admin || (katrid.admin = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var admin;
+    (function (admin) {
+        class GroupsPermissionWidget {
+            constructor(el) {
+                this.el = el;
+                this._loading = false;
+                this.create();
+            }
+            create() {
+                const tv = this.el.appendChild(document.createElement('div'));
+                this.treeView = new katrid.ui.TreeView(tv);
+                this.treeView.el.classList.add('groups-permissions');
+            }
+            async load() {
+                this.groups = new Map();
+                try {
+                    this._loading = true;
+                    const svc = new Katrid.Services.ModelService('auth.group');
+                    const params = {};
+                    let res = await svc.call('admin_list_groups', params);
+                    for (const group of res.sort((a, b) => a.name.localeCompare(b.name))) {
+                        const groupNode = this.treeView.addItem(group.name, null, { checkbox: true });
+                        groupNode.data = group;
+                        this.groups.set(group.id.toString(), groupNode);
+                    }
+                }
+                finally {
+                    this._loading = false;
+                }
+            }
+            setPerms(groups) {
+                for (const [group, checked] of Object.entries(groups)) {
+                    const node = this.groups.get(group);
+                    if (node)
+                        node.checked = checked;
+                }
+            }
+            getPerms() {
+                let res = {};
+                for (const group of this.groups.values())
+                    res[group.data.id] = group.checked;
+                return res;
+            }
+            static async showDialog(groups) {
+                const dlg = new katrid.ui.Dialog({ title: katrid.i18n.gettext('Groups'), buttons: ['ok', 'cancel'] });
+                dlg.dialog.classList.add('dialog-lg');
+                const el = dlg.dialog.querySelector('.dialog-body');
+                const widget = new GroupsPermissionWidget(el);
+                await widget.load();
+                if (groups)
+                    widget.setPerms(groups);
+                if ((await dlg.showModal()) === 'ok')
+                    return widget.getPerms();
+            }
+        }
+        admin.GroupsPermissionWidget = GroupsPermissionWidget;
     })(admin = katrid.admin || (katrid.admin = {}));
 })(katrid || (katrid = {}));
 var katrid;
@@ -4296,10 +4356,13 @@ var Katrid;
             create() {
                 this.el.className = 'query-viewer';
                 this.el.innerHTML = `
-        <div class="col-12 px-2"><h4 class="text-muted">Visualizador de Consultas</h4></div>
-        <div class="row px-3">
-          <div class="col-2 overflow-auto" id="query-viewer-treeview" style="max-height: 85vh"></div>
-          <div class="col-10 query-view card shadow flex-column overflow-auto" style="max-height: 85vh"></div>
+        <div>
+        <h4 class="text-muted">${katrid.i18n.gettext('Query Viewer')}</h4></div>
+        <div class="d-flex flex-row flex-grow-1">
+          <div class="position-relative" style="flex: 0 0 250px">
+          <div id="report-explorer" class="position-absolute" style="left:0;top:0;right:0;bottom:0;width: 250px"></div>
+          </div>
+          <div class="query-view card flex-grow-1"></div>
         </div>
       `;
                 this.load();
@@ -4329,8 +4392,43 @@ var Katrid;
                             }
                         };
                     }
-                    let treeView = new Katrid.WebComponent.TreeView(res.data, 'query-viewer-treeview');
-                    await treeView.makeTreeView();
+                    const treeView = new katrid.ui.TreeView(this.el.querySelector('#report-explorer'));
+                    const categories = Object.groupBy(res.data, ({ category_id }) => category_id);
+                    const catCtxMenu = (node, evt) => {
+                        if (!node.data?.id)
+                            return;
+                        const menu = new katrid.ui.ContextMenu();
+                        menu.add(katrid.i18n.gettext('Permissions'), async () => {
+                            const catModel = new Katrid.Services.ModelService('ui.action.report.category');
+                            let res = await catModel.call('admin_get_groups', { category_id: node.data.id });
+                            if (!res)
+                                res = {};
+                            const selGroups = await katrid.admin.GroupsPermissionWidget.showDialog(res);
+                            if (selGroups) {
+                                let res = await catModel.call('admin_set_groups', { category_id: node.data.id, groups: selGroups });
+                                console.debug(res);
+                            }
+                        });
+                        menu.show(evt.clientX, evt.clientY);
+                    };
+                    const repCtxMenu = (node, evt) => {
+                        const menu = new katrid.ui.ContextMenu();
+                        menu.add(katrid.i18n.gettext('Permissions'));
+                        menu.show(evt.clientX, evt.clientY);
+                    };
+                    const repClick = (node) => {
+                        node.data.onclick();
+                    };
+                    for (const id of Object.keys(categories).sort((a, b) => a.localeCompare(b))) {
+                        let catNode;
+                        for (const item of categories[id]) {
+                            if (!catNode) {
+                                catNode = treeView.addItem(item.category, null, { onContextMenu: catCtxMenu });
+                                catNode.data = { id: item.category_id, name: item.category };
+                            }
+                            treeView.addItem(item.name, catNode, { onContextMenu: repCtxMenu, onSelect: repClick }).data = item;
+                        }
+                    }
                 }
             }
             createParamsPanel(params) {
@@ -14336,7 +14434,7 @@ var Katrid;
             }
             call(meth, kwargs, params) {
                 return new Promise((resolve, reject) => {
-                    this.post(meth, { kwargs: kwargs })
+                    this.post(meth, { kwargs }, params)
                         .then((res) => {
                         resolve(res);
                     })
