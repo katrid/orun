@@ -14885,9 +14885,13 @@ dashboard-view {
 .query-viewer #report-explorer {
   overflow: auto !important;
 }
-.query-viewer .query-view {
-  display: flex;
-  flex-direction: row;
+.query-viewer .header {
+  padding: 0 8px 4px 8px;
+  border-bottom: 1px solid #e5e5e5;
+}
+.query-viewer .query-view h4, .query-viewer .query-view .h4 {
+  border-bottom: 1px solid #e5e5e5;
+  padding-bottom: 8px;
 }
 .query-viewer .query-view .table-responsive {
   flex: 1 1 500px;

@@ -4356,8 +4356,8 @@ var Katrid;
             create() {
                 this.el.className = 'query-viewer';
                 this.el.innerHTML = `
-        <div>
-        <h4 class="text-muted">${katrid.i18n.gettext('Query Viewer')}</h4></div>
+        <div class="header">
+          <h4 class="text-muted">${katrid.i18n.gettext('Query Viewer')}</h4></div>
         <div class="d-flex flex-row flex-grow-1">
           <div class="position-relative" style="flex: 0 0 250px">
           <div id="report-explorer" class="position-absolute" style="left:0;top:0;right:0;bottom:0;width: 250px"></div>
@@ -4381,9 +4381,8 @@ var Katrid;
                             let fields = res.fields;
                             const params = res.params;
                             this.params = null;
-                            if (params) {
+                            if (params)
                                 this.createParamsPanel(params);
-                            }
                             if (fields)
                                 this.createQueryView(fields, res.data).ready();
                             else if (res.type === "query") {
