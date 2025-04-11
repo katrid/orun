@@ -4400,19 +4400,23 @@ var Katrid;
                         menu.add(katrid.i18n.gettext('Permissions'), async () => {
                             const catModel = new Katrid.Services.ModelService('ui.action.report.category');
                             let res = await catModel.call('admin_get_groups', { category_id: node.data.id });
-                            if (!res)
-                                res = {};
                             const selGroups = await katrid.admin.GroupsPermissionWidget.showDialog(res);
                             if (selGroups) {
-                                let res = await catModel.call('admin_set_groups', { category_id: node.data.id, groups: selGroups });
-                                console.debug(res);
+                                res = await catModel.call('admin_set_groups', { category_id: node.data.id, groups: selGroups });
                             }
                         });
                         menu.show(evt.clientX, evt.clientY);
                     };
                     const repCtxMenu = (node, evt) => {
                         const menu = new katrid.ui.ContextMenu();
-                        menu.add(katrid.i18n.gettext('Permissions'));
+                        menu.add(katrid.i18n.gettext('Permissions'), async () => {
+                            const repMdel = new Katrid.Services.ModelService('ui.action.report');
+                            let res = await repMdel.call('admin_get_groups', { action_id: node.data.id });
+                            const selGroups = await katrid.admin.GroupsPermissionWidget.showDialog(res);
+                            if (selGroups) {
+                                res = await repMdel.call('admin_set_groups', { action_id: node.data.id, groups: selGroups });
+                            }
+                        });
                         menu.show(evt.clientX, evt.clientY);
                     };
                     const repClick = (node) => {

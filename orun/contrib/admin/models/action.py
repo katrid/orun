@@ -8,6 +8,7 @@ from orun.utils.translation import gettext_lazy as _
 from orun.utils.module_loading import import_string
 from orun.http import HttpRequest
 
+from orun.contrib.auth.models import Group
 from orun.contrib.contenttypes.models import ContentType, ref
 
 
@@ -68,6 +69,23 @@ class Action(models.Model):
 
     def _get_info(self, request, context):
         return self.to_dict(exclude=['groups'])
+
+    @api.classmethod
+    def admin_get_groups(cls, request: HttpRequest, action_id):
+        groups = {g.pk: g.allow_by_default for g in Group.objects.only('pk', 'allow_by_default').filter(active=True)}
+        groups.update({g.group_id: g.allow for g in ActionGroups.objects.only('group_id').filter(action_id=action_id)})
+        return groups
+
+    @api.classmethod
+    def admin_set_groups(cls, request: HttpRequest, action_id, groups: dict):
+        ActionGroups.objects.filter(action_id=action_id).delete()
+        ActionGroups.objects.bulk_create([
+            ActionGroups(action_id=action_id, group_id=g, allow=v)
+            for g, v in groups.items()
+        ])
+        return {
+            'message': _('Permissions updated'),
+        }
 
 
 class ActionGroups(models.Model):
