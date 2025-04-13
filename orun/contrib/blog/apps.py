@@ -8,6 +8,6 @@ class BlogConfig(AppConfig):
     name = 'orun.contrib.blog'
     verbose_name = 'Blog'
     fixtures = [
-        'blog.admin',
+        'orun.contrib.blog.admin',
     ]
     dependencies = ['orun.contrib.auth']
