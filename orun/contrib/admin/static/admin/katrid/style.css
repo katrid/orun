@@ -11927,10 +11927,6 @@ a.dropdown-item {
   color: #212529;
 }
 
-.breadcrumb {
-  font-size: 16px;
-}
-
 #page-content {
   display: flex;
   flex-direction: column;
@@ -12302,6 +12298,8 @@ a.user-dropdown {
   white-space: nowrap;
   overflow: hidden;
   flex: 1 1 auto;
+  border-radius: 0 0 4px 4px;
+  display: flex;
 }
 .app-header.navbar .navbar-search i.fa-search {
   color: #fff;
@@ -13664,6 +13662,28 @@ nav#header .nav-item .dropdown-menu {
   display: inline-block;
 }
 
+:root {
+  --soft-secondary: #f0f0f0;
+}
+
+.btn-soft-secondary {
+  background-color: #f7f7ff;
+  color: #616161;
+  border: 1px solid #e6d0fe;
+}
+
+.btn.btn-soft-secondary:hover, .btn.btn-soft-secondary:focus, .btn.btn-soft-secondary:focus-visible {
+  background-color: #eae4ff;
+  color: #525252;
+  border: 1px solid #dab7ff;
+}
+
+.btn.btn-soft-secondary:active {
+  background-color: #e0d6ff;
+  color: #525252;
+  border: 1px solid #dab7ff;
+}
+
 .radio-button {
   margin: 0;
 }
@@ -14493,9 +14513,6 @@ table-field .table tbody tr {
   width: 100%;
   font-family: monospace;
   padding: 4px 8px;
-}
-.katrid-app .breadcrumb li {
-  font-size: 16px;
 }
 .katrid-app .content-scroll > .content {
   padding-bottom: 30px;

@@ -1468,7 +1468,7 @@ declare namespace Katrid.Data {
         get fieldEl(): HTMLElement;
         set fieldEl(value: HTMLElement);
         protected setElement(value: HTMLElement): void;
-        formLabel(formEl: Element): HTMLLabelElement;
+        formLabel(fieldEl?: Element): HTMLLabelElement;
         tag: string;
         protected getControlId(): string;
         formControl(fieldEl?: Element): HTMLElement;
@@ -3080,7 +3080,7 @@ declare namespace Katrid.ui {
         private _additionalTip;
         private _popper;
         constructor(el: HTMLElement, config: any);
-        protected createElement(text: string): HTMLElement;
+        protected createElement(text: string): HTMLDivElement;
         show(text: string): void;
         hide(): void;
         loadAdditionalTip(): void;

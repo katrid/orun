@@ -1160,9 +1160,6 @@ table-field .table tbody tr {
   font-family: monospace;
   padding: 4px 8px;
 }
-.katrid-app .breadcrumb li {
-  font-size: 16px;
-}
 .katrid-app .content-scroll > .content {
   padding-bottom: 30px;
 }
