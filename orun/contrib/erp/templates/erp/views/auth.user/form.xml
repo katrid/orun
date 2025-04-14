@@ -7,7 +7,7 @@
   <field name="is_staff"/>
   <field name="is_superuser"/>
   <div class="col-3">
-    <button type="tag" class="btn btn-outline-secondary" name="auth.ChangePassword" target="new">{{ gettext('Change password') }}</button>
+    <button type="button" class="btn btn-outline-secondary" name="auth.ChangePassword" target="new">{{ gettext('Change password') }}</button>
   </div>
   <field name="user_action"/>
   <field name="date_joined"/>
