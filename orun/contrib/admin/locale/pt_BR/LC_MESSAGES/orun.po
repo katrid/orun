@@ -26,3 +26,9 @@ msgstr "Nova Senha"
 
 msgid "Confirm Password"
 msgstr "Confirmar Senha"
+
+msgid "User Report"
+msgstr "Relatório do Usuário"
+
+msgid "Uncategorized"
+msgstr "Sem Categoria"

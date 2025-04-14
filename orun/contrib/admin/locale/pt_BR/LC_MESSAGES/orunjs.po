@@ -347,3 +347,6 @@ msgstr "Permissões"
 
 msgid "Query Viewer"
 msgstr "Visualizador de Consultas"
+
+msgid "Support"
+msgstr "Suporte"

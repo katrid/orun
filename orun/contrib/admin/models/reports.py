@@ -17,7 +17,7 @@ from orun.conf import settings
 from orun.reports.runtime import PreparedReport
 from orun.db import models, connection
 from orun.template import loader
-from orun.utils.translation import gettext_lazy as _
+from orun.utils.translation import gettext_lazy as _, gettext
 from orun.utils.module_loading import import_string
 from orun.contrib.auth.models import Group
 from .action import Action
@@ -359,17 +359,18 @@ class ReportAction(Action):
     def list_all(cls, request: HttpRequest):
         user = request.user
         qs = cls.objects.all()
+        # TODO replace by a raw query
         if not user.is_superuser:
             # apply permissions
             categories = ReportCategoryGroups.get_user_perms(user)
-            qs = qs.filter(category_id__in=categories)
+            qs = qs.filter(models.Q(category_id__in=categories) | models.Q(category=None))
         return {
             'data': [
                 {
                     'id': q.pk,
                     'category_id': q.category_id,
-                    'category': str(q.category) if q.category else 'Uncategorized',
-                    'name': q.name + ' (User Report)' if q.owner_type == 'user' else q.name,
+                    'category': str(q.category) if q.category else gettext('Uncategorized'),
+                    'name': q.name + f' ({gettext("User Report")})' if q.owner_type == 'user' else q.name,
                     # 'params': q.params,
                 }
                 # todo check permission
