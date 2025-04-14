@@ -20,9 +20,10 @@ def static(prefix, view=serve, **kwargs):
     """
     if not prefix:
         raise ImproperlyConfigured("Empty static prefix not permitted")
-    elif not settings.DEBUG or urlsplit(prefix).netloc:
-        # No-op if not in debug mode or a non-local prefix.
-        return []
+    # elif not settings.DEBUG or urlsplit(prefix).netloc:
+    #     # No-op if not in debug mode or a non-local prefix.
+    #     return []
+    # TODO collect static files on deploy
     return [
         re_path(r'^%s(?P<path>.*)$' % re.escape(prefix.lstrip('/')), view, kwargs=kwargs),
     ]
