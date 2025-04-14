@@ -12,6 +12,7 @@ class Category(models.Model):
         name = 'blog.category'
         verbose_name = 'Category'
         verbose_name_plural = 'Categories'
+        name_field = 'name'
 
 
 class Post(models.Model):
@@ -25,3 +26,4 @@ class Post(models.Model):
 
     class Meta:
         name = 'blog.post'
+        name_field = 'name'
