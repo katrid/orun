@@ -3052,6 +3052,7 @@ declare namespace katrid.ui {
     export class Toolbar {
         container?: HTMLElement;
         el: HTMLElement;
+        static buttonClass: string;
         private _vertical;
         constructor(container?: HTMLElement);
         create(): void;

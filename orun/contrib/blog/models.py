@@ -17,7 +17,7 @@ class Category(models.Model):
 class Post(models.Model):
     category = models.ForeignKey(Category)
     title = models.CharField(null=False)
-    content = models.TextField()
+    content = models.TextField(trim=False)
     private = models.BooleanField(default=False)
     published = models.BooleanField(default=True)
     author = models.ForeignKey('auth.user')

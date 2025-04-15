@@ -15676,6 +15676,7 @@ var katrid;
     var ui;
     (function (ui) {
         class Toolbar {
+            static { this.buttonClass = 'btn btn-light tool-button'; }
             constructor(container) {
                 this.container = container;
                 this._vertical = false;
@@ -15691,7 +15692,7 @@ var katrid;
             addButton(text) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'btn btn-secondary tool-button';
+                btn.className = this.constructor['buttonClass'];
                 if (typeof text === 'string') {
                     btn.innerHTML = text;
                 }

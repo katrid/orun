@@ -9,12 +9,11 @@
   {% block fonts %}
   <link href="/static/admin/assets/css/fontawesome.css" rel="stylesheet">
   {% endblock %}
-  <!-- Katrid.js style -->
+  {# katrid.admin theme #}
   {% block css_theme %}<link href="/static/admin/katrid/style.css" rel="stylesheet">{% endblock %}
 
-  <!-- extra head -->
+  {# extra head #}
   {% block extra_head %}{% endblock %}
-  <!-- end extra head -->
 </head>
 <body class="{% block body_class %}{% endblock %}" {% block body_attrs %}{% endblock %}>
 
