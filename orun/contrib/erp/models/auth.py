@@ -136,7 +136,7 @@ class User(AbstractUser, Partner):
     def after_insert(self, modified_fields):
         super().after_insert(modified_fields)
         if self.user_company_id:
-            self.companies.add(self.user_company)
+            UserCompanies.objects.create(user=self, company=self.user_company)
 
     @api.classmethod
     def api_get_defaults(cls, request: HttpRequest, context=None, *args, **kwargs):
