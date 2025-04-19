@@ -350,3 +350,6 @@ msgstr "Visualizador de Consultas"
 
 msgid "Support"
 msgstr "Suporte"
+
+msgid "Open in new tab"
+msgstr "Abrir em nova aba"
