@@ -15493,19 +15493,36 @@ page[size=A4] {
   border-right: 1px solid #cccccc;
 }
 
-.help-center {
-  width: 400px;
-  padding: 10px;
-  position: relative;
-  background-color: white;
+.help-center-portal {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  align-items: stretch;
 }
-.help-center .help-center-content {
-  position: absolute;
-  top: 10px;
-  bottom: 10px;
-  right: 10px;
-  left: 10px;
-  overflow: auto;
+.help-center-portal .navbar {
+  padding: 10px;
+  background-color: #c0c0c0;
+}
+.help-center-portal .navbar h2, .help-center-portal .navbar .h2 {
+  margin: 0;
+}
+.help-center-portal .help-panel {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  flex: 1;
+}
+.help-center-portal .left-side {
+  width: 250px;
+  flex: 0 0 250px;
+  background-color: #f8f9fa;
+}
+.help-center-portal .content-panel {
+  flex: 1;
+  padding: 20px;
+}
+.help-center-portal .content-panel p img {
+  max-width: 100%;
 }
 
 .tree-view {
@@ -16253,6 +16270,38 @@ page[size=A4] {
 }
 .katrid-app .code-editor-widget .editor {
   height: 100%;
+}
+
+.help-center-portal {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  align-items: stretch;
+}
+.help-center-portal .navbar {
+  padding: 10px;
+  background-color: #c0c0c0;
+}
+.help-center-portal .navbar h2, .help-center-portal .navbar .h2 {
+  margin: 0;
+}
+.help-center-portal .help-panel {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  flex: 1;
+}
+.help-center-portal .left-side {
+  width: 250px;
+  flex: 0 0 250px;
+  background-color: #f8f9fa;
+}
+.help-center-portal .content-panel {
+  flex: 1;
+  padding: 20px;
+}
+.help-center-portal .content-panel p img {
+  max-width: 100%;
 }
 
 /*# sourceMappingURL=style.css.map */

@@ -2543,6 +2543,70 @@ var katrid;
         admin.UserPreferences = UserPreferences;
     })(admin = katrid.admin || (katrid.admin = {}));
 })(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var admin;
+    (function (admin) {
+        class HelpPortal {
+            constructor(el) {
+                this.el = el;
+                this.markdown = new showdown.Converter();
+                if (!el) {
+                    this.el = document.createElement('div');
+                    document.body.appendChild(this.el);
+                }
+                this.render();
+            }
+            render() {
+                this.el.classList.add('help-center-portal');
+                this.el.innerHTML = `
+      <div class="navbar">
+      <h2>Help Center</h2>
+      </div>
+      <div class="help-panel">
+        <div class="left-side"><div></div></div>
+        <div class="content-panel"></div>
+      </div>
+    `;
+                this.treeView = new katrid.ui.TreeView(this.el.querySelector('.left-side div'), { options: { onSelect: (node) => this.onSelect(node) } });
+                this.treeView.options.options.onSelect;
+                this.loadTOC();
+            }
+            onSelect(node) {
+                if (node.data) {
+                    if (node.data.index) {
+                        this.navigateTo(node.data.index);
+                    }
+                    else if (node.data.target) {
+                        this.navigateTo(node.data.target);
+                    }
+                }
+            }
+            async loadTOC() {
+                let res = await fetch('/admin/help-center/toc/')
+                    .then(res => res.json());
+                for (const toc of res.toc) {
+                    let node = this.treeView.addItem(toc.title);
+                    node.data = toc;
+                    this.loadChildren(node, toc.toc);
+                }
+            }
+            async navigateTo(url) {
+                let res = await fetch('/admin/help-center/get/?' + (new URLSearchParams({ 'content': url })).toString()).then(res => res.json());
+                if (res.content) {
+                    res = this.markdown.makeHtml(res.content);
+                    this.el.querySelector('.content-panel').innerHTML = res;
+                }
+            }
+            loadChildren(node, toc) {
+                for (const [k, v] of Object.entries(toc)) {
+                    node.addItem({ text: k, target: v });
+                }
+            }
+        }
+        admin.HelpPortal = HelpPortal;
+    })(admin = katrid.admin || (katrid.admin = {}));
+})(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
     var BI;
@@ -2738,6 +2802,7 @@ var Katrid;
             </a>
             <div class="dropdown-menu dropdown-menu-end">
               <a class="dropdown-item" id="user-support-menu-item" href="https://support.katrid.com/buy" target="_blank"><i class="fa fa-fw"></i> ${katrid.i18n.gettext('Support')}</a>
+              <a class="dropdown-item" id="user-support-menu-item" href="/admin/help-center/" target="_blank"><i class="fa fa-fw"></i> Help Center</a>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" onclick="katrid.admin.UserPreferences.showModal()"><i class="fa fa-fw"></i> ${Katrid.i18n.gettext('Preferences')}</a>
               <a class="dropdown-item" href="/web/logout/"><i class="fa fa-fw fa-sign-out-alt"></i> ${Katrid.i18n.gettext('Logout')}</a>

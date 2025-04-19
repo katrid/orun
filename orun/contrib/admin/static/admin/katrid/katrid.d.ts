@@ -750,6 +750,33 @@ declare namespace katrid.admin {
         execute(): Promise<void>;
     }
 }
+declare var showdown: any;
+declare namespace katrid.admin.help {
+    type HelpTOC = {
+        name: string;
+        title: string;
+        toc: Record<string, string> | HelpTOC;
+    } | Record<string, string>;
+    interface IAppTOC {
+        name: string;
+        title?: string;
+        index?: string;
+        toc: Record<string, string> | HelpTOC[];
+    }
+}
+declare namespace katrid.admin {
+    class HelpPortal {
+        el?: HTMLElement;
+        treeView: katrid.ui.TreeView;
+        markdown: any;
+        constructor(el?: HTMLElement);
+        render(): void;
+        onSelect(node: any): void;
+        loadTOC(): Promise<void>;
+        navigateTo(url: any): Promise<void>;
+        loadChildren(node: any, toc: any): void;
+    }
+}
 declare namespace Katrid.BI {
     function newPlot(el: any, data: any, layout: any, config: any): any;
 }
