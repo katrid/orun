@@ -33,4 +33,10 @@ urlpatterns = [
 
     # admin api
     path('admin/api/report/<str:qualname>/', views.api.admin_report_api),
+
+    # help center
+    path('admin/help-center/', views.help.help_center),
+    path('admin/help-center/toc/', views.help.toc),
+    path('admin/help-center/get/', views.help.get_content),
+    re_path(r'admin/help-center/admin/help-center/docs/images/(?P<app_name>[^\/]+)/(?P<path>.+)', views.help.get_image),
 ]

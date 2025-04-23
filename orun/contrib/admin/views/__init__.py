@@ -6,3 +6,4 @@ except ModuleNotFoundError:
     pass
 from . import dashboard
 from . import portlets
+from . import help
