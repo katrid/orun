@@ -1801,8 +1801,8 @@ declare namespace Katrid.Forms.Dialogs {
     }
     function toast(message: string): void;
     function alert(message: string | any, title?: string, icon?: string): void | bootstrap.Toast;
-    function createModal(title?: string, content?: string, buttons?: any[]): HTMLDivElement;
-    function createDialog(title?: string, content?: string, buttons?: any[]): bootstrap.Modal;
+    function createModal(title?: string, content?: string | HTMLElement, buttons?: any[]): HTMLDivElement;
+    function createDialog(title?: string, content?: string | HTMLElement, buttons?: any[]): bootstrap.Modal;
 }
 declare namespace Katrid.Forms {
     class BoundField {

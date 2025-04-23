@@ -7506,13 +7506,16 @@ var Katrid;
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-      ${content || ''}
       </div>
       <div class="modal-footer">
       ${buttonsTempl}
       </div>
     </div>
   </div>`;
+                if (content instanceof HTMLElement)
+                    modal.querySelector('.modal-body').appendChild(content);
+                else if (typeof content === 'string')
+                    modal.querySelector('.modal-body').innerHTML = content || '';
                 return modal;
             }
             Dialogs.createModal = createModal;
