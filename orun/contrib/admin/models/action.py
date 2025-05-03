@@ -168,6 +168,9 @@ class WindowAction(Action):
             k: model._admin_get_view_info(request, view_type=k, view=None, toolbar=True) for k in modes if k not in views_info
         })
         info['viewsInfo']['search'] = model._admin_get_view_info(request, view_type='search')
+        if not request.user.has_perm(('create', 'update', 'delete'), model._meta.name):
+            for vi in info['viewsInfo'].values():
+                vi['readonly'] = True
         return info
 
     def get_help_text(self, model) -> str:

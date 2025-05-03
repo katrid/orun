@@ -51,3 +51,4 @@ def get_image(request: HttpRequest, app_name, path: str):
     if os.path.isfile(path):
         content_type, _ = mimetypes.guess_type(path)
         return FileResponse(open(path, 'rb'), content_type=content_type)
+    return None

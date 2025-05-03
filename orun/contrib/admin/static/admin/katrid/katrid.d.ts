@@ -946,6 +946,7 @@ declare namespace Katrid.Forms {
         recordClick?: (record: any, index: number, event: Event) => void;
         multiple?: boolean;
         viewInfo?: Katrid.Forms.ModelViewInfo;
+        readonly?: boolean;
     }
     class ModelView extends BaseView {
         datasource: Katrid.Data.DataSource;
@@ -1147,6 +1148,28 @@ declare namespace Katrid.BI {
 }
 declare namespace katrid.bi {
     const QueryViewer: typeof Katrid.BI.QueryViewer;
+}
+declare namespace katrid.ui {
+    class ChatDialog {
+        el: HTMLElement;
+        title: string;
+        constructor(config?: {
+            title?: string;
+        });
+        create(): void;
+        protected render(): void;
+    }
+}
+declare namespace katrid.ui {
+    class ChatManager {
+        container?: HTMLElement;
+        el: HTMLElement;
+        protected _chatList: HTMLElement;
+        protected _chatContainer: HTMLElement;
+        constructor(container?: HTMLElement);
+        create(container: HTMLElement): void;
+        protected render(): void;
+    }
 }
 declare namespace Katrid.Components {
     class Component {
@@ -1694,6 +1717,10 @@ declare namespace Katrid.Data {
         formControl(): HTMLElement;
         createTooltip(section: any): void;
         getView(mode?: string): Katrid.Forms.ModelView;
+    }
+}
+declare namespace Katrid.Data {
+    class RecordField extends Field {
     }
 }
 declare namespace katrid.db {
@@ -2749,6 +2776,222 @@ declare namespace katrid.ui {
         sendMessage(msg: string): Promise<void>;
         protected parentNotification(record: any): Promise<void>;
         protected _createComment(comment: any): HTMLElement;
+    }
+}
+declare namespace oui.design {
+    class ClipboardManager {
+        designer: DesignSurface;
+        constructor(designer: DesignSurface);
+        getClipboardData(): Promise<any[]>;
+        prepareCopyData(): string;
+        copy(): Promise<void>;
+        pasteData(data: any): any[];
+        paste(): Promise<any[]>;
+    }
+}
+declare namespace oui.design {
+    class GrabHandles {
+        topCenter: HTMLElement;
+        topRight: HTMLElement;
+        middleLeft: HTMLElement;
+        bottomRight: HTMLElement;
+        bottomCenter: HTMLElement;
+        bottomLeft: HTMLElement;
+        middleRight: HTMLElement;
+        topLeft: HTMLElement;
+        handles: HTMLElement[];
+        private _dragging;
+        onObjectResized: ({ target }: {
+            target: any;
+        }) => void;
+        onObjectResizing: ({ target }: {
+            target: any;
+        }) => void;
+        container: Element;
+        target: PositionalControl;
+        gridX: number;
+        gridY: number;
+        snapToGrid: boolean;
+        designer: DesignSurface;
+        constructor(config: {
+            target: PositionalControl;
+            container: Element;
+            snapToGrid?: boolean;
+            gridX?: number;
+            gridY?: number;
+            designer: DesignSurface;
+            onObjectResized?: ({ target }: {
+                target: any;
+            }) => void;
+            onObjectResizing?: ({ target }: {
+                target: any;
+            }) => void;
+        });
+        set dragging(value: boolean);
+        get dragging(): boolean;
+        createHandle(): HTMLElement;
+        clear(): void;
+        setPosition(): void;
+        _setGrabHandle(): void;
+        createHandles(): this;
+        resized(): void;
+        applyRect(dx?: number, dy?: number, dw?: number, dh?: number): void;
+        destroy(): void;
+    }
+}
+declare namespace oui.design {
+    interface UndoEntry {
+        action: string;
+        data: any;
+        description?: string;
+    }
+    class UndoManager {
+        designer: DesignSurface;
+        stack: UndoEntry[];
+        capacity: number;
+        index: number;
+        private _redoEntry;
+        enabled: boolean;
+        constructor(designer: DesignSurface);
+        beginUpdate(): void;
+        endUpdate(): void;
+        add(action: string, data: any, description?: string): void;
+        undo(): void;
+        redo(): void;
+        resizeSelection(selection: PositionalControl[]): void;
+        moveSelection(selection: PositionalControl[]): void;
+        addRedo(redo: UndoEntry): void;
+        protected undoMoveObject(undoEntry: IUndoMoveObject[], description?: string): void;
+        protected undoResizeObject(undoEntry: IUndoResizeObject[]): void;
+        protected undoPaste(undoEntry: any[]): void;
+        protected undoProperty(undoEntry: any[]): void;
+        protected undoRemove(undoEntry: any[]): void;
+        protected undoEntry(entry: UndoEntry): void;
+        redoEntry(entry: UndoEntry): void;
+    }
+    interface IUndoMoveObject {
+        target: katrid.drawing.BaseWidget;
+        x: number;
+        y: number;
+    }
+    interface IUndoResizeObject {
+        target: katrid.drawing.BaseWidget;
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+    }
+}
+declare namespace oui.design {
+    class DesignSurface {
+        el: HTMLElement;
+        surface: HTMLElement;
+        overlay: HTMLElement;
+        private _selecting;
+        protected _isMouseDown: boolean;
+        protected _ox: number;
+        protected _oy: number;
+        drawGrid: boolean;
+        protected _gridSize: number;
+        protected gridX: number;
+        protected gridY: number;
+        protected eventsDisabled: boolean;
+        snapToGrid: boolean;
+        grabs: GrabHandles[];
+        undoManager: UndoManager;
+        clipboardManager: ClipboardManager;
+        constructor(container: HTMLElement);
+        create(): void;
+        activate(): void;
+        deactivate(): void;
+        cut(): Promise<void>;
+        copy(): Promise<void>;
+        paste(): Promise<void>;
+        pasteObject(obj: PositionalControl): PositionalControl;
+        undo(): void;
+        redo(): void;
+        protected onKeyDown(event: KeyboardEvent): void;
+        resizeSelectionBy(dw: number, dh: number): void;
+        insertObject(obj: ControlDesigner): ControlDesigner;
+        get gridSize(): number;
+        applyRectToSelection(dx: number, dy: number, dw: number, dh: number): void;
+        protected _drawBackground(): void;
+        protected _createEvents(): void;
+        protected onPointerDown(evt: PointerEvent): void;
+        protected onPointerMove(evt: MouseEvent): void;
+        protected onPointerUp(evt: PointerEvent): void;
+        protected destroySelectionBox(): void;
+        protected createOverlay(): HTMLDivElement;
+        protected _selBox: HTMLElement;
+        protected createSelectionBox(): void;
+        protected updateSelectionBox(x: number, y: number, width: number, height: number): void;
+        protected _selection: Set<PositionalControl>;
+        get selection(): Set<PositionalControl>;
+        set selection(value: Set<PositionalControl>);
+        objectPointerDown(obj: PositionalControl, evt: PointerEvent): void;
+        addToSelection(obj: PositionalControl): void;
+        removeFromSelection(obj: PositionalControl): void;
+        clearSelection(): void;
+        updateSelection(): void;
+        protected createGrabs(): void;
+        protected destroyGrabs(): void;
+        protected updateGrabs(): void;
+        moveSelectionBy(dx: number, dy: number): void;
+        private _zoom;
+        protected _zoomFactor: number;
+        get zoom(): number;
+        set zoom(value: number);
+        get zoomFactor(): number;
+        setZoom(zoom: number): void;
+    }
+    class BasePageDesigner {
+    }
+    class ControlDesigner {
+        designer?: DesignSurface;
+        el: HTMLElement;
+        protected _ox: number;
+        protected _oy: number;
+        protected _isMouseDown: boolean;
+        constructor(designer?: DesignSurface);
+        protected defaultProps(): void;
+        create(): void;
+        protected _createEvents(): void;
+        protected onPointerDown(evt: PointerEvent): void;
+        protected onPointerUp(evt: PointerEvent): void;
+        draw(): void;
+    }
+    class PositionalControl extends ControlDesigner {
+        private _x;
+        private _y;
+        protected _width: number;
+        protected _height: number;
+        protected _moving: boolean;
+        protected defaultProps(): void;
+        get x(): number;
+        set x(value: number);
+        get y(): number;
+        set y(value: number);
+        get width(): number;
+        set width(value: number);
+        get height(): number;
+        set height(value: number);
+        getClientRect(): DOMRect;
+        protected _createEvents(): void;
+        protected onPointerMove(evt: PointerEvent): void;
+        protected onPointerUp(evt: PointerEvent): void;
+        moveBy(x: number, y: number): void;
+        draw(): void;
+        applyRect(dx: number, dy: number, dw: number, dh: number): void;
+        setRect(x: number, y: number, width: number, height: number): void;
+    }
+    class Rectangle extends PositionalControl {
+        protected defaultProps(): void;
+        create(): void;
+        draw(): void;
+    }
+    class Text extends PositionalControl {
+        protected defaultProps(): void;
+        create(): void;
     }
 }
 declare namespace Katrid.Services {

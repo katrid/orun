@@ -3455,6 +3455,8 @@ var Katrid;
                 super(info);
                 this.pendingOperation = 0;
                 this._active = false;
+                if (info.readonly != null)
+                    this._readonly = info.readonly;
             }
             static fromTemplate(action, model, template) {
                 return new Katrid.Forms.Views.registry[this.viewType]({ action, model, template });
@@ -4000,11 +4002,13 @@ var Katrid;
             }
             createToolbarButtons(container) {
                 let parent = container.querySelector('.toolbar-action-buttons');
-                let btnCreate = document.createElement('button');
-                btnCreate.className = 'btn btn-primary btn-action-create';
-                btnCreate.innerText = Katrid.i18n.gettext('Create');
-                btnCreate.setAttribute('v-on:click', 'insert()');
-                parent.append(btnCreate);
+                if (!this.config.readonly) {
+                    let btnCreate = document.createElement('button');
+                    btnCreate.className = 'btn btn-primary btn-action-create';
+                    btnCreate.innerText = Katrid.i18n.gettext('Create');
+                    btnCreate.setAttribute('v-on:click', 'insert()');
+                    parent.append(btnCreate);
+                }
                 let btnXls = document.createElement('button');
                 btnXls.innerHTML = '<i class="fas fa-download"></i>';
                 btnXls.title = 'Download as excel';
@@ -4040,19 +4044,22 @@ var Katrid;
                 this.createSelectionInfo(parent);
                 let btnActions = document.createElement('div');
                 btnActions.classList.add('btn-group');
-                btnActions.innerHTML = `<div class="dropdown">
+                console.debug('readonly', this._readonly);
+                if (!this.config.readonly) {
+                    btnActions.innerHTML = `<div class="dropdown">
         <button name="actions" type="button" class="btn btn-soft-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown" v-show="selectionLength"
                 aria-haspopup="true">
           ${Katrid.i18n.gettext('Action')} <span class="caret"></span>
         </button>
         <div class="dropdown-menu dropdown-menu-actions">
-          <a class="dropdown-item" v-on:click="deleteSelection()">
+          <a class="dropdown-item btn-action-delete" v-on:click="deleteSelection()">
             <i class="fa fa-fw fa-trash-o"></i> ${Katrid.i18n.gettext('Delete')}
           </a>
           <!-- replace-actions -->
         </div>
       </div>`;
-                parent.append(btnActions);
+                    parent.append(btnActions);
+                }
                 return parent;
             }
             createSelectionInfo(parent) {
@@ -4575,6 +4582,66 @@ var katrid;
     (function (bi) {
         bi.QueryViewer = Katrid.BI.QueryViewer;
     })(bi = katrid.bi || (katrid.bi = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class ChatDialog {
+            constructor(config) {
+                this.title = config?.title ?? 'Chat';
+                this.create();
+            }
+            create() {
+                this.render();
+                document.body.appendChild(this.el);
+            }
+            render() {
+                let el = document.createElement('div');
+                el.className = 'chat-dialog shadow';
+                el.innerHTML = `
+        <div class="chat-header">
+          <label>${this.title}</label>
+          <button class="close-button">X</button>
+        </div>
+        <div class="chat-messages">
+          <pre>test</pre>
+        </div>
+        <div class="chat-input">
+          <input type="text" class="input-message form-control" placeholder="Type a message...">
+        </div>
+      `;
+                this.el = el;
+            }
+        }
+        ui.ChatDialog = ChatDialog;
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
+        class ChatManager {
+            constructor(container) {
+                this.container = container;
+                if (container)
+                    this.create(container);
+            }
+            create(container) {
+                this.render();
+                container.appendChild(this.el);
+            }
+            render() {
+                this.el = document.createElement('div');
+                this.el.className = 'chat-manager';
+                this._chatList = this.el.appendChild(document.createElement('div'));
+                this._chatList.className = 'chat-list';
+                this._chatContainer = this.el.appendChild(document.createElement('div'));
+                this._chatContainer.className = 'chat-container';
+            }
+        }
+        ui.ChatManager = ChatManager;
+    })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
 var Katrid;
 (function (Katrid) {
@@ -6119,7 +6186,7 @@ var Katrid;
                     let title = '';
                     if (this.helpText)
                         title = this.helpText;
-                    if (Katrid.webApp.userInfo.superuser) {
+                    if (Katrid.webApp?.userInfo?.superuser) {
                         title += '<br>Field: ' + this.name;
                         if (this.model)
                             title += '<br>Related Model: ' + this.model;
@@ -6955,6 +7022,16 @@ var Katrid;
         }
         Data.OneToManyField = OneToManyField;
         Katrid.Data.Fields.registry.OneToManyField = OneToManyField;
+    })(Data = Katrid.Data || (Katrid.Data = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Data;
+    (function (Data) {
+        class RecordField extends Data.Field {
+        }
+        Data.RecordField = RecordField;
+        Katrid.Data.Fields.registry.RecordField = RecordField;
     })(Data = Katrid.Data || (Katrid.Data = {}));
 })(Katrid || (Katrid = {}));
 var katrid;
@@ -9114,6 +9191,7 @@ var Katrid;
                 let parent = container.querySelector('.toolbar-action-buttons');
                 let div = document.createElement('div');
                 div.classList.add('btn-toolbar');
+                console.debug('readonly', this.readonly);
                 div.innerHTML = `
     <div class="btn-group btn-group-split" v-show="changing">
       <button class="btn btn-primary btn-action-save" type="button" v-bind:disabled="loadingRecord"
@@ -9164,6 +9242,11 @@ ${Katrid.i18n.gettext('Delete')}
       <attachments-button v-show="!inserting"></attachments-button>
 </div>
 `;
+                if (this.config.readonly) {
+                    div.querySelector('.btn-action-create').remove();
+                    div.querySelector('.btn-action-edit').remove();
+                    div.querySelector('.dropdown-menu-actions').innerHTML = '';
+                }
                 parent.append(div);
                 return parent;
             }
@@ -14037,6 +14120,1230 @@ var katrid;
         });
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
+var oui;
+(function (oui) {
+    var design;
+    (function (design) {
+        class ClipboardManager {
+            constructor(designer) {
+                this.designer = designer;
+            }
+            async getClipboardData() {
+                let data = await navigator.clipboard.readText();
+                if (data) {
+                    data = JSON.parse(data);
+                    if (data.type === 'selection') {
+                        return data;
+                    }
+                }
+            }
+            prepareCopyData() {
+                const objects = this.designer.selection.map(obj => obj.dump());
+                return JSON.stringify({ type: 'selection', objects });
+            }
+            async copy() {
+                await navigator.clipboard.writeText(this.prepareCopyData());
+            }
+            pasteData(data) {
+                if (data.type !== 'selection') {
+                    console.error('Invalid clipboard data');
+                    return;
+                }
+                let objs = [];
+                for (let obj of data.objects) {
+                    const lo = this.designer.loadObject(obj);
+                    this.designer.pasteObject(lo).locked = false;
+                    this.designer.addToSelection(lo);
+                    objs.push(lo);
+                }
+                this.designer.clearSelection();
+                return objs;
+            }
+            async paste() {
+                const data = await this.getClipboardData();
+                if (data) {
+                    return this.pasteData(data);
+                }
+            }
+        }
+        design.ClipboardManager = ClipboardManager;
+    })(design = oui.design || (oui.design = {}));
+})(oui || (oui = {}));
+var oui;
+(function (oui) {
+    var design;
+    (function (design) {
+        class GrabHandle {
+            constructor(el) {
+                this.el = el;
+                this.width = 8;
+                this.height = 8;
+            }
+            set left(value) {
+                this.el.style.left = `${value}px`;
+            }
+            set top(value) {
+                this.el.style.top = `${value}px`;
+            }
+            set width(value) {
+                this.el.style.width = `${value}px`;
+            }
+            set height(value) {
+                this.el.style.height = `${value}px`;
+            }
+        }
+        class GrabHandles {
+            constructor(config) {
+                this._dragging = false;
+                this.gridX = 4;
+                this.gridY = 4;
+                this.snapToGrid = false;
+                this.container = config.container;
+                this.target = config.target;
+                this.onObjectResized = config.onObjectResized;
+                this.onObjectResizing = config.onObjectResizing;
+                this.designer = config.designer;
+                this.handles = [];
+                this.createHandles();
+                this.setPosition();
+                if (config.snapToGrid) {
+                    this.gridX = config.gridX;
+                    this.gridY = config.gridY;
+                    this.snapToGrid = true;
+                }
+            }
+            set dragging(value) {
+                this._dragging = value;
+                this.designer.resizing = value;
+            }
+            get dragging() {
+                return this._dragging;
+            }
+            createHandle() {
+                let h = document.createElement('span');
+                h.classList.add('resize-handle');
+                this.handles.push(h);
+                return h;
+            }
+            clear() {
+                for (let handle of this.handles) {
+                    handle.remove();
+                }
+                this.handles = [];
+            }
+            setPosition() {
+                const rect = this.target.getClientRect();
+                if (this.designer.zoomFactor !== 1) {
+                    rect.x *= this.designer.zoomFactor;
+                    rect.y *= this.designer.zoomFactor;
+                    rect.width *= this.designer.zoomFactor;
+                    rect.height *= this.designer.zoomFactor;
+                }
+                let handle = new GrabHandle(this.bottomLeft);
+                handle.left = rect.left - 3;
+                handle.top = rect.bottom - 5;
+                handle = new GrabHandle(this.middleLeft);
+                handle.left = rect.left - 3;
+                handle.top = rect.bottom - rect.height / 2 - 4;
+                handle = new GrabHandle(this.topLeft);
+                handle.left = rect.left - 3;
+                handle.top = rect.top - 3;
+                handle = new GrabHandle(this.topRight);
+                handle.left = rect.right - 4;
+                handle.top = rect.top - 3;
+                handle = new GrabHandle(this.middleRight);
+                handle.left = rect.right - 4;
+                handle.top = rect.bottom - rect.height / 2 - 4;
+                handle = new GrabHandle(this.bottomRight);
+                handle.left = rect.right - 4;
+                handle.top = rect.bottom - 5;
+                handle = new GrabHandle(this.topCenter);
+                handle.left = rect.right - rect.width / 2 - 4;
+                handle.top = rect.top - 3;
+                handle = new GrabHandle(this.bottomCenter);
+                handle.left = rect.right - rect.width / 2 - 4;
+                handle.top = rect.bottom - 5;
+            }
+            _setGrabHandle() {
+                this.topLeft.addEventListener('pointerdown', (evt) => {
+                    if (evt.button !== 0)
+                        return;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    const targetHandle = evt.target;
+                    let ox = evt.clientX;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid) {
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    }
+                    this.dragging = true;
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = evt.clientY;
+                            let x = evt.clientX;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dx = x - ox;
+                            let dy = y - oy;
+                            if (dx || dy) {
+                                this.applyRect(dx, dy, -dx, -dy);
+                                if (dx)
+                                    ox = x;
+                                if (dy)
+                                    oy = y;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.topRight.addEventListener('pointerdown', (evt) => {
+                    if (evt.button !== 0)
+                        return;
+                    const targetHandle = evt.target;
+                    let ox = evt.clientX;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid) {
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    }
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            let y = evt.clientY;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dx = x - ox;
+                            let dy = y - oy;
+                            if (dx || dy) {
+                                this.applyRect(0, dy, dx, -dy);
+                                if (dx)
+                                    ox = x;
+                                if (dy)
+                                    oy = y;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.setPointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.bottomRight.addEventListener('pointerdown', (evt) => {
+                    if (evt.button !== 0)
+                        return;
+                    let targetHandle = evt.target;
+                    let ox = evt.clientX;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid) {
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    }
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            let y = evt.clientY;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dx = x - ox;
+                            let dy = y - oy;
+                            if (dx || dy) {
+                                this.applyRect(0, 0, dx, dy);
+                                if (dx)
+                                    ox = x;
+                                if (dy)
+                                    oy = y;
+                            }
+                        }
+                    };
+                    let onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.middleLeft.addEventListener('pointerdown', (evt) => {
+                    if (evt.button !== 0)
+                        return;
+                    let targetHandle = evt.target;
+                    let ox = evt.clientX;
+                    if (this.snapToGrid)
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                            }
+                            let dx = x - ox;
+                            if (dx) {
+                                this.applyRect(dx, 0, -dx, 0);
+                                ox = x;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.middleRight.addEventListener('pointerdown', (evt) => {
+                    if (evt.button !== 0)
+                        return;
+                    const targetHandle = evt.target;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    let ox = evt.clientX;
+                    if (this.snapToGrid)
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                    this.dragging = true;
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    let onmousemove = (evt) => {
+                        evt.preventDefault();
+                        evt.stopPropagation();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                            }
+                            let dx = x - ox;
+                            if (dx) {
+                                this.applyRect(0, 0, dx, 0);
+                                ox = x;
+                            }
+                        }
+                    };
+                    let onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.bottomCenter.addEventListener('pointerdown', (evt) => {
+                    if (evt.button !== 0)
+                        return;
+                    let targetHandle = evt.target;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid)
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    let onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = evt.clientY;
+                            if (this.snapToGrid) {
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dy = y - oy;
+                            if (dy) {
+                                this.applyRect(0, 0, 0, dy);
+                                oy = y;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.topCenter.addEventListener('pointerdown', (evt) => {
+                    if (evt.button !== 0)
+                        return;
+                    let targetHandle = evt.target;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid)
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let y = evt.clientY;
+                            if (this.snapToGrid) {
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dy = y - oy;
+                            if (dy) {
+                                this.applyRect(0, dy, 0, -dy);
+                                oy = y;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+                this.bottomLeft.addEventListener('pointerdown', (evt) => {
+                    if (evt.button !== 0)
+                        return;
+                    const targetHandle = evt.target;
+                    let ox = evt.clientX;
+                    let oy = evt.clientY;
+                    if (this.snapToGrid) {
+                        ox = Math.trunc(ox / this.gridX) * this.gridX;
+                        oy = Math.trunc(oy / this.gridY) * this.gridY;
+                    }
+                    this.dragging = true;
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (evt.pointerId)
+                        targetHandle.setPointerCapture(evt.pointerId);
+                    const onmousemove = (evt) => {
+                        evt.preventDefault();
+                        if (this.dragging) {
+                            let x = evt.clientX;
+                            let y = evt.clientY;
+                            if (this.snapToGrid) {
+                                x = Math.trunc(x / this.gridX) * this.gridX;
+                                y = Math.trunc(y / this.gridY) * this.gridY;
+                            }
+                            let dx = x - ox;
+                            let dy = y - oy;
+                            if (dx || dy) {
+                                this.applyRect(dx, 0, -dx, dy);
+                                if (dx)
+                                    ox = x;
+                                if (dy)
+                                    oy = y;
+                            }
+                        }
+                    };
+                    const onmouseup = (evt) => {
+                        if (evt.pointerId)
+                            targetHandle.releasePointerCapture(evt.pointerId);
+                        if (this.dragging) {
+                            evt.preventDefault();
+                            this.dragging = false;
+                            this.resized();
+                            targetHandle.removeEventListener('pointermove', onmousemove);
+                        }
+                    };
+                    targetHandle.addEventListener('pointermove', onmousemove);
+                    targetHandle.addEventListener('pointerup', onmouseup, { once: true });
+                });
+            }
+            createHandles() {
+                let handle;
+                this.bottomLeft = handle = this.createHandle();
+                handle.classList.add('bottom-left');
+                this.middleLeft = handle = this.createHandle();
+                handle.classList.add('middle-left');
+                this.topLeft = handle = this.createHandle();
+                handle.classList.add('top-left');
+                this.topRight = handle = this.createHandle();
+                handle.classList.add('top-right');
+                this.middleRight = handle = this.createHandle();
+                handle.classList.add('middle-right');
+                this.bottomRight = handle = this.createHandle();
+                handle.classList.add('bottom-right');
+                this.topCenter = handle = this.createHandle();
+                handle.classList.add('top-center');
+                this.bottomCenter = handle = this.createHandle();
+                handle.classList.add('bottom-center');
+                this.container.append(...this.handles);
+                this.setPosition();
+                this._setGrabHandle();
+                return this;
+            }
+            resized() {
+                if (this.onObjectResized)
+                    this.onObjectResized({ target: this.target });
+            }
+            applyRect(dx = 0, dy = 0, dw = 0, dh = 0) {
+                if (this.designer && this.designer.zoom !== 100) {
+                    const factor = this.designer.zoom / 100;
+                    dx = dx / factor;
+                    dy = dy / factor;
+                    dw = dw / factor;
+                    dh = dh / factor;
+                }
+                if (this.target.designer) {
+                    this.target.designer.applyRectToSelection(dx, dy, dw, dh);
+                }
+                else {
+                    this.target.x += dx;
+                    this.target.y += dy;
+                    this.target.width += dw;
+                    this.target.height += dh;
+                }
+                this.setPosition();
+                this.onObjectResizing?.({ target: this.target });
+            }
+            destroy() {
+                for (let h of this.handles) {
+                    h.remove();
+                }
+                this.handles = [];
+            }
+        }
+        design.GrabHandles = GrabHandles;
+    })(design = oui.design || (oui.design = {}));
+})(oui || (oui = {}));
+var oui;
+(function (oui) {
+    var design;
+    (function (design) {
+        const DEFAULT_CAPACITY = 100;
+        class UndoManager {
+            constructor(designer) {
+                this.designer = designer;
+                this.enabled = true;
+                this.stack = [];
+                this.index = -1;
+                this.capacity = DEFAULT_CAPACITY;
+            }
+            beginUpdate() {
+                this.enabled = false;
+            }
+            endUpdate() {
+                this.enabled = true;
+            }
+            add(action, data, description) {
+                if (!this.enabled) {
+                    return;
+                }
+                this.stack.splice(this.index + 1);
+                this.stack.push({ action, data, description });
+                this.index++;
+                if (this.stack.length > this.capacity) {
+                    this.stack.shift();
+                }
+            }
+            undo() {
+                try {
+                    this.enabled = false;
+                    if (this.index > -1) {
+                        this.undoEntry(this.stack[this.index]);
+                        if (this._redoEntry) {
+                            this.stack[this.index] = this._redoEntry;
+                            this._redoEntry = null;
+                        }
+                        this.index--;
+                    }
+                }
+                finally {
+                    this.enabled = true;
+                }
+            }
+            redo() {
+                try {
+                    this.enabled = false;
+                    if (this.index < this.stack.length - 1) {
+                        this.index++;
+                        this.redoEntry(this.stack[this.index]);
+                    }
+                }
+                finally {
+                    this.enabled = true;
+                }
+            }
+            resizeSelection(selection) {
+                this.add('resize', selection.map(obj => ({ target: obj, x: obj.x, y: obj.y, w: obj.width, h: obj.height })));
+            }
+            moveSelection(selection) {
+                this.add('move', selection.map(obj => ({ target: obj, x: obj.x, y: obj.y })));
+            }
+            addRedo(redo) {
+                if (this._redoEntry) {
+                    this._redoEntry.data.push(redo.data);
+                }
+                else {
+                    this._redoEntry = redo;
+                }
+            }
+            undoMoveObject(undoEntry, description) {
+                this.addRedo({
+                    action: 'move',
+                    description,
+                    data: undoEntry.map(entry => ({ target: entry.target, x: entry.target.x, y: entry.target.y })),
+                });
+                for (let entry of undoEntry) {
+                    entry.target.designer.moveTo(entry.x, entry.y);
+                }
+            }
+            undoResizeObject(undoEntry) {
+                this.addRedo({
+                    action: 'resize',
+                    data: undoEntry.map(entry => ({ target: entry.target, x: entry.target.x, y: entry.target.y, w: entry.target.width, h: entry.target.height })),
+                });
+                for (let entry of undoEntry) {
+                    entry.target.setRect(entry.x, entry.y, entry.w, entry.h);
+                }
+            }
+            undoPaste(undoEntry) {
+                for (let entry of undoEntry.reverse()) {
+                    this.undoEntry(entry);
+                }
+            }
+            undoProperty(undoEntry) {
+                for (let entry of undoEntry) {
+                    entry.target[entry.property] = entry.value;
+                    entry.target.redraw();
+                }
+            }
+            undoRemove(undoEntry) {
+                for (let entry of undoEntry) {
+                    this.designer.undoRemove(entry);
+                }
+            }
+            undoEntry(entry) {
+                switch (entry.action) {
+                    case 'add':
+                        this.designer.removeObjects(entry.data);
+                        break;
+                    case 'move':
+                        this.undoMoveObject(entry.data, entry.description);
+                        break;
+                    case 'resize':
+                        this.undoResizeObject(entry.data);
+                        break;
+                    case 'paste':
+                        this.undoPaste(entry.data);
+                        break;
+                    case 'property':
+                        this.undoProperty(entry.data);
+                        break;
+                    case 'remove':
+                        this.undoRemove(entry.data);
+                        break;
+                }
+            }
+            redoEntry(entry) {
+                switch (entry.action) {
+                    case 'add':
+                        for (let obj of entry.data) {
+                            this.designer.addObject(obj);
+                        }
+                        break;
+                    case 'move':
+                        this.undoMoveObject(entry.data);
+                        break;
+                    case 'resize':
+                        this.undoResizeObject(entry.data);
+                        break;
+                    case 'paste':
+                        break;
+                    case 'property':
+                        break;
+                }
+            }
+        }
+        design.UndoManager = UndoManager;
+    })(design = oui.design || (oui.design = {}));
+})(oui || (oui = {}));
+var oui;
+(function (oui) {
+    var design;
+    (function (design) {
+        const isMac = navigator['userAgentData']?.platform === 'macOS';
+        class DesignSurface {
+            constructor(container) {
+                this._selecting = false;
+                this._isMouseDown = false;
+                this.drawGrid = true;
+                this._gridSize = 8;
+                this.gridX = 8;
+                this.gridY = 8;
+                this.eventsDisabled = false;
+                this.snapToGrid = false;
+                this._selection = new Set();
+                this._zoom = 100;
+                this._zoomFactor = 1;
+                this.create();
+                container.appendChild(this.el);
+                this.undoManager = new design.UndoManager(this);
+                this.clipboardManager = new design.ClipboardManager(this);
+                this.activate();
+            }
+            create() {
+                this.el = document.createElement('div');
+                this.el.className = 'design-surface';
+                this.surface = document.createElement('div');
+                this.surface.className = 'design-surface-content';
+                this.el.appendChild(this.surface);
+                this.overlay = this.createOverlay();
+                this.el.appendChild(this.overlay);
+                this._createEvents();
+                this._drawBackground();
+            }
+            activate() {
+                this.eventsDisabled = false;
+            }
+            deactivate() {
+                this.eventsDisabled = true;
+            }
+            async cut() {
+                await this.clipboardManager.copy();
+                this._deleteObjects(this.selection);
+            }
+            copy() {
+                if (this.selection.size) {
+                    console.debug('copy', this.selection);
+                    return this.clipboardManager.copy();
+                }
+            }
+            async paste() {
+                try {
+                    this.undoManager.beginUpdate();
+                    const objs = await this.clipboardManager.paste();
+                    this.undoManager.endUpdate();
+                    this.undoManager.add('add', objs);
+                }
+                finally {
+                    this.undoManager.endUpdate();
+                }
+            }
+            pasteObject(obj) {
+                return this.insertObject(obj);
+            }
+            undo() {
+                this.undoManager.undo();
+                this.updateGrabs();
+            }
+            redo() {
+                this.undoManager.redo();
+            }
+            onKeyDown(event) {
+                if (this.eventsDisabled)
+                    return;
+                let ctrlKey = event.ctrlKey;
+                let altKey = event.altKey;
+                if (isMac) {
+                    ctrlKey = altKey;
+                    altKey = false;
+                }
+                if ((!isMac && ctrlKey) || (isMac && event.metaKey && !ctrlKey)) {
+                    if (event.key === 'z') {
+                        event.preventDefault();
+                        this.undo();
+                        return;
+                    }
+                    else if (event.key === 'c') {
+                        event.preventDefault();
+                        this.copy();
+                        return;
+                    }
+                    else if (event.key === 'v') {
+                        event.preventDefault();
+                        this.paste();
+                        return;
+                    }
+                    else if (event.key === 'x') {
+                        event.preventDefault();
+                        this.cut();
+                    }
+                    else if ((isMac && event.key === 'Z') || (!isMac && event.key === 'y')) {
+                        event.preventDefault();
+                        this.redo();
+                        return;
+                    }
+                }
+                if (this._selection?.size && !altKey) {
+                    if (event.shiftKey) {
+                        switch (event.key) {
+                            case 'ArrowDown':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(0, 1);
+                                else
+                                    this.resizeSelectionBy(0, this.gridY || 1);
+                                break;
+                            case 'ArrowUp':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(0, -1);
+                                else
+                                    this.resizeSelectionBy(0, -this.gridY || -1);
+                                break;
+                            case 'ArrowLeft':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(-1, 0);
+                                else
+                                    this.resizeSelectionBy(-this.gridX || -1, 0);
+                                break;
+                            case 'ArrowRight':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.resizeSelectionBy(1, 0);
+                                else
+                                    this.resizeSelectionBy(this.gridX || 1, 0);
+                                break;
+                        }
+                    }
+                    else {
+                        switch (event.key) {
+                            case 'ArrowDown':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.moveSelectionBy(0, this.gridY || 1);
+                                else
+                                    this.moveSelectionBy(0, 1);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowUp':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.moveSelectionBy(0, -1 * this.gridY || 1);
+                                else
+                                    this.moveSelectionBy(0, -1);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowLeft':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.moveSelectionBy(-this.gridX || -1, 0);
+                                else
+                                    this.moveSelectionBy(-1, 0);
+                                this._tempGuidelines();
+                                break;
+                            case 'ArrowRight':
+                                event.preventDefault();
+                                if (ctrlKey)
+                                    this.moveSelectionBy(this.gridX || 1, 0);
+                                else
+                                    this.moveSelectionBy(1, 0);
+                                this._tempGuidelines();
+                                break;
+                            case 'Delete':
+                                event.preventDefault();
+                                this.deleteSelection();
+                                break;
+                        }
+                    }
+                }
+            }
+            resizeSelectionBy(dw, dh) {
+                this.applyRectToSelection(0, 0, dw, dh);
+            }
+            insertObject(obj) {
+                obj.designer = this;
+                this.surface.appendChild(obj.el);
+                return obj;
+            }
+            get gridSize() {
+                return this._gridSize;
+            }
+            applyRectToSelection(dx, dy, dw, dh) {
+                if (dx || dy || dw || dh) {
+                    this.undoManager.resizeSelection(Array.from(this._selection));
+                    for (let obj of this.selection) {
+                        obj.applyRect(dx, dy, dw, dh);
+                    }
+                    this.updateGrabs();
+                }
+            }
+            _drawBackground() {
+                if (this.drawGrid) {
+                    this.surface.style.backgroundImage = 'linear-gradient(90deg, #f0f0f0 1px, transparent 1px), linear-gradient(#f0f0f0 1px, transparent 1px)';
+                    this.surface.style.backgroundSize = `${this._gridSize}px ${this._gridSize}px`;
+                }
+            }
+            _createEvents() {
+                this.el.addEventListener('pointerdown', (evt) => this.onPointerDown(evt));
+                this.el.addEventListener('mousemove', (evt) => this.onPointerMove(evt));
+                this.el.addEventListener('pointerup', (evt) => this.onPointerUp(evt));
+                document.addEventListener('keydown', (evt) => this.onKeyDown(evt));
+            }
+            onPointerDown(evt) {
+                if (evt.button !== 0)
+                    return;
+                this.el.setPointerCapture(evt.pointerId);
+                this.clearSelection();
+                this._isMouseDown = true;
+                this._ox = evt.clientX;
+                this._oy = evt.clientY;
+            }
+            onPointerMove(evt) {
+                if (!this._isMouseDown)
+                    return;
+                this._selecting = true;
+                let x = this._ox;
+                let y = this._oy;
+                const r = this.el.getBoundingClientRect();
+                let w = evt.clientX - this._ox - r.left;
+                let h = evt.clientY - this._oy - r.top;
+                if (w < 0) {
+                    x += w;
+                    w = Math.abs(w);
+                }
+                if (h < 0) {
+                    y += h;
+                    h = Math.abs(h);
+                }
+                this.updateSelectionBox(x, y, w, h);
+            }
+            onPointerUp(evt) {
+                if (evt.button !== 0)
+                    return;
+                this.el.releasePointerCapture(evt.pointerId);
+                this._isMouseDown = false;
+                this.destroySelectionBox();
+                this._selecting = false;
+            }
+            destroySelectionBox() {
+                if (this._selecting) {
+                    this._selBox.remove();
+                    this._selBox = null;
+                }
+            }
+            createOverlay() {
+                const overlay = document.createElement('div');
+                overlay.className = 'designer-overlay';
+                return overlay;
+            }
+            createSelectionBox() {
+                if (this._selBox)
+                    this._selBox.remove();
+                this._selBox = document.createElement('div');
+                this._selBox.className = 'selection-box';
+                this.el.appendChild(this._selBox);
+            }
+            updateSelectionBox(x, y, width, height) {
+                if (!this._selBox)
+                    this.createSelectionBox();
+                this._selBox.style.left = `${x}px`;
+                this._selBox.style.top = `${y}px`;
+                this._selBox.style.width = `${width}px`;
+                this._selBox.style.height = `${height}px`;
+            }
+            get selection() {
+                return this._selection;
+            }
+            set selection(value) {
+                this._selection = value;
+                this.updateSelection();
+            }
+            objectPointerDown(obj, evt) {
+                if (!this._selection.has(obj)) {
+                    if (evt.shiftKey)
+                        this._selection.add(obj);
+                    this.selection = new Set([obj]);
+                }
+            }
+            addToSelection(obj) {
+                this._selection.add(obj);
+            }
+            removeFromSelection(obj) {
+                this._selection.delete(obj);
+            }
+            clearSelection() {
+                this.destroyGrabs();
+                this._selection.clear();
+            }
+            updateSelection() {
+                this.createGrabs();
+            }
+            createGrabs() {
+                if (this.grabs)
+                    for (const obj of this.grabs)
+                        obj.destroy();
+                this.grabs = Array.from(this._selection).map(obj => new design.GrabHandles({ target: obj, container: this.el, designer: this }));
+            }
+            destroyGrabs() {
+                if (this.grabs) {
+                    for (const obj of this.grabs)
+                        obj.destroy();
+                    this.grabs = [];
+                }
+            }
+            updateGrabs() {
+                for (const obj of this.grabs)
+                    obj.setPosition();
+            }
+            moveSelectionBy(dx, dy) {
+                if (this._zoomFactor !== 1) {
+                    dx /= this._zoomFactor;
+                    dy /= this._zoomFactor;
+                }
+                for (const obj of this._selection) {
+                    if (obj instanceof PositionalControl)
+                        obj.moveBy(dx, dy);
+                }
+                this.updateGrabs();
+            }
+            get zoom() {
+                return this._zoom;
+            }
+            set zoom(value) {
+                this.setZoom(value);
+            }
+            get zoomFactor() {
+                return this._zoomFactor;
+            }
+            setZoom(zoom) {
+                this._zoom = zoom;
+                this._zoomFactor = zoom / 100;
+                this.surface.style.transform = `scale(${this._zoomFactor})`;
+                this.surface.style.transformOrigin = '0 0';
+            }
+        }
+        design.DesignSurface = DesignSurface;
+        class BasePageDesigner {
+        }
+        design.BasePageDesigner = BasePageDesigner;
+        class ControlDesigner {
+            constructor(designer) {
+                this.designer = designer;
+                this._isMouseDown = false;
+                this.defaultProps();
+                this.create();
+            }
+            defaultProps() {
+                this._ox = 0;
+                this._oy = 0;
+            }
+            create() {
+                this.el = document.createElement('div');
+                this._createEvents();
+                this.draw();
+            }
+            _createEvents() {
+            }
+            onPointerDown(evt) {
+                if (evt.button !== 0)
+                    return;
+                evt.stopPropagation();
+                evt.preventDefault();
+                this.el.setPointerCapture(evt.pointerId);
+                this._isMouseDown = true;
+                this._ox = evt.clientX;
+                this._oy = evt.clientY;
+                this.designer?.objectPointerDown(this, evt);
+            }
+            onPointerUp(evt) {
+                evt.stopPropagation();
+                this._isMouseDown = false;
+                this.el.setPointerCapture(evt.pointerId);
+            }
+            draw() {
+            }
+        }
+        design.ControlDesigner = ControlDesigner;
+        class PositionalControl extends ControlDesigner {
+            constructor() {
+                super(...arguments);
+                this._moving = false;
+            }
+            defaultProps() {
+                super.defaultProps();
+                this._x = 0;
+                this._y = 0;
+            }
+            get x() {
+                return this._x;
+            }
+            set x(value) {
+                this._x = value;
+                this.el.style.left = `${value}px`;
+            }
+            get y() {
+                return this._y;
+            }
+            set y(value) {
+                this._y = value;
+                this.el.style.top = `${value}px`;
+            }
+            get width() {
+                return this._width;
+            }
+            set width(value) {
+                this._width = value;
+                this.draw();
+            }
+            get height() {
+                return this._height;
+            }
+            set height(value) {
+                this._height = value;
+                this.draw();
+            }
+            getClientRect() {
+                return new DOMRect(this._x, this._y, this._width, this._height);
+            }
+            _createEvents() {
+                super._createEvents();
+                this.el.addEventListener('pointerdown', (evt) => this.onPointerDown(evt));
+                this.el.addEventListener('pointermove', (evt) => this.onPointerMove(evt));
+                this.el.addEventListener('pointerup', (evt) => this.onPointerUp(evt));
+            }
+            onPointerMove(evt) {
+                if (!this._isMouseDown)
+                    return;
+                this._moving = true;
+                if (this.designer?.snapToGrid) {
+                    const dx = evt.clientX - this._ox;
+                    const dy = evt.clientY - this._oy;
+                    const gridSize = this.designer.gridSize;
+                    const snapX = Math.round(dx / gridSize) * gridSize;
+                    const snapY = Math.round(dy / gridSize) * gridSize;
+                    this.designer.moveSelectionBy(snapX, snapY);
+                    this._ox += snapX;
+                    this._oy += snapY;
+                }
+                else {
+                    this.designer?.moveSelectionBy(evt.clientX - this._ox, evt.clientY - this._oy);
+                    this._ox = evt.clientX;
+                    this._oy = evt.clientY;
+                }
+            }
+            onPointerUp(evt) {
+                super.onPointerUp(evt);
+                this._moving = false;
+            }
+            moveBy(x, y) {
+                this._x += x;
+                this._y += y;
+                this.draw();
+            }
+            draw() {
+                this.el.style.left = `${this._x}px`;
+                this.el.style.top = `${this._y}px`;
+                this.el.style.width = `${this._width}px`;
+                this.el.style.height = `${this._height}px`;
+            }
+            applyRect(dx, dy, dw, dh) {
+                this.x += dx;
+                this.y += dy;
+                this.width += dw;
+                this.height += dh;
+                this.draw();
+            }
+            setRect(x, y, width, height) {
+                console.debug('apply undo', x, y, width, height);
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.draw();
+            }
+        }
+        design.PositionalControl = PositionalControl;
+        class Rectangle extends PositionalControl {
+            defaultProps() {
+                super.defaultProps();
+                this._width = 100;
+                this._height = 50;
+            }
+            create() {
+                super.create();
+                this.el.className = 'object-designer rectangle-object';
+            }
+            draw() {
+                super.draw();
+                this.el.style.backgroundColor = '#919191';
+                this.el.style.border = '1px solid #000';
+            }
+        }
+        design.Rectangle = Rectangle;
+        class Text extends PositionalControl {
+            defaultProps() {
+                super.defaultProps();
+                this._width = 100;
+                this._height = 20;
+            }
+            create() {
+                super.create();
+                this.el.className = 'object-designer text-object';
+                this.el.innerHTML = 'Hello World';
+            }
+        }
+        design.Text = Text;
+    })(design = oui.design || (oui.design = {}));
+})(oui || (oui = {}));
 var Katrid;
 (function (Katrid) {
     var Services;

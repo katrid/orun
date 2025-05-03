@@ -99,7 +99,7 @@ class Permission(models.Model):
         return perms[0].allow
 
     @classmethod
-    def has_perm(cls, user: int, model: str, perm: str):
+    def has_perm(cls, user: int, model: str, perm: str | tuple[str]):
         """
         Check if the user has the given permission for a model.
         :param user: User id
@@ -107,8 +107,10 @@ class Permission(models.Model):
         :param perm: Permission codename
         :return: Returns True if the user has the given permission for a model.
         """
+        if isinstance(perm, str):
+            perm = (perm,)
         perms = GroupPermissions.objects.only('allow').filter(
-            group__users__user_id=user, permission__content_type__name=model, permission__codename=perm,
+            group__users__id=user, permission__content_type__name=model, permission__codename__in=perm,
         )
         if not perms:
             # allowed by default
@@ -205,6 +207,12 @@ class Group(models.Model):
                 return True
             return False
         return perms[0].allow
+
+    def to_dict(self, fields=None, exclude=None, view_type=None):
+        res = super().to_dict(fields=fields, exclude=exclude, view_type=view_type)
+        if 'permissions' in fields:
+            res['permissions'] = {str(p.permission.pk): p.allow for p in GroupPermissions.objects.filter(group_id=self.pk)}
+        return res
 
     @classmethod
     def _from_json(cls, instance, data, **kwargs):
