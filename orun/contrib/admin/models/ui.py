@@ -94,7 +94,9 @@ class View(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk and self.parent_id is None:
             self.mode = 'primary'
-        if self.view_type is None:
+        if self.parent_id and self.view_type != self.parent.view_type:
+            self.view_type = self.parent.view_type
+        elif self.view_type is None:
             xml = etree.fromstring(self.render({}))
             self.view_type = xml.tag
         super(View, self).save(*args, **kwargs)
