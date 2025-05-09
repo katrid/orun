@@ -1694,6 +1694,7 @@ declare namespace Katrid.Data {
 declare namespace Katrid.Data {
     class ManyToManyField extends ForeignKey {
         tag: string;
+        setValue(record: Katrid.Data.DataRecord, value: any): any;
         toJSON(val: any): any;
         loadInfo(info: any): void;
         formCreate(fieldEl: HTMLElement): HTMLElement;
@@ -2790,6 +2791,266 @@ declare namespace oui.design {
     }
 }
 declare namespace oui.design {
+    class Component implements katrid.IComponent {
+        protected _name: string;
+        children: Component[];
+        owner: katrid.IComponent;
+        constructor(owner?: katrid.IComponent);
+        get name(): string;
+        set name(value: string);
+        protected setName(value: string): void;
+        freeNotifies: Set<katrid.IComponent>;
+        components: Set<katrid.IComponent>;
+        destroy(): void;
+        insertComponent(component: Component): void;
+        removeComponent(component: Component): void;
+        findComponent(name: string): katrid.IComponent;
+        notification(obj: Component, operation: katrid.OperationNotification): void;
+        freeNotification(obj: Component): void;
+        getType(): string;
+        dump(): any;
+        load(info: any): void;
+    }
+    type Point = {
+        x: number;
+        y: number;
+    };
+    type Size = {
+        width: number;
+        height: number;
+    };
+    const pageSizes: {
+        A3: {
+            width: number;
+            height: number;
+        };
+        A4: {
+            width: number;
+            height: number;
+        };
+        A5: {
+            width: number;
+            height: number;
+        };
+        Letter: {
+            width: number;
+            height: number;
+        };
+        Auto: {
+            width: number;
+            height: number;
+        };
+        Custom: {
+            width: number;
+            height: number;
+        };
+        Responsive: {
+            width: string;
+            height: number;
+        };
+        WebSmall: {
+            width: number;
+            height: number;
+        };
+        WebMedium: {
+            width: number;
+            height: number;
+        };
+        WebLarge: {
+            width: number;
+            height: number;
+        };
+    };
+    type PageSize = keyof typeof pageSizes;
+    enum PageOrientation {
+        Portrait = 0,
+        Landscape = 1
+    }
+    type Background = {
+        color: string;
+        style: string;
+    };
+    type TextHighlight = {
+        font?: Font;
+        background?: any;
+        visible?: boolean;
+        condition: string;
+    };
+    type DisplayFormat = {
+        kind: string;
+        format?: string;
+    };
+    enum HAlign {
+        left = 0,
+        center = 1,
+        right = 2,
+        justify = 3
+    }
+    enum VAlign {
+        top = 0,
+        middle = 1,
+        bottom = 2
+    }
+    interface Font {
+        name?: string;
+        size?: string;
+        bold?: boolean;
+        italic?: boolean;
+        underline?: boolean;
+        color?: string;
+    }
+    enum LineStyle {
+        solid = 0,
+        dashed = 1,
+        dotted = 2
+    }
+    interface Border {
+        all?: boolean;
+        top?: boolean;
+        right?: boolean;
+        bottom?: boolean;
+        left?: boolean;
+        rounded?: number;
+        color?: number | string;
+    }
+    type Padding = {
+        top: number;
+        right: number;
+        bottom: number;
+        left: number;
+    };
+}
+declare var Plotly: any;
+declare var requirejs: any;
+declare var appStudio: any;
+declare var monaco: any;
+declare namespace oui.design {
+    type PropertyConfig = {
+        caption?: string;
+        description?: string;
+        placeholder?: string;
+        title?: string;
+        onGetValues?: (typeEditor: ComponentEditor) => any[];
+        options?: any[] | Record<any, string>;
+    };
+    class PropertyEditor {
+        name: string;
+        config?: PropertyConfig;
+        caption: string;
+        description: string;
+        placeholder: string;
+        title: string;
+        cssClass: string;
+        static tag: string;
+        constructor(name: string, config?: PropertyConfig);
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+        protected setValue(value: any, input: HTMLElement): void;
+        protected createLabel(editor: HTMLElement): void;
+        createInput(typeEditor: ComponentEditor): HTMLElement;
+        createInputEvent(typeEditor: ComponentEditor, input: HTMLElement): void;
+        inputChange(typeEditor: ComponentEditor, input: any, evt: any): void;
+        getValue(typeEditor: ComponentEditor): any;
+        apply(typeEditor: ComponentEditor, value: any): void;
+    }
+    class StringProperty extends PropertyEditor {
+        createInput(typeEditor: ComponentEditor): HTMLElement;
+    }
+    class NameStringProperty extends PropertyEditor {
+    }
+    class TextProperty extends StringProperty {
+        static tag: string;
+    }
+    class IntegerProperty extends PropertyEditor {
+        createInput(typeEditor: ComponentEditor): HTMLElement;
+    }
+    class BooleanProperty extends PropertyEditor {
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+    }
+    class BackgroundProperty extends PropertyEditor {
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+    }
+    class FontProperty extends PropertyEditor {
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+    }
+    class BorderProperty extends PropertyEditor {
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+        private allChecked;
+    }
+    class VAlignProperty extends PropertyEditor {
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+    }
+    class HAlignProperty extends PropertyEditor {
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+    }
+    class DisplayFormatProperty extends PropertyEditor {
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+    }
+    class SizeProperty extends PropertyEditor {
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+    }
+    class PaddingProperty extends PropertyEditor {
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+    }
+    interface ISelectPropertyItem {
+        value: any;
+        text: string;
+    }
+    class SelectProperty extends StringProperty {
+        static tag: string;
+        getValues(typeEditor: ComponentEditor): ISelectPropertyItem[];
+        createInput(typeEditor: ComponentEditor): HTMLElement;
+        selectItem(typeEditor: ComponentEditor, index: number): void;
+    }
+    class AutoCompleteProperty extends StringProperty {
+        static tag: string;
+        getValues(typeEditor: ComponentEditor): ISelectPropertyItem[];
+        createInput(typeEditor: ComponentEditor): HTMLElement;
+        selectItem(typeEditor: ComponentEditor, item: any): void;
+    }
+    class ComponentProperty extends SelectProperty {
+        onGetValues: (typeEditor: ComponentEditor) => ISelectPropertyItem[];
+        values: any[];
+        constructor(name: string, config: IPropertyConfig);
+        getValues(typeEditor: ComponentEditor): ISelectPropertyItem[];
+        selectItem(typeEditor: ComponentEditor, index: number): void;
+        protected setValue(value: any, input: HTMLElement): void;
+    }
+    class LocationProperty extends PropertyEditor {
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+    }
+    class HeightProperty extends PropertyEditor {
+        createEditor(typeEditor: ComponentEditor): HTMLElement;
+    }
+    function findComponentEditor(type: any): any;
+    function registerComponentEditor(type: any, editor: typeof ComponentEditor): void;
+    function getComponentEditor(componentClass: typeof oui.design.Component): typeof ComponentEditor;
+    class ComponentEditor {
+        designer?: DesignSurface;
+        static properties: PropertyEditor[];
+        targetObject: any;
+        constructor(comp: any, designer?: DesignSurface);
+        createEditor(): HTMLElement;
+        edit(): void;
+        showEditor(): void;
+        setModified(): void;
+        static registerPropertyEditor(propName: string, editor?: PropertyEditor): void;
+        static defineProperties(): StringProperty[];
+        setPropValue(propName: string, value: any): void;
+        createContextMenu(): Katrid.Forms.ContextMenu;
+        createOutline(): void;
+    }
+    class WidgetEditor extends ComponentEditor {
+        static defineProperties(): PropertyEditor[];
+    }
+    class DataSourceProperty extends SelectProperty {
+        getValues(typeEditor: ComponentEditor): any;
+        getValue(typeEditor: ComponentEditor): any;
+        apply(target: any, value: any): void;
+    }
+    function showCodeEditor(value?: string, lang?: string, previewType?: string): Promise<unknown>;
+    function createCodeEditor(dom: HTMLElement, value?: string, lang?: string, previewType?: string): Promise<unknown>;
+}
+declare namespace oui.design {
     class GrabHandles {
         topCenter: HTMLElement;
         topRight: HTMLElement;
@@ -2808,13 +3069,13 @@ declare namespace oui.design {
             target: any;
         }) => void;
         container: Element;
-        target: PositionalControl;
+        target: BaseWidget;
         gridX: number;
         gridY: number;
         snapToGrid: boolean;
         designer: DesignSurface;
         constructor(config: {
-            target: PositionalControl;
+            target: BaseWidget;
             container: Element;
             snapToGrid?: boolean;
             gridX?: number;
@@ -2858,8 +3119,8 @@ declare namespace oui.design {
         add(action: string, data: any, description?: string): void;
         undo(): void;
         redo(): void;
-        resizeSelection(selection: PositionalControl[]): void;
-        moveSelection(selection: PositionalControl[]): void;
+        resizeSelection(selection: BaseWidget[]): void;
+        moveSelection(selection: BaseWidget[]): void;
         addRedo(redo: UndoEntry): void;
         protected undoMoveObject(undoEntry: IUndoMoveObject[], description?: string): void;
         protected undoResizeObject(undoEntry: IUndoResizeObject[]): void;
@@ -2900,19 +3161,24 @@ declare namespace oui.design {
         grabs: GrabHandles[];
         undoManager: UndoManager;
         clipboardManager: ClipboardManager;
+        onSelectionChange: (selection: Set<BaseWidget>) => void;
         constructor(container: HTMLElement);
         create(): void;
+        changePropertyNotification(objs: any[], propName: string, value: any): void;
+        setModified(): void;
+        enableEvents(): void;
+        disableEvents(): void;
         activate(): void;
         deactivate(): void;
         cut(): Promise<void>;
         copy(): Promise<void>;
         paste(): Promise<void>;
-        pasteObject(obj: PositionalControl): PositionalControl;
+        pasteObject(obj: BaseWidget): BaseWidget;
         undo(): void;
         redo(): void;
         protected onKeyDown(event: KeyboardEvent): void;
         resizeSelectionBy(dw: number, dh: number): void;
-        insertObject(obj: ControlDesigner): ControlDesigner;
+        insertObject(obj: ObjectDesigner): ObjectDesigner;
         get gridSize(): number;
         applyRectToSelection(dx: number, dy: number, dw: number, dh: number): void;
         protected _drawBackground(): void;
@@ -2925,12 +3191,12 @@ declare namespace oui.design {
         protected _selBox: HTMLElement;
         protected createSelectionBox(): void;
         protected updateSelectionBox(x: number, y: number, width: number, height: number): void;
-        protected _selection: Set<PositionalControl>;
-        get selection(): Set<PositionalControl>;
-        set selection(value: Set<PositionalControl>);
-        objectPointerDown(obj: PositionalControl, evt: PointerEvent): void;
-        addToSelection(obj: PositionalControl): void;
-        removeFromSelection(obj: PositionalControl): void;
+        protected _selection: Set<BaseWidget>;
+        get selection(): Set<BaseWidget>;
+        set selection(value: Set<BaseWidget>);
+        objectPointerDown(obj: BaseWidget, evt: PointerEvent): void;
+        addToSelection(obj: BaseWidget): void;
+        removeFromSelection(obj: BaseWidget): void;
         clearSelection(): void;
         updateSelection(): void;
         protected createGrabs(): void;
@@ -2946,27 +3212,35 @@ declare namespace oui.design {
     }
     class BasePageDesigner {
     }
-    class ControlDesigner {
-        designer?: DesignSurface;
+    class ObjectDesigner extends oui.design.Component {
         el: HTMLElement;
         protected _ox: number;
         protected _oy: number;
         protected _isMouseDown: boolean;
-        constructor(designer?: DesignSurface);
+        designer: DesignSurface;
+        constructor(owner?: katrid.IComponent);
         protected defaultProps(): void;
         create(): void;
         protected _createEvents(): void;
+        getType(): string;
         protected onPointerDown(evt: PointerEvent): void;
         protected onPointerUp(evt: PointerEvent): void;
-        draw(): void;
+        protected draw(): void;
     }
-    class PositionalControl extends ControlDesigner {
+    class BaseWidget extends ObjectDesigner {
+        objects: BaseWidget[];
         private _x;
         private _y;
         protected _width: number;
         protected _height: number;
         protected _moving: boolean;
+        create(): void;
         protected defaultProps(): void;
+        get location(): Point;
+        set location(value: Point);
+        get size(): Size;
+        set size(value: Size);
+        remove(): void;
         get x(): number;
         set x(value: number);
         get y(): number;
@@ -2976,22 +3250,17 @@ declare namespace oui.design {
         get height(): number;
         set height(value: number);
         getClientRect(): DOMRect;
+        protected _insertObject(obj: BaseWidget): void;
+        insertObject(obj: BaseWidget): void;
+        removeObject(obj: BaseWidget): void;
         protected _createEvents(): void;
         protected onPointerMove(evt: PointerEvent): void;
         protected onPointerUp(evt: PointerEvent): void;
         moveBy(x: number, y: number): void;
-        draw(): void;
+        protected draw(): void;
         applyRect(dx: number, dy: number, dw: number, dh: number): void;
         setRect(x: number, y: number, width: number, height: number): void;
-    }
-    class Rectangle extends PositionalControl {
-        protected defaultProps(): void;
-        create(): void;
-        draw(): void;
-    }
-    class Text extends PositionalControl {
-        protected defaultProps(): void;
-        create(): void;
+        invalidate(): void;
     }
 }
 declare namespace Katrid.Services {

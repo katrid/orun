@@ -15222,6 +15222,14 @@ query-view .table-responsive {
   margin: 8px;
 }
 
+.kdi-designer .size-layer {
+  position: absolute;
+  background-color: #ffffff;
+  overflow: hidden;
+  left: 0;
+  top: 0;
+}
+
 .toolbar-action-buttons {
   display: flex;
 }
@@ -15546,7 +15554,7 @@ page[size=A4] {
   height: 100%;
 }
 
-.report-editor {
+.oui-app, .report-editor {
   --widget-designer-border-color: #8266ff;
   --guide-line-color: #ff79ba;
   --band-sizer-color: #c7c7c7;
@@ -15554,70 +15562,72 @@ page[size=A4] {
   --band-header-color-selected: #d33fa5;
   --widget-designer-outline: #c8beff;
 }
-.report-editor .guideline {
+.oui-app .guideline, .report-editor .guideline {
   stroke: var(--guide-line-color);
   z-index: 998;
 }
-.report-editor .selection-box {
-  stroke: #708bde;
-  fill: #b6c8ff;
-  fill-opacity: 0.5;
+.oui-app .selection-box, .report-editor .selection-box {
+  position: absolute;
+  border: 1px solid #708bde;
+  background-color: #b6c8ff;
+  opacity: 0.5;
 }
-.report-editor .designer {
+.oui-app .designer, .report-editor .designer {
   position: absolute;
   left: 0;
   top: 0;
   right: 0;
   bottom: 0;
 }
-.report-editor .designer .band-sizer {
+.oui-app .designer .band-sizer, .report-editor .designer .band-sizer {
   cursor: ns-resize;
   fill: var(--band-sizer-color);
 }
-.report-editor .designer .band {
+.oui-app .designer .band, .report-editor .designer .band {
   fill: transparent;
 }
-.report-editor .designer .band-header {
+.oui-app .designer .band-header, .report-editor .designer .band-header {
   fill: var(--band-header-color);
   font-size: 9pt;
   z-index: -1;
 }
-.report-editor .designer .band-designer.selected .band-header {
+.oui-app .designer .band-designer.selected .band-header, .report-editor .designer .band-designer.selected .band-header {
   fill: var(--band-header-color-selected);
 }
-.report-editor .designer .band-header text, .report-editor .designer .widget-designer {
+.oui-app .designer .band-header text, .oui-app .designer .widget-designer, .report-editor .designer .band-header text, .report-editor .designer .widget-designer {
   user-select: none;
   z-index: 99;
 }
-.report-editor .designer .widget-designer {
+.oui-app .designer .widget-designer, .report-editor .designer .widget-designer {
   cursor: move;
 }
-.report-editor .designer .widget-designer foreignObject {
+.oui-app .designer .widget-designer foreignObject, .report-editor .designer .widget-designer foreignObject {
   outline: 1px dotted var(--widget-designer-outline);
 }
-.report-editor .designer .widget-designer foreignObject div.text-object {
+.oui-app .designer .widget-designer foreignObject div.text-object, .report-editor .designer .widget-designer foreignObject div.text-object {
   display: table-cell;
   font-family: Helvetica, Arial, sans-serif;
   font-size: 9pt;
 }
-.report-editor .designer .widget-designer > rect {
+.oui-app .designer .widget-designer > rect, .report-editor .designer .widget-designer > rect {
   outline: 1px dotted var(--widget-designer-outline);
 }
-.report-editor rect.resize-handle {
-  stroke: var(--widget-designer-border-color);
-  fill: #a793ff;
+.oui-app span.resize-handle, .report-editor span.resize-handle {
+  position: absolute;
+  border: 1px solid var(--widget-designer-border-color);
+  background-color: #a793ff;
   z-index: 999;
 }
-.report-editor rect.resize-handle.top-right, .report-editor rect.resize-handle.bottom-left {
+.oui-app span.resize-handle.top-right, .oui-app span.resize-handle.bottom-left, .report-editor span.resize-handle.top-right, .report-editor span.resize-handle.bottom-left {
   cursor: nesw-resize;
 }
-.report-editor rect.resize-handle.top-left, .report-editor rect.resize-handle.bottom-right {
+.oui-app span.resize-handle.top-left, .oui-app span.resize-handle.bottom-right, .report-editor span.resize-handle.top-left, .report-editor span.resize-handle.bottom-right {
   cursor: nwse-resize;
 }
-.report-editor rect.resize-handle.middle-left, .report-editor rect.resize-handle.middle-right {
+.oui-app span.resize-handle.middle-left, .oui-app span.resize-handle.middle-right, .report-editor span.resize-handle.middle-left, .report-editor span.resize-handle.middle-right {
   cursor: ew-resize;
 }
-.report-editor rect.resize-handle.top-center, .report-editor rect.resize-handle.bottom-center {
+.oui-app span.resize-handle.top-center, .oui-app span.resize-handle.bottom-center, .report-editor span.resize-handle.top-center, .report-editor span.resize-handle.bottom-center {
   cursor: ns-resize;
 }
 
@@ -15919,8 +15929,8 @@ page[size=A4] {
   position: relative;
 }
 
-.designer rect.resize-handle {
-  fill: #a793ff;
+.designer span.resize-handle {
+  background: #a793ff;
   position: absolute;
   border-radius: 50%;
   z-index: 999;
@@ -16026,6 +16036,26 @@ page[size=A4] {
 .katrid-report-designer .band-designer .band {
   background-position: top left, 16px 16px;
   position: relative;
+}
+
+.oui-app .design-surface {
+  user-select: none;
+  position: relative;
+}
+.oui-app .design-surface .design-surface-content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+.oui-app .design-surface .object-designer {
+  position: absolute;
+  overflow: hidden;
+  outline: 1px dotted var(--widget-designer-outline);
+}
+.oui-app .design-surface .object-designer:hover {
+  outline: 1px solid var(--widget-designer-outline);
 }
 
 .font-300 {
@@ -16276,6 +16306,64 @@ page[size=A4] {
 }
 .help-center-portal .content-panel p img {
   max-width: 100%;
+}
+
+.chat-dialog {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  height: 400px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+.chat-dialog .chat-header {
+  background-color: #007bff;
+  color: white;
+  padding: 10px;
+  font-weight: bold;
+  flex: 0 0 40px;
+  display: flex;
+}
+.chat-dialog .chat-header label {
+  font-size: 1rem;
+  flex: 1;
+}
+.chat-dialog .chat-header button {
+  flex: 0 0 auto;
+}
+.chat-dialog .chat-messages {
+  flex: 1 0 auto;
+  padding: 10px;
+  overflow-y: scroll;
+}
+.chat-dialog .chat-input {
+  flex: 0 0 auto;
+}
+
+.chat-manager {
+  display: flex;
+  flex-direction: row;
+}
+.chat-manager .chat-list {
+  flex: 0 0 200px;
+  border-right: 1px solid #ccc;
+  padding: 10px;
+  overflow-y: scroll;
+}
+.chat-manager .chat-list .chat-item {
+  padding: 5px;
+  cursor: pointer;
+}
+.chat-manager .chat-list .chat-item:hover {
+  background-color: #f0f0f0;
+}
+.chat-manager .chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /*# sourceMappingURL=style.css.map */

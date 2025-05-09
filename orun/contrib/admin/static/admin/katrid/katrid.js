@@ -6868,6 +6868,9 @@ var Katrid;
                 super(...arguments);
                 this.tag = 'input-tags';
             }
+            setValue(record, value) {
+                record[this.name] = value;
+            }
             toJSON(val) {
                 if (Array.isArray(val))
                     return val.map(obj => obj.id);
@@ -6877,7 +6880,6 @@ var Katrid;
             }
             loadInfo(info) {
                 super.loadInfo(info);
-                console.debug('loadinfo', info);
             }
             formCreate(fieldEl) {
                 let section = super.formCreate(fieldEl);
@@ -6885,7 +6887,7 @@ var Katrid;
                 return section;
             }
             formSpanTemplate() {
-                return `<div class="input-tags"><label class="badge badge-dark" v-for="tag in record.${this.name}">{{tag.text}}</label></div>`;
+                return `<div class="input-tags"><label class="badge badge-dark" v-for="tag in record.${this.name}">{{tag?.text}}</label></div>`;
             }
         }
         Data.ManyToManyField = ManyToManyField;
@@ -13332,7 +13334,6 @@ var Katrid;
                     this.$field = this.$parent.$fields[this.$attrs.name];
                     ac.bind({ vm: this.$parent, field: this.$field, view: this.$parent.$view, model: this.$parent.$view.model });
                     this.$el.addEventListener('onChange', (evt) => {
-                        console.log('select item', evt.detail);
                         this.$emit('update:modelValue', evt.detail.tags);
                     });
                     if (this.modelValue) {
@@ -14173,6 +14174,1044 @@ var oui;
 (function (oui) {
     var design;
     (function (design) {
+        class Component {
+            constructor(owner) {
+                this.components = new Set();
+                this.owner = owner;
+                owner?.insertComponent(this);
+            }
+            get name() {
+                return this._name;
+            }
+            set name(value) {
+                this.setName(value);
+            }
+            setName(value) {
+                this._name = value;
+            }
+            destroy() {
+                if (this.freeNotifies)
+                    for (const c of this.freeNotifies)
+                        c.notification(this, 'remove');
+                for (const c of this.children)
+                    c.destroy();
+                this.components = new Set();
+            }
+            insertComponent(component) {
+                if (!this.components)
+                    this.components = new Set();
+                this.components.add(component);
+                component.owner = this;
+            }
+            removeComponent(component) {
+                this.components.delete(component);
+                for (const c of this.components)
+                    c.notification(component, 'remove');
+            }
+            findComponent(name) {
+                if (name && this.components)
+                    for (const c of this.components)
+                        if (c.name === name)
+                            return c;
+            }
+            notification(obj, operation) {
+                if (operation === 'remove' && this.freeNotifies?.has(obj))
+                    this.freeNotifies.delete(obj);
+                for (const c of this.components)
+                    c.notification(obj, operation);
+            }
+            freeNotification(obj) {
+                if (!this.freeNotifies)
+                    this.freeNotifies = new Set();
+                this.freeNotifies.add(obj);
+            }
+            getType() {
+                return this.constructor.name;
+            }
+            dump() {
+                const d = {
+                    type: this.getType(),
+                    name: this.name,
+                };
+                if (this.children) {
+                    d.children = this.children.map(c => c.dump());
+                }
+                return d;
+            }
+            load(info) {
+                this.name = info.name;
+            }
+        }
+        design.Component = Component;
+        design.pageSizes = {
+            A3: { width: 1122, height: 1587 },
+            A4: { width: 794, height: 1122 },
+            A5: { width: 583, height: 794 },
+            Letter: { width: 816, height: 1071 },
+            Auto: { width: -1, height: -1 },
+            Custom: { width: 0, height: 0 },
+            Responsive: { width: "100%", height: -1 },
+            WebSmall: { width: 768, height: 1024 },
+            WebMedium: { width: 1024, height: 768 },
+            WebLarge: { width: 1280, height: 1024 },
+        };
+        let PageOrientation;
+        (function (PageOrientation) {
+            PageOrientation[PageOrientation["Portrait"] = 0] = "Portrait";
+            PageOrientation[PageOrientation["Landscape"] = 1] = "Landscape";
+        })(PageOrientation = design.PageOrientation || (design.PageOrientation = {}));
+        let HAlign;
+        (function (HAlign) {
+            HAlign[HAlign["left"] = 0] = "left";
+            HAlign[HAlign["center"] = 1] = "center";
+            HAlign[HAlign["right"] = 2] = "right";
+            HAlign[HAlign["justify"] = 3] = "justify";
+        })(HAlign = design.HAlign || (design.HAlign = {}));
+        let VAlign;
+        (function (VAlign) {
+            VAlign[VAlign["top"] = 0] = "top";
+            VAlign[VAlign["middle"] = 1] = "middle";
+            VAlign[VAlign["bottom"] = 2] = "bottom";
+        })(VAlign = design.VAlign || (design.VAlign = {}));
+        let LineStyle;
+        (function (LineStyle) {
+            LineStyle[LineStyle["solid"] = 0] = "solid";
+            LineStyle[LineStyle["dashed"] = 1] = "dashed";
+            LineStyle[LineStyle["dotted"] = 2] = "dotted";
+        })(LineStyle = design.LineStyle || (design.LineStyle = {}));
+    })(design = oui.design || (oui.design = {}));
+})(oui || (oui = {}));
+var oui;
+(function (oui) {
+    var design;
+    (function (design) {
+        class PropertyEditor {
+            static { this.tag = 'input'; }
+            constructor(name, config) {
+                this.name = name;
+                this.config = config;
+                this.caption = config?.caption;
+                this.description = config?.description;
+                this.placeholder = config?.placeholder;
+                this.title = config?.title;
+            }
+            createEditor(typeEditor) {
+                let editor = document.createElement('section');
+                editor.classList.add('form-group', 'col-12');
+                editor.setAttribute('prop-name', this.name);
+                editor.classList.add('property-editor');
+                if (this.caption)
+                    this.createLabel(editor);
+                if (this.cssClass)
+                    editor.classList.add(this.cssClass);
+                let input = this.createInput(typeEditor);
+                let value = this.getValue(typeEditor);
+                this.setValue(value, input);
+                editor.append(input);
+                if (this.title) {
+                    editor.title = this.title;
+                }
+                return editor;
+            }
+            setValue(value, input) {
+                if (value != null)
+                    input.value = value;
+            }
+            createLabel(editor) {
+                let label = document.createElement('label');
+                label.innerText = this.caption || this.name;
+                label.className = 'control-label';
+                editor.appendChild(label);
+            }
+            createInput(typeEditor) {
+                let input = document.createElement(this.constructor.tag);
+                input.classList.add('form-control');
+                if (this.placeholder)
+                    input.placeholder = this.placeholder;
+                this.createInputEvent(typeEditor, input);
+                return input;
+            }
+            createInputEvent(typeEditor, input) {
+                input.addEventListener('change', evt => this.inputChange(typeEditor, input, evt));
+            }
+            inputChange(typeEditor, input, evt) {
+                this.apply(typeEditor, input.value);
+            }
+            getValue(typeEditor) {
+                return typeEditor.targetObject[this.name];
+            }
+            apply(typeEditor, value) {
+                typeEditor.targetObject[this.name] = value;
+                typeEditor.setPropValue(this.name, value);
+            }
+        }
+        design.PropertyEditor = PropertyEditor;
+        class StringProperty extends PropertyEditor {
+            createInput(typeEditor) {
+                let el = super.createInput(typeEditor);
+                el.spellcheck = false;
+                return el;
+            }
+        }
+        design.StringProperty = StringProperty;
+        class NameStringProperty extends PropertyEditor {
+        }
+        design.NameStringProperty = NameStringProperty;
+        class TextProperty extends StringProperty {
+            static { this.tag = 'textarea'; }
+        }
+        design.TextProperty = TextProperty;
+        class IntegerProperty extends PropertyEditor {
+            createInput(typeEditor) {
+                let el = super.createInput(typeEditor);
+                el.type = 'number';
+                return el;
+            }
+        }
+        design.IntegerProperty = IntegerProperty;
+        let CONTROL_COUNT = 0;
+        class BooleanProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                let editor = document.createElement('section');
+                editor.className = 'col-12 property-editor';
+                editor.innerHTML = `<div class="form-check"><input class="form-check-input" type="checkbox" id="_el-input-${++CONTROL_COUNT}"><label class="form-check-label" for="_el-input-${CONTROL_COUNT}">${this.caption}</label></div>`;
+                let input = editor.querySelector('input');
+                input.checked = this.getValue(typeEditor);
+                input.addEventListener('change', () => typeEditor.targetObject[this.name] = input.checked);
+                return editor;
+            }
+        }
+        design.BooleanProperty = BooleanProperty;
+        class BackgroundProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('section');
+                editor.className = 'col-12 property-editor';
+                editor.innerHTML = `
+      <table>
+      <tr>
+      <td><label>Background</label></td>
+      <td style="width:100%">
+      <input class="form-control" type="color" name="background-color">
+      </td></tr>
+      </table>
+      `;
+                const val = this.getValue(typeEditor) || {};
+                const bgColor = editor.querySelector('input[name="background-color"]');
+                if (val.color)
+                    bgColor.value = val.color;
+                else
+                    bgColor.value = '#FFFFFF';
+                bgColor.addEventListener('change', () => {
+                    val.color = bgColor.value;
+                    typeEditor.targetObject['background'] = val;
+                });
+                return editor;
+            }
+        }
+        design.BackgroundProperty = BackgroundProperty;
+        class FontProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('section');
+                editor.className = 'col-12 property-editor';
+                editor.style.textAlign = 'center';
+                editor.innerHTML = `
+<table>
+<tr>
+<td>
+<select class="form-select form-select-sm" name="font-name">
+<option value=""></option>
+<option value="Arial">Arial</option>
+<option value="Helvetica">Helvetica</option>
+<option value="Times New Roman">Times New Roman</option>
+<option value="Courier">Courier</option>
+<option value="Courier New">Courier New</option>
+</select>
+</td>
+<td>
+<input class="form-control input-sm" type="number" name="font-size" value="9">
+</td>
+<td style="width:40px">
+<input class="form-control input-sm" name="font-color" type="color">
+</td>
+</tr>
+</table>
+<div class="btn-group" style="width: 100%">
+<input class="btn-check" type="checkbox" id="property-font-bold" name="font-bold">
+<label class="btn btn-sm btn-outline-secondary" for="property-font-bold"><i class="fa-solid fa-bold"></i></label>
+<input class="btn-check" type="checkbox" id="property-font-italic" name="font-italic">
+<label class="btn btn-sm btn-outline-secondary" for="property-font-italic"><i class="fa-solid fa-italic"></i></label>
+<input class="btn-check" type="checkbox" id="property-font-underline" name="font-underline">
+<label class="btn btn-sm btn-outline-secondary" for="property-font-underline"><i class="fa-solid fa-underline"></i></label>
+</div>
+`;
+                let val = this.getValue(typeEditor) || {};
+                let bold = editor.querySelector('input[name="font-bold"]');
+                if (val.bold)
+                    bold.checked = true;
+                bold.addEventListener('change', () => {
+                    val.bold = bold.checked;
+                    typeEditor.targetObject.font = val;
+                });
+                let italic = editor.querySelector('input[name="font-italic"]');
+                if (val.italic)
+                    italic.checked = true;
+                italic.addEventListener('change', () => {
+                    val.italic = italic.checked;
+                    typeEditor.targetObject.font = val;
+                });
+                let underline = editor.querySelector('input[name="font-underline"]');
+                if (val.underline)
+                    underline.checked = true;
+                underline.addEventListener('change', () => {
+                    val.underline = underline.checked;
+                    typeEditor.targetObject['font'] = val;
+                });
+                let fontName = editor.querySelector('select[name="font-name"]');
+                fontName.value = typeEditor.targetObject.font?.name;
+                fontName.addEventListener('change', () => {
+                    val.name = fontName.value;
+                    typeEditor.targetObject['font'] = val;
+                });
+                let fontColor = editor.querySelector('input[name="font-color"]');
+                fontColor.value = typeEditor.targetObject['font']?.color;
+                fontColor.addEventListener('change', () => {
+                    val.color = fontColor.value;
+                    typeEditor.targetObject['font'] = val;
+                });
+                let fontSize = editor.querySelector('input[name="font-size"]');
+                if (typeEditor.targetObject['font']?.size) {
+                    let size = typeEditor.targetObject['font'].size;
+                    if (typeof size === 'number')
+                        fontSize.value = size.toString();
+                    else
+                        fontSize.value = size.match(/(\d+)/)[0];
+                }
+                fontSize.addEventListener('change', () => {
+                    val.size = fontSize.value;
+                    typeEditor.targetObject['font'] = val;
+                });
+                return editor;
+            }
+        }
+        design.FontProperty = FontProperty;
+        class BorderProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                let editor = document.createElement('div');
+                editor.className = 'property-editor';
+                editor.style.textAlign = 'center';
+                editor.innerHTML = `
+<div class="btn-group" style="width: 100%">
+<input class="btn-check" type="checkbox" id="property-border-all" name="border-all">
+<label class="btn btn-sm btn-outline-secondary" for="property-border-all"><i class="fa-duotone fa-border-all"></i></label>
+<input class="btn-check" type="checkbox" id="property-border-top" name="border-top">
+<label class="btn btn-sm btn-outline-secondary" for="property-border-top"><i class="fa-duotone fa-border-top"></i></label>
+<input class="btn-check" type="checkbox" id="property-border-right" name="border-right">
+<label class="btn btn-sm btn-outline-secondary" for="property-border-right"><i class="fa-duotone fa-border-right"></i></label>
+<input class="btn-check" type="checkbox" id="property-border-bottom" name="border-bottom">
+<label class="btn btn-sm btn-outline-secondary" for="property-border-bottom"><i class="fa-duotone fa-border-bottom"></i></label>
+<input class="btn-check" type="checkbox" id="property-border-left" name="border-left">
+<label class="btn btn-sm btn-outline-secondary" for="property-border-left"><i class="fa-duotone fa-border-left"></i></label>
+<input class="form-control input-sm" name="border-color" type="color">
+</div>
+      `;
+                let val = this.getValue(typeEditor) || {};
+                let all = editor.querySelector('input[name="border-all"]');
+                let top = editor.querySelector('input[name="border-top"]');
+                let right = editor.querySelector('input[name="border-right"]');
+                let bottom = editor.querySelector('input[name="border-bottom"]');
+                let left = editor.querySelector('input[name="border-left"]');
+                let color = editor.querySelector('input[name="border-color"]');
+                if (val.all)
+                    all.checked = true;
+                else {
+                    top.checked = val.top;
+                    right.checked = val.right;
+                    bottom.checked = val.bottom;
+                    left.checked = val.left;
+                }
+                if (val.color != null)
+                    color.value = typeof val.color === 'number' ? `#${val.color.toString(16)}` : val.color;
+                else
+                    color.value = 'transparent';
+                all.addEventListener('change', () => {
+                    val.all = all.checked;
+                    top.checked = right.checked = bottom.checked = left.checked = val.top = val.right = val.bottom = val.left = val.all;
+                    if (val.all)
+                        typeEditor.targetObject[this.name] = val;
+                    else
+                        typeEditor.targetObject[this.name] = null;
+                });
+                top.addEventListener('change', () => {
+                    val.top = top.checked;
+                    all.checked = val.all = this.allChecked(val);
+                    typeEditor.targetObject[this.name] = val;
+                });
+                right.addEventListener('change', () => {
+                    val.right = right.checked;
+                    all.checked = val.all = this.allChecked(val);
+                    typeEditor.targetObject[this.name] = val;
+                });
+                bottom.addEventListener('change', () => {
+                    val.bottom = bottom.checked;
+                    all.checked = val.all = this.allChecked(val);
+                    typeEditor.targetObject[this.name] = val;
+                });
+                left.addEventListener('change', () => {
+                    val.left = left.checked;
+                    all.checked = val.all = this.allChecked(val);
+                    typeEditor.targetObject[this.name] = val;
+                });
+                color.addEventListener('change', () => {
+                    val.color = color.value;
+                    typeEditor.targetObject[this.name] = val;
+                });
+                return editor;
+            }
+            allChecked(val) {
+                return val.top && val.right && val.bottom && val.left;
+            }
+        }
+        design.BorderProperty = BorderProperty;
+        class VAlignProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                let editor = document.createElement('div');
+                editor.className = 'property-editor';
+                editor.style.textAlign = 'center';
+                editor.innerHTML = `
+<div class="btn-group" style="width: 100%">
+<input class="btn-check" type="radio" id="property-valign-top" name="valign" value="0">
+<label class="btn btn-sm btn-outline-secondary" for="property-valign-top"><i class="fa-duotone fa-objects-align-top"></i></label>
+<input class="btn-check" type="radio" id="property-valign-middle" name="valign" value="1">
+<label class="btn btn-sm btn-outline-secondary" for="property-valign-middle"><i class="fa-duotone fa-objects-align-center-vertical"></i></label>
+<input class="btn-check" type="radio" id="property-valign-bottom" name="valign" value="2">
+<label class="btn btn-sm btn-outline-secondary" for="property-valign-bottom"><i class="fa-duotone fa-objects-align-bottom"></i></label>
+</div>
+      `;
+                let val = this.getValue(typeEditor) || design.VAlign.top;
+                let top = editor.querySelector('#property-valign-top');
+                let middle = editor.querySelector('#property-valign-middle');
+                let bottom = editor.querySelector('#property-valign-bottom');
+                top.checked = val === design.VAlign.top;
+                middle.checked = val === design.VAlign.middle;
+                bottom.checked = val === design.VAlign.bottom;
+                const change = evt => typeEditor.targetObject[this.name] = parseInt(evt.target.value);
+                top.addEventListener('change', change);
+                middle.addEventListener('change', change);
+                bottom.addEventListener('change', change);
+                return editor;
+            }
+        }
+        design.VAlignProperty = VAlignProperty;
+        class HAlignProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('div');
+                editor.className = 'property-editor';
+                editor.style.textAlign = 'center';
+                editor.innerHTML = `
+<div class="btn-group" style="width: 100%">
+<input class="btn-check" type="radio" id="property-halign-left" name="halign" value="0">
+<label class="btn btn-sm btn-outline-secondary" title="Align to left" for="property-halign-left"><i class="fa-duotone fa-align-left"></i></label>
+<input class="btn-check" type="radio" id="property-halign-center" name="halign" value="1">
+<label class="btn btn-sm btn-outline-secondary" title="Align to center" for="property-halign-center"><i class="fa-duotone fa-align-center"></i></label>
+<input class="btn-check" type="radio" id="property-halign-right" name="halign" value="2">
+<label class="btn btn-sm btn-outline-secondary" title="Align to right" for="property-halign-right"><i class="fa-duotone fa-align-right"></i></label>
+<input class="btn-check" type="radio" id="property-halign-justify" name="halign" value="3">
+<label class="btn btn-sm btn-outline-secondary" title="Justify" for="property-halign-justify"><i class="fa-duotone fa-align-justify"></i></label>
+</div>`;
+                let val = this.getValue(typeEditor) || design.HAlign.left;
+                let left = editor.querySelector('#property-halign-left');
+                let center = editor.querySelector('#property-halign-center');
+                let right = editor.querySelector('#property-halign-right');
+                let justify = editor.querySelector('#property-halign-justify');
+                left.checked = val === design.HAlign.left;
+                center.checked = val === design.HAlign.center;
+                right.checked = val === design.HAlign.right;
+                justify.checked = val === design.HAlign.justify;
+                const change = evt => typeEditor.targetObject[this.name] = parseInt(evt.target.value);
+                left.addEventListener('change', change);
+                center.addEventListener('change', change);
+                right.addEventListener('change', change);
+                justify.addEventListener('change', change);
+                return editor;
+            }
+        }
+        design.HAlignProperty = HAlignProperty;
+        class DisplayFormatProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('div');
+                editor.className = 'property-editor';
+                editor.style.textAlign = 'center';
+                editor.innerHTML = `
+      <table><tr>
+      <td><select class="form-select" name="displayFormat"><option value=""></option>
+        <option value="Numeric">Numeric</option>
+        <option value="DateTime">DateTime</option>
+        <option value="String">String</option>
+      </select></td>
+      <td><input class="form-control" type="text"></td>
+      </tr></table>
+`;
+                const val = this.getValue(typeEditor) || {};
+                const input = editor.querySelector('input');
+                const kind = editor.querySelector('select');
+                if (val.kind)
+                    kind.value = val.kind;
+                if (val.format)
+                    input.value = val.format;
+                const onChange = () => {
+                    val.kind = kind.value;
+                    val.format = input.value;
+                    typeEditor.targetObject['displayFormat'] = val;
+                };
+                input.addEventListener('change', onChange);
+                kind.addEventListener('change', onChange);
+                return editor;
+            }
+        }
+        design.DisplayFormatProperty = DisplayFormatProperty;
+        class SizeProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('section');
+                editor.classList.add('form-group', 'row', 'property-editor');
+                editor.setAttribute('prop-name', this.name);
+                let size = this.getValue(typeEditor);
+                if (this.caption) {
+                    this.createLabel(editor);
+                }
+                if (this.cssClass) {
+                    editor.classList.add(this.cssClass);
+                }
+                let div = document.createElement('div');
+                div.className = 'col-6';
+                let igroup = createInputGroup('<i class="fa-regular fa-fw fa-arrows-left-right"></i>');
+                let input = igroup.querySelector('input');
+                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
+                    width: parseInt(evt.target.value),
+                    height: size.height,
+                }));
+                input.value = size?.width;
+                div.append(igroup);
+                editor.append(div);
+                div = document.createElement('div');
+                div.className = 'col-6';
+                igroup = createInputGroup('<i class="fa-regular fa-fw fa-arrows-up-down"></i>');
+                input = igroup.querySelector('input');
+                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
+                    width: size?.width,
+                    height: parseInt(evt.target.value),
+                }));
+                input.value = size?.height;
+                div.append(igroup);
+                editor.append(div);
+                return editor;
+            }
+        }
+        design.SizeProperty = SizeProperty;
+        class PaddingProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                let editor = document.createElement('section');
+                editor.classList.add('form-group', 'row', 'property-editor');
+                editor.setAttribute('prop-name', this.name);
+                const padding = this.getValue(typeEditor) || {};
+                if (this.caption)
+                    this.createLabel(editor);
+                if (this.cssClass)
+                    editor.classList.add(this.cssClass);
+                let input = createInputGroup({
+                    className: 'col-6', targetObj: padding, targetProp: 'top', append: 'Top', dataType: Number,
+                    callback: (evt, value) => typeEditor.setPropValue(this.name, padding),
+                    value: padding.top,
+                });
+                editor.appendChild(input);
+                input = createInputGroup({
+                    className: 'col-6', targetObj: padding, targetProp: 'right', append: 'Right', dataType: Number,
+                    callback: (evt, value) => typeEditor.setPropValue(this.name, padding),
+                    value: padding.right,
+                });
+                editor.appendChild(input);
+                input = createInputGroup({
+                    className: 'col-6', targetObj: padding, targetProp: 'bottom', append: 'Bottom', dataType: Number,
+                    callback: (evt, value) => typeEditor.setPropValue(this.name, padding),
+                    value: padding.bottom,
+                });
+                editor.appendChild(input);
+                input = createInputGroup({
+                    className: 'col-6', targetObj: padding, targetProp: 'left', append: 'Left', dataType: Number,
+                    callback: (evt, value) => typeEditor.setPropValue(this.name, padding),
+                    value: padding.left,
+                });
+                editor.appendChild(input);
+                return editor;
+            }
+        }
+        design.PaddingProperty = PaddingProperty;
+        class SelectProperty extends StringProperty {
+            static { this.tag = 'select'; }
+            getValues(typeEditor) {
+                if (this.config.options) {
+                    if (Array.isArray(this.config.options)) {
+                        return this.config.options;
+                    }
+                    return Array.from(Object.entries(this.config.options).map(([k, v]) => ({
+                        value: k.toString(),
+                        text: v.toString()
+                    })));
+                }
+                return;
+            }
+            createInput(typeEditor) {
+                let input = super.createInput(typeEditor);
+                input.className = 'form-select';
+                input.innerHTML = `<option value="">(${this.caption || this.name})</option>`;
+                for (let obj of this.getValues(typeEditor)) {
+                    let el = document.createElement('option');
+                    el.setAttribute('value', obj.value);
+                    el.innerText = obj.text;
+                    input.append(el);
+                }
+                input.addEventListener('change', () => this.selectItem(typeEditor, parseInt(input.value)));
+                return input;
+            }
+            selectItem(typeEditor, index) {
+            }
+        }
+        design.SelectProperty = SelectProperty;
+        class AutoCompleteProperty extends StringProperty {
+            static { this.tag = 'div'; }
+            getValues(typeEditor) {
+                if (this.config.options) {
+                    if (Array.isArray(this.config.options)) {
+                        return this.config.options;
+                    }
+                    return Array.from(Object.entries(this.config.options).map(([k, v]) => ({
+                        value: k.toString(),
+                        text: v.toString()
+                    })));
+                }
+                return;
+            }
+            createInput(typeEditor) {
+                let input = document.createElement('div');
+                const ac = new katrid.ui.InputAutoComplete({
+                    el: input,
+                    source: this.getValues(typeEditor),
+                });
+                ac.value = this.getValue(typeEditor);
+                ac.el.addEventListener('selectItem', (evt) => this.selectItem(typeEditor, evt.detail.item));
+                return input;
+            }
+            selectItem(typeEditor, item) {
+                if (item) {
+                    typeEditor.targetObject[this.name] = item.id;
+                }
+                else {
+                    typeEditor.targetObject[this.name] = null;
+                }
+            }
+        }
+        design.AutoCompleteProperty = AutoCompleteProperty;
+        class ComponentProperty extends SelectProperty {
+            constructor(name, config) {
+                super(name, config);
+                this.onGetValues = config.onGetValues;
+            }
+            getValues(typeEditor) {
+                let vals = Array.from(this.onGetValues(typeEditor));
+                this.values = vals.map(v => v.value);
+                vals.forEach((v, i) => v.value = i);
+                return vals;
+            }
+            selectItem(typeEditor, index) {
+                typeEditor.targetObject[this.name] = this.values[index];
+            }
+            setValue(value, input) {
+                if (value) {
+                    const i = this.values.indexOf(value);
+                    if (i > -1) {
+                        input.value = i.toString();
+                        return;
+                    }
+                }
+                input.value = '';
+            }
+        }
+        design.ComponentProperty = ComponentProperty;
+        function createInputGroup(param) {
+            let div;
+            const igroup = document.createElement('div');
+            igroup.className = 'input-group input-group-sm';
+            const span = document.createElement('span');
+            span.className = 'input-group-text';
+            const input = document.createElement('input');
+            input.className = 'form-control input-xl';
+            igroup.append(input);
+            igroup.append(span);
+            if (typeof param === 'string')
+                span.innerHTML = param;
+            else {
+                if (param.append)
+                    span.innerHTML = param.append;
+                if (param.value != null)
+                    input.value = param.value;
+                if (param.callback || (param.targetObj && param.targetProp)) {
+                    input.addEventListener('blur', (evt) => {
+                        let val = input.value;
+                        if (param.targetObj && param.targetProp) {
+                            if (val && param.dataType === Number)
+                                val = val ? parseFloat(val) : null;
+                            param.targetObj[param.targetProp] = val;
+                        }
+                        if (param.callback)
+                            param.callback(evt, val);
+                    });
+                }
+                if (param.className) {
+                    div = document.createElement('div');
+                    div.className = param.className;
+                    div.append(igroup);
+                    return div;
+                }
+            }
+            return igroup;
+        }
+        class LocationProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                let editor = document.createElement('section');
+                editor.classList.add('form-group', 'row', 'property-editor');
+                editor.setAttribute('prop-name', this.name);
+                let loc = this.getValue(typeEditor);
+                if (this.caption)
+                    this.createLabel(editor);
+                if (this.cssClass)
+                    editor.classList.add(this.cssClass);
+                let div = document.createElement('div');
+                div.className = 'col-6';
+                let igroup = createInputGroup('x');
+                let input = igroup.querySelector('input');
+                input.value = loc?.x;
+                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
+                    x: parseInt(evt.target.value),
+                    y: loc.y
+                }));
+                div.append(igroup);
+                editor.append(div);
+                div = document.createElement('div');
+                div.className = 'col-6';
+                igroup = createInputGroup('y');
+                input = igroup.querySelector('input');
+                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, {
+                    x: loc.x,
+                    y: parseInt(evt.target.value),
+                }));
+                input.value = loc?.y;
+                div.append(igroup);
+                editor.append(div);
+                return editor;
+            }
+        }
+        design.LocationProperty = LocationProperty;
+        class HeightProperty extends PropertyEditor {
+            createEditor(typeEditor) {
+                const editor = document.createElement('section');
+                editor.classList.add('form-group', 'row', 'property-editor');
+                editor.setAttribute('prop-name', this.name);
+                let size = this.getValue(typeEditor);
+                if (this.caption) {
+                    this.createLabel(editor);
+                }
+                if (this.cssClass) {
+                    editor.classList.add(this.cssClass);
+                }
+                let div = document.createElement('div');
+                div.className = 'col-12';
+                let igroup = createInputGroup('<i class="fa-regular fa-fw fa-arrows-up-down"></i>');
+                let input = igroup.querySelector('input');
+                input.type = 'number';
+                input.addEventListener('blur', evt => typeEditor.setPropValue(this.name, parseInt(evt.target.value)));
+                input.value = size;
+                div.append(igroup);
+                editor.append(div);
+                if (this.title) {
+                    editor.title = this.title;
+                }
+                return editor;
+            }
+        }
+        design.HeightProperty = HeightProperty;
+        let componentEditorRegistry = [];
+        function findComponentEditor(type) {
+            for (let reg of componentEditorRegistry)
+                if (reg.type === type)
+                    return reg;
+            for (let i = componentEditorRegistry.length - 1; i >= 0; i--) {
+                let reg = componentEditorRegistry[i];
+                if (reg.type && type.prototype instanceof reg.type)
+                    return reg;
+            }
+            for (let reg of componentEditorRegistry) {
+                if (reg.type === undefined)
+                    return reg;
+            }
+        }
+        design.findComponentEditor = findComponentEditor;
+        function registerComponentEditor(type, editor) {
+            let reg;
+            for (let r of componentEditorRegistry)
+                if (r.type === type) {
+                    reg = r;
+                    break;
+                }
+            if (!reg) {
+                reg = { type, editor };
+                componentEditorRegistry.push(reg);
+            }
+            else {
+                reg.editor = editor;
+            }
+            editor.properties = editor.defineProperties();
+        }
+        design.registerComponentEditor = registerComponentEditor;
+        function getComponentEditor(componentClass) {
+            let reg = findComponentEditor(componentClass);
+            if (reg)
+                return reg.editor;
+            return ComponentEditor;
+        }
+        design.getComponentEditor = getComponentEditor;
+        class ComponentEditor {
+            constructor(comp, designer) {
+                this.designer = designer;
+                this.targetObject = comp;
+            }
+            createEditor() {
+                let editor = document.createElement('div');
+                let props = this.constructor['properties'];
+                for (let prop of props)
+                    editor.append(prop.createEditor(this));
+                return editor;
+            }
+            edit() {
+                this.showEditor();
+            }
+            showEditor() {
+            }
+            setModified() {
+                this.designer?.setModified();
+            }
+            static registerPropertyEditor(propName, editor) {
+                this.properties[propName] = editor;
+            }
+            static defineProperties() {
+                return [
+                    new StringProperty('name', { placeholder: 'Object Name' }),
+                ];
+            }
+            setPropValue(propName, value) {
+                this.targetObject[propName] = value;
+                this.designer?.changePropertyNotification([this.targetObject], propName, value);
+            }
+            createContextMenu() {
+                const menu = new katrid.ui.ContextMenu();
+                menu.add(_.gettext('Delete'), () => this.designer.deleteObject(this.targetObject));
+                return menu;
+            }
+            createOutline() {
+            }
+        }
+        design.ComponentEditor = ComponentEditor;
+        class WidgetEditor extends ComponentEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new LocationProperty('location'), new SizeProperty('size'));
+            }
+        }
+        design.WidgetEditor = WidgetEditor;
+        class DataWidgetEditor extends ComponentEditor {
+            static defineProperties() {
+                return [
+                    new StringProperty('title', { caption: 'Title' }),
+                    new DataSourceProperty('datasource', { caption: 'Data Source' }),
+                ];
+            }
+        }
+        class DataSourceProperty extends SelectProperty {
+            getValues(typeEditor) {
+                return typeEditor.designer.report.datasources.map(ds => ({
+                    value: ds,
+                    text: ds.name
+                }));
+            }
+            getValue(typeEditor) {
+                if (typeEditor.targetObject.datasource) {
+                    return appStudio.dataSources.indexOf(typeEditor.targetObject.datasource);
+                }
+            }
+            apply(target, value) {
+                target.targetObject.setDataSource(appStudio.dataSources[value]);
+            }
+        }
+        design.DataSourceProperty = DataSourceProperty;
+        class ChartEditor extends WidgetEditor {
+            async showEditor() {
+                this.targetObject.code = await showCodeEditor(this.targetObject.code, 'javascript', 'chart');
+            }
+        }
+        class PieChartEditor extends ChartEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new AutocompleteProperty('values', { caption: 'Values' }), new AutocompleteProperty('labels', { caption: 'Labels' }));
+            }
+        }
+        class DonutChartEditor extends PieChartEditor {
+        }
+        class BarChartEditor extends ChartEditor {
+            static defineProperties() {
+                return super.defineProperties().concat(new AutocompleteProperty('x', { caption: 'X' }), new AutocompleteProperty('y', { caption: 'Y' }));
+            }
+        }
+        class LineChartEditor extends BarChartEditor {
+        }
+        async function showCodeEditor(value = null, lang = 'javascript', previewType = 'table') {
+            let codeEditor;
+            return new Promise((resolve, reject) => {
+                requirejs(['vs/editor/editor.main'], function () {
+                    let title = 'Code Editor';
+                    let modal = document.createElement('div');
+                    modal.className = 'modal';
+                    modal.tabIndex = -1;
+                    modal.innerHTML = `<div class="modal-dialog modal-xl modal-fullscreen-md-down" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">${title}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+      <div class="code-editor"></div>
+      </div>
+      <div class="modal-footer">
+      <button type="button" class="btn-ok btn btn-outline-secondary">OK</button>
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+                    let lastTimeout;
+                    let dlg = new bootstrap.Modal(modal);
+                    modal.addEventListener('hidden.bs.modal', () => {
+                        modal.remove();
+                        resolve(false);
+                    });
+                    dlg.show();
+                    let btnOk = modal.querySelector('.btn-ok');
+                    if (!codeEditor) {
+                        let editor = modal.querySelector('.code-editor');
+                        let preview = modal.querySelector('.preview');
+                        codeEditor = monaco.editor.create(editor, {
+                            lang,
+                        });
+                        if (previewType === 'table') {
+                            let tbl = new Katrid.bi.TableWidget(preview);
+                            codeEditor.onDidChangeModelContent(event => {
+                                if (lastTimeout)
+                                    clearTimeout(lastTimeout);
+                                lastTimeout = setTimeout(() => {
+                                    let previewType = modal.getAttribute('preview-type');
+                                    lastTimeout = null;
+                                    let code = codeEditor.getModel().getValue();
+                                    if (previewType === 'table')
+                                        tbl.fromCode(code);
+                                    else if (previewType === 'chart')
+                                        chartPreview(preview, code);
+                                    else
+                                        preview.innerHTML = code;
+                                }, 1000);
+                            });
+                        }
+                    }
+                    let defValue = value;
+                    if (!defValue) {
+                        if (lang === 'javascript') {
+                            defValue = ['({})'].join('\n');
+                        }
+                        else if (lang === 'html') {
+                            defValue = '<div></div>';
+                        }
+                    }
+                    if (lang) {
+                        monaco.editor.setModelLanguage(codeEditor.getModel(), lang);
+                    }
+                    codeEditor.getModel().setValue(defValue);
+                    codeEditor.focus();
+                    btnOk.addEventListener('click', () => {
+                        resolve(codeEditor.getModel().getValue());
+                        dlg.hide();
+                    });
+                });
+            });
+        }
+        design.showCodeEditor = showCodeEditor;
+        let _lastChart = null;
+        function chartPreview(preview, code) {
+            preview.innerHTML = '';
+            if (_lastChart) {
+                Plotly.purge(_lastChart);
+                _lastChart = null;
+            }
+            let config = katrid.bi.getTraces(eval(code), this.studio);
+            _lastChart = Plotly.newPlot(preview, config.traces, config.layout || { height: $(preview).height(), width: $(preview).width() }, { responsive: true });
+        }
+        function getTraces(config) {
+            let kwargs = ['datasource', 'x', 'y', 'values', 'labels'];
+            if (config.traces instanceof Function) {
+                let traces = [];
+                for (let t of config.traces()) {
+                    let trace = {};
+                    if (typeof t.datasource === 'string') {
+                        let ds = appStudio.findComponent(t.datasource);
+                        if (ds.data) {
+                            if (t.x)
+                                trace.x = ds.values(t.x);
+                            if (t.y)
+                                trace.y = ds.values(t.y);
+                            if (t.values)
+                                trace.values = ds.values(t.values);
+                            if (t.labels)
+                                trace.labels = ds.values(t.labels);
+                        }
+                        for (let k of Object.keys(t)) {
+                            if (!kwargs.includes(k))
+                                trace[k] = t[k];
+                        }
+                    }
+                    traces.push(trace);
+                }
+                config.traces = traces;
+            }
+            return config;
+        }
+        async function createCodeEditor(dom, value = null, lang = 'javascript', previewType = 'table') {
+            return new Promise((resolve, reject) => {
+                requirejs(['vs/editor/editor.main'], function () {
+                    let codeEditor = monaco.editor.create(dom, {
+                        lang,
+                    });
+                    setTimeout(() => {
+                        codeEditor.layout();
+                    });
+                    if (lang)
+                        monaco.editor.setModelLanguage(codeEditor.getModel(), lang);
+                    if (value)
+                        codeEditor.getModel().setValue(value);
+                    resolve(codeEditor);
+                });
+            });
+        }
+        design.createCodeEditor = createCodeEditor;
+        registerComponentEditor(oui.design.Component, ComponentEditor);
+        registerComponentEditor(oui.design.BaseWidget, WidgetEditor);
+    })(design = oui.design || (oui.design = {}));
+})(oui || (oui = {}));
+var oui;
+(function (oui) {
+    var design;
+    (function (design) {
         class GrabHandle {
             constructor(el) {
                 this.el = el;
@@ -14859,6 +15898,22 @@ var oui;
                 this._createEvents();
                 this._drawBackground();
             }
+            changePropertyNotification(objs, propName, value) {
+                for (let obj of objs) {
+                    if (obj.redraw)
+                        obj.redraw();
+                    this.onPropertyNotification?.(obj, propName, value);
+                }
+                this.updateGrabs();
+            }
+            setModified() {
+            }
+            enableEvents() {
+                this.eventsDisabled = false;
+            }
+            disableEvents() {
+                this.eventsDisabled = true;
+            }
             activate() {
                 this.eventsDisabled = false;
             }
@@ -15126,6 +16181,7 @@ var oui;
             }
             updateSelection() {
                 this.createGrabs();
+                this.onSelectionChange?.(this._selection);
             }
             createGrabs() {
                 if (this.grabs)
@@ -15150,7 +16206,7 @@ var oui;
                     dy /= this._zoomFactor;
                 }
                 for (const obj of this._selection) {
-                    if (obj instanceof PositionalControl)
+                    if (obj instanceof BaseWidget)
                         obj.moveBy(dx, dy);
                 }
                 this.updateGrabs();
@@ -15175,9 +16231,9 @@ var oui;
         class BasePageDesigner {
         }
         design.BasePageDesigner = BasePageDesigner;
-        class ControlDesigner {
-            constructor(designer) {
-                this.designer = designer;
+        class ObjectDesigner extends oui.design.Component {
+            constructor(owner) {
+                super(owner);
                 this._isMouseDown = false;
                 this.defaultProps();
                 this.create();
@@ -15192,6 +16248,9 @@ var oui;
                 this.draw();
             }
             _createEvents() {
+            }
+            getType() {
+                return this.constructor.name;
             }
             onPointerDown(evt) {
                 if (evt.button !== 0)
@@ -15212,16 +16271,39 @@ var oui;
             draw() {
             }
         }
-        design.ControlDesigner = ControlDesigner;
-        class PositionalControl extends ControlDesigner {
+        design.ObjectDesigner = ObjectDesigner;
+        class BaseWidget extends ObjectDesigner {
             constructor() {
                 super(...arguments);
                 this._moving = false;
+            }
+            create() {
+                super.create();
+                this.objects = [];
             }
             defaultProps() {
                 super.defaultProps();
                 this._x = 0;
                 this._y = 0;
+            }
+            get location() {
+                return { x: this.x, y: this.y };
+            }
+            set location(value) {
+                this.x = value.x;
+                this.y = value.y;
+                this.draw();
+            }
+            get size() {
+                return { width: this.width, height: this.height };
+            }
+            set size(value) {
+                this.width = value.width;
+                this.height = value.height;
+                this.draw();
+            }
+            remove() {
+                this.el.remove();
             }
             get x() {
                 return this._x;
@@ -15253,6 +16335,22 @@ var oui;
             }
             getClientRect() {
                 return new DOMRect(this._x, this._y, this._width, this._height);
+            }
+            _insertObject(obj) {
+                this.el.appendChild(obj.el);
+            }
+            insertObject(obj) {
+                if (!this.children.includes(obj)) {
+                    this.children.push(obj);
+                    this._insertObject(obj);
+                }
+            }
+            removeObject(obj) {
+                const index = this.children.indexOf(obj);
+                if (index !== -1) {
+                    this.children.splice(index, 1);
+                    obj.el.remove();
+                }
             }
             _createEvents() {
                 super._createEvents();
@@ -15310,38 +16408,11 @@ var oui;
                 this.height = height;
                 this.draw();
             }
-        }
-        design.PositionalControl = PositionalControl;
-        class Rectangle extends PositionalControl {
-            defaultProps() {
-                super.defaultProps();
-                this._width = 100;
-                this._height = 50;
-            }
-            create() {
-                super.create();
-                this.el.className = 'object-designer rectangle-object';
-            }
-            draw() {
-                super.draw();
-                this.el.style.backgroundColor = '#919191';
-                this.el.style.border = '1px solid #000';
+            invalidate() {
+                this.draw();
             }
         }
-        design.Rectangle = Rectangle;
-        class Text extends PositionalControl {
-            defaultProps() {
-                super.defaultProps();
-                this._width = 100;
-                this._height = 20;
-            }
-            create() {
-                super.create();
-                this.el.className = 'object-designer text-object';
-                this.el.innerHTML = 'Hello World';
-            }
-        }
-        design.Text = Text;
+        design.BaseWidget = BaseWidget;
     })(design = oui.design || (oui.design = {}));
 })(oui || (oui = {}));
 var Katrid;
