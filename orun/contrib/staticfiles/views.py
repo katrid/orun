@@ -27,8 +27,8 @@ def serve(request, path, insecure=False, **kwargs):
 
     It uses the orun.views.static.serve() view to serve the found files.
     """
-    if not settings.DEBUG and not insecure:
-        raise Http404
+    # if not settings.DEBUG and not insecure:
+    #     raise Http404
     normalized_path = posixpath.normpath(path).lstrip('/')
     absolute_path = finders.find(normalized_path)
     if not absolute_path:
