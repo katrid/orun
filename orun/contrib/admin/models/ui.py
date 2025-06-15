@@ -244,7 +244,7 @@ class View(models.Model):
             context['db'] = {
                 'connection': connection
             }
-        if settings.DEBUG and self.template_name:
+        if self.template_name:
             # context['ref'] = g.env.ref
             templ = self.template_name.split(':')[-1]
             if self.view_type in ('dashboard', 'report'):
@@ -255,10 +255,6 @@ class View(models.Model):
                     return content.render(context)
                 return apps.report_env.get_or_select_template(templ).render(**context)
             return loader.get_template(templ).render(context)
-        if self.view_type in ('dashboard', 'report') and self.template_name:
-            content = get_template(self.template_name)
-            return content.render(context)
-            # return apps.report_env.from_string(self.content).render(**context)
         if self.view_type == 'dashboard':
             return self.content
         return Template(self.content).render(context)
