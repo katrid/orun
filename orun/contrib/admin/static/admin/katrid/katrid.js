@@ -7929,6 +7929,11 @@ var Katrid;
                                         record[field.name] = v;
                                     }
                                 }
+                                else if (field instanceof Katrid.Data.NumericField) {
+                                    if (s.includes(Katrid.i18n.formats.DECIMAL_SEPARATOR))
+                                        s = s.replace(Katrid.i18n.formats.DECIMAL_SEPARATOR, '.');
+                                    record[field.name] = parseFloat(s);
+                                }
                                 else if (field instanceof Katrid.Data.BooleanField) {
                                     s = s.trim().toLowerCase();
                                     if (s) {
