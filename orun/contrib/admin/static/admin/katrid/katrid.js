@@ -12964,6 +12964,7 @@ var Katrid;
                 this.input = input;
                 el.addEventListener('click', evt => {
                     this.input.focus();
+                    this.input.select();
                     this.showMenu();
                 });
                 let caret = el.querySelector('.caret');
