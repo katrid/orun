@@ -7870,7 +7870,7 @@ var Katrid;
             if (td && (td.tagName === 'TD'))
                 menu.add('<i class="fa fa-fw fa-copy"></i> Copiar', (...args) => copyClick(event.target.closest('table')));
             if (this.field?.pasteAllowed && this.$parent.dataSource.changing)
-                menu.add('<i class="fa fa-fw fa-paste"></i> Colar', (...args) => pasteClick(this));
+                menu.add(`<i class="fa fa-fw fa-paste"></i> ${katrid.i18n.gettext('Paste')}`, (...args) => pasteClick(this));
             if (td && (td.tagName === 'TD')) {
                 menu.addSeparator();
                 menu.add('<i class="fa fa-fw fa-filter"></i> Filtrar pelo conteúdo deste campo', () => filterByFieldContent.call(this, td, record));
@@ -7897,24 +7897,36 @@ var Katrid;
             let fkCache = {};
             for (let line of text.split('\n')) {
                 if (n > 0) {
-                    line = line.trim();
-                    if (line) {
+                    if (line.trim()) {
                         let record = {};
                         let c = 0;
                         for (let s of line.split(sep)) {
+                            s = s.trim();
+                            if (s)
+                                continue;
                             let field = vm.$view.$columns[c];
                             if (field) {
                                 if (field instanceof Katrid.Data.ForeignKey) {
-                                    if (s) {
-                                        if (!fkCache[field.name])
-                                            fkCache[field.name] = {};
-                                        let fkValues = fkCache[field.name];
-                                        if (!fkValues[s]) {
-                                            let res = await vm.$view.model.service.getFieldChoice({ field: field.name, term: s, kwargs: { exact: true } });
-                                            if (res.items?.length)
-                                                fkValues[s] = res.items[0];
-                                        }
-                                        record[field.name] = fkValues[s];
+                                    if (!fkCache[field.name])
+                                        fkCache[field.name] = {};
+                                    let fkValues = fkCache[field.name];
+                                    if (!fkValues[s]) {
+                                        let res = await vm.$view.model.service.getFieldChoice({
+                                            field: field.name,
+                                            term: s,
+                                            kwargs: { exact: true }
+                                        });
+                                        if (res.items?.length)
+                                            fkValues[s] = res.items[0];
+                                    }
+                                    record[field.name] = fkValues[s];
+                                }
+                                else if (field instanceof Katrid.Data.DateField) {
+                                    if (/\d{4}-\d{2}-\d{2}/.test(s))
+                                        record[field.name] = /\d{2}\/\d{2}\/d{4}/.test(s) ? new Date(s) : null;
+                                    else {
+                                        let v = katrid.utils.autoCompleteDate(s, katrid.i18n.formats.shortDateFormat);
+                                        record[field.name] = v;
                                     }
                                 }
                                 else if (field instanceof Katrid.Data.BooleanField) {

@@ -99,7 +99,7 @@ declare namespace Katrid {
     function createVm(config: any): any;
     let componentsRegistry: {};
     let directivesRegistry: {};
-    let filtersRegistry: {};
+    let filtersRegistry: Record<string, any>;
     function component(name: string, config: any): void;
     function directive(name: string, config: any): void;
     function filter(name: string, config: any): void;
