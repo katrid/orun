@@ -7902,7 +7902,7 @@ var Katrid;
                         let c = 0;
                         for (let s of line.split(sep)) {
                             s = s.trim();
-                            if (s)
+                            if (!s)
                                 continue;
                             let field = vm.$view.$columns[c];
                             if (field) {
