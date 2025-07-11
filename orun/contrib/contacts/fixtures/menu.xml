@@ -7,6 +7,7 @@
       <menuitem id="menu.contacts.partners.partner.title" name="Titles" action="action.contacts.view.partner.title"/>
     </menuitem>
     <menuitem id="menu.contacts.localization" name="Localization">
+      <menuitem id="menu.contacts.localization.currency" action="action.contacts.view.currency"/>
       <menuitem id="menu.contacts.localization.country" name="Countries" action="action.contacts.view.country"/>
       <menuitem id="menu.contacts.localization.country.state" name="Fed. States" action="action.contacts.view.country.state"/>
       <menuitem id="menu.contacts.localization.city" name="Cities" action="action.contacts.view.city"/>

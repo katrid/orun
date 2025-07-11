@@ -9,6 +9,9 @@
   <action id="action.contacts.view.partner.title" type="ui.action.window" name="Partner Titles" model="res.partner.title">
     <field name="view_mode">list,form</field>
   </action>
+  <action id="action.contacts.view.currency" type="ui.action.window" name="Countries" model="res.currency">
+    <field name="view_mode">list,form</field>
+  </action>
   <action id="action.contacts.view.country" type="ui.action.window" name="Countries" model="res.country">
     <field name="view_mode">list,form</field>
   </action>
