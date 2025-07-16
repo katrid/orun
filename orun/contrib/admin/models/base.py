@@ -688,7 +688,7 @@ class AdminModel(models.Model, helper=True):
                 if isinstance(field, models.ForeignKey):
                     # find by the name field
                     name_fields = field.model._meta.get_name_fields()
-                    field.related_model.objects.filter(**{f: input_value for f in name_fields})
+                    return field.related_model.objects.filter(**{f: input_value for f in name_fields}).only('pk').first()
                 return input_value
             cls.objects.bulk_create(
                 [
