@@ -60,12 +60,14 @@ class AdminModel(models.Model, helper=True):
         }
 
     @classmethod
-    def _api_search(cls, request: HttpRequest, where=None, fields=None, params=None, order=None, default=None, **kwargs):
+    def _api_search(cls, request: HttpRequest, where=None, fields=None, params=None, order=None, default=None,
+                    **kwargs):
         # self.check_permission('read')
         qs = cls.objects.all()
         if order:
             # TODO order by custom expr
-            order_by = ['-' + field.name if '-' + field.name in order else field.name for field in [cls._meta.fields[f[1:] if f.startswith('-') else f] for f in order] if field.concrete]
+            order_by = ['-' + field.name if '-' + field.name in order else field.name for field in
+                        [cls._meta.fields[f[1:] if f.startswith('-') else f] for f in order] if field.concrete]
             if order_by:
                 qs = qs.order_by(*order)
         domain = kwargs.get('domain')
@@ -124,7 +126,8 @@ class AdminModel(models.Model, helper=True):
                                     assert f.related_model._meta.name_field
                                     name_field = f.related_model._meta.name_field
                                     k = f.name + '__' + name_field + '__' + k.split('__', 1)[1]
-                                elif settings.ACCENT_INSENSITIVE and k.endswith('__icontains') and isinstance(f, models.CharField):
+                                elif settings.ACCENT_INSENSITIVE and k.endswith('__icontains') and isinstance(f,
+                                                                                                              models.CharField):
                                     k = k[:-11] + '__unaccent__icontains'
                             except FieldDoesNotExist:
                                 # check if field is a related field
@@ -187,7 +190,8 @@ class AdminModel(models.Model, helper=True):
 
     @api.classmethod
     def api_search_by_name(
-            cls, request: HttpRequest, name=None, count=None, page=None, label_from_instance=None, name_fields=None, *args, exact=False,
+            cls, request: HttpRequest, name=None, count=None, page=None, label_from_instance=None, name_fields=None,
+            *args, exact=False,
             **kwargs
     ):
         fmt = kwargs.get('format')
@@ -492,7 +496,8 @@ class AdminModel(models.Model, helper=True):
         model = field.model
         # collect md documentation
         if model._meta.addon and model._meta.addon.path:
-            app_docs = os.path.join(model._meta.addon.docs_path, 'models', model._meta.name, 'fields', f'{field.name}.md')
+            app_docs = os.path.join(model._meta.addon.docs_path, 'models', model._meta.name, 'fields',
+                                    f'{field.name}.md')
             if os.path.isfile(app_docs):
                 with open(app_docs) as f:
                     info['help_text'] = f.read()
@@ -649,7 +654,8 @@ class AdminModel(models.Model, helper=True):
                 sheet.write_row(i + 1, 0, [serialize(cls._meta.fields[f], getattr(obj, f, None)) for f in fields])
             wb.close()
             buf.seek(0)
-            res = HttpResponse(buf.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            res = HttpResponse(buf.read(),
+                               content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             res['Content-Disposition'] = f'attachment; filename={cls._meta.verbose_name_plural.replace("/", " ")}.xlsx'
             return res
 
@@ -684,7 +690,10 @@ class AdminModel(models.Model, helper=True):
                 raise ValidationError(
                     gettext('The following fields were not found in the model: %s') % ', '.join(not_found)
                 )
-            def get_value(field, input_value):
+            cols = list(field_map.keys())
+
+            def get_value(field, col, row):
+                input_value = row[cols.index(col)]
                 if isinstance(field, models.ForeignKey):
                     # find by the name field
                     name_fields = field.model._meta.get_name_fields()
@@ -692,14 +701,17 @@ class AdminModel(models.Model, helper=True):
                         **{f: input_value for f in name_fields}
                     ).only('pk').first()
                 return input_value
-            cls.objects.bulk_create(
-                [
-                    {f: get_value(cls._meta.fields[f], row[c].value) for c, f in field_map.items()}
-                    for row in df.values
-                ]
-            )
+
+            ids = []
+            for row in df.values:
+                ids.append(
+                    cls.objects.create(
+                        **{f: get_value(cls._meta.fields[f], c, row) for c, f in field_map.items()}
+                    ).pk
+                )
             return {
                 'message': gettext('%s records imported successfully.') % len(df),
+                'ids': ids,
                 'type': 'ir.action.client',
                 'tag': 'refresh',
             }
@@ -737,6 +749,3 @@ def _resolve_fk_search(field: models.Field, exact=False):
             else:
                 return [f'{t}__icontains']
     return [field.name]
-
-
-
