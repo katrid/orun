@@ -42,6 +42,7 @@ class Partner(models.Model):
     address_2 = models.CharField(256, label=_('Address 2'))
     zip = models.CharField(32, label=_('Zip'))
     country = models.ForeignKey('res.country', label=_('Country'), on_delete=models.SET_NULL)
+    default_currency = models.ForeignKey('res.currency', label=_('Default Currency'))
     state = models.ForeignKey('res.country.state', label=_('State'), on_delete=models.SET_NULL)
     city = models.CharField(64, label=_('City'))
     phone = models.CharField(64, label=_('Phone'))
