@@ -354,7 +354,7 @@ msgstr "Suporte"
 msgid "Open in new tab"
 msgstr "Abrir em nova aba"
 
-msgid "Importar from Excel"
+msgid "Import from Excel"
 msgstr "Importar do Excel"
 
 msgid "Export to Excel"
