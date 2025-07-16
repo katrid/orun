@@ -155,7 +155,7 @@ def upload_file(request, model, meth):
             traceback.print_exc()
             return JsonResponse({
                 'error': True,
-                'message': str(e),
+                'message': 'Server error'
             })
         if isinstance(res, dict):
             res = JsonResponse(res)
