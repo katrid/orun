@@ -1,4 +1,5 @@
 import os
+import math
 from typing import List
 from collections import defaultdict
 import copy
@@ -692,14 +693,18 @@ class AdminModel(models.Model, helper=True):
                 )
             cols = list(field_map.keys())
 
-            def get_value(field, col, row):
-                input_value = row[cols.index(col)]
+            def get_value(field: models.Field, col, data_row):
+                input_value = data_row[cols.index(col)]
+                if isinstance(input_value, float) and math.isnan(input_value):
+                    input_value = None
                 if isinstance(field, models.ForeignKey):
                     # find by the name field
-                    name_fields = field.model._meta.get_name_fields()
+                    name_fields = field.related_model._meta.get_name_fields()
                     return field.related_model.objects.filter(
-                        **{f: input_value for f in name_fields}
+                        **{f.name: input_value for f in name_fields}
                     ).only('pk').first()
+                if input_value == '':
+                    return None
                 return input_value
 
             ids = []
