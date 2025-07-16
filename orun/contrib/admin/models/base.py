@@ -7,7 +7,7 @@ from itertools import chain
 import io
 
 from orun.apps import apps
-from orun.core.exceptions import FieldDoesNotExist
+from orun.core.exceptions import FieldDoesNotExist, ValidationError
 from orun.utils.xml import get_xml_fields, etree
 from orun.utils.translation import gettext
 from orun import api
@@ -652,6 +652,55 @@ class AdminModel(models.Model, helper=True):
             res = HttpResponse(buf.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             res['Content-Disposition'] = f'attachment; filename={cls._meta.verbose_name_plural.replace("/", " ")}.xlsx'
             return res
+
+    @api.classmethod
+    def api_import(cls, files, field_map=None, preview=False):
+        for file in files:
+            import pandas as pd
+            buf = io.BytesIO(file.read())
+            df = pd.read_excel(buf)
+            not_found = []
+            if not field_map:
+                field_map = {}
+                # try to find fields by name or label
+                for c in df.columns:
+                    f = cls._meta.fields.get(c)
+                    if f is None:
+                        for fl in cls._meta.fields:
+                            if fl.label.lower() == c.lower():
+                                f = fl
+                                break
+                        else:
+                            not_found.append(c)
+                    field_map[c] = (f and f.name)
+
+            if preview and not preview == 'false':
+                return {
+                    'values': [list(r) for r in df.values],
+                    'columns': list(df.columns),
+                    'field_map': field_map,
+                }
+            if not_found:
+                raise ValidationError(
+                    gettext('The following fields were not found in the model: %s') % ', '.join(not_found)
+                )
+            def get_value(field, input_value):
+                if isinstance(field, models.ForeignKey):
+                    # find by the name field
+                    name_fields = field.model._meta.get_name_fields()
+                    field.related_model.objects.filter(**{f: input_value for f in name_fields})
+                return input_value
+            cls.objects.bulk_create(
+                [
+                    {f: get_value(cls._meta.fields[f], row[c].value) for c, f in field_map.items()}
+                    for row in df.values
+                ]
+            )
+            return {
+                'message': gettext('%s records imported successfully.') % len(df),
+                'type': 'ir.action.client',
+                'tag': 'refresh',
+            }
 
 
 def _resolve_fk_search(field: models.Field, exact=False):

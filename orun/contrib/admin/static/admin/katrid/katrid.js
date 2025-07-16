@@ -3861,6 +3861,27 @@ var Katrid;
                     if (config.format)
                         return this.rpc('api_export', { kwargs: { where: me._lastSearch, fields: Array.from(Object.keys(me.fields)) } });
                 };
+                comp.methods.importFromFile = async function (config) {
+                    if (config.format === 'xlsx') {
+                        let input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = config.format === 'xlsx' ? '.xlsx, .xls' : '.csv';
+                        input.onchange = async (event) => {
+                            if (event.target.files.length > 0) {
+                                const res = await Katrid.Services.Upload.callWithFiles({
+                                    model: me.model, method: 'api_import', file: event.target, vm: this, data: { preview: false },
+                                });
+                                if (res.error) {
+                                    Katrid.Forms.Dialogs.Alerts.error(res.messages?.[0] || res.error);
+                                }
+                                else if (res.message)
+                                    Katrid.Forms.Dialogs.Alerts.success(res.message);
+                            }
+                            input.remove();
+                        };
+                        input.click();
+                    }
+                };
                 return comp;
             }
             setActive(value) {
@@ -4009,12 +4030,17 @@ var Katrid;
                     btnCreate.setAttribute('v-on:click', 'insert()');
                     parent.append(btnCreate);
                 }
-                let btnXls = document.createElement('button');
-                btnXls.innerHTML = '<i class="fas fa-download"></i>';
-                btnXls.title = 'Download as excel';
-                btnXls.className = 'btn btn-soft-secondary btn-export-xls';
-                btnXls.setAttribute('v-on:click', "download({format: 'xlsx'})");
-                parent.append(btnXls);
+                let btnImportExport = document.createElement('div');
+                btnImportExport.className = 'btn-group';
+                btnImportExport.innerHTML = `<button type="button" class="btn btn-soft-secondary dropdown-toggle btn-actions" name="import-export" data-bs-toggle="dropdown" aria-haspopup="true" title="${Katrid.i18n.gettext('Import/Export')}">
+      <i class="fas fa-fw fa-download"></i>
+         <span class="caret"></span>
+      </button>
+      <div class="dropdown-menu">
+        <a class="dropdown-item" v-on:click="download({format: 'xlsx'})">${Katrid.i18n.gettext('Export to Excel')}</a>
+        <a class="dropdown-item" v-on:click="importFromFile({format: 'xlsx'})">${Katrid.i18n.gettext('Import from Excel')}</a>
+      </div>`;
+                parent.append(btnImportExport);
                 if (this.config?.toolbar?.print) {
                     let btnPrint = document.createElement('div');
                     btnPrint.classList.add('btn-group');
@@ -10158,6 +10184,23 @@ var Katrid;
         }
         Forms.SearchView = SearchView;
         Katrid.Forms.Views.registry['search'] = SearchView;
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        class SettingsForm extends Katrid.Forms.ModelView {
+            beforeRender(templ) {
+                const div = document.createElement('div');
+                div.classList.add('view-content');
+                div.innerHTML = `<div class="form-header">Test</div><div class="action-view-content content-scroll"><div class="content no-padding"></div></div>`;
+                div.querySelector('.form-body').appendChild(super.beforeRender(templ));
+                return div;
+            }
+        }
+        Forms.SettingsForm = SettingsForm;
+        Katrid.Forms.Views.registry.settings = SettingsForm;
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
 var Katrid;

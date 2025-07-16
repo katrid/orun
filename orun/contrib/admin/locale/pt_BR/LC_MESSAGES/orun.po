@@ -32,3 +32,9 @@ msgstr "Relatório do Usuário"
 
 msgid "Uncategorized"
 msgstr "Sem Categoria"
+
+msgid "%s records imported successfully."
+msgstr "%s registros importados com sucesso."
+
+msgid "The following fields were not found in the model: %s"
+msgstr "Os seguintes campos não foram encontrados no modelo: %s"

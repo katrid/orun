@@ -1,4 +1,7 @@
 import json
+
+import traceback
+from orun.core.exceptions import ValidationError
 from orun.shortcuts import render
 from orun.conf import settings
 from orun.utils.translation import gettext
@@ -139,7 +142,21 @@ def upload_file(request, model, meth):
     model = apps[model]
     meth = getattr(model, meth)
     if meth.exposed:
-        res = meth(**request.POST, files=[file for file in request.FILES.getlist('files')])
+        try:
+            res = meth(**request.POST.dict(), files=[file for file in request.FILES.getlist('files')])
+        except ValidationError as e:
+            traceback.print_exc()
+            return JsonResponse({
+                'error': True,
+                'messages': e.messages,
+            })
+        except Exception as e:
+            # print traceback.format_exc()
+            traceback.print_exc()
+            return JsonResponse({
+                'error': True,
+                'message': str(e),
+            })
         if isinstance(res, dict):
             res = JsonResponse(res)
         return res
