@@ -7918,15 +7918,16 @@ var Katrid;
             let text = await navigator.clipboard.readText();
             let sep = '\t';
             if (!text.includes(sep))
-                text = ';';
+                sep = ';';
             let n = 0;
             let fkCache = {};
             for (let line of text.split('\n')) {
                 if (n > 0) {
                     if (line.trim()) {
                         let record = {};
-                        let c = 0;
+                        let c = -1;
                         for (let s of line.split(sep)) {
+                            c++;
                             s = s.trim();
                             if (!s)
                                 continue;
@@ -7976,7 +7977,6 @@ var Katrid;
                                 else
                                     record[field.name] = s;
                             }
-                            c++;
                         }
                         vm.$addRecord(record);
                     }
