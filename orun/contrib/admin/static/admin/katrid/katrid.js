@@ -3872,7 +3872,7 @@ var Katrid;
                                     model: me.model, method: 'api_import', file: event.target, vm: this, data: { preview: false },
                                 });
                                 if (res.error) {
-                                    Katrid.Forms.Dialogs.Alerts.error(res.messages?.[0] || res.error);
+                                    Katrid.Forms.Dialogs.Alerts.error(res.messages?.[0] || res.message || res.error);
                                 }
                                 else if (res.message)
                                     Katrid.Forms.Dialogs.Alerts.success(res.message);
