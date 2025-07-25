@@ -699,9 +699,9 @@ class AdminModel(models.Model, helper=True):
                     input_value = None
                 if isinstance(field, models.ForeignKey):
                     # find by the name field
-                    name_fields = field.related_model._meta.get_name_fields()
+                    name_fields = _resolve_fk_search(field)
                     return field.related_model.objects.filter(
-                        **{f.name: input_value for f in name_fields}
+                        **{f: input_value for f in name_fields}
                     ).only('pk').first()
                 if input_value == '':
                     return None
