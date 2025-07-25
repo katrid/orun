@@ -359,3 +359,12 @@ msgstr "Importar do Excel"
 
 msgid "Export to Excel"
 msgstr "Exportar para Excel"
+
+msgid "Is filled"
+msgstr "Está preenchido"
+
+msgid "Is not filled"
+msgstr "Não está preenchido"
+
+msgid "Is different"
+msgstr "É diferente"
