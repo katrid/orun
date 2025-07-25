@@ -704,7 +704,9 @@ class AdminModel(models.Model, helper=True):
                 input_value = data_row[cols.index(col)]
                 if isinstance(input_value, float) and math.isnan(input_value):
                     input_value = None
-                if isinstance(field, models.ForeignKey):
+                elif isinstance(input_value, str):
+                    input_value = input_value.strip()
+                if isinstance(field, models.ForeignKey) and input_value:
                     # find by the name field
                     name_fields = _resolve_fk_search(field)
                     return field.related_model.objects.filter(
