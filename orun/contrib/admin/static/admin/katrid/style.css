@@ -14333,7 +14333,7 @@ table-field .table tbody tr {
   font-weight: bold;
 }
 .katrid-app .search-view-more-area a.selected:before {
-  font-family: "Font Awesome 5 Free";
+  font-family: "Font Awesome 5 Free", "Font Awesome 6 Pro";
   position: absolute;
   left: 6px;
   content: "\f00c";
