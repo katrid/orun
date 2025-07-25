@@ -708,7 +708,7 @@ class AdminModel(models.Model, helper=True):
                     # find by the name field
                     name_fields = _resolve_fk_search(field)
                     return field.related_model.objects.filter(
-                        **{fname[len(field.name) + 2:]: input_value for fname in name_fields}
+                        **{fname.split('__', 1)[1]: input_value for fname in name_fields if '__' in fname}
                     ).only('pk').first()
                 if input_value == '':
                     return None
