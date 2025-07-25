@@ -127,9 +127,14 @@ class AdminModel(models.Model, helper=True):
                                     assert f.related_model._meta.name_field
                                     name_field = f.related_model._meta.name_field
                                     k = f.name + '__' + name_field + '__' + k.split('__', 1)[1]
-                                elif settings.ACCENT_INSENSITIVE and k.endswith('__icontains') and isinstance(f,
-                                                                                                              models.CharField):
-                                    k = k[:-11] + '__unaccent__icontains'
+                                elif k.endswith('__icontains') and isinstance(f, models.CharField):
+                                    if settings.ACCENT_INSENSITIVE:
+                                        k = k[:-11] + '__unaccent__icontains'
+                                    if isinstance(v, str):
+                                        if v.endswith('*'):
+                                            k = k[:-11] + '__startswith'
+                                        elif v.startswith('*'):
+                                            k = k[:-11] + '__endswith'
                             except FieldDoesNotExist:
                                 # check if field is a related field
                                 f = getattr(cls, k_fname, None)
