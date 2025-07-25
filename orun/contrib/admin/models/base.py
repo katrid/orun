@@ -133,8 +133,10 @@ class AdminModel(models.Model, helper=True):
                                     if isinstance(v, str):
                                         if v.endswith('*'):
                                             k = k[:-11] + '__startswith'
+                                            v = v[:-1]
                                         elif v.startswith('*'):
                                             k = k[:-11] + '__endswith'
+                                            v = v[1:]
                             except FieldDoesNotExist:
                                 # check if field is a related field
                                 f = getattr(cls, k_fname, None)
