@@ -32,7 +32,10 @@ class Params:
 
 
 class Param:
-    def __init__(self, name=None, data_type=None, required=False, label: Optional[str]=None, model=None, operation=None, options: dict=None):
+    def __init__(
+            self, name=None, data_type=None, required=False, label: Optional[str] = None, model=None, operation=None,
+            options: dict = None, filter: dict = None,
+    ):
         self.name = name
         self.data_type = data_type
         self.required = required
@@ -40,6 +43,7 @@ class Param:
         self.model = model
         self.operation = operation
         self.options = options or {}
+        self.filter = filter
 
     @classmethod
     def from_node(cls, node):
@@ -76,4 +80,5 @@ class Param:
             'modelChoices': self.model,
             'operation': self.operation,
             'options': self.options,
+            'filter': self.filter,
         }

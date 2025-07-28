@@ -8166,14 +8166,15 @@ var Katrid;
                     if (param.operation === 'in') {
                         multiple = 'multiple';
                     }
-                    return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="${serviceName}" field-name="${param.name}" v-model="param.value1" ${multiple}></div>`;
+                    let filter = param.info.filter ? ` filter='${JSON.stringify(param.info.filter)}'` : '';
+                    return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="${serviceName}" field-name="${param.name}" v-model="param.value1" ${filter} ${multiple}></div>`;
                 },
                 ModelChoices(param) {
                     let multiple = '';
                     if (param.operation === 'in') {
                         multiple = 'multiple';
                     }
-                    let filter = param.info.filter ? ` filter="${param.info.filter}"` : param.info.filter;
+                    let filter = param.info.filter ? ` filter='${JSON.stringify(param.info.filter)}'` : '';
                     return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ui.action.report" model-choices="${param.info.modelChoices}" ${filter} v-model="param.value1" ${multiple}></div>`;
                 },
                 SelectionField(param) {
