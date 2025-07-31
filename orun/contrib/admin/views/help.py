@@ -12,6 +12,22 @@ def help_center(request: HttpRequest):
     return render(request, 'help-center/help-center.jinja2', {'settings': settings})
 
 
+def _toc_items(tocs: dict):
+    res = []
+    for k, v in tocs.items():
+        if isinstance(v, dict):
+            res.append({
+                'title': k,
+                'toc': _toc_items(v),
+            })
+        else:
+            res.append({
+                'title': k,
+                'index': v,
+            })
+    return res
+
+
 def toc(request: HttpRequest):
     # collect toc from all apps
     docs = []
@@ -21,7 +37,7 @@ def toc(request: HttpRequest):
             with open(fname, 'r') as f:
                 data = json.load(f)
                 if 'toc' in data:
-                    data['toc'] = {title: f'{name}/{file}' for title, file in data['toc'].items()}
+                    data['toc'] = _toc_items(data['toc'])
                 data['name'] = name
                 if 'title' not in data:
                     data['title'] = app.verbose_name
