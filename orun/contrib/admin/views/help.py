@@ -32,6 +32,8 @@ def toc(request: HttpRequest):
 
 
 def _get_content_file(filename: str):
+    if filename.startswith('/'):
+        filename = filename[1:]
     app_name, fname = filename.split('/', 1)
     app = apps.addons.get(app_name)
     filepath = os.path.join(app.path, 'docs', fname)
