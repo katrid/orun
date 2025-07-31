@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import mimetypes
 from orun.apps import apps
@@ -31,6 +32,15 @@ def toc(request: HttpRequest):
     return JsonResponse({"toc": docs})
 
 
+def prepare_content(content: str):
+    RE_INCLUDE = re.compile(r'^\{\{\s*include\s+["\'](?P<filename>[\w/.-]+)["\']\s*}}\s*$', re.MULTILINE)
+    for match in RE_INCLUDE.finditer(content):
+        filename = match.group('filename')
+        content_file = _get_content_file(filename)
+        content = content.replace(match.group(0), content_file)
+    return content
+
+
 def _get_content_file(filename: str):
     if filename.startswith('/'):
         filename = filename[1:]
@@ -38,7 +48,8 @@ def _get_content_file(filename: str):
     app = apps.addons.get(app_name)
     filepath = os.path.join(app.path, 'docs', fname)
     with open(filepath, 'r') as f:
-        return f.read()
+        content = prepare_content(f.read())
+    return content
 
 
 def get_content(request: HttpRequest):
