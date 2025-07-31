@@ -2591,11 +2591,31 @@ var katrid;
                     this.loadChildren(node, toc.toc);
                 }
             }
+            getCurrentFolder(uri) {
+                const trimmed = uri.replace(/\/$/, '');
+                return trimmed.substring(0, trimmed.lastIndexOf('/') + 1);
+            }
             async navigateTo(url) {
                 let res = await fetch('/admin/help-center/get/?' + (new URLSearchParams({ 'content': url })).toString()).then(res => res.json());
                 if (res.content) {
+                    window.history.pushState({}, '', '#/' + url);
                     res = this.markdown.makeHtml(res.content);
                     this.el.querySelector('.content-panel').innerHTML = res;
+                    this.el.querySelectorAll('.content-panel a').forEach((a) => {
+                        if (a.href.indexOf('#') > 0) {
+                            let s = a.href.slice(a.href.indexOf('#') + 1);
+                            if (s.startsWith('./'))
+                                s = this.getCurrentFolder(window.location.hash.slice(1)) + s.slice(2);
+                            if (!s.startsWith('/'))
+                                s = this.getCurrentFolder(window.location.hash.slice(1)) + '/' + s;
+                            console.debug('click to', s);
+                            a.href = '#' + s;
+                        }
+                        a.addEventListener('click', evt => {
+                            evt.preventDefault();
+                            this.navigateTo(a.href.slice(a.href.indexOf('#') + 1));
+                        });
+                    });
                 }
             }
             loadChildren(node, toc) {
