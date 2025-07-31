@@ -2619,9 +2619,33 @@ var katrid;
                 }
             }
             loadChildren(node, toc) {
-                for (const [k, v] of Object.entries(toc)) {
-                    node.addItem({ text: k, target: v });
+                if (Array.isArray(toc)) {
+                    for (const item of toc) {
+                        if (item.toc) {
+                            const n = node.addItem({ text: item.title, data: item.toc, });
+                            console.debug(item.toc);
+                            this.loadChildren(n, item.toc);
+                        }
+                        else
+                            node.addItem({ text: item.title, target: item.index });
+                    }
                 }
+                else
+                    for (const [k, v] of Object.entries(toc)) {
+                        console.debug('load childnre', typeof v);
+                        if (typeof v === 'string')
+                            node.addItem({ text: k, target: v });
+                        else if (typeof v === 'object') {
+                            let childNode = node.addItem({ text: k, data: v });
+                            if (v.toc) {
+                                this.loadChildren(childNode, v.toc);
+                            }
+                            else {
+                                childNode.data.index = v.index || v.name;
+                                childNode.data.target = v.target || v.name;
+                            }
+                        }
+                    }
             }
         }
         admin.HelpPortal = HelpPortal;
