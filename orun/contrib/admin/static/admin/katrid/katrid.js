@@ -2621,7 +2621,7 @@ var katrid;
                 if (Array.isArray(toc)) {
                     for (const item of toc) {
                         if (item.toc) {
-                            const n = node.addItem({ text: item.title, data: item.toc, });
+                            const n = node.addItem({ text: item.title, index: item.index, });
                             this.loadChildren(n, item.toc);
                         }
                         else

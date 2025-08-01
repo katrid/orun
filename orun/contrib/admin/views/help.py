@@ -6,6 +6,7 @@ from orun.apps import apps
 from orun.conf import settings
 from orun.http import HttpRequest, JsonResponse, HttpResponse, FileResponse
 from orun.shortcuts import render
+from orun.utils.translation import gettext as _
 
 
 def help_center(request: HttpRequest):
@@ -36,8 +37,19 @@ def toc(request: HttpRequest):
         if os.path.isfile(fname):
             with open(fname, 'r') as f:
                 data = json.load(f)
-                if 'toc' in data:
-                    data['toc'] = _toc_items(data['toc'])
+                app_toc = data.get('toc')
+                if app_toc:
+                    app_toc = data['toc'] = _toc_items(app_toc)
+                if data.get('include_models'):
+                    if not app_toc:
+                        data['toc'] = app_toc = []
+                    # iter over models and extract their docs
+                    models = app.get_models(False)
+                    if models:
+                        cur_toc = []
+                        app_toc.append({'title': _('Models'), 'index': f'{name}/models/index.md', 'toc': cur_toc})
+                        for m in models:
+                            cur_toc.append({'title': m._meta.verbose_name, 'index': f'{name}/$models/{m._meta.name}'})
                 data['name'] = name
                 if 'title' not in data:
                     data['title'] = app.verbose_name
@@ -57,15 +69,49 @@ def prepare_content(content: str):
     return content
 
 
+def get_model_help(app, model_name: str):
+    model = apps.models[model_name]
+    content = '## ' + str(model._meta.verbose_name_plural or model._meta.verbose_name) + '\n\n'
+    if model._meta.help_text:
+        content += model._meta.help_text + '\n\n'
+    else:
+        # try to find the model documentation file
+        model_index = os.path.join(app.path, 'docs', 'models', model._meta.name, 'index.md')
+        if os.path.isfile(model_index):
+            with open(model_index, 'r') as f:
+                content = f.read()
+            content += '\n\n'
+    # append fields documentation
+    for f in model._meta.fields:
+        if f.help_text:
+            content += f'\n\n### {f.label}:  \n(`{f.name}`)  \n{f.help_text}'
+    return content
+
+
 def _get_content_file(filename: str):
     if filename.startswith('/'):
         filename = filename[1:]
     app_name, fname = filename.split('/', 1)
     app = apps.addons.get(app_name)
-    filepath = os.path.join(app.path, 'docs', fname)
-    with open(filepath, 'r') as f:
-        content = prepare_content(f.read())
-    return content
+    content = ''
+    if fname.startswith('$'):
+        # special case (magic folders)
+        if fname.startswith('$models/'):
+            content = get_model_help(app, fname[8:])
+    else:
+        filepath = os.path.join(app.path, 'docs', fname)
+        if os.path.isfile(filepath):
+            with open(filepath, 'r') as f:
+                content = f.read()
+        elif fname == 'models/index.md':
+            # fallback to models index
+            content = '## Models\n\n'
+            models = app.get_models(False)
+            if models:
+                content += '\n'.join(f'- [{m._meta.verbose_name_plural}]({app_name}/$models/{m._meta.name})  \n{m._meta.help_text or ""}' for m in models)
+            else:
+                content += 'No models found.'
+    return prepare_content(content) if content else ''
 
 
 def get_content(request: HttpRequest):
