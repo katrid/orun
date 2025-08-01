@@ -20,6 +20,7 @@
       <menuitem id="menu.settings.ui.view" name="Views" action="action.view.ui.view"/>
     </menuitem>
     <menuitem id="menu.settings.server" name="Server Settings">
+      <menuitem id="menu.settings.cron" name="Job Scheduler" action="admin.action.view.cron"/>
       <menuitem id="menu.settings.automation" name="Automations" action="action.view.automations"/>
     </menuitem>
     <menuitem id="menu.settings.db" name="Database Dictionary">

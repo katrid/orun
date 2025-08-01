@@ -238,6 +238,9 @@ class UrlAction(Action):
 
 
 class ServerAction(Action):
+    """
+    Represents a server-side action that can execute Python code.
+    """
     sequence = models.IntegerField(default=5)
     model = models.ForeignKey('content.type', null=False)
     code = models.TextField(label=_('Python Code'))
@@ -248,6 +251,9 @@ class ServerAction(Action):
 
     class Meta:
         name = 'ui.action.server'
+
+    def execute(self):
+        pass
 
 
 class ServerActionLine(models.Model):

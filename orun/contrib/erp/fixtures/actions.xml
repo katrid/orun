@@ -58,5 +58,8 @@
   <action id="action.view.auth.permission-manager" type="ui.action.client" name="Permission Manager">
     <field name="tag">katrid.admin.PermissionManager</field>
   </action>
+  <action id="admin.action.view.cron" type="ui.action.window" name="Job Scheduler" model="admin.cron">
+    <field name="view_mode">list,form</field>
+  </action>
   <delete id="action.view.ir.query.category"/>
 </data>
