@@ -2608,7 +2608,6 @@ var katrid;
                                 s = this.getCurrentFolder(window.location.hash.slice(1)) + s.slice(2);
                             if (!s.startsWith('/'))
                                 s = this.getCurrentFolder(window.location.hash.slice(1)) + '/' + s;
-                            console.debug('click to', s);
                             a.href = '#' + s;
                         }
                         a.addEventListener('click', evt => {
@@ -2623,7 +2622,6 @@ var katrid;
                     for (const item of toc) {
                         if (item.toc) {
                             const n = node.addItem({ text: item.title, data: item.toc, });
-                            console.debug(item.toc);
                             this.loadChildren(n, item.toc);
                         }
                         else
@@ -2632,18 +2630,13 @@ var katrid;
                 }
                 else
                     for (const [k, v] of Object.entries(toc)) {
-                        console.debug('load childnre', typeof v);
                         if (typeof v === 'string')
                             node.addItem({ text: k, target: v });
                         else if (typeof v === 'object') {
+                            const item = v;
                             let childNode = node.addItem({ text: k, data: v });
-                            if (v.toc) {
-                                this.loadChildren(childNode, v.toc);
-                            }
-                            else {
-                                childNode.data.index = v.index || v.name;
-                                childNode.data.target = v.target || v.name;
-                            }
+                            if (item.toc)
+                                this.loadChildren(childNode, item.toc);
                         }
                     }
             }
