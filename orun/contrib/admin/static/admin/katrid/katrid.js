@@ -16661,8 +16661,8 @@ var Katrid;
                                     else
                                         messages.push(result.message);
                                 }
-                                else if (result.warn)
-                                    messages.push({ type: 'warn', message: result.warn });
+                                else if (result.warn || result.warning)
+                                    messages.push({ type: 'warn', message: result.warn || result.warning });
                                 else if (result.error) {
                                     if (typeof result.error === 'string')
                                         messages.push({ type: 'error', message: result.error });
@@ -16980,10 +16980,6 @@ var Katrid;
                                 else if (msg instanceof Array)
                                     Katrid.Forms.Dialogs.Alerts.error(msg.join('\n'));
                         }
-                        else if (res.warning)
-                            Katrid.Forms.Dialogs.Alerts.warning(res.warning);
-                        else if (res.success)
-                            Katrid.Forms.Dialogs.Alerts.success(res.warning);
                         else
                             Katrid.Forms.Dialogs.Alerts.error(res.message);
                         reject(res);
