@@ -1114,6 +1114,7 @@ var Katrid;
                 return Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx);
             }
             async _evalResponseAction(res) {
+                console.debug('eval response', res);
                 if (res.tag === 'refresh')
                     this.view.refresh();
                 else if (res.tag == 'new') {
@@ -1131,6 +1132,9 @@ var Katrid;
                 else if (res.type) {
                     const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
                     return act.execute();
+                }
+                else if (Array.isArray(res)) {
+                    console.debug('array', res);
                 }
             }
             doBindingAction(evt) {
