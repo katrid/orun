@@ -1133,9 +1133,6 @@ var Katrid;
                     const act = new (Katrid.Actions.registry[res.type])(res, this.scope, this.scope.location);
                     return act.execute();
                 }
-                else if (Array.isArray(res)) {
-                    console.debug('array', res);
-                }
             }
             doBindingAction(evt) {
                 Katrid.Services.Actions.load($(evt.currentTarget).data('id'))
@@ -16983,6 +16980,10 @@ var Katrid;
                                 else if (msg instanceof Array)
                                     Katrid.Forms.Dialogs.Alerts.error(msg.join('\n'));
                         }
+                        else if (res.warning)
+                            Katrid.Forms.Dialogs.Alerts.warning(res.warning);
+                        else if (res.success)
+                            Katrid.Forms.Dialogs.Alerts.success(res.warning);
                         else
                             Katrid.Forms.Dialogs.Alerts.error(res.message);
                         reject(res);
