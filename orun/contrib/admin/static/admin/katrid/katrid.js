@@ -13984,7 +13984,7 @@ var Katrid;
                             let rec = event.detail.record;
                             let data = {};
                             let field = this.$parent.$fields[this.$name];
-                            if (field.info) {
+                            if (field?.info) {
                                 data[field.info.field || 'id'] = rec.id;
                                 let res = await this.$parent.$view.model.service.getFieldChoices({ field: this.$name, filter: data });
                                 rec[this.$name] = res.data;
