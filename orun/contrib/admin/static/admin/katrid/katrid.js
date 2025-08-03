@@ -1114,7 +1114,6 @@ var Katrid;
                 return Katrid.Services.Actions.onExecuteAction(actionId, actionType, ctx);
             }
             async _evalResponseAction(res) {
-                console.debug('eval response', res);
                 if (res.tag === 'refresh')
                     this.view.refresh();
                 else if (res.tag == 'new') {
@@ -1442,6 +1441,7 @@ var Katrid;
                         return {
                             userReport: this.userReport || {},
                             userReports: [],
+                            paramsVisible: true,
                             report: self.report,
                             customizableReport: this.customizableReport,
                             advancedOptions: this.advancedOptions,
@@ -4225,7 +4225,7 @@ var Katrid;
             loadData(data) {
                 this._lastGroup = undefined;
                 let table = this.table = document.createElement('table');
-                table.classList.add('table', 'table-hover');
+                table.classList.add('table', 'table-hover', 'data-table');
                 const thead = table.createTHead();
                 const thr = thead.insertRow(0);
                 table.createTBody();
@@ -8311,7 +8311,9 @@ var Katrid;
         }
         Reports.Param = Param;
         function createParamsPanel(container, params) {
-            const el = $(`<div class="params-params row">
+            const el = $(`<div class="params-params" style="position:relative">
+      <a class="float-end" style="position:absolute;top:0;right:10px;text-align:right;" v-on:click="paramsVisible=!paramsVisible"><i class="fa fa-fw" :class="{'fa-angles-down':!paramsVisible,'fa-angles-up':paramsVisible}"></i></a>
+      <div class="row" v-show="paramsVisible">
 <div v-for="param in params" class="col-lg-6 form-group">
           <div class="col-12">
             <label class="control-label">{{ param.label }}</label>
@@ -8325,11 +8327,13 @@ var Katrid;
           <report-param-widget :param="param"/>
 </div>
         </div>
+        </div>
 </div>`)[0];
             const vm = Katrid.createVm({
                 data() {
                     return {
-                        params
+                        params,
+                        paramsVisible: true,
                     };
                 }
             });
@@ -8783,13 +8787,13 @@ var Katrid;
         <div class="clearfix"></div>
         <hr>
       </div>
-      <div id="params-params" class="params-params margin-top-8 row">
+      <div id="params-params" class="params-params margin-top-8 row" v-show="!paramsVisible">
         <div v-for="param in report.params" class="col-lg-6 form-group">
           <div class="col-12">
             <label class="control-label">{{ param.label }}</label>
           </div>
           <div class="col-4" v-if="param.operationsVisible">
-            <select v-model="param.operation" class="form-control" ng-change="param.setOperation(param.operation)">
+            <select v-model="param.operation" class="form-control">
               <option v-for="op in param.operations" :value="op.id">{{ op.text }}</option>
             </select>
           </div>

@@ -979,7 +979,7 @@ table-field .table tbody tr {
   font-weight: bold;
 }
 .katrid-app .search-view-more-area a.selected:before {
-  font-family: "Font Awesome 5 Free";
+  font-family: "Font Awesome 5 Free", "Font Awesome 6 Pro";
   position: absolute;
   left: 6px;
   content: "\f00c";
@@ -1342,6 +1342,10 @@ table-field .table tbody tr {
 }
 .katrid-app table.table.table-no-border td {
   border: none;
+}
+.katrid-app table.data-table thead tr {
+  position: sticky;
+  top: 0;
 }
 .katrid-app table.data-table th {
   cursor: default;

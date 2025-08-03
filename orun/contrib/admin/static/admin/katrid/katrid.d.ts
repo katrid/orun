@@ -773,7 +773,8 @@ declare namespace katrid.admin {
         render(): void;
         onSelect(node: any): void;
         loadTOC(): Promise<void>;
-        navigateTo(url: any): Promise<void>;
+        private getCurrentFolder;
+        navigateTo(url: string): Promise<void>;
         loadChildren(node: any, toc: any): void;
     }
 }
@@ -2189,6 +2190,11 @@ declare namespace Katrid.Forms {
         protected getFieldConditions(field: Katrid.Data.Field): any;
     }
     export {};
+}
+declare namespace Katrid.Forms {
+    class SettingsForm extends Katrid.Forms.ModelView {
+        beforeRender(templ: HTMLElement): HTMLElement;
+    }
 }
 declare namespace Katrid.Forms {
     export class ListRenderer {

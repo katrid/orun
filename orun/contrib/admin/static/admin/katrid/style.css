@@ -14697,6 +14697,10 @@ table-field .table tbody tr {
 .katrid-app table.table.table-no-border td {
   border: none;
 }
+.katrid-app table.data-table thead tr {
+  position: sticky;
+  top: 0;
+}
 .katrid-app table.data-table th {
   cursor: default;
 }
