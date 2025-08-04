@@ -1441,7 +1441,6 @@ var Katrid;
                         return {
                             userReport: this.userReport || {},
                             userReports: [],
-                            paramsVisible: true,
                             report: self.report,
                             customizableReport: this.customizableReport,
                             advancedOptions: this.advancedOptions,
@@ -8786,7 +8785,7 @@ var Katrid;
         <div class="clearfix"></div>
         <hr>
       </div>
-      <div id="params-params" class="params-params margin-top-8 row" v-show="!paramsVisible">
+      <div id="params-params" class="params-params margin-top-8 row">
         <div v-for="param in report.params" class="col-lg-6 form-group">
           <div class="col-12">
             <label class="control-label">{{ param.label }}</label>
