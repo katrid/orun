@@ -2241,7 +2241,7 @@ declare namespace Katrid.Forms {
         save(formId?: number): void;
         discard(formId?: number | string): void;
         allowGrouping: boolean;
-        protected renderTemplate(template: HTMLElement): HTMLDivElement;
+        protected renderTemplate(template: HTMLElement): HTMLElement;
         $columns: any[];
         groupBy(data: any[]): Promise<any>;
     }

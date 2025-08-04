@@ -4108,7 +4108,6 @@ var Katrid;
                 this.createSelectionInfo(parent);
                 let btnActions = document.createElement('div');
                 btnActions.classList.add('btn-group');
-                console.debug('readonly', this._readonly);
                 if (!this.config.readonly) {
                     btnActions.innerHTML = `<div class="dropdown">
         <button name="actions" type="button" class="btn btn-soft-secondary dropdown-toggle btn-actions" data-bs-toggle="dropdown" v-show="selectionLength"
@@ -10267,7 +10266,7 @@ var Katrid;
                     Object.assign(options, _options);
                 }
                 let table = document.createElement('table');
-                table.classList.add('table', 'table-sm', 'table-striped');
+                table.classList.add('table', 'table-sm', 'table-striped', 'data-table');
                 this.tHead = document.createElement('thead');
                 this.tHeadRow = document.createElement('tr');
                 this.tBody = document.createElement('tbody');
@@ -10657,9 +10656,8 @@ var Katrid;
                 let div = document.createElement('div');
                 let table = renderer.render(template);
                 div.className = 'table-responsive';
-                div.append(table);
                 this.$columns = renderer.columns;
-                return div;
+                return table;
             }
             async groupBy(data) {
                 this.vm.records = this.vm.groups;
