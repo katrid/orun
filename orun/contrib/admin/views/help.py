@@ -13,19 +13,18 @@ def help_center(request: HttpRequest):
     return render(request, 'help-center/help-center.jinja2', {'settings': settings})
 
 
-def _toc_items(tocs: dict):
+def _toc_items(app_name: str, tocs: dict):
     res = []
     for k, v in tocs.items():
         if isinstance(v, dict):
             res.append({
                 'title': k,
-                'toc': _toc_items(v),
+                'toc': _toc_items(app_name, v),
             })
         else:
-            res.append({
-                'title': k,
-                'index': v,
-            })
+            if not v.startswith('/'):
+                v = f'/{app_name}/{v}'
+            res.append({'title': k, 'index': v, })
     return res
 
 
@@ -39,7 +38,7 @@ def toc(request: HttpRequest):
                 data = json.load(f)
                 app_toc = data.get('toc')
                 if app_toc:
-                    app_toc = data['toc'] = _toc_items(app_toc)
+                    app_toc = data['toc'] = _toc_items(name, app_toc)
                 if data.get('include_models'):
                     if not app_toc:
                         data['toc'] = app_toc = []
@@ -108,7 +107,9 @@ def _get_content_file(filename: str):
             content = '## Models\n\n'
             models = app.get_models(False)
             if models:
-                content += '\n'.join(f'- [{m._meta.verbose_name_plural}]({app_name}/$models/{m._meta.name})  \n{m._meta.help_text or ""}' for m in models)
+                content += '\n'.join(
+                    f'- [{m._meta.verbose_name_plural}]({app_name}/$models/{m._meta.name})  \n{m._meta.help_text or ""}'
+                    for m in models)
             else:
                 content += 'No models found.'
     return prepare_content(content) if content else ''
