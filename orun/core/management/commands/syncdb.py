@@ -2,6 +2,7 @@ import os
 import time
 from collections import OrderedDict
 from importlib import import_module
+import logging
 
 from orun.apps import apps
 from orun.core.checks import Tags, run_checks
@@ -15,6 +16,8 @@ from orun.db import DEFAULT_DB_ALIAS, connections, router
 from orun.utils.module_loading import module_has_submodule
 from orun.db.backends.base.base import BaseDatabaseWrapper
 from orun.db import metadata
+
+logger = logging.getLogger('orun.db.backends')
 
 
 class Command(BaseCommand):
@@ -104,16 +107,14 @@ class Command(BaseCommand):
 
         if self.verbosity >= 1:
             self.stdout.write(self.style.MIGRATE_HEADING("Synchronizing apps without migrations:"))
-        if options['schema']:
-            self.sync_apps(connection, [app_label])
-        else:
-            self.sync_apps(connection, apps.app_configs.keys())
-
-        # Send the post_migrate signal, so individual apps can do whatever they need
-        # to do at this point.
-        # emit_post_migrate_signal(
-        #     self.verbosity, self.interactive, connection.alias, apps=post_migrate_apps, plan=plan,
-        # )
+        try:
+            if options['schema']:
+                self.sync_apps(connection, [app_label])
+            else:
+                self.sync_apps(connection, apps.app_configs.keys())
+        except Exception as e:
+            logger.exception("Error during syncdb operation")
+            raise
 
     def sync_apps(self, connection: BaseDatabaseWrapper, app_labels):
         """Run the old syncdb-style operation on a list of app_labels."""
