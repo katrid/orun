@@ -30,6 +30,7 @@ from orun.db.models.options import Options
 from orun.db.models.query import Q
 from orun.db.models.signals import (
     class_prepared, post_init, post_save, pre_init, pre_save,
+    before_insert, before_update, after_update, after_insert,  # triggers
 )
 from orun.db.models import (
     NOT_PROVIDED, ExpressionWrapper, IntegerField, Max, Value,
@@ -413,6 +414,7 @@ class ModelState:
     loading = False
     fields_cache = ModelStateFieldsCacheDescriptor()
     update_fields: dict = None
+    old_values: dict = None
 
     def __init__(self, loading=False):
         self.loading = loading
@@ -842,9 +844,9 @@ class Model(metaclass=ModelBase):
         self._state.adding = False
 
         if inserted:
-            self.after_insert([])
+            self.after_insert(self._state.update_fields)
         else:
-            self.after_update(None, None)
+            self.after_update(None, self._state.update_fields)
 
         # Signal that the save is complete
         if not meta.auto_created:
@@ -904,7 +906,9 @@ class Model(metaclass=ModelBase):
             raise ValueError("Cannot force an update in save() with no primary key.")
 
         if pk_set:
-            self.before_update(None, None)
+            self.before_update(None, self._state.update_fields)  # todo old values
+        else:
+            self.before_insert(self._state.update_fields)
 
         updated = False
         # Skip an UPDATE when adding an instance and primary key has a default.
@@ -2026,19 +2030,19 @@ class Model(metaclass=ModelBase):
     def after_save(self, old, update):
         pass
 
-    def before_insert(self, modified_fields):
-        pass
+    def before_insert(self, values):
+        before_insert.send(self, values)
 
-    def after_insert(self, modified_fields):
-        pass
+    def after_insert(self, values):
+        after_insert.send(self, values)
 
     def before_update(self, old, values):
-        if values:
-            for k, v in values.items():
-                setattr(self, k, v)
+        # trigger before update signal
+        before_update.send(self, values)
 
     def after_update(self, old, values):
-        pass
+        # trigger after update signal
+        after_update.send(self, values)
 
     def before_delete(self):
         pass
@@ -2047,11 +2051,12 @@ class Model(metaclass=ModelBase):
         pass
 
     def update(self, **values):
-        self.before_update(None, values)
-        self.objects.filter(pk=self.pk).update(**values)
         for k, v in values.items():
             setattr(self, k, v)
+        self.before_update(None, values)
+        self.objects.filter(pk=self.pk).update(**values)
         self.after_update(None, values)
+        self._state.update_fields = {}
 
     @classmethod
     def get(cls, id) -> Self:

@@ -1,9 +1,12 @@
 from functools import partial, wraps
-from typing import Union, List, Optional, TYPE_CHECKING
+from typing import Union, List, Optional, TYPE_CHECKING, overload, override, Callable
+from collections import defaultdict
+import threading
 
 from orun.apps import apps
 from orun.db.models.utils import make_model_name
 from orun.dispatch import Signal
+
 if TYPE_CHECKING:
     from orun.db.models import Model
 
@@ -15,6 +18,7 @@ class ModelSignal(Signal):
     Signal subclass that allows the sender to be lazily specified as a string
     of the `app_label.ModelName` form.
     """
+
     def _lazy_method(self, method, apps, receiver, sender, **kwargs):
         from orun.db.models.options import Options
         from orun.db.models.base import ModelBase
@@ -61,22 +65,32 @@ post_migrate = Signal(providing_args=["app_config", "verbosity", "interactive", 
 post_sync = Signal(providing_args=["verbosity", "interactive", "using", "apps"])
 
 
-class TriggerSignal(Signal):
-    def __init__(self, when: str, op: str, providing_args=None, use_caching=False):
+class RecordSignal:
+    def __init__(self, when: str, op: str):
+        self.lock = threading.Lock()
         self.when = when
         self.op = op
-        self.models: List[str] = []
-        super().__init__(providing_args=providing_args, use_caching=use_caching)
+        self.listeners: dict[type[Model], List[Callable]] = defaultdict(list)
 
-    def connect(self, receiver, sender=None, weak=True, dispatch_uid=None):
-        super().connect(receiver, sender=sender, weak=weak, dispatch_uid=dispatch_uid)
+    def connect(self, sender, receiver):
         with self.lock:
-            self.models.append(sender)
+            self.listeners[sender].append(receiver)
+
+    def disconnect(self, sender, receiver):
+        with self.lock:
+            if sender in self.listeners and receiver in self.listeners[sender]:
+                self.listeners[sender].remove(receiver)
+
+    @override
+    def send(self, sender: 'Model', *args, **kwargs):
+        if sender.__class__ in self.listeners:
+            for receiver in self.listeners[sender.__class__]:
+                receiver(sender, *args, **kwargs)
 
 
-class TriggerEvent:
+class RecordEvent:
     def __init__(self, signal, model):
-        self.signal: TriggerSignal = signal
+        self.signal: RecordSignal = signal
         self.model: str = model
         self.instance: Optional[Model] = None
 
@@ -89,21 +103,26 @@ class TriggerEvent:
 
 
 # trigger decorator
-def trigger(signal: TriggerSignal, model: str):
+def trigger(signal: RecordSignal, model: str | type['Model'], when: Callable = None):
     def inner(fn):
-        def wrap(event: TriggerEvent, old, new, *args, **kwargs):
-            event.instance = new or old
-            return fn(event, old, new)
+        @wraps(fn)
+        def wrapper(event: RecordEvent, instance, *args, **kwargs):
+            event.instance = instance
+            if when is not None:
+                if when(instance, event):
+                    return fn(instance, *args, **kwargs)
+            return None
 
-        signal.connect(partial(wrap, TriggerEvent(signal, model)), sender=model, weak=False)
-        return wrap
+        signal.connect(model, partial(wrapper, RecordEvent(signal, model)))
+        return wrapper
+
     return inner
 
 
-before_insert = TriggerSignal('before', 'insert', providing_args=["instance", "args", "kwargs"], use_caching=False)
-before_update = TriggerSignal('before', 'update', providing_args=["instance", "args", "kwargs"], use_caching=False)
-before_delete = TriggerSignal('before', 'delete', providing_args=["instance", "args", "kwargs"], use_caching=False)
+before_insert = RecordSignal('before', 'insert')
+before_update = RecordSignal('before', 'update')
+before_delete = RecordSignal('before', 'delete')
 
-after_insert = TriggerSignal('after', 'insert', providing_args=["instance", "args", "kwargs"], use_caching=False)
-after_update = TriggerSignal('after', 'update', providing_args=["instance", "args", "kwargs"], use_caching=False)
-after_delete = TriggerSignal('after', 'delete', providing_args=["instance", "args", "kwargs"], use_caching=False)
+after_insert = RecordSignal('after', 'insert')
+after_update = RecordSignal('after', 'update')
+after_delete = RecordSignal('after', 'delete')
