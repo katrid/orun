@@ -432,11 +432,6 @@ class AdminModel(models.Model, helper=True):
             # TODO events should be called from orm api internals
             if obj._state.adding:
                 before_insert.send(cls._meta.name, old=None, new=obj)
-            elif cls._meta.name in before_update.models:
-                # make a copy of old data
-                old = copy.deepcopy(obj)
-                cls._from_json(obj, row)
-                # before_update.send(cls._meta.name, old=obj, new=obj)
             else:
                 cls._from_json(obj, row)
             if obj._state.adding:

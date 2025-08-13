@@ -1,4 +1,3 @@
-import sys
 import importlib.util
 import traceback
 
@@ -23,8 +22,12 @@ class Automation(models.Model):
             'insert': _('On creation'),
             'update': _('On update'),
             'delete': _('On deletion'),
+            'change': _('On UI change'),
         },
     )
+    before_update_filter = models.TextField()
+    after_update_filter = models.TextField()
+    when_updating = models.TextField()
     action = models.ForeignKey('ui.action.server')
     code = models.TextField()
 
@@ -32,7 +35,7 @@ class Automation(models.Model):
         name = 'admin.automation'
         name_field = 'description'
         field_groups = {
-            'list_fields': ['description', 'type', 'signal_name'],
+            'list_fields': ['description', 'type', 'signal_name', 'trigger', 'model', 'active'],
         }
 
     @classmethod
