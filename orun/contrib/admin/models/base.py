@@ -422,14 +422,9 @@ class AdminModel(models.Model, helper=True):
         for row in data:
             pk = row.pop('id', None)
             if pk:
-                # _cache_change = _cache_change or cls.check_permission('change')
                 obj = cls.objects.get(pk=pk)
             else:
-                # _cache_create = _cache_create or cls.check_permission('create')
                 obj = cls()
-
-            # dispatch events
-            # TODO events should be called from orm api internals
             cls._from_json(obj, row)
             res.append(obj.pk)
         return res
