@@ -430,16 +430,7 @@ class AdminModel(models.Model, helper=True):
 
             # dispatch events
             # TODO events should be called from orm api internals
-            if obj._state.adding:
-                before_insert.send(cls._meta.name, old=None, new=obj)
-            else:
-                cls._from_json(obj, row)
-            if obj._state.adding:
-                cls._from_json(obj, row)
-                # dispatch event
-                # if cls._meta.name in after_insert.models:
-                #     after_insert.send(cls._meta.name, old=None, new=obj)
-
+            cls._from_json(obj, row)
             res.append(obj.pk)
         return res
 
