@@ -686,3 +686,6 @@ class BaseDatabaseWrapper:
     def execute(self, sql: str, params=None):
         from orun.db._sql import ExecuteSQL
         return ExecuteSQL(self, sql).using(params).execute()
+
+    def get_notices(self):
+        return None

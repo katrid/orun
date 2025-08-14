@@ -291,3 +291,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             stmt += ')'
             cur.execute(stmt, args)
             return cur
+
+    def get_notices(self):
+        if self.connection is not None:
+            return self.connection.notices
+        return None
