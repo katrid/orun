@@ -1,10 +1,13 @@
 from functools import wraps
+import logging
 import traceback
 from orun.core.exceptions import ValidationError, RPCError, ObjectDoesNotExist
 from orun.db.utils import DatabaseError
 from orun.http.response import HttpResponseBase
 from orun.db import transaction, connection
 import orun.messages
+
+logger = logging.getLogger('orun')
 
 
 def jsonrpc(fn):
@@ -24,12 +27,11 @@ def jsonrpc(fn):
                     if isinstance(r, HttpResponseBase):
                         return r
 
-                    msgs = orun.messages.get()
                     res['result'] = r
-                    if msgs is not None:
+                finally:
+                    if msgs := orun.messages.get():
                         # add katrid.admin.processMessages Response Processor (should be evaluated by client-side)
                         res['katrid.admin.ResponseMessagesProcessor'] = msgs
-                finally:
                     # extract notices from the connection
                     if notices := connection.get_notices():
                         res['notices'] = [
@@ -37,23 +39,27 @@ def jsonrpc(fn):
                             for t, s in [n.split(':', 1) for n in notices]
                         ]
         except ValidationError as e:
+            traceback.print_exc()
             code = getattr(e, 'code', None)
             res['error'] = {
                 'code': code,
                 'messages': getattr(e, 'error_dict', list(e)),
             }
         except DatabaseError as e:
+            logger.exception('API DatabaseError')
             traceback.print_exc()
             res['error'] = {
                 'messages': [str(e)]
             }
         except RPCError as e:
+            logger.exception('API RPCError')
             traceback.print_exc()
             res['error'] = {
                 'code': e.code,
                 'messages': [str(e)]
             }
         except Exception as e:
+            logger.exception('API')
             traceback.print_exc()
             res['error'] = {
                 'message': str(e),
