@@ -91,6 +91,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'TextField': 'text',
         'TimeField': 'time',
         'UUIDField': 'uuid',
+        'JSONField': 'jsonb',
+        'MultiChoiceField': 'text[]',
     }
     data_type_check_constraints = {
         'PositiveIntegerField': '"%(column)s" >= 0',

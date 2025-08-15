@@ -1,13 +1,13 @@
-from typing import Optional, Union, Callable, TYPE_CHECKING
-import re
 import copy
 import datetime
 import decimal
 import operator
+import re
 import uuid
 import warnings
 from base64 import b64decode, b64encode
-from functools import partialmethod, total_ordering
+from functools import partialmethod
+from typing import Optional, Union, Callable, TYPE_CHECKING, overload, Self
 
 from orun.apps import apps
 from orun.conf import settings
@@ -18,7 +18,7 @@ from orun.core import checks, exceptions, validators
 from orun.core.exceptions import FieldDoesNotExist  # NOQA
 from orun.db import connection, connections, router
 from orun.db.models.constants import LOOKUP_SEP
-from orun.db.models.query_utils import DeferredAttribute, RegisterLookupMixin, Q, PropertyDescriptor, HybridDescriptor
+from orun.db.models.query_utils import DeferredAttribute, RegisterLookupMixin, PropertyDescriptor, HybridDescriptor
 from orun.utils import timezone
 from orun.utils.datastructures import DictWrapper
 from orun.utils.dateparse import (
@@ -30,6 +30,7 @@ from orun.utils.ipv6 import clean_ipv6_address
 from orun.utils.itercompat import is_iterable
 from orun.utils.text import capfirst
 from orun.utils.translation import gettext_lazy as _, gettext
+
 if TYPE_CHECKING:
     from orun.db import metadata
     from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
@@ -44,7 +45,7 @@ __all__ = [
     'PositiveSmallIntegerField', 'SlugField', 'SmallIntegerField', 'TextField',
     'TimeField', 'URLField', 'UUIDField', 'ChoiceField', 'SelectionField', 'StringField',
     'XmlField', 'HtmlField', 'PasswordField',
-    'NotNullIntegerField', 'DocumentField',
+    'NotNullIntegerField', 'MultiChoiceField',
 ]
 
 
@@ -141,7 +142,7 @@ class Fields(list):
         return self[item]
 
 
-class BaseField(RegisterLookupMixin):
+class BaseField[T](RegisterLookupMixin):
     _args = None
     _kwargs = None
     base_field = None
@@ -207,7 +208,7 @@ class BaseField(RegisterLookupMixin):
         self.name = name
 
 
-class Field(BaseField):
+class Field[T](BaseField[T]):
     """Base class for all field types"""
 
     # Designates whether empty strings fundamentally are allowed at the
@@ -369,6 +370,16 @@ class Field(BaseField):
         else:
             self.copy = copy
 
+    @overload
+    def __get__(self, instance: None, owner) -> Self:
+        ...
+
+    @overload
+    def __get__(self, instance: object, owner) -> T:
+        ...
+
+    def __get__(self, instance, owner=None) -> T | Self:
+        return self
     @property
     def on_calculate(self):
         return self._on_calculate
@@ -1110,7 +1121,7 @@ class Field(BaseField):
             )
 
 
-class BooleanField(Field):
+class BooleanField(Field[bool]):
     empty_strings_allowed = False
     default_error_messages = {
         'invalid': _("'%(value)s' value must be either True or False."),
@@ -1151,7 +1162,7 @@ class BooleanField(Field):
         return self.to_python(value)
 
 
-class CharField(Field):
+class CharField(Field[str]):
     description = _("String (up to %(max_length)s)")
 
     def __init__(
@@ -1569,7 +1580,7 @@ class DateTimeField(DateField):
         return value
 
 
-class DecimalField(Field):
+class DecimalField(Field[decimal.Decimal]):
     default_error_messages = {
         'invalid': _("'%(value)s' value must be a decimal number."),
     }
@@ -1845,7 +1856,7 @@ class ImagePathField(FilePathField):
     pass
 
 
-class FloatField(Field):
+class FloatField(Field[float]):
     empty_strings_allowed = False
     default_error_messages = {
         'invalid': _("'%(value)s' value must be a float."),
@@ -2285,12 +2296,6 @@ class TextField(Field):
         return self.to_python(value)
 
 
-class DocumentField(TextField):
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault('trim', False)
-        super().__init__(*args, **kwargs)
-
-
 class TimeField(DateTimeCheckMixin, Field):
     empty_strings_allowed = False
     default_error_messages = {
@@ -2491,11 +2496,6 @@ class UUIDField(Field):
         kwargs['max_length'] = 32
         super().__init__(label, **kwargs)
 
-    def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        del kwargs['max_length']
-        return name, path, args, kwargs
-
     def get_internal_type(self):
         return "UUIDField"
 
@@ -2531,20 +2531,23 @@ def NotNullIntegerField(*args, **kwargs):
 
 
 class ChoiceField(CharField):
-    def __init__(self, *args, **kwargs):
-        if args and isinstance(args[0], (list, tuple, dict)):
-            choices = args[0]
-            if isinstance(choices, dict):
-                choices = tuple(choices.items())
-            kwargs['choices'] = choices
+    def __init__(self, choices, **kwargs):
+        if isinstance(choices, dict):
+            choices = tuple(choices.items())
+        kwargs['choices'] = choices
         kwargs.setdefault('max_length', 32)
-        super(ChoiceField, self).__init__(*args[1:], **kwargs)
+        super().__init__(**kwargs)
 
     def add_choices(self, items):
         self.choices += list(items)
 
 
 SelectionField = ChoiceField
+
+
+class MultiChoiceField(ChoiceField):
+    def get_internal_type(self):
+        return "MultiChoiceField"
 
 
 class XmlField(TextField):

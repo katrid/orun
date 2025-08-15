@@ -1,15 +1,13 @@
 import json
 
-from orun import forms
 from orun.core import checks, exceptions
 from orun.db import NotSupportedError, connections, router
 from orun.db.models import lookups
 from orun.db.models.lookups import PostgresOperatorLookup, Transform
 from orun.utils.translation import gettext_lazy as _
-
 from . import Field
 
-__all__ = ['JSONField']
+__all__ = ['JSONField', 'RecordField', 'RecordCollectionField']
 
 
 class JSONField(Field):
@@ -19,17 +17,14 @@ class JSONField(Field):
     }
     _default_hint = ('dict', '{}')
 
-    def __init__(
-        self, verbose_name=None, name=None, encoder=None, decoder=None,
-        **kwargs,
-    ):
+    def __init__(self, *, encoder=None, decoder=None, **kwargs):
         if encoder and not callable(encoder):
             raise ValueError('The encoder parameter must be a callable object.')
         if decoder and not callable(decoder):
             raise ValueError('The decoder parameter must be a callable object.')
         self.encoder = encoder
         self.decoder = decoder
-        super().__init__(verbose_name, name, **kwargs)
+        super().__init__(**kwargs)
 
     def check(self, **kwargs):
         errors = super().check(**kwargs)
@@ -44,13 +39,13 @@ class JSONField(Field):
                 continue
             connection = connections[db]
             if (
-                self.model._meta.required_db_vendor and
-                self.model._meta.required_db_vendor != connection.vendor
+                    self.model._meta.required_db_vendor and
+                    self.model._meta.required_db_vendor != connection.vendor
             ):
                 continue
             if not (
-                'supports_json_field' in self.model._meta.required_db_features or
-                connection.features.supports_json_field
+                    'supports_json_field' in self.model._meta.required_db_features or
+                    connection.features.supports_json_field
             ):
                 errors.append(
                     checks.Error(
@@ -110,22 +105,27 @@ class JSONField(Field):
     def value_to_string(self, obj):
         return self.value_from_object(obj)
 
-    def formfield(self, **kwargs):
-        return super().formfield(**{
-            'form_class': forms.JSONField,
-            'encoder': self.encoder,
-            'decoder': self.decoder,
-            **kwargs,
-        })
+
+class RecordField(JSONField):
+    """
+    Complex field structure.
+    """
+    struct: dict[str, Field]
+
+    def __init__(self, struct: dict[str, Field], /, **kwargs):
+        self.struct = struct
+        super().__init__(**kwargs)
+
+    def _formfield(self):
+        info = super()._formfield()
+        info['structure'] = [{'field': k, 'info': v._formfield()} for k, v in self.struct.items()]
+        return info
 
 
-class StructField(JSONField):
+class RecordCollectionField(RecordField):
     """
-    Complex field structure
+    Represents a collection of records with a complex structure.
     """
-    def __init__(self, structure, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.structure = structure
 
 
 def compile_json_path(key_transforms, include_root=True):
@@ -251,6 +251,7 @@ class CaseInsensitiveMixin:
     Because utf8mb4_bin is a binary collation, comparison of JSON values is
     case-sensitive.
     """
+
     def process_lhs(self, compiler, connection):
         lhs, lhs_params = super().process_lhs(compiler, connection)
         if connection.vendor == 'mysql':
@@ -320,8 +321,8 @@ class KeyTransform(Transform):
         lhs, params, key_transforms = self.preprocess_lhs(compiler, connection)
         json_path = compile_json_path(key_transforms)
         return (
-            "COALESCE(JSON_QUERY(%s, '%s'), JSON_VALUE(%s, '%s'))" %
-            ((lhs, json_path) * 2)
+                "COALESCE(JSON_QUERY(%s, '%s'), JSON_VALUE(%s, '%s'))" %
+                ((lhs, json_path) * 2)
         ), tuple(params) * 2
 
     def as_postgresql(self, compiler, connection):
@@ -342,9 +343,9 @@ class KeyTransform(Transform):
             repr(datatype) for datatype in connection.ops.jsonfield_datatype_values
         ])
         return (
-            "(CASE WHEN JSON_TYPE(%s, %%s) IN (%s) "
-            "THEN JSON_TYPE(%s, %%s) ELSE JSON_EXTRACT(%s, %%s) END)"
-        ) % (lhs, datatype_values, lhs, lhs), (tuple(params) + (json_path,)) * 3
+                   "(CASE WHEN JSON_TYPE(%s, %%s) IN (%s) "
+                   "THEN JSON_TYPE(%s, %%s) ELSE JSON_EXTRACT(%s, %%s) END)"
+               ) % (lhs, datatype_values, lhs, lhs), (tuple(params) + (json_path,)) * 3
 
 
 class KeyTextTransform(KeyTransform):
@@ -359,6 +360,7 @@ class KeyTransformTextLookupMixin:
     key values to text and performing the lookup on the resulting
     representation.
     """
+
     def __init__(self, key_transform, *args, **kwargs):
         if not isinstance(key_transform, KeyTransform):
             raise TypeError(
@@ -402,8 +404,8 @@ class KeyTransformIn(lookups.In):
             compiler, connection, sql, param,
         )
         if (
-            not hasattr(param, 'as_sql') and
-            not connection.features.has_native_json_field
+                not hasattr(param, 'as_sql') and
+                not connection.features.has_native_json_field
         ):
             if connection.vendor == 'oracle':
                 value = json.loads(param)
@@ -413,8 +415,8 @@ class KeyTransformIn(lookups.In):
                 else:
                     sql = sql % 'JSON_VALUE'
             elif connection.vendor == 'mysql' or (
-                connection.vendor == 'sqlite' and
-                params[0] not in connection.ops.jsonfield_datatype_values
+                    connection.vendor == 'sqlite' and
+                    params[0] not in connection.ops.jsonfield_datatype_values
             ):
                 sql = "JSON_EXTRACT(%s, '$')"
         if connection.vendor == 'mysql' and connection.mysql_is_mariadb:

@@ -16,7 +16,7 @@ from orun.db.models.enums import *  # NOQA
 from orun.db.models.enums import __all__ as enums_all
 from orun.db.models.fields import *  # NOQA
 from orun.db.models.fields import __all__ as fields_all
-from orun.db.models.fields.json import JSONField
+from orun.db.models.fields.json import JSONField, RecordField, RecordCollectionField
 from orun.db.models.fields.files import FileField, ImageField
 from orun.db.models.fields.proxy import ProxyField
 from orun.db.models.indexes import *  # NOQA
@@ -52,6 +52,6 @@ __all__ += [
     'FilteredRelation',
     'ForeignKey', 'ForeignObject', 'OneToOneField', 'ManyToManyField', 'OneToManyField',
     'ManyToOneRel', 'ManyToManyRel', 'OneToOneRel', 'OneToManyRel',
-    'override',
+    'JSONField', 'RecordField', 'RecordCollectionField',
 ]
 

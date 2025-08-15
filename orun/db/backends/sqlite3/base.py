@@ -113,6 +113,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'TextField': 'text',
         'TimeField': 'time',
         'UUIDField': 'char(32)',
+        'MultiChoiceField': 'text',
     }
     data_type_check_constraints = {
         'PositiveBigIntegerField': '"%(column)s" >= 0',
