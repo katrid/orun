@@ -1526,11 +1526,13 @@ declare namespace Katrid.Data {
         getValue(value: any): any;
         protected getFieldAttributes(fieldEl: Element): any;
         renderTo(fieldEl: Element, view: Katrid.Forms.ModelView): void;
+        protected _createSection(attrs: any): HTMLElement;
         formCreate(fieldEl: Element, view: Katrid.Forms.ModelView): HTMLElement;
         widgetHelp: string;
         getTooltip(el: HTMLElement): Katrid.ui.Tooltip;
         createTooltip(section: HTMLElement): void;
         listCreate(view: Katrid.Forms.ListRenderer, fieldEl: HTMLElement): void;
+        tableCreate(row: HTMLElement, header: HTMLElement): void;
         formSpanTemplate(): string;
         listSpanTemplate(): string;
         listCaptionTemplate(): string;
@@ -1723,6 +1725,13 @@ declare namespace Katrid.Data {
 }
 declare namespace Katrid.Data {
     class RecordField extends Field {
+        schema: any[];
+        fields: Field[];
+        loadInfo(info: any): void;
+        protected _loadSchema(structure: any[]): void;
+    }
+    class RecordCollectionField extends RecordField {
+        formControl(fieldEl?: Element): HTMLElement;
     }
 }
 declare namespace katrid.db {
@@ -2755,9 +2764,39 @@ declare namespace Katrid.Forms {
 }
 declare namespace katrid.forms.widgets {
 }
+declare namespace Katrid.Forms.Widgets {
+}
 declare namespace Katrid.Forms.Controls {
 }
 declare namespace Katrid.Forms.Widgets {
+}
+declare namespace Katrid.Forms.Widgets {
+    interface ITableRendererOptions {
+        rowSelector?: boolean;
+        showStar?: boolean;
+        recordsName?: string;
+        recordClick?: string;
+    }
+    export class TableRenderer {
+        fields: Katrid.Data.Field[];
+        options?: ITableRendererOptions;
+        tHead: HTMLElement;
+        tHeadRow: HTMLElement;
+        tBody: HTMLElement;
+        tRow: HTMLElement;
+        table: HTMLTableElement;
+        inlineEditor: boolean;
+        rowSelector: boolean;
+        recordsName: string;
+        constructor(fields: Katrid.Data.Field[], options?: ITableRendererOptions);
+        createTable(): HTMLTableElement;
+        fromTemplate(list: HTMLElement, records?: string): HTMLElement;
+        columns: Katrid.Data.Field[];
+        addField(fld: HTMLElement): void;
+        createField(field: Katrid.Data.Field): void;
+        compile(): void;
+    }
+    export {};
 }
 declare namespace Katrid.Forms.Widgets {
 }
@@ -3527,6 +3566,7 @@ declare namespace Katrid.UI {
     }
     let helpProvider: HelpProvider;
 }
+declare var showdown: any;
 declare namespace Katrid.UI {
     class HelpCenter {
         app?: Katrid.Core.WebApplication;
@@ -3534,6 +3574,7 @@ declare namespace Katrid.UI {
         container: HTMLElement;
         private readonly _actionChanged;
         private _timeout;
+        markdown: any;
         constructor(app?: Katrid.Core.WebApplication);
         clear(): void;
         actionChanged(timeout?: number): void;

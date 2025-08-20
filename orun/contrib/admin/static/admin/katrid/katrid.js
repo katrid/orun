@@ -461,7 +461,7 @@ var Katrid;
                 }
                 if (this.config.usage) {
                     const p = document.createElement('p');
-                    p.innerHTML = this.config.usage;
+                    p.innerHTML = help.markdown.makeHtml(this.config.usage);
                     help.element.append(p);
                 }
             }
@@ -1269,7 +1269,7 @@ var Katrid;
                     const p = document.createElement('pre');
                     p.innerText = 'Model name: ' + this.modelName;
                     const pDesc = document.createElement('p');
-                    pDesc.innerHTML = this.config.help_text || '';
+                    pDesc.innerHTML = help.markdown.makeHtml(this.config.help_text) || '';
                     help.element.append(h6);
                     help.element.append(p);
                     help.element.append(pDesc);
@@ -6158,34 +6158,7 @@ var Katrid;
                 if (view.getViewType() === 'form')
                     this.formCreate(fieldEl, view);
             }
-            formCreate(fieldEl, view) {
-                let attrs = this.attrs = this.getFieldAttributes(fieldEl);
-                let widget;
-                let widgetType = attrs.widget || this.widget;
-                let control;
-                let label;
-                let span;
-                if (fieldEl.hasAttribute('default-value')) {
-                    console.debug('Default value', this.defaultValue);
-                    let value = fieldEl.getAttribute('default-value');
-                    if (value)
-                        this.defaultValue = value;
-                }
-                if (widgetType) {
-                    widget = this.createWidget(widgetType);
-                    if (widget.renderToForm)
-                        return widget.renderToForm(fieldEl, view);
-                    else if (widget.formControl)
-                        control = widget.formControl(fieldEl);
-                    if (widget.spanTemplate)
-                        span = widget.spanTemplate(fieldEl, view);
-                    if (widget.formLabel)
-                        label = widget.formLabel(fieldEl);
-                }
-                else {
-                    label = this.formLabel(fieldEl);
-                    control = this.formControl(fieldEl);
-                }
+            _createSection(attrs) {
                 let section = document.createElement('section');
                 section.classList.add('form-field-section');
                 section.setAttribute('v-form-field', null);
@@ -6215,6 +6188,37 @@ var Katrid;
                     section.classList.add(this.cols);
                 if (this.cssClass)
                     section.classList.add(this.cssClass);
+                return section;
+            }
+            formCreate(fieldEl, view) {
+                const attrs = this.attrs = this.getFieldAttributes(fieldEl);
+                let widget;
+                let widgetType = attrs.widget || this.widget;
+                let control;
+                let label;
+                let span;
+                if (fieldEl.hasAttribute('default-value')) {
+                    console.debug('Default value', this.defaultValue);
+                    let value = fieldEl.getAttribute('default-value');
+                    if (value)
+                        this.defaultValue = value;
+                }
+                if (widgetType) {
+                    widget = this.createWidget(widgetType);
+                    if (widget.renderToForm)
+                        return widget.renderToForm(fieldEl, view);
+                    else if (widget.formControl)
+                        control = widget.formControl(fieldEl);
+                    if (widget.spanTemplate)
+                        span = widget.spanTemplate(fieldEl, view);
+                    if (widget.formLabel)
+                        label = widget.formLabel(fieldEl);
+                }
+                else {
+                    label = this.formLabel(fieldEl);
+                    control = this.formControl(fieldEl);
+                }
+                let section = this._createSection(attrs);
                 if (label) {
                     let input = control;
                     if (control.tagName !== 'INPUT')
@@ -6272,6 +6276,20 @@ var Katrid;
                 }
                 th.setAttribute('v-on:click', `columnClick('${this.name}')`);
                 view.tHeadRow.append(th);
+            }
+            tableCreate(row, header) {
+                const td = document.createElement('td');
+                td.innerHTML = this.listSpanTemplate();
+                td.setAttribute('field-name', this.name);
+                row.append(td);
+                const th = document.createElement('th');
+                th.innerHTML = this.listCaptionTemplate();
+                if (this.cssClass) {
+                    td.classList.add(this.cssClass);
+                    th.classList.add(this.cssClass);
+                }
+                th.setAttribute('v-on:click', `columnClick('${this.name}')`);
+                header.append(th);
             }
             formSpanTemplate() {
                 if (this.hasChoices)
@@ -7093,9 +7111,47 @@ var Katrid;
     var Data;
     (function (Data) {
         class RecordField extends Data.Field {
+            loadInfo(info) {
+                super.loadInfo(info);
+                this.schema = info.structure;
+                this._loadSchema(this.schema);
+            }
+            _loadSchema(structure) {
+                const fields = Katrid.Data.Fields.fromArray(structure.map(item => {
+                    item.info.name = item.field;
+                    return item.info;
+                }));
+                this.fields = Object.values(fields);
+            }
         }
         Data.RecordField = RecordField;
+        class RecordCollectionField extends RecordField {
+            formControl(fieldEl) {
+                return createRecordCollectionElement(this);
+            }
+        }
+        Data.RecordCollectionField = RecordCollectionField;
+        function createRecordCollectionElement(field) {
+            const el = document.createElement('record-collection-field');
+            const toolbar = document.createElement('div');
+            toolbar.className = 'toolbar';
+            const addButton = document.createElement('button');
+            addButton.className = 'btn btn-sm btn-secondary';
+            addButton.innerText = Katrid.i18n.gettext('Add');
+            addButton.type = 'button';
+            addButton.setAttribute('v-on:click', `newRecord()`);
+            toolbar.append(addButton);
+            el.append(toolbar);
+            const renderer = new Katrid.Forms.Widgets.TableRenderer(field.fields);
+            el.append(renderer.createTable());
+            return el;
+        }
+        class WidgetRenderer {
+            render() {
+            }
+        }
         Katrid.Data.Fields.registry.RecordField = RecordField;
+        Katrid.Data.Fields.registry.RecordCollectionField = RecordCollectionField;
     })(Data = Katrid.Data || (Katrid.Data = {}));
 })(Katrid || (Katrid = {}));
 var katrid;
@@ -13897,9 +13953,17 @@ var katrid;
         var widgets;
         (function (widgets) {
             Katrid.component('record-collection-field', {
-                template: '<div class="table-responsive"></div>',
+                template: '<div class="table-responsive"><slot></slot></div>',
                 mounted() {
                     console.debug('rec collection field', arguments);
+                },
+                methods: {
+                    recordClick(ev) {
+                        console.debug('record click', ev);
+                    },
+                    newRecord() {
+                        console.debug('new record');
+                    }
                 }
             });
             class TabularDocumentList extends Katrid.Forms.Widgets.Widget {
@@ -13995,6 +14059,183 @@ var Katrid;
                     }
                 }
             });
+        })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
+    })(Forms = Katrid.Forms || (Katrid.Forms = {}));
+})(Katrid || (Katrid = {}));
+var Katrid;
+(function (Katrid) {
+    var Forms;
+    (function (Forms) {
+        var Widgets;
+        (function (Widgets) {
+            class TableRenderer {
+                constructor(fields, options) {
+                    this.fields = fields;
+                    this.options = options;
+                    this.inlineEditor = false;
+                    this.rowSelector = false;
+                    this.columns = [];
+                }
+                createTable() {
+                    const options = this.options || { rowSelector: true, showStar: false };
+                    const table = document.createElement('table');
+                    table.classList.add('table', 'table-sm', 'table-striped', 'data-table');
+                    this.tHead = document.createElement('thead');
+                    this.tHeadRow = document.createElement('tr');
+                    this.tBody = document.createElement('tbody');
+                    this.tRow = document.createElement('tr');
+                    if (options.rowSelector) {
+                        this.tHeadRow.innerHTML = `<th class="list-record-selector">
+        <input type="checkbox" v-model="allSelected" v-on:click.stop="toggleAll()">
+          </th>`;
+                        this.tRow.innerHTML = `<th class="list-record-selector" v-on:click.stop="selectToggle(record)">
+        <input type="checkbox" v-model="record.$selected">
+          </th>`;
+                    }
+                    if (options.showStar) {
+                        let th = document.createElement('th');
+                        th.classList.add('list-record-star');
+                        this.tHeadRow.append(th);
+                        let td = document.createElement('th');
+                        td.classList.add('list-record-star');
+                        td.title = 'Mark with star';
+                        td.setAttribute('v-on:click.stop', 'action.markStar(record)');
+                        td.innerHTML = `<i class="far fa-fw fa-star"></i>`;
+                        this.tRow.append(td);
+                    }
+                    for (const f of this.fields)
+                        if (f.visible)
+                            this.createField(f);
+                    this.tRow.setAttribute(':data-id', 'record.id');
+                    this.tRow.setAttribute('v-if', '!groups');
+                    this.tRow.setAttribute('v-for', `(record, index) in ${options.recordsName || 'records'}`);
+                    this.tRow.setAttribute(':selected', 'record.$selected');
+                    this.tRow.setAttribute('v-on:contextmenu', 'recordContextMenu(record, index, $event)');
+                    table.setAttribute('v-on:contextmenu', 'tableContextMenu($event)');
+                    table.setAttribute('v-on:keydown', 'rowKeyDown($event)');
+                    if (this.options?.recordClick)
+                        this.tRow.setAttribute('v-on:click', this.options.recordClick);
+                    else
+                        this.tRow.setAttribute('v-on:click', 'recordClick(record, index, $event)');
+                    this.tRow.setAttribute(':class', '{modified: record.$state}');
+                    this.tHead.append(this.tHeadRow);
+                    let loadingRow = document.createElement('tr');
+                    loadingRow.setAttribute('v-if', 'loading');
+                    loadingRow.innerHTML = `<td class="table-loading text-center" colspan="${this.tRow.children.length}">
+  <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+</td>`;
+                    this.tBody.append(loadingRow);
+                    this.tBody.append(this.tRow);
+                    table.append(this.tHead);
+                    table.append(this.tBody);
+                    this.table = table;
+                    return table;
+                }
+                fromTemplate(list, records) {
+                    list.classList.add('list-view');
+                    let options = this.options || { rowSelector: true, showStar: false };
+                    let _options = list.getAttribute('data-options');
+                    if (_options) {
+                        _options = JSON.parse(_options);
+                        Object.assign(options, _options);
+                    }
+                    let table = document.createElement('table');
+                    table.classList.add('table', 'table-sm', 'table-striped', 'data-table');
+                    this.tHead = document.createElement('thead');
+                    this.tHeadRow = document.createElement('tr');
+                    this.tBody = document.createElement('tbody');
+                    this.tRow = document.createElement('tr');
+                    if (options.rowSelector) {
+                        this.tHeadRow.innerHTML = `<th class="list-record-selector">
+        <input type="checkbox" v-model="allSelected" v-on:click.stop="toggleAll()">
+          </th>`;
+                        this.tRow.innerHTML = `<th class="list-record-selector" v-on:click.stop="selectToggle(record)">
+        <input type="checkbox" v-model="record.$selected">
+          </th>`;
+                    }
+                    if (options.showStar) {
+                        let th = document.createElement('th');
+                        th.classList.add('list-record-star');
+                        this.tHeadRow.append(th);
+                        let td = document.createElement('th');
+                        td.classList.add('list-record-star');
+                        td.title = 'Mark with star';
+                        td.setAttribute('v-on:click.stop', 'action.markStar(record)');
+                        td.innerHTML = `<i class="far fa-fw fa-star"></i>`;
+                        this.tRow.append(td);
+                    }
+                    for (let f of list.querySelectorAll(':scope > field')) {
+                        this.addField(f);
+                        f.remove();
+                    }
+                    this.tRow.setAttribute(':data-id', 'record.id');
+                    this.tRow.setAttribute('v-if', '!groups');
+                    this.tRow.setAttribute('v-for', `(record, index) in ${records || 'records'}`);
+                    this.tRow.setAttribute(':selected', 'record.$selected');
+                    this.tRow.setAttribute('v-on:contextmenu', 'recordContextMenu(record, index, $event)');
+                    table.setAttribute('v-on:contextmenu', 'tableContextMenu($event)');
+                    table.setAttribute('v-on:keydown', 'rowKeyDown($event)');
+                    if (this.options?.recordClick)
+                        this.tRow.setAttribute('v-on:click', this.options.recordClick);
+                    else
+                        this.tRow.setAttribute('v-on:click', 'recordClick(record, index, $event)');
+                    let ngTrClass = list.getAttribute('v-tr-class');
+                    if (ngTrClass) {
+                        if (!ngTrClass.startsWith('{'))
+                            ngTrClass = '{' + ngTrClass + '}';
+                        this.tRow.setAttribute(':class', ngTrClass);
+                    }
+                    this.tRow.setAttribute(':class', '{modified: record.$state}');
+                    this.tHead.append(this.tHeadRow);
+                    let loadingRow = document.createElement('tr');
+                    loadingRow.setAttribute('v-if', 'loading');
+                    loadingRow.innerHTML = `<td class="table-loading text-center" colspan="${this.tRow.children.length}">
+  <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+</td>`;
+                    this.tBody.append(loadingRow);
+                    this.tBody.append(this.tRow);
+                    table.append(this.tHead);
+                    table.append(this.tBody);
+                    this.table = table;
+                    return table;
+                }
+                addField(fld) {
+                    if (fld.hasAttribute('invisible') || (fld.getAttribute('visible') === 'False'))
+                        return;
+                    let fieldName = fld.getAttribute('name');
+                    let field = this.viewInfo.model.fields[fieldName];
+                    if (field && !field.visible)
+                        return;
+                    let html = fld.innerHTML;
+                    if (field?.visible || !field)
+                        this.columns.push(field);
+                    if (!fieldName || html) {
+                        let td = document.createElement('td');
+                        let th = document.createElement('th');
+                        th.classList.add('grid-field-readonly');
+                        if (field) {
+                            let caption = field.caption;
+                            if (fld.hasAttribute('caption'))
+                                caption = fld.getAttribute('caption');
+                            th.innerHTML = `<span class="grid-field-readonly">${caption}</span>`;
+                        }
+                        else
+                            th.innerText = fld.getAttribute('header');
+                        td.innerHTML = html;
+                        this.tHeadRow.append(th);
+                        this.tRow.append(td);
+                    }
+                    else {
+                        field.listCreate(this, fld);
+                    }
+                }
+                createField(field) {
+                    field.tableCreate(this.tRow, this.tHeadRow);
+                }
+                compile() {
+                }
+            }
+            Widgets.TableRenderer = TableRenderer;
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
@@ -16605,6 +16846,7 @@ var Katrid;
                 data = {
                     method: name,
                     params: data,
+                    id: Math.floor(Math.random() * 1000000),
                 };
                 if (!config)
                     config = {};
@@ -16635,6 +16877,21 @@ var Katrid;
                             res = await response.json();
                         else
                             return downloadBytes(response);
+                        console.debug('notices', res.notices);
+                        if (res.notices) {
+                            for (const notice of res.notices) {
+                                if (typeof notice === 'string')
+                                    Katrid.Forms.Dialogs.Alerts.info(notice);
+                                else if (notice.type) {
+                                    if (notice.type === 'warning')
+                                        Katrid.Forms.Dialogs.Alerts.warn(notice.message);
+                                    else if (notice.type === 'exception')
+                                        Katrid.Forms.Dialogs.Alerts.error(notice.message);
+                                    else
+                                        Katrid.Forms.Dialogs.Alerts.info(notice.message);
+                                }
+                            }
+                        }
                         if (res.error) {
                             if ('message' in res.error)
                                 Katrid.Forms.Dialogs.Alerts.error(res.error.message);
@@ -17979,6 +18236,7 @@ var Katrid;
                 this.container.className = 'help-center';
                 this.app.element.parentElement.append(this.container);
                 this.actionChanged(0);
+                this.markdown = new showdown.Converter();
             }
             clear() {
                 if (this.element)
