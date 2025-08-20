@@ -930,12 +930,9 @@ class ForeignKey(ForeignObject):
 
     def _formfield(self):
         res = super()._formfield()
-        res['model'] = self.remote_field.model._meta.name
+        res['model'] = self.remote_field.model if isinstance(self.remote_field.model, str) else self.remote_field.model._meta.name
         if self.filter:
-            if isinstance(self.filter, dict):
-                res['filter'] = json.dumps(self.filter)
-            elif isinstance(self.filter, str):
-                res['filter'] = self.filter
+            res['filter'] = json.dumps(self.filter) if isinstance(self.filter, dict) else self.filter
         return res
 
     def get_data_type(self) -> str:
