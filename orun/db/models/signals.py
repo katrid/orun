@@ -108,9 +108,8 @@ def trigger(signal: RecordSignal, model: str | type['Model'], when: Callable = N
         @wraps(fn)
         def wrapper(event: RecordEvent, instance, *args, **kwargs):
             event.instance = instance
-            if when is not None:
-                if when(instance, event):
-                    return fn(instance, *args, **kwargs)
+            if when is None or when(instance, event):
+                return fn(instance, *args, **kwargs)
             return None
 
         signal.connect(model, partial(wrapper, RecordEvent(signal, model)))
