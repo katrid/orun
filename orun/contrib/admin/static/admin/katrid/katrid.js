@@ -16846,7 +16846,6 @@ var Katrid;
                 data = {
                     method: name,
                     params: data,
-                    id: Math.floor(Math.random() * 1000000),
                 };
                 if (!config)
                     config = {};

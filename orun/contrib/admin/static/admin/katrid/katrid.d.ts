@@ -362,6 +362,7 @@ declare namespace Katrid.Actions {
         get selectionLength(): any;
         copyTo(configId: any): Promise<void>;
         makeUrl(viewType?: string): string;
+        protected pendingOperation: boolean;
         recordId: any;
         execute(): Promise<void>;
         changeUrl(): void;
@@ -377,7 +378,6 @@ declare namespace Katrid.Actions {
         loadGroupRecords(group: any): Promise<void>;
         doViewAction(viewAction: any, target: any, confirmation: any, prompt: any): any;
         _doViewAction(scope: any, viewAction: any, target: any, confirmation: any, prompt: any): any;
-        protected pendingOperation: boolean;
         formButtonClick(id: any, meth: any): Promise<void>;
         onActionLink(actionId: string, actionType: string, context?: any, evt?: any): Promise<unknown>;
         _evalResponseAction(res: any): Promise<any>;
@@ -771,7 +771,7 @@ declare namespace katrid.admin {
         markdown: any;
         constructor(el?: HTMLElement);
         render(): void;
-        onSelect(node: any): void;
+        onSelect(node: katrid.ui.TreeNode): void;
         loadTOC(): Promise<void>;
         private getCurrentFolder;
         navigateTo(url: string): Promise<void>;
