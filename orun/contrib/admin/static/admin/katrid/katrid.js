@@ -2644,6 +2644,19 @@ var katrid;
         admin.HelpPortal = HelpPortal;
     })(admin = katrid.admin || (katrid.admin = {}));
 })(katrid || (katrid = {}));
+var oui;
+(function (oui) {
+    var admin;
+    (function (admin) {
+        var ux;
+        (function (ux) {
+            function makeFieldMandatory(model, fieldName) {
+                model.service.call('admin.custom_set_field_props', { field: fieldName, mandatory: true });
+            }
+            ux.makeFieldMandatory = makeFieldMandatory;
+        })(ux = admin.ux || (admin.ux = {}));
+    })(admin = oui.admin || (oui.admin = {}));
+})(oui || (oui = {}));
 var Katrid;
 (function (Katrid) {
     var BI;
@@ -9424,6 +9437,9 @@ ${Katrid.i18n.gettext('Delete')}
                             const menu = new katrid.ui.ContextMenu();
                             menu.add(katrid.i18n.gettext('User Defined Value'), () => {
                                 katrid.admin.UserDefinedValue.showDialog();
+                            });
+                            menu.add(katrid.i18n.gettext('Make Field Mandatory'), () => {
+                                oui.admin.ux.makeFieldMandatory(this.model, target.getAttribute('name'));
                             });
                             menu.show(event.clientX, event.clientY);
                         }

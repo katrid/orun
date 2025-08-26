@@ -324,6 +324,10 @@ class Registry:
                 assets += app.js_assets
         return assets
 
+    def add_app(self, app_config: AppConfig):
+        if self.ready:
+            pass
+
 
 from .context import Environment, LazyEnvironment
 apps = Registry()

@@ -368,3 +368,10 @@ msgstr "Não está preenchido"
 
 msgid "Is different"
 msgstr "É diferente"
+
+msgid "User Defined Value"
+msgstr "Valor Definido pelo Usuário"
+
+msgid "Make Field Mandatory"
+msgstr "Tornar Campo Obrigatório"
+

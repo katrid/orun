@@ -1,5 +1,6 @@
 import datetime
 from dateutil.relativedelta import relativedelta
+import traceback
 
 from orun.db import models
 from orun.contrib import auth
@@ -16,13 +17,13 @@ INTERVAL_TYPES = {
 
 
 class Cron(models.Model):
-    INTERVAL_TYPE = (
-        ('days', _('Days')),
-        ('hours', _('Hours')),
-        ('weeks', _('Weeks')),
-        ('months', _('Months')),
-        ('minutes', _('Minutes')),
-    )
+    INTERVAL_TYPE = {
+        'days': _('Days'),
+        'hours': _('Hours'),
+        'weeks': _('Weeks'),
+        'months': _('Months'),
+        'minutes': _('Minutes'),
+    }
     action = models.ForeignKey('ui.action.server')
     name = models.CharField(256, null=False)
     user = models.ForeignKey('auth.user', default=auth.current_user, null=False)
@@ -67,3 +68,17 @@ class Cron(models.Model):
 
         remaining_calls = self.limit - calls_count if self.limit != -1 else -1
         self.update(last_call=now, next_call=next_call, active=bool(calls_count), limit=remaining_calls)
+
+    @classmethod
+    def process_all(cls):
+        """
+        Process all cron jobs that are due for execution.
+        """
+        now = datetime.datetime.now()
+        for cron in cls.objects.filter(active=True, next_call__lte=now).order_by('priority', 'id'):
+            try:
+                cron.process()
+            except Exception as e:
+                # Log the error or handle it as needed
+                print(f"Error processing cron job {cron.id}: {e}")
+                traceback.format_exc()

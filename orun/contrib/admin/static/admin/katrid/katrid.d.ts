@@ -778,6 +778,9 @@ declare namespace katrid.admin {
         loadChildren(node: any, toc: any): void;
     }
 }
+declare namespace oui.admin.ux {
+    function makeFieldMandatory(model: Katrid.Data.Model, fieldName: string): void;
+}
 declare namespace Katrid.BI {
     function newPlot(el: any, data: any, layout: any, config: any): any;
 }

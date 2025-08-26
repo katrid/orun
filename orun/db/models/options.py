@@ -112,6 +112,9 @@ class Options:
     unique_together: List[str] = None
     parent_path_field: str = None
 
+    has_natural_key: bool = None
+    natural_key: str = None
+
     help_text: str = None
 
     #
@@ -248,13 +251,18 @@ class Options:
         meta_attrs.setdefault('inherited', bool(parents))
         meta_attrs['model'] = model
 
-        opts = type('Options', bases, meta_attrs)
+        opts: type[Options] = type('Options', bases, meta_attrs)
         if opts.constraints is None:
             opts.constraints = []
         if opts.indexes is None:
             opts.indexes = []
         if opts.field_change_event is None:
             opts.field_change_event = defaultdict(list)
+        if opts.has_natural_key is None and opts.natural_key:
+            opts.has_natural_key = True
+        elif opts.name_field and opts.has_natural_key is None:
+            opts.has_natural_key = True
+            opts.natural_key = opts.name_field
         return opts
 
     def contribute_to_class(self, cls, name):

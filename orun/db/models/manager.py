@@ -4,6 +4,7 @@ from importlib import import_module
 
 from orun.db import router
 from orun.db.models.query import QuerySet
+from orun.db.models.fields import CharField
 
 
 class BaseManager:
@@ -163,6 +164,18 @@ class BaseManager:
 
     def __hash__(self):
         return id(self)
+
+    def get_by_natural_key(self, key, **kwargs):
+        """
+        Get an object by its natural key.
+        """
+        if self.model._meta.has_natural_key and self.model._meta.natural_key:
+            natural_field = self.model._meta.natural_field
+            field = self.model._meta.fields[self.model._meta.natural_key]
+            if isinstance(field, CharField):
+                natural_field += '__iexact'
+            return self.get_queryset().filter(**{natural_key: key}).first()
+        return None
 
 
 class Manager(BaseManager.from_queryset(QuerySet)):
