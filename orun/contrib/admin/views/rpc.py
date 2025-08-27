@@ -7,7 +7,7 @@ from orun.http.response import HttpResponseBase
 from orun.db import transaction, connection
 import orun.messages
 
-logger = logging.getLogger('orun')
+logger = logging.getLogger('admin')
 
 
 def jsonrpc(fn):
@@ -47,20 +47,17 @@ def jsonrpc(fn):
             }
         except DatabaseError as e:
             logger.exception('API DatabaseError')
-            traceback.print_exc()
             res['error'] = {
                 'messages': [str(e)]
             }
         except RPCError as e:
             logger.exception('API RPCError')
-            traceback.print_exc()
             res['error'] = {
                 'code': e.code,
                 'messages': [str(e)]
             }
         except Exception as e:
             logger.exception('API')
-            traceback.print_exc()
             res['error'] = {
                 'message': str(e),
             }
