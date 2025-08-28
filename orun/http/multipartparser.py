@@ -6,6 +6,7 @@ file upload handlers for processing.
 """
 import base64
 import binascii
+import cgi
 from urllib.parse import unquote
 
 from orun.conf import settings
@@ -18,7 +19,6 @@ from orun.core.files.uploadhandler import (
 from orun.utils.datastructures import MultiValueDict
 from orun.utils.encoding import force_text
 from orun.utils.text import unescape_entities
-from orun.utils.regex_helper import _lazy_re_compile
 
 __all__ = ('MultiPartParser', 'MultiPartParserError', 'InputStreamExhausted')
 
@@ -46,9 +46,6 @@ class MultiPartParser:
     ``MultiValueDict.parse()`` reads the input stream in ``chunk_size`` chunks
     and returns a tuple of ``(MultiValueDict(POST), MultiValueDict(FILES))``.
     """
-
-    boundary_re = _lazy_re_compile(r"[ -~]{0,200}[!-~]")
-
     def __init__(self, META, input_data, upload_handlers, encoding=None):
         """
         Initialize the MultiPartParser object.
@@ -71,7 +68,7 @@ class MultiPartParser:
         # Parse the header to get the boundary to split the parts.
         ctypes, opts = parse_header(content_type.encode('ascii'))
         boundary = opts.get('boundary')
-        if not boundary or not self.boundary_re.fullmatch(boundary):
+        if not boundary or not cgi.valid_boundary(boundary):
             raise MultiPartParserError('Invalid boundary in multipart: %s' % boundary.decode())
 
         # Content-Length should contain the length of the body we are about
