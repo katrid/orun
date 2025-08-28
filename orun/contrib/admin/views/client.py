@@ -185,7 +185,7 @@ def report_preview(request):
 
 
 def heartbeat(request):
-    return 'ok'
+    return HttpResponse('ok')
 
 # @login_required
 # def query(request):
