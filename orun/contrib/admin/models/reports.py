@@ -237,9 +237,9 @@ class ReportAction(Action):
         output_path = os.path.join(settings.REPORT_PATH, fname)
         if binding_params and 'company_id' in binding_params:
             company = apps['res.company'].objects.get(pk=binding_params['company_id'])
-        elif isinstance(params, list):
+        elif isinstance(params, dict) and (data_params := params.get('data')):
             # find company in params
-            for p in params:
+            for p in data_params:
                 if p['name'] == 'company_id':
                     pvalue = p['value1']
                     if pvalue and isinstance(pvalue, list):
