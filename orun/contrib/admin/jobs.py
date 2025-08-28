@@ -44,7 +44,7 @@ class JobItem:
             self._next_execution += datetime.timedelta(days=1)
 
     async def run(self):
-        pass
+        self.target()
 
     async def process(self):
         if datetime.datetime.now() >= self._next_execution:
