@@ -237,6 +237,15 @@ class ReportAction(Action):
         output_path = os.path.join(settings.REPORT_PATH, fname)
         if binding_params and 'company_id' in binding_params:
             company = apps['res.company'].objects.get(pk=binding_params['company_id'])
+        elif isinstance(params, list):
+            # find company in params
+            for p in params:
+                if p['name'] == 'company_id':
+                    pvalue = p['value1']
+                    if pvalue and isinstance(pvalue, list):
+                        pvalue = pvalue[0]
+                    company = apps['res.company'].objects.get(pk=pvalue)
+                    break
         else:
             # TODO get the current user company
             company = apps['auth.user'].objects.get(pk=1).user_company
