@@ -177,6 +177,13 @@ class BaseManager:
             return self.get_queryset().filter(**{natural_key: key}).first()
         return None
 
+    def scalar(self, col):
+        """
+        Returns the first column of the first row in the query result.
+        :return:
+        """
+        return self.get_queryset().values_list(col, flat=True).first()
+
 
 class Manager(BaseManager.from_queryset(QuerySet)):
     pass
