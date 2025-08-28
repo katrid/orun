@@ -45,6 +45,10 @@ def execute(sqlstmt: str, params=None):
     return connections[DEFAULT_DB_ALIAS].execute(sqlstmt, params)
 
 
+def exec_sql(sqlstmt: str, params=None):
+    return connections[DEFAULT_DB_ALIAS].execute(sqlstmt, params)
+
+
 # Register an event to reset saved queries when a Orun request is started.
 def reset_queries(**kwargs):
     for conn in connections.all():
