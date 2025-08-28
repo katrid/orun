@@ -174,7 +174,7 @@ class BaseManager:
             field = self.model._meta.fields[self.model._meta.natural_key]
             if isinstance(field, CharField):
                 natural_field += '__iexact'
-            return self.get_queryset().filter(**{natural_key: key}).first()
+            return self.get_queryset().filter(**{natural_field: key}).first()
         return None
 
     def scalar(self, col):
