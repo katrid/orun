@@ -659,7 +659,7 @@ class AdminModel(models.Model, helper=True):
                 field_map = {}
                 # try to find fields by name or label
                 for c in df.columns:
-                    f = cls._meta.fields.get(c)
+                    f = cls._meta.fields.find(c)
                     if f is None:
                         for fl in cls._meta.fields:
                             if fl.label.lower() == c.lower():
