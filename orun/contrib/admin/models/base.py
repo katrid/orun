@@ -650,6 +650,7 @@ class AdminModel(models.Model, helper=True):
 
     @api.classmethod
     def api_import(cls, files, field_map=None, preview=False):
+        # TODO generate preview data and show a client side dialog
         for file in files:
             import pandas as pd
             buf = io.BytesIO(file.read())
@@ -667,7 +668,7 @@ class AdminModel(models.Model, helper=True):
                                 break
                         else:
                             not_found.append(c)
-                    field_map[c] = (f and f.name)
+                    field_map[c] = f and f.name
 
             if preview and not preview == 'false':
                 return {
