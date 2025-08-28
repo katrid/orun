@@ -184,6 +184,9 @@ def report_preview(request):
     pass
 
 
+def heartbeat(request):
+    return 'ok'
+
 # @login_required
 # def query(request):
 #     id = request.args.get('id')
