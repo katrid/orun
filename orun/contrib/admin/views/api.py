@@ -46,7 +46,6 @@ def rpc(request, service, meth, params):
                 logger = None
                 if settings.LOG_DIR and method not in IGNORED_METHODS:
                     logger = _get_log_file(model_name)
-                    print(method)
                     logger.write(f"""{{"timestamp": {str(datetime.datetime.now())},"request": {request.body.decode('utf-8')}}}\n""")
 
                 # api logging
@@ -96,15 +95,6 @@ def view_model(request: HttpRequest, service: str):
         'viewsInfo': views_info['views'],
         'fields': views_info['fields'],
     })
-    return JsonResponse(views)
-    print('get view', views);
-    if request.method == 'GET':
-        res = service.get(request)
-        if isinstance(res, (dict, list, tuple)):
-            res = JsonResponse(res)
-        elif not isinstance(res, HttpResponse):
-            res = HttpResponse(res, content_type=service.content_type)
-        return res
 
 
 @login_required

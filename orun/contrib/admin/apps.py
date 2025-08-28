@@ -27,7 +27,10 @@ class AdminConfig(AppConfig):
             Automation.setup()
         except:
             raise
-            pass
+
+    def init_app(self, registry):
+        from .jobs import JobManager
+        registry.loop.create_task(JobManager.jobs_loop())
 
     def register_object(self, name: str, obj):
         from orun.contrib.contenttypes.models import Object
@@ -44,4 +47,3 @@ class AdminConfig(AppConfig):
         super().load_fixtures(**options)
         self.register_group('group_admin', 'System Administrator')
         self.register_group('group_manager', 'Manager')
-
