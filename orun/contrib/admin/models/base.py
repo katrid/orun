@@ -668,7 +668,10 @@ class AdminModel(models.Model, helper=True):
                                 break
                         else:
                             not_found.append(c)
-                    field_map[c] = f and f.name
+                    elif f.attname == c:
+                        field_map[c] = f.attname
+                    else:
+                        field_map[c] = f.name
 
             if preview and not preview == 'false':
                 return {
@@ -690,10 +693,13 @@ class AdminModel(models.Model, helper=True):
                     input_value = input_value.strip()
                 if isinstance(field, models.ForeignKey) and input_value:
                     # find by the name field
-                    name_fields = _resolve_fk_search(field)
-                    return field.related_model.objects.filter(
-                        **{fname.split('__', 1)[1]: input_value for fname in name_fields if '__' in fname}
-                    ).only('pk').first()
+                    if col == field.attname:
+                        return input_value
+                    else:
+                        name_fields = _resolve_fk_search(field)
+                        return field.related_model.objects.filter(
+                            **{fname.split('__', 1)[1]: input_value for fname in name_fields if '__' in fname}
+                        ).only('pk').first()
                 if input_value == '':
                     return None
                 return input_value
