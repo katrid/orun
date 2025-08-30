@@ -235,6 +235,7 @@ class ReportAction(Action):
         engine = get_engine(REPORT_ENGINES[rep_type])
         fname = uuid.uuid4().hex + '.pdf'
         output_path = os.path.join(settings.REPORT_PATH, fname)
+        company = None
         if binding_params and 'company_id' in binding_params:
             company = apps['res.company'].objects.get(pk=binding_params['company_id'])
         elif isinstance(params, dict) and (data_params := params.get('data')):
