@@ -8271,7 +8271,10 @@ var Katrid;
                     if (param.operation === 'in') {
                         multiple = 'multiple';
                     }
-                    let filter = param.info.filter ? ` filter='${JSON.stringify(param.info.filter)}'` : '';
+                    let filter = param.info.filter;
+                    if (Katrid.isString(filter))
+                        filter = eval(`(${filter})`);
+                    filter = param.info.filter ? ` filter='${JSON.stringify(filter)}'` : '';
                     return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="${serviceName}" field-name="${param.name}" v-model="param.value1" ${filter} ${multiple}></div>`;
                 },
                 ModelChoices(param) {
@@ -8279,7 +8282,10 @@ var Katrid;
                     if (param.operation === 'in') {
                         multiple = 'multiple';
                     }
-                    let filter = param.info.filter ? ` filter='${JSON.stringify(param.info.filter)}'` : '';
+                    let filter = param.info.filter;
+                    if (Katrid.isString(filter))
+                        filter = eval(`(${filter})`);
+                    filter = param.info.filter ? ` filter='${JSON.stringify(filter)}'` : '';
                     return `<div><input-ajax-choices id="rep-param-id-${param.id}" ajax-choices="ui.action.report" model-choices="${param.info.modelChoices}" ${filter} v-model="param.value1" ${multiple}></div>`;
                 },
                 SelectionField(param) {
