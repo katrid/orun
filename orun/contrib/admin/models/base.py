@@ -664,7 +664,7 @@ class AdminModel(models.Model, helper=True):
                     if f is None:
                         for fl in cls._meta.fields:
                             if fl.label.lower() == c.lower():
-                                f = fl
+                                field_map[c] = fl.name
                                 break
                         else:
                             not_found.append(c)
@@ -684,8 +684,10 @@ class AdminModel(models.Model, helper=True):
                     gettext('The following fields were not found in the model: %s') % ', '.join(not_found)
                 )
             cols = list(field_map.keys())
+            field_dict  = {f: cls._meta.fields.find(f) for f in field_map.values()}
 
-            def get_value(field: models.Field, col, data_row):
+            def get_value(field_name, col, data_row):
+                field = field_dict[field_name]
                 input_value = data_row[cols.index(col)]
                 if isinstance(input_value, float) and math.isnan(input_value):
                     input_value = None
@@ -708,7 +710,7 @@ class AdminModel(models.Model, helper=True):
             for row in df.values:
                 ids.append(
                     cls.objects.create(
-                        **{f: get_value(cls._meta.fields[f], c, row) for c, f in field_map.items()}
+                        **{f: get_value(f, c, row) for c, f in field_map.items()}
                     ).pk
                 )
             return {
