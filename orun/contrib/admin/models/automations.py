@@ -29,7 +29,7 @@ class Automation(models.Model):
     after_update_filter = models.TextField()
     when_updating = models.TextField()
     action = models.ForeignKey('ui.action.server')
-    code = models.TextField()
+    code = models.TextField(widget='CodeEditor', widget_attrs={'lang': 'python', 'cols': 12})
 
     class Meta:
         name = 'admin.automation'
