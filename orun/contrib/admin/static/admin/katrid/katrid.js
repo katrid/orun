@@ -6052,7 +6052,9 @@ var Katrid;
                 }
             }
             loadInfo(info) {
-                if (info.cols)
+                if (info.attrs?.cols)
+                    this.cols = info.attrs.cols;
+                else if (info.cols)
                     this.cols = info.cols;
                 if ('readonly' in info)
                     this.readonly = info.readonly;
@@ -12353,7 +12355,8 @@ var katrid;
                         const div = document.createElement('code-editor');
                         div.className = 'code-editor-widget';
                         div.setAttribute('v-model', `record.${this.field.name}`);
-                        div.setAttribute('code-editor-lang', fieldEl.getAttribute('code-editor-lang') || 'javascript');
+                        console.debug('field attrs', this.field.info);
+                        div.setAttribute('code-editor-lang', fieldEl.getAttribute('code-editor-lang') || this.field.info.attrs['lang'] || 'javascript');
                         return div;
                     };
                     this.spanTemplate = (fieldEl) => {
