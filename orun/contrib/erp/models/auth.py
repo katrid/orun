@@ -1,3 +1,6 @@
+import secrets
+import hashlib
+
 from orun import api
 from orun.contrib import auth
 from orun.conf import settings
@@ -31,6 +34,7 @@ class User(AbstractUser, Partner):
         related_name="user_set",
         related_query_name="user",
     )
+    tokens = models.OneToManyField('auth.user.token', label=_('API Tokens'))
 
     class Meta:
         schema = 'auth'
@@ -146,8 +150,11 @@ class User(AbstractUser, Partner):
         default_company = user.get_current_company()
         if default_company:
             res['user_company'] = {'id': default_company.pk, 'text': default_company.name}
-        print(res)
         return res
+        
+    @classmethod
+    def get_token(cls, token: str):
+        return UserToken.objects.filter(token=token, active=True, user__active=True).first()
 
 
 class Rule(models.Model):
@@ -229,3 +236,35 @@ class _Group(Group, helper=True):
     def admin_list_groups(cls, request: HttpRequest):
         return [{'id': g.pk, 'name': g.name} for g in Group.objects.filter(active=True)]
 
+
+class UserToken(models.Model):
+    user = models.ForeignKey(User, null=False, on_delete=models.CASCADE)
+    active = models.BooleanField(default=True, label=_('Active'))
+    description = models.CharField(128, label=_('Description'), null=False)
+    token = models.CharField(64, null=False, unique=True, db_index=True, readonly=True)
+    valid_until = models.DateField(
+        null=True, label=_('Valid Until'), help_text='Token expiration date (keep empty for no expiration)'
+    )
+
+    class Meta:
+        name = 'auth.user.token'
+        verbose_name = 'User Token'
+        verbose_name_plural = 'User Tokens'
+        ordering = '-id'
+
+    def save(self, *args, **kwargs):
+        if not self.token and self.active:
+            token = generate_api_token()
+            # ensure token is unique
+            while UserToken.objects.filter(token=token).exists():
+                token = generate_api_token()
+            self.token = token
+        super().save(*args, **kwargs)
+
+
+def generate_api_token():
+    # Generate a secure random string
+    random_string = secrets.token_urlsafe(32)
+    # Hash the string using SHA256
+    token_hash = hashlib.sha256(random_string.encode('utf-8')).hexdigest()
+    return token_hash
