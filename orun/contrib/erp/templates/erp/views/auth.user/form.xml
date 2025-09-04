@@ -22,5 +22,9 @@
       <tab-heading>{{ gettext('Companies') }}</tab-heading>
       <field name="companies" nolabel/>
     </tab>
+    <tab>
+      <tab-heading>API Tokens</tab-heading>
+      <field name="tokens" nolabel/>
+    </tab>
   </tabset>
 </form>
