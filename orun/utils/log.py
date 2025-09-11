@@ -18,15 +18,8 @@ request_logger = logging.getLogger('orun.request')
 # HTTP 500 error. Depending on DEBUG, all other log records are either sent to
 # the console (DEBUG=True) or discarded (DEBUG=False) by means of the
 # require_debug_true filter.
-DEFAULT_LOGGING = {
-    'version': 1,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module}:{message}',
-            'style': '{',
-        },
-    },
-}
+DEFAULT_LOGGING = {}
+
 
 def configure_logging(logging_config, logging_settings):
     if logging_config and DEFAULT_LOGGING:
@@ -103,6 +96,7 @@ class CallbackFilter(logging.Filter):
     takes the record-to-be-logged as its only parameter) to decide whether to
     log a record.
     """
+
     def __init__(self, callback):
         self.callback = callback
 
