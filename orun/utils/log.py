@@ -18,13 +18,60 @@ request_logger = logging.getLogger('orun.request')
 # HTTP 500 error. Depending on DEBUG, all other log records are either sent to
 # the console (DEBUG=True) or discarded (DEBUG=False) by means of the
 # require_debug_true filter.
-DEFAULT_LOGGING = {}
+DEFAULT_LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'require_debug_false': {
+            '()': 'orun.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'orun.utils.log.RequireDebugTrue',
+        },
+    },
+    'formatters': {
+        'orun.server': {
+            '()': 'orun.utils.log.ServerFormatter',
+            'format': '[{server_time}] {message}',
+            'style': '{',
+        }
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+        },
+        'orun.server': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'orun.server',
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'filters': ['require_debug_false'],
+            'class': 'orun.utils.log.AdminEmailHandler'
+        }
+    },
+    'loggers': {
+        'orun': {
+            'handlers': ['console', 'mail_admins'],
+            'level': 'INFO',
+        },
+        'orun.server': {
+            'handlers': ['orun.server'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    }
+}
 
 
 def configure_logging(logging_config, logging_settings):
-    if logging_config and DEFAULT_LOGGING:
+    if logging_config:
         # First find the logging configuration function ...
         logging_config_func = import_string(logging_config)
+
         logging.config.dictConfig(DEFAULT_LOGGING)
 
         # ... then invoke it with the logging settings
