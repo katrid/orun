@@ -12357,7 +12357,7 @@ var katrid;
                         div.className = 'code-editor-widget';
                         div.setAttribute('v-model', `record.${this.field.name}`);
                         console.debug('field attrs', this.field.info);
-                        div.setAttribute('code-editor-lang', fieldEl.getAttribute('code-editor-lang') || this.field.info.attrs['lang'] || 'javascript');
+                        div.setAttribute('code-editor-lang', fieldEl.getAttribute('code-editor-lang') || this.field.info.attrs?.lang || 'javascript');
                         return div;
                     };
                     this.spanTemplate = (fieldEl) => {
