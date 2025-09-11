@@ -12268,6 +12268,7 @@ var katrid;
                                     automaticLayout: true,
                                     readOnly: this.readonly,
                                     value: this.value || '',
+                                    minimap: { enabled: false },
                                 });
                                 this.codeEditor.getModel().updateOptions({ tabSize: 2 });
                                 let parent = this.closest('.form-view');
