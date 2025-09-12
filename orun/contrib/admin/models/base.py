@@ -106,7 +106,8 @@ class AdminModel(models.Model, helper=True):
             default = {}
             # filter active records only
             if cls._meta.active_field is not None:
-                default[cls._meta.active_field] = True
+                if not params or (cls._meta.active_field not in params and not cls._meta.active_field.name + '__in' in params):
+                    default[cls._meta.active_field] = True
 
         if where:
             if isinstance(where, list):
