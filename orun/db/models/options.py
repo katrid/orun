@@ -69,6 +69,7 @@ def make_immutable_fields_list(name, data):
 
 
 class Options:
+    exposed = True
     default_apps = apps
 
     abstract = False
