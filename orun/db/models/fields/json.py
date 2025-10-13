@@ -17,13 +17,14 @@ class JSONField(Field):
     }
     _default_hint = ('dict', '{}')
 
-    def __init__(self, *, encoder=None, decoder=None, **kwargs):
+    def __init__(self, *, encoder=None, decoder=None, auto_loads=True, **kwargs):
         if encoder and not callable(encoder):
             raise ValueError('The encoder parameter must be a callable object.')
         if decoder and not callable(decoder):
             raise ValueError('The decoder parameter must be a callable object.')
         self.encoder = encoder
         self.decoder = decoder
+        self.auto_loads = auto_loads
         super().__init__(**kwargs)
 
     def check(self, **kwargs):
@@ -65,6 +66,13 @@ class JSONField(Field):
             kwargs['decoder'] = self.decoder
         return name, path, args, kwargs
 
+    def value_to_json(self, value):
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            return json.dumps(value, cls=self.encoder)
+        return value
+
     def from_db_value(self, value, expression, connection):
         if value is None:
             return value
@@ -72,10 +80,12 @@ class JSONField(Field):
         # SQL datatypes.
         if isinstance(expression, KeyTransform) and not isinstance(value, str):
             return value
-        try:
-            return json.loads(value, cls=self.decoder)
-        except json.JSONDecodeError:
-            return value
+        if self.auto_loads and isinstance(value, (str, bytes)):
+            try:
+                return json.loads(value, cls=self.decoder)
+            except json.JSONDecodeError:
+                return value
+        return value
 
     def get_internal_type(self):
         return 'JSONField'
@@ -83,7 +93,9 @@ class JSONField(Field):
     def get_prep_value(self, value):
         if value is None:
             return value
-        return json.dumps(value, cls=self.encoder)
+        if not isinstance(value, str):
+            return json.dumps(value, cls=self.encoder)
+        return value
 
     def get_transform(self, name):
         transform = super().get_transform(name)
