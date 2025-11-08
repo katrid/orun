@@ -3860,6 +3860,9 @@ declare namespace katrid.ui {
     }
     export {};
 }
+declare namespace katrid.ui.dialogs {
+    function showExceptionAlert(msg: string): void;
+}
 declare namespace katrid.ui {
     class Toast {
         static _container: HTMLElement;

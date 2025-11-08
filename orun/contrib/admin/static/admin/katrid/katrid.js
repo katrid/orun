@@ -19471,6 +19471,20 @@ var katrid;
 (function (katrid) {
     var ui;
     (function (ui) {
+        var dialogs;
+        (function (dialogs) {
+            function showExceptionAlert(msg) {
+                alert(msg);
+                throw new Error(msg);
+            }
+            dialogs.showExceptionAlert = showExceptionAlert;
+        })(dialogs = ui.dialogs || (ui.dialogs = {}));
+    })(ui = katrid.ui || (katrid.ui = {}));
+})(katrid || (katrid = {}));
+var katrid;
+(function (katrid) {
+    var ui;
+    (function (ui) {
         class Toast {
             static createElement(config) {
                 if (!this._container) {

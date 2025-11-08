@@ -15316,7 +15316,7 @@ query-view .table-responsive {
   display: flex;
   cursor: pointer;
   flex-flow: row wrap;
-  padding: 4px 35px 1px 4px;
+  padding: 4px 4px 1px 4px;
   align-items: flex-start;
   min-height: calc(1.2em + 0.6rem + calc(var(--bs-border-width) * 2));
 }
