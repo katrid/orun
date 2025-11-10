@@ -159,6 +159,128 @@ var katrid;
     }
     katrid.localData = localData;
 })(katrid || (katrid = {}));
+var oui;
+(function (oui) {
+    var data;
+    (function (data) {
+        class ClientDatabase {
+            constructor(dbName, version = 1) {
+                this.dbName = dbName;
+                this.version = version;
+                this._active = false;
+            }
+            open() {
+                let req;
+                req = indexedDB.open(this.dbName, this.version);
+                return new Promise((resolve, reject) => {
+                    req.onsuccess = (evt) => {
+                        this._active = true;
+                        this.db = evt.target.result;
+                        resolve(this.db);
+                    };
+                    req.onerror = (evt) => reject(evt);
+                    req.onupgradeneeded = (evt) => this.onUpgradeNeeded?.(evt);
+                });
+            }
+            close() {
+                return new Promise((resolve, reject) => {
+                    this.db.onclose = evt => {
+                        this._active = false;
+                        resolve();
+                    };
+                    this.db.close();
+                });
+            }
+            async addRecord(storeName, record) {
+                if (!this._active)
+                    await this.open();
+                const tx = this.db.transaction(storeName, 'readwrite');
+                const store = tx.objectStore(storeName);
+                return new Promise((resolve, reject) => {
+                    const req = store.add(record);
+                    req.onsuccess = (evt) => resolve(req.result);
+                    req.onerror = (evt) => reject(evt);
+                });
+            }
+            async putRecord(storeName, record, key) {
+                if (!this._active)
+                    await this.open();
+                const tx = this.db.transaction(storeName, 'readwrite');
+                const store = tx.objectStore(storeName);
+                return new Promise((resolve, reject) => {
+                    tx.onerror = evt => {
+                        console.error(evt.target.error);
+                        reject(evt);
+                    };
+                    tx.oncomplete = evt => console.debug('putRecord tx complete');
+                    const req = store.put(record, key);
+                    req.onsuccess = (evt) => {
+                        tx.commit();
+                        resolve(req.result);
+                    };
+                    req.onerror = (evt) => {
+                        console.error(evt.target.error);
+                        reject(evt.target);
+                    };
+                });
+            }
+            async getRecord(storeName, key) {
+                if (!this._active)
+                    await this.open();
+                const tx = this.db.transaction(storeName, 'readonly');
+                const store = tx.objectStore(storeName);
+                return new Promise((resolve, reject) => {
+                    const req = store.get(key);
+                    req.onsuccess = (evt) => {
+                        resolve(req.result);
+                    };
+                    req.onerror = (evt) => reject(evt);
+                });
+            }
+        }
+        data.ClientDatabase = ClientDatabase;
+        class ClientTable {
+            constructor(tableName) {
+                this.tableName = tableName;
+            }
+            open() {
+                this._tx = this.database.db.transaction(this.tableName, 'readwrite');
+                this._store = this._tx.objectStore(this.tableName);
+            }
+            close() {
+            }
+            add(record) {
+                return new Promise((resolve, reject) => {
+                    const req = this._store.add(record);
+                    req.onsuccess = (evt) => resolve(req.result);
+                    req.onerror = evt => reject(req.error);
+                });
+            }
+            get(key) {
+                return new Promise((resolve, reject) => {
+                    const req = this._store.get(key);
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(req.error);
+                });
+            }
+            put(key, record) {
+                return new Promise((resolve, reject) => {
+                    const req = this._store.put(record, key);
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(req.error);
+                });
+            }
+            delete(key) {
+                return new Promise((resolve, reject) => {
+                    const req = this._store.delete(key);
+                    req.onsuccess = evt => resolve();
+                    req.onerror = evt => reject(req.error);
+                });
+            }
+        }
+        data.ClientTable = ClientTable;
+    })(data = oui.data || (oui.data = {}));
+})(oui || (oui = {}));
 var katrid;
 (function (katrid) {
     var ui;

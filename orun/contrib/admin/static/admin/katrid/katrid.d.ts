@@ -131,6 +131,34 @@ declare namespace katrid {
         getItem(key: string): Promise<string | any>;
     }
 }
+declare namespace oui.data {
+    class ClientDatabase {
+        dbName: string;
+        version: number;
+        db: IDBDatabase;
+        private _active;
+        constructor(dbName: string, version?: number);
+        onUpgradeNeeded: (evt: IDBVersionChangeEvent) => void;
+        open(): Promise<IDBDatabase>;
+        close(): Promise<void>;
+        addRecord(storeName: string, record: any): Promise<IDBValidKey>;
+        putRecord(storeName: string, record: any, key?: IDBValidKey): Promise<IDBValidKey>;
+        getRecord(storeName: string, key: IDBValidKey): Promise<any>;
+    }
+    class ClientTable {
+        tableName: string;
+        database: ClientDatabase;
+        private _store;
+        private _tx;
+        constructor(tableName: string);
+        open(): void;
+        close(): void;
+        add(record: any): Promise<IDBValidKey>;
+        get(key: IDBValidKey): Promise<any>;
+        put(key: IDBValidKey, record: any): Promise<IDBValidKey>;
+        delete(key: IDBValidKey): Promise<void>;
+    }
+}
 declare namespace katrid.ui {
     interface BaseApplicationOptions {
         el: HTMLElement;
