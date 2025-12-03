@@ -4,7 +4,7 @@ import re
 import socket
 import sys
 from datetime import datetime
-# import uvicorn
+import uvicorn
 
 from orun.conf import settings
 from orun.core.management.base import BaseCommand, CommandError
@@ -12,13 +12,6 @@ from orun.core.servers.basehttp import (
     WSGIServer, get_internal_wsgi_application, run,
 )
 from orun.utils import autoreload
-
-naiveip_re = re.compile(r"""^(?:
-(?P<addr>
-    (?P<ipv4>\d{1,3}(?:\.\d{1,3}){3}) |         # IPv4 address
-    (?P<ipv6>\[[a-fA-F0-9:]+\]) |               # IPv6 address
-    (?P<fqdn>[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*) # FQDN
-):)?(?P<port>\d+)$""", re.X)
 
 
 class Command(BaseCommand):
@@ -64,53 +57,22 @@ class Command(BaseCommand):
         """Return the default WSGI handler for the runner."""
         return get_internal_wsgi_application()
 
-    def _handle(self, *args, **options):
-        from orun.core.handlers import asgi
+    def handle(self, *args, **options):
+        from orun.core.handlers import ws
         addrport = options.get('addrport')
         if addrport is None:
             addrport = '127.0.0.1:8000'
         elif ':' not in addrport:
             addrport = '127.0.0.1:' + addrport
         addr, port = addrport.split(':')
-        
+
+        use_reloader = options['use_reloader']
         # uvicorn.run(asgi.ASGIHandler, host=addr, port=int(port))
-        uvicorn.run(asgi.ASGIHandler, host=addr, port=int(port))
-
-    def handle(self, *args, **options):
-        # if not settings.DEBUG and not settings.ALLOWED_HOSTS:
-        #     raise CommandError('You must set settings.ALLOWED_HOSTS if DEBUG is False.')
-
-        self.use_ipv6 = options['use_ipv6']
-        if self.use_ipv6 and not socket.has_ipv6:
-            raise CommandError('Your Python does not support IPv6.')
-        self._raw_ipv6 = False
-        if not options['addrport']:
-            self.addr = ''
-            self.port = self.default_port
-        else:
-            m = re.match(naiveip_re, options['addrport'])
-            if m is None:
-                raise CommandError('"%s" is not a valid port number '
-                                   'or address:port pair.' % options['addrport'])
-            self.addr, _ipv4, _ipv6, _fqdn, self.port = m.groups()
-            if not self.port.isdigit():
-                raise CommandError("%r is not a valid port number." % self.port)
-            if self.addr:
-                if _ipv6:
-                    self.addr = self.addr[1:-1]
-                    self.use_ipv6 = True
-                    self._raw_ipv6 = True
-                elif self.use_ipv6 and not _fqdn:
-                    raise CommandError('"%s" is not a valid IPv6 address.' % self.addr)
-        if not self.addr:
-            self.addr = self.default_addr_ipv6 if self.use_ipv6 else self.default_addr
-            self._raw_ipv6 = self.use_ipv6
-        self.run(**options)
+        uvicorn.run(ws.asgi_handler, host=addr, port=int(port))
 
     def run(self, **options):
         """Run the server, using the autoreloader if needed."""
-        # use_reloader = options['use_reloader']
-        use_reloader = False
+        use_reloader = options['use_reloader']
 
         if use_reloader:
             autoreload.run_with_reloader(self.inner_run, **options)
@@ -133,17 +95,17 @@ class Command(BaseCommand):
         now = datetime.now().strftime('%B %d, %Y - %X')
         self.stdout.write(now)
         self.stdout.write((
-            "Orun version %(version)s, using settings %(settings)r\n"
-            "Starting development server at %(protocol)s://%(addr)s:%(port)s/\n"
-            "Quit the server with %(quit_command)s.\n"
-        ) % {
-            "version": self.get_version(),
-            "settings": settings.SETTINGS_MODULE,
-            "protocol": self.protocol,
-            "addr": '[%s]' % self.addr if self._raw_ipv6 else self.addr,
-            "port": self.port,
-            "quit_command": quit_command,
-        })
+                              "Orun version %(version)s, using settings %(settings)r\n"
+                              "Starting development server at %(protocol)s://%(addr)s:%(port)s/\n"
+                              "Quit the server with %(quit_command)s.\n"
+                          ) % {
+                              "version": self.get_version(),
+                              "settings": settings.SETTINGS_MODULE,
+                              "protocol": self.protocol,
+                              "addr": '[%s]' % self.addr if self._raw_ipv6 else self.addr,
+                              "port": self.port,
+                              "quit_command": quit_command,
+                          })
 
         try:
             handler = self.get_handler(*args, **options)
@@ -167,7 +129,3 @@ class Command(BaseCommand):
             if shutdown_message:
                 self.stdout.write(shutdown_message)
             sys.exit(0)
-
-
-# Kept for backward compatibility
-BaseRunserverCommand = Command

@@ -1,4 +1,3 @@
-import cgi
 import codecs
 import copy
 import decimal
@@ -7,7 +6,7 @@ import warnings
 import json
 from io import BytesIO
 from itertools import chain
-from urllib.parse import quote, urlencode, urljoin, urlsplit
+from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlsplit
 
 from orun.conf import settings
 from orun.core import signing
@@ -22,7 +21,7 @@ from orun.utils.datastructures import (
 from orun.utils.deprecation import RemovedInOrun30Warning
 from orun.utils.encoding import escape_uri_path, iri_to_uri
 from orun.utils.functional import cached_property
-from orun.utils.http import is_same_domain, limited_parse_qsl
+from orun.utils.http import is_same_domain, parse_header_parameters
 
 RAISE_ERROR = object()
 host_validation_re = re.compile(r"^([a-z0-9.-]+|\[[a-f0-9]*:[a-f0-9\.:]+\])(:\d+)?$")
@@ -77,7 +76,7 @@ class HttpRequest:
 
     def _set_content_type_params(self, meta):
         """Set content_type, content_params, and encoding."""
-        self.content_type, self.content_params = cgi.parse_header(meta.get('CONTENT_TYPE', ''))
+        self.content_type, self.content_params = parse_header_parameters(meta.get('CONTENT_TYPE', ''))
         if 'charset' in self.content_params:
             try:
                 codecs.lookup(self.content_params['charset'])
@@ -377,13 +376,6 @@ class HttpRequest:
     def __iter__(self):
         return iter(self.readline, b'')
 
-    def xreadlines(self):
-        warnings.warn(
-            'HttpRequest.xreadlines() is deprecated in favor of iterating the '
-            'request.', RemovedInOrun30Warning, stacklevel=2,
-        )
-        yield from self
-
     def readlines(self):
         return list(self)
 
@@ -421,8 +413,8 @@ class QueryDict(MultiValueDict):
     By default QueryDicts are immutable, though the copy() method
     will always return a mutable copy.
 
-    Both keys and values set on this class are converted from the given encoding
-    (DEFAULT_CHARSET by default) to str.
+    Both keys and values set on this class are converted from the given
+    encoding (DEFAULT_CHARSET by default) to str.
     """
 
     # These are both reset in __init__, but is specified here at the class
@@ -433,30 +425,41 @@ class QueryDict(MultiValueDict):
     def __init__(self, query_string=None, mutable=False, encoding=None):
         super().__init__()
         self.encoding = encoding or settings.DEFAULT_CHARSET
-        query_string = query_string or ''
+        query_string = query_string or ""
         parse_qsl_kwargs = {
-            'keep_blank_values': True,
-            'fields_limit': settings.DATA_UPLOAD_MAX_NUMBER_FIELDS,
-            'encoding': self.encoding,
+            "keep_blank_values": True,
+            "encoding": self.encoding,
+            "max_num_fields": settings.DATA_UPLOAD_MAX_NUMBER_FIELDS,
         }
         if isinstance(query_string, bytes):
-            # query_string normally contains URL-encoded data, a subset of ASCII.
+            # query_string normally contains URL-encoded data, a subset of
+            # ASCII.
             try:
                 query_string = query_string.decode(self.encoding)
             except UnicodeDecodeError:
                 # ... but some user agents are misbehaving :-(
-                query_string = query_string.decode('iso-8859-1')
-        for key, value in limited_parse_qsl(query_string, **parse_qsl_kwargs):
-            self.appendlist(key, value)
+                query_string = query_string.decode("iso-8859-1")
+        try:
+            for key, value in parse_qsl(query_string, **parse_qsl_kwargs):
+                self.appendlist(key, value)
+        except ValueError as e:
+            # ValueError can also be raised if the strict_parsing argument to
+            # parse_qsl() is True. As that is not used by Django, assume that
+            # the exception was raised by exceeding the value of max_num_fields
+            # instead of fragile checks of exception message strings.
+            raise TooManyFieldsSent(
+                "The number of GET/POST parameters exceeded "
+                "settings.DATA_UPLOAD_MAX_NUMBER_FIELDS."
+            ) from e
         self._mutable = mutable
 
     @classmethod
-    def fromkeys(cls, iterable, value='', mutable=False, encoding=None):
+    def fromkeys(cls, iterable, value="", mutable=False, encoding=None):
         """
         Return a new QueryDict with keys (may be repeated) from an iterable and
         values from value.
         """
-        q = cls('', mutable=True, encoding=encoding)
+        q = cls("", mutable=True, encoding=encoding)
         for key in iterable:
             q.appendlist(key, value)
         if not mutable:
@@ -488,13 +491,13 @@ class QueryDict(MultiValueDict):
         super().__delitem__(key)
 
     def __copy__(self):
-        result = self.__class__('', mutable=True, encoding=self.encoding)
+        result = self.__class__("", mutable=True, encoding=self.encoding)
         for key, value in self.lists():
             result.setlist(key, value)
         return result
 
     def __deepcopy__(self, memo):
-        result = self.__class__('', mutable=True, encoding=self.encoding)
+        result = self.__class__("", mutable=True, encoding=self.encoding)
         memo[id(self)] = result
         for key, value in self.lists():
             result.setlist(copy.deepcopy(key, memo), copy.deepcopy(value, memo))
@@ -556,16 +559,19 @@ class QueryDict(MultiValueDict):
             safe = safe.encode(self.encoding)
 
             def encode(k, v):
-                return '%s=%s' % ((quote(k, safe), quote(v, safe)))
+                return "%s=%s" % ((quote(k, safe), quote(v, safe)))
+
         else:
+
             def encode(k, v):
                 return urlencode({k: v})
+
         for k, list_ in self.lists():
             output.extend(
                 encode(k.encode(self.encoding), str(v).encode(self.encoding))
                 for v in list_
             )
-        return '&'.join(output)
+        return "&".join(output)
 
 
 # It's neither necessary nor appropriate to use

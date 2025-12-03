@@ -1,4 +1,3 @@
-import cgi
 import codecs
 import re
 from io import BytesIO
@@ -11,6 +10,7 @@ from orun.http import HttpRequest, QueryDict, parse_cookie
 from orun.urls import set_script_prefix
 from orun.utils.encoding import repercent_broken_unicode
 from orun.utils.functional import cached_property
+from orun.utils.http import is_same_domain, parse_header_parameters
 
 _slashes_re = re.compile(br'/+')
 
@@ -81,7 +81,7 @@ class WSGIRequest(HttpRequest):
         self.META['PATH_INFO'] = path_info
         self.META['SCRIPT_NAME'] = script_name
         self.method = environ['REQUEST_METHOD'].upper()
-        self.content_type, self.content_params = cgi.parse_header(environ.get('CONTENT_TYPE', ''))
+        self.content_type, self.content_params = parse_header_parameters(environ.get('CONTENT_TYPE', ''))
         if 'charset' in self.content_params:
             try:
                 codecs.lookup(self.content_params['charset'])
