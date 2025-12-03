@@ -1,6 +1,7 @@
 import datetime
 from orun.apps import apps
 from orun.db import models
+from orun.http import HttpRequest
 from orun.utils.translation import gettext_lazy as _
 from orun.contrib.auth import current_user_id
 from orun import api
@@ -64,11 +65,17 @@ class Message(models.Model):
             'message_type': self.message_type,
             'object_id': self.object_id,
             'object_name': self.object_name,
+            'model': self.model,
             'attachments': [{'id': f.pk, 'name': f.file_name, 'mimetype': f.mimetype} for f in self.attachments],
         }
 
     @api.classmethod
     def post_message(cls, model_name, id, content=None, *, user_id=None, **kwargs):
+        msg = cls._post_message(model_name, id, content=content, user_id=user_id, **kwargs)
+        return msg.get_message()
+
+    @classmethod
+    def _post_message(cls, model_name, id, content=None, user_id=None, **kwargs):
         Message = apps['mail.message']
         msg = Message.objects.create(
             author_id=user_id or current_user_id(),  # logged in user
@@ -80,18 +87,52 @@ class Message(models.Model):
         attachments = kwargs.get('attachments')
         if attachments:
             msg.attachments.set(attachments)
-        return msg.get_message()
+        return msg
 
     @api.classmethod
     def get_messages(cls, model_name, id):
+        """
+        Return comments for the given model and id
+        :param model_name:
+        :param id:
+        :return:
+        """
         # TODO it must be specified in the target model
-        return {'comments': [msg.get_message() for msg in cls.objects.filter(model=model_name, object_id=id)]}
+        # TODO rename to get_comments
+        return cls.get_comments(model_name, id)
 
     @classmethod
-    def comment_to(cls, obj: models.Model, content: str, user_id=None):
+    def get_comments(cls, model_name, id):
+        return {
+            'comments': [
+                msg.get_message()
+                for msg in cls.objects.filter(
+                    model=model_name, object_id=id, message_type='comment'
+                ).order_by('date_time')
+            ]
+        }
+
+    @classmethod
+    def add_comment(cls, obj: models.Model, content: str, user_id=None):
         if user_id is None:
             user_id = current_user_id()
         return cls.post_message(obj._meta.name, obj.pk, content=content, user_id=user_id)
+
+    @api.classmethod
+    def get_unread_messages(cls, request: HttpRequest):
+        return cls.objects.filter(
+            notifications__partner_id=current_user_id(),
+            notifications__is_read=False
+        ).distinct()
+
+    def send_notification(self, partner_id):
+        from .notification import Notification
+        return Notification.objects.create(
+            mail_message=self,
+            partner_id=partner_id,
+            notification_type='inbox',
+            notification_status='ready',
+        )
 
 
 class Confirmation(models.Model):
