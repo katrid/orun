@@ -23,7 +23,7 @@ def current_user():
     Get the current user_id
     :return:
     """
-    return apps.env.user_id
+    return orun_apps.env.user_id
 
 
 def load_backend(path):
