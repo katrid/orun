@@ -68,10 +68,10 @@ class Message(models.Model):
         }
 
     @api.classmethod
-    def post_message(cls, model_name, id, content=None, **kwargs):
+    def post_message(cls, model_name, id, content=None, *, user_id=None, **kwargs):
         Message = apps['mail.message']
         msg = Message.objects.create(
-            author_id=current_user_id(),  # logged in user
+            author_id=user_id or current_user_id(),  # logged in user
             content=content,
             model=model_name,
             object_id=id,
@@ -86,6 +86,12 @@ class Message(models.Model):
     def get_messages(cls, model_name, id):
         # TODO it must be specified in the target model
         return {'comments': [msg.get_message() for msg in cls.objects.filter(model=model_name, object_id=id)]}
+
+    @classmethod
+    def comment_to(cls, obj: models.Model, content: str, user_id=None):
+        if user_id is None:
+            user_id = current_user_id()
+        return cls.post_message(obj._meta.name, obj.pk, content=content, user_id=user_id)
 
 
 class Confirmation(models.Model):
