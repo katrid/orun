@@ -38,8 +38,9 @@ class Notification(models.Model):
     @api.classmethod
     def get_unread_notifications(cls, request: HttpRequest, notification_type='inbox'):
         user_id = int(request.user_id)
+        # todo group by thread
         return [
-            n.mail_message.get_message()
+            n.mail_message.get_message_summary()
             for n in cls.objects.filter(
                 partner_id=user_id, is_read=False, notification_type=notification_type
             )
