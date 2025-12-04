@@ -3023,7 +3023,12 @@ var Katrid;
                 this.rootElement.append(mainContent);
                 this._actionManager = actionManager;
                 this.buttonNotificationMessages = this.rootElement.querySelector('.button-notification-messages');
-                this.buttonNotificationMessages.addEventListener('mousedown', () => {
+                this.buttonNotificationMessages.addEventListener('mousedown', async () => {
+                    const model = new Katrid.Services.ModelService('mail.notification');
+                    model.processResult = false;
+                    const res = await model.rpc('get_unread_notifications');
+                    if (Array.isArray(res))
+                        this.notificationMessages = res;
                     let menu = this.buttonNotificationMessages.parentElement.querySelector('.dropdown-menu');
                     menu.innerHTML = '';
                     if (this.notificationMessages?.length > 0) {
@@ -3034,10 +3039,6 @@ var Katrid;
                                 msg.read = true;
                             }
                             this.createNotificationMessageItem(menu, msg);
-                        }
-                        if (items.length) {
-                            const model = new Katrid.Services.ModelService('mail.message');
-                            model.post('set_read', { kwargs: { ids: items } });
                         }
                         setTimeout(() => {
                             this.hideMessageCounter();
@@ -3069,22 +3070,25 @@ var Katrid;
                 let el = document.createElement('a');
                 el.className = 'dropdown-item';
                 let s = '';
-                if (msg.timestamp) {
-                    let m = moment(msg.timestamp);
+                if (msg.date_time) {
+                    let m = moment(msg.date_time);
                     s += `<small class="timestamp float-sm-end" title="${katrid.filters.dateTimeHumanize(m)}">${m.fromNow()}</small>`;
                 }
                 if (msg.title)
                     s += `<h3>${msg.title}</h3>`;
                 if (typeof msg.content === 'string')
                     s += `<div>${msg.content}</div>`;
-                else if (msg.url) {
-                    s += `<div>${msg.content.message}</div>`;
-                    el.href = msg.url;
-                }
                 if (!msg.read)
                     el.classList.add('unread');
                 el.innerHTML = s;
+                el.addEventListener('click', () => {
+                    el.classList.remove('unread');
+                    this.openObject(msg.model, msg.object_id);
+                });
                 menu.appendChild(el);
+            }
+            openObject(service, objectId) {
+                location.hash = `#/app/?model=${service}&view_type=form&id=${objectId}`;
             }
             appReady() {
                 $(() => {
@@ -3096,6 +3100,12 @@ var Katrid;
                     }
                     else
                         this.loadPage(location.hash);
+                    setTimeout(async () => {
+                        const model = new Katrid.Services.ModelService('mail.notification');
+                        const res = await model.rpc('get_unread_count');
+                        if (res?.count)
+                            this.newMessagesCount = res.count;
+                    }, 5000);
                 });
             }
             formatActionHref(actionId) {
@@ -14570,9 +14580,11 @@ var katrid;
                     let res = await svc.rpc('get_messages', null, {
                         model_name: this.datasource.model.name, id
                     });
-                    if (res.comments)
+                    if (res.comments) {
                         for (let comment of res.comments)
                             this._panel.appendChild(this._createComment(comment));
+                        await svc.rpc('clear_notifications', null, { model: this.datasource.model.name, id });
+                    }
                 }
             }
             _createComment(comment) {
@@ -16966,6 +16978,7 @@ var Katrid;
             static { this.url = '/api/rpc/'; }
             constructor(name) {
                 this.name = name;
+                this.processResult = true;
             }
             static $fetch(url, config, params = null) {
                 return this.adapter.$fetch(url, config, params);
@@ -17024,7 +17037,8 @@ var Katrid;
                             res = await response.json();
                         else
                             return downloadBytes(response);
-                        console.debug('notices', res.notices);
+                        if (!this.processResult)
+                            return resolve(res.result || res);
                         if (res.notices) {
                             for (const notice of res.notices) {
                                 if (typeof notice === 'string')
@@ -17166,11 +17180,9 @@ var Katrid;
                 let url = `/web/file/upload/${model.name}/${method}/`;
                 if (vm?.record?.id)
                     form.append('id', vm.record.id);
-                console.debug('data', data);
                 if (data) {
                     Object.entries(data).map(([k, v]) => {
                         form.append(k, v);
-                        console.debug(k, v);
                     });
                 }
                 return Service.$fetch(url, {
@@ -20722,6 +20734,7 @@ var katrid;
             this.items = [];
         }
         async masterChanged(key) {
+            console.debug('master changed', key);
             if (key) {
                 const svc = new Katrid.Services.Model('mail.message');
                 if (this.scope.$parent.record)

@@ -814,6 +814,16 @@ declare namespace Katrid.BI {
 }
 declare namespace Katrid.Core {
     import ActionManager = Katrid.Actions.ActionManager;
+    interface INotificationMessage {
+        id?: any;
+        title?: string;
+        content?: string;
+        url?: string;
+        read?: boolean;
+        date_time?: string;
+        object_id?: any;
+        model?: string;
+    }
     interface IMenuInfo {
         id?: any;
         name: string;
@@ -870,7 +880,8 @@ declare namespace Katrid.Core {
         private _notificationMessages;
         get notificationMessages(): any[];
         set notificationMessages(value: any[]);
-        protected createNotificationMessageItem(menu: HTMLElement, msg: any): void;
+        protected createNotificationMessageItem(menu: HTMLElement, msg: INotificationMessage): void;
+        openObject(service: string, objectId: any): void;
         buttonNotificationMessages: HTMLElement;
         protected appReady(): void;
         formatActionHref(actionId: any): string;
@@ -3358,6 +3369,7 @@ declare namespace Katrid.Services {
     class Service {
         name: string;
         static url: string;
+        processResult: boolean;
         constructor(name: string);
         static adapter: BaseAdapter;
         static $fetch(url: any, config: any, params?: any): any;
