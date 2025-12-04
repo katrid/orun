@@ -103,7 +103,7 @@ class Message(models.Model):
         # send notification message to the creator of the object
         model = apps[model_name]
         if (obj := model.objects.filter(pk=ref_id).first()) and (created_by := getattr(obj, 'created_by_id', None)):
-            msg.send_notification(partner=created_by)
+            msg.send_notification(partner_id=created_by)
             # send websocket notification
             send_to_room(f"user:{created_by}", 'message_notification')
         return msg
