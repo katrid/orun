@@ -40,6 +40,8 @@ def rpc(request, service, meth, params):
         args = ()
         model_name = service
         service = apps.services[service]
+        if not service._meta.exposed:
+            raise MethodNotFound
         meth = getattr(service, method)
         if getattr(meth, 'exposed', None):
             try:
