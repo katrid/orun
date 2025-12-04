@@ -146,3 +146,5 @@ def serialize(*args, **kwargs):
     return decorator
 
 
+class Endpoint:
+    url: str = None
