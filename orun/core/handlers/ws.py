@@ -1,4 +1,5 @@
 import json
+import asyncio
 from collections import defaultdict
 
 from starlette.applications import Starlette
@@ -11,6 +12,7 @@ rooms: dict = defaultdict(set)
 
 
 class WebSocketHandler(WebSocketEndpoint):
+    event_loop = None
     encoding = "text"
 
     async def on_connect(self, websocket: WebSocket):
@@ -42,13 +44,17 @@ class WebSocketHandler(WebSocketEndpoint):
 
 def send_to_room(room: str, message: str):
     for websocket in rooms[room]:
-        import asyncio
-        asyncio.create_task(websocket.send_text(message))
+        asyncio.run_coroutine_threadsafe(websocket.send_text(message), WebSocketHandler.event_loop)
+
+
+def _on_startup():
+    WebSocketHandler.event_loop = asyncio.get_event_loop()
 
 
 asgi_handler = Starlette(
     routes=[
         WebSocketRoute('/ws', WebSocketHandler),
         Mount('/', app=ASGIHandler()),
-    ]
+    ],
+    on_startup=[_on_startup]
 )

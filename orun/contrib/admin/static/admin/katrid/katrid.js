@@ -3100,13 +3100,34 @@ var Katrid;
                     }
                     else
                         this.loadPage(location.hash);
-                    setTimeout(async () => {
-                        const model = new Katrid.Services.ModelService('mail.notification');
-                        const res = await model.rpc('get_unread_count');
-                        if (res?.count)
-                            this.newMessagesCount = res.count;
+                    setTimeout(() => {
+                        this.initWebSocket();
+                        this.checkNewMessages();
                     }, 5000);
                 });
+            }
+            async checkNewMessages() {
+                const model = new Katrid.Services.ModelService('mail.notification');
+                const res = await model.rpc('get_unread_count');
+                if (res?.count)
+                    this.newMessagesCount = res.count;
+            }
+            initWebSocket() {
+                if (this.ws)
+                    this.ws.close();
+                if (this.userInfo?.id) {
+                    this.ws = new WebSocket(`/ws?user_id=${this.userInfo.id}`);
+                    this.ws.onopen = (event) => {
+                        console.debug('WebSocket connected');
+                    };
+                    this.ws.onmessage = (event) => {
+                        if (event.data === 'message_notification')
+                            this.checkNewMessages();
+                    };
+                    this.ws.onclose = (event) => {
+                        console.log('WebSocket closed');
+                    };
+                }
             }
             formatActionHref(actionId) {
                 return `#/app/?menu_id=${this.currentMenu.id}&action=${actionId}`;

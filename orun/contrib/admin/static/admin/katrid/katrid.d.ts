@@ -868,6 +868,7 @@ declare namespace Katrid.Core {
         loadPage(hash: string, reset?: boolean): Promise<void>;
     }
     class WebApplication extends Application {
+        protected ws: WebSocket;
         private _currentMenu;
         private _actionManager;
         constructor(config: any);
@@ -884,6 +885,8 @@ declare namespace Katrid.Core {
         openObject(service: string, objectId: any): void;
         buttonNotificationMessages: HTMLElement;
         protected appReady(): void;
+        checkNewMessages(): Promise<void>;
+        initWebSocket(): void;
         formatActionHref(actionId: any): string;
         get currentMenu(): any;
         set currentMenu(value: any);
