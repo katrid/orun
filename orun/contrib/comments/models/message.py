@@ -5,6 +5,7 @@ from orun.http import HttpRequest
 from orun.utils.translation import gettext_lazy as _
 from orun.contrib.auth import current_user_id
 from orun import api
+from orun.core.handlers.ws import send_to_room
 
 
 class Subtype(models.Model):
@@ -87,18 +88,24 @@ class Message(models.Model):
         return msg.get_message()
 
     @classmethod
-    def _post_message(cls, model_name, id, content=None, user_id=None, **kwargs):
-        Message = apps['mail.message']
-        msg = Message.objects.create(
+    def _post_message(cls, model_name, ref_id, content=None, user_id=None, **kwargs):
+        msg = cls.objects.create(
             author_id=user_id or current_user_id(),  # logged in user
             content=content,
             model=model_name,
-            object_id=id,
+            object_id=ref_id,
             message_type='comment',
         )
         attachments = kwargs.get('attachments')
         if attachments:
             msg.attachments.set(attachments)
+        # TODO set creator as follower
+        # send notification message to the creator of the object
+        model = apps[model_name]
+        if (obj := model.objects.filter(pk=ref_id).first()) and (created_by := getattr(obj, 'created_by_id', None)):
+            msg.send_notification(partner=created_by)
+            # send websocket notification
+            send_to_room(f"user:{created_by}", 'message_notification')
         return msg
 
     @api.classmethod
@@ -147,7 +154,7 @@ class Message(models.Model):
         )
 
     @api.classmethod
-    def clear_notifications(self, request: HttpRequest, model, id):
+    def clear_notifications(cls, request: HttpRequest, model, id):
         """
         Clear notifications for the current user
         :param request:
