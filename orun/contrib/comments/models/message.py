@@ -69,6 +69,18 @@ class Message(models.Model):
             'attachments': [{'id': f.pk, 'name': f.file_name, 'mimetype': f.mimetype} for f in self.attachments],
         }
 
+    def get_message_summary(self):
+        return {
+            'id': self.pk,
+            'content': self.content,
+            'author_id': self.author_id,
+            'date_time': self.date_time,
+            'message_type': self.message_type,
+            'object_id': self.object_id,
+            'object_name': self.object_name,
+            'model': self.model,
+        }
+
     @api.classmethod
     def post_message(cls, model_name, id, content=None, *, user_id=None, **kwargs):
         msg = cls._post_message(model_name, id, content=content, user_id=user_id, **kwargs)
@@ -133,6 +145,20 @@ class Message(models.Model):
             notification_type='inbox',
             notification_status='ready',
         )
+
+    @api.classmethod
+    def clear_notifications(self, request: HttpRequest, model, id):
+        """
+        Clear notifications for the current user
+        :param request:
+        :return:
+        """
+        user_id = int(request.user_id)
+        from .notification import Notification
+        Notification.objects.filter(
+            mail_message__model=model, mail_message__object_id=id, partner_id=user_id, is_read=False
+        ).update(is_read=True)
+        return {'status': 'ok'}
 
 
 class Confirmation(models.Model):
