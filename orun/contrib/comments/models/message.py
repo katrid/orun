@@ -104,8 +104,6 @@ class Message(models.Model):
         model = apps[model_name]
         if (obj := model.objects.filter(pk=ref_id).first()) and (created_by := getattr(obj, 'created_by_id', None)):
             msg.send_notification(partner_id=created_by)
-            # send websocket notification
-            send_to_room(f"user:{created_by}", 'message_notification')
         return msg
 
     @api.classmethod
@@ -146,12 +144,15 @@ class Message(models.Model):
 
     def send_notification(self, partner_id):
         from .notification import Notification
-        return Notification.objects.create(
+        notification = Notification.objects.create(
             mail_message=self,
             partner_id=partner_id,
             notification_type='inbox',
             notification_status='ready',
         )
+        # send websocket notification
+        send_to_room(f"user:{partner_id}", 'message_notification')
+        return notification
 
     @api.classmethod
     def clear_notifications(cls, request: HttpRequest, model, id):
