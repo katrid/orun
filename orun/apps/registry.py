@@ -6,6 +6,7 @@ import functools
 import jinja2
 
 from orun.utils.module_loading import import_module
+from contextvars import ContextVar
 from orun.apps import AppConfig
 from orun import SUPERUSER
 from orun.core.exceptions import ImproperlyConfigured, AppRegistryNotReady
@@ -40,6 +41,7 @@ class Registry:
         self.stored_apps = []
 
         self._local_ctx = local()
+        self._local_var = ContextVar('local_env')
         self.env = LazyEnvironment(self, Environment(self, user_id=SUPERUSER))
 
     def create_template_env(self):
