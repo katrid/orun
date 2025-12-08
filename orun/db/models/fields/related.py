@@ -389,7 +389,7 @@ class ForeignObject(RelatedField):
     rel_class = ForeignObjectRel
 
     def __init__(self, to, on_delete,  from_fields, to_fields, rel=None, related_name=None,
-                 related_query_name=None, filter=None, limit_choices_to=None, parent_link=False, on_update=DB_CASCADE,
+                 related_query_name=None, filter=None, limit_choices_to=None, parent_link=False, on_update=DB_PROTECT,
                  **kwargs):
 
         if rel is None:
@@ -652,12 +652,13 @@ class ForeignObject(RelatedField):
             if self.remote_field.limit_choices_to:
                 cls._meta.related_fkey_lookups.append(self.remote_field.limit_choices_to)
 
-    def get_column_def(self):
-        col = super().get_column_def()
+    def column_definition(self, editor=None):
+        col = super().column_definition(editor)
         field = self.target_field
         while isinstance(field, OneToOneField):
             field = field.target_field
-        col.type = field.__class__.__module__ + '.' + field.__class__.__qualname__
+        col.type = field.get_internal_type()
+        col.type = {'bigserial': 'bigint', 'serial': 'int'}.get(col.type, col.type)
         col.fk = self.related_model._meta.name
         return col
 
@@ -665,17 +666,20 @@ class ForeignObject(RelatedField):
         from orun.db.metadata import Constraint
         super().contribute_to_table(editor, table)
         # contribute to table with fk constraint
-        fk_name = '_fk_' + self.model._meta.qualname.replace('.', '_') + '__' + self.column
-        table.constraints.append(
-            Constraint(
-                name=fk_name, type='FOREIGN KEY',
-                attributes={
-                    'on_delete': self.on_delete, 'on_update': 'CASCADE', 'column': self.column,
-                    'references': [self.model._meta.db_table, self.remote_field.target_field.name],
-                },
-                auto_created=True,
-            )
+        fk_name = 'fk_' + self.model._meta.qualname.replace('.', '_') + '__' + self.column
+        ref_model = self.target_field.model
+        table.constraints[fk_name] = Constraint(
+            name=fk_name, type='FOREIGN KEY',
+            deferrable='DEFERRED',
+            expressions=[self.column],
+            on_delete='CASCADE' if self.on_delete is DB_CASCADE else None,
+            on_update='CASCADE' if self.on_update is DB_CASCADE else None,
+            references=[[ref_model._meta.db_schema, ref_model._meta.tablename], [self.target_field.attname]],
+            auto_created=True,
         )
+
+    def get_rel_field(self):
+        return self.target_field
 
 
 ForeignObject.register_lookup(RelatedIn)
@@ -1590,7 +1594,6 @@ class ManyToManyField(RelatedField):
 
     def value_to_json(self, value):
         if value is not None:
-            print(self)
             return list(obj._api_format_choice() for obj in value.all())
 
     def get_data_type(self) -> str:
@@ -1610,6 +1613,7 @@ class OneToManyField(RelatedField):
     def __init__(self, to, to_fields=None, related_name=None, queryset: Callable = None, *args, **kwargs):
         kwargs['rel'] = self.rel_class(self, to, to_fields, related_name=related_name)
         kwargs['concrete'] = False
+        kwargs.setdefault('readonly', False)
         kwargs.setdefault('copy', True)
         self.queryset = queryset
         page_limit = kwargs.pop('page_limit', None)
