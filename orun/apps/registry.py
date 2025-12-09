@@ -41,8 +41,9 @@ class Registry:
         self.stored_apps = []
 
         self._local_ctx = local()
-        self._local_var = ContextVar('local_env')
-        self.env = LazyEnvironment(self, Environment(self, user_id=SUPERUSER))
+        root_env = Environment(self, user_id=SUPERUSER)
+        self._local_var = ContextVar('local_env', default=root_env)
+        self.env = LazyEnvironment(self, root_env)
 
     def create_template_env(self):
         from orun.utils.filters import default_filter
