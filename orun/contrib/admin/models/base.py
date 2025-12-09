@@ -200,8 +200,7 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def api_search_by_name(
             cls, request: HttpRequest, name=None, count=None, page=None, label_from_instance=None, name_fields=None,
-            *args, exact=False,
-            **kwargs
+            exact=False, *args, **kwargs
     ):
         fmt = kwargs.get('format')
         where = kwargs.get('params')
