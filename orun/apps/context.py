@@ -8,7 +8,7 @@ class LazyEnvironment:
         self._root_env = root
 
     def __getattr__(self, item):
-        return getattr(self._registry._local_var.get() or self._root_env, item)
+        return getattr(self._registry._local_var.get(), item)
         # return getattr(getattr(self._registry._local_ctx, 'env', self._root_env), item, None)
 
     def __call__(self, **kwargs):
