@@ -125,7 +125,7 @@ class Message(models.Model):
                 msg.get_message()
                 for msg in cls.objects.filter(
                     model=model_name, object_id=id, message_type='comment'
-                ).order_by('date_time')
+                )
             ]
         }
 
@@ -138,9 +138,9 @@ class Message(models.Model):
     @api.classmethod
     def get_unread_messages(cls, request: HttpRequest):
         return cls.objects.filter(
-            notifications__partner_id=current_user_id(),
+            notifications__partner_id=int(request.user_id),
             notifications__is_read=False
-        ).distinct()
+        )
 
     def send_notification(self, partner_id):
         from .notification import Notification
