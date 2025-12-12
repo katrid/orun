@@ -15,11 +15,6 @@ class AdminConfig(AppConfig):
     dependencies = ['orun.contrib.auth']
     urls_module = 'orun.contrib.admin.urls'
 
-    def ready(self):
-        super().ready()
-        if getattr(settings, 'ADMIN_AUTOMATION', None):
-            app_started.connect(self._app_started)
-
     def _app_started(self, sender, **kwargs):
         # load automations
         from .models import Automation
@@ -30,6 +25,8 @@ class AdminConfig(AppConfig):
 
     def init_app(self, registry):
         from .jobs import JobManager
+        if getattr(settings, 'ADMIN_AUTOMATION', None):
+            self._app_started(registry)
         registry.loop.create_task(JobManager.jobs_loop())
 
     def register_object(self, name: str, obj):
