@@ -30,7 +30,7 @@ class Partner(models.Model):
     title = models.ForeignKey(PartnerTitle, label=_('Title'))
     active = models.BooleanField(default=True, label=_('Active'))
     color = models.IntegerField(label=_('Color'))
-    user = models.ForeignKey('auth.user', label=_('User'), copy=False)
+    # user = models.ForeignKey('auth.user', label=_('User'), copy=False)
     language = models.ForeignKey('res.language', label=_('Language'))
     email = models.EmailField(label=_('Email'))
     website = models.URLField()

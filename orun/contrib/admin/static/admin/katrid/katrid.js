@@ -12767,7 +12767,7 @@ var katrid;
             if (match.length) {
                 let today = new Date();
                 let day = Number.parseInt(match[0][0]);
-                let month = today.getMonth();
+                let month = today.getMonth() - 1;
                 let year = today.getFullYear();
                 if (match.length > 1) {
                     month = Number.parseInt(match[1][0]) - 1;
@@ -13837,6 +13837,7 @@ var Katrid;
                 this.$view.datasource.parent = this.$parent.$view.datasource;
             },
             render() {
+                this.readonly = this.$field.readonly;
                 if (!this.$compiledTemplate) {
                     let el = beforeRender(this.$field, this.$view.renderTemplate(this.$view.domTemplate()));
                     this.$columns = this.$view.$columns;
@@ -14064,7 +14065,6 @@ var Katrid;
             template: '<div></div>',
             mounted() {
                 let field = this.$parent.$view.fields[this.$attrs.name];
-                console.debug('el', field);
                 let widget = new OneToManyGrid(field);
                 widget.appendTo(this.$el);
                 this.$el.$widget = widget;
@@ -14525,8 +14525,9 @@ var katrid;
       <div class="container">
           <h3>${Katrid.i18n.gettext('Comments')}</h3>
           <div class="form-group">
-          <button class="btn btn-secondary btn-show-editor">${Katrid.i18n.gettext('New message')}</button>
-          <button class="btn btn-secondary">${Katrid.i18n.gettext('Log note')}</button>
+          <button class="btn btn-secondary btn-show-editor">${katrid.i18n.gettext('New message')}</button>
+          <button class="btn btn-secondary">${katrid.i18n.gettext('Log note')}</button>
+          <a class="followers"><i class="fas fa-fw fa-user"></i>${katrid.i18n.gettext('Followers')}</a>
           </div>
           <div id="mail-editor" style="display: none;">
             <div class="form-group">
@@ -14544,7 +14545,6 @@ var katrid;
               <button class="btn btn-primary btn-send">${Katrid.i18n.gettext('Send')}</button>
             </div>
           </div>
-
           <hr>`;
                 this._textEditor = div.querySelector('textarea');
                 this._file = div.querySelector('input');
@@ -14639,7 +14639,7 @@ var katrid;
         ui.UserCommentsElement = UserCommentsElement;
         Katrid.define('user-comments', UserCommentsElement);
         Katrid.component('user-comments', {
-            template: '<user-comments/>',
+            template: '<user-comments class="comments"/>',
             mounted() {
                 this.$el.datasource = this.$parent.$view?.datasource;
             }

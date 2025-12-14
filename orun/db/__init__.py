@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from orun.core import signals
 from orun.db.utils import (
     DEFAULT_DB_ALIAS, ORUN_VERSION_PICKLE_KEY, ConnectionHandler,
@@ -5,6 +7,8 @@ from orun.db.utils import (
     InterfaceError, InternalError, NotSupportedError, OperationalError,
     ProgrammingError,
 )
+if TYPE_CHECKING:
+    from orun.db.backends.base.base import BaseDatabaseWrapper
 
 __all__ = [
     'connection', 'connections', 'router', 'DatabaseError', 'IntegrityError',
@@ -38,7 +42,7 @@ class DefaultConnectionProxy:
 
 
 # For backwards compatibility. Prefer connections['default'] instead.
-connection = DefaultConnectionProxy()
+connection: 'BaseDatabaseWrapper' = DefaultConnectionProxy()  # noqa
 
 
 def execute(sqlstmt: str, params=None):

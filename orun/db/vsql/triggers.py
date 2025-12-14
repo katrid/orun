@@ -49,7 +49,6 @@ class Trigger:
 
     def contribute_to_class(self, cls, name):
         cls._meta.triggers.add(self)
-        print(cls, name)
 
     def get_source(self):
         return inspect.getsource(self.fn)

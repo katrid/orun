@@ -8,6 +8,7 @@ class Author(models.Model):
     class Meta:
         verbose_name = 'Author'
         verbose_name_plural = 'Authors'
+        log_changes = False
 
 
 class BookWithRecordField(models.Model):
@@ -22,3 +23,4 @@ class BookWithRecordField(models.Model):
     class Meta:
         verbose_name = 'Book with Record Field'
         verbose_name_plural = 'Books with Record Field'
+        log_changes = False

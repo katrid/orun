@@ -55,6 +55,11 @@ class MenuItem(Registrable):
         return self._register_menu_item(self._cls, self.qualname)
 
 
+class Group(Registrable):
+    name: str = None
+    description: str = None
+
+
 def register_groups(**groups):
     from orun.contrib.auth.models import Group
 

@@ -1,13 +1,14 @@
-from typing import List, Any, Optional, Dict, Type, TYPE_CHECKING
-from dataclasses import dataclass, field
+from typing import List, Any, Optional, Sequence
+from dataclasses import dataclass
 
 from orun.apps import apps
 
-if TYPE_CHECKING:
-    from orun.db.models import Model, Field
+
+__all__ = ['Metadata', 'Table', 'Column', 'Index', 'Constraint']
 
 
 class Metadata:
+    schemas: list[str]
     tables: dict[str, 'Table']
 
     def __init__(self, editor=None):
@@ -32,31 +33,39 @@ class Metadata:
 
 @dataclass(slots=True)
 class Table:
-    model: str
-    name: str
+    model: str = None
+    name: str = None
     schema: str = None
     tablespace: str = None
-    indexes: List['Index'] = None
-    constraints: List['Constraint'] = None
-    columns: List['Column'] = None
+    indexes: dict[str, 'Index'] = None
+    constraints: dict[str, 'Constraint'] = None
+    columns: dict[str, 'Column'] = None
+    tablename: str = None
 
     def __post_init__(self):
-        self.columns = []
-        self.indexes = []
-        self.constraints = []
+        self.columns = {}
+        self.indexes = {}
+        self.constraints = {}
 
     def dump(self):
         return {
             'model': self.model, 'name': self.name, 'schema': self.schema, 'tablespace': self.tablespace,
-            'columns': [c.dump() for c in self.columns]
+            'columns': {k: c.dump() for k, c in self.columns.items()},
+            'constraints': {k: c.dump() for k, c in self.constraints.items()},
+            'indexes': {k: c.dump() for k, c in self.indexes.items()},
         }
 
     @classmethod
     def load(cls, data: dict):
+        """Load metadata information from database"""
         table = cls(model=data['model'], name=data['name'], schema=data['schema'], tablespace=data['tablespace'])
-        table.indexes = [Index(**i) for i in data.get('indexes', [])]
-        table.constraints = [Constraint(**c) for c in data.get('constraints', [])]
-        table.columns = [Column(**c) for c in data['columns']]
+        table.indexes = {k: Index(**i) for k, i in data.get('indexes', {}).items()}
+        table.constraints = {k: Constraint(**c) for k, c in data.get('constraints', {}).items()}
+        cols = data['columns']
+        if isinstance(cols, dict):
+            table.columns = {k: Column(**c) for k, c in data['columns'].items()}
+        else:
+            table.columns = {c['name']: Column(**c) for c in data['columns']}
         return table
 
 
@@ -64,23 +73,33 @@ class Table:
 class Column:
     name: str
     type: str
-    params: List[str] = None
+    params: Optional[List[str]] = None
     null: bool = True
     pk: bool = False
-    default: str = None
+    default: Any = None
     tablespace: str = None
     computed: str = None
+    stored: bool = True
     autoinc: bool = False
     fk: dict = None
     attributes: dict = None
-    field: 'Field' = None
+    unique: bool = False
+    field = None
+
+    def __post_init__(self):
+        if self.type.startswith('orun.db.models'):
+            self.type = self.type.split('.')[-1]
 
     def dump(self):
         return {
             'name': self.name, 'type': self.type, 'params': self.params, 'null': self.null, 'pk': self.pk,
-            'default': self.default, 'tablespace': self.tablespace, 'computed': self.computed, 'autoinc': self.autoinc,
-            'fk': self.fk, 'attributes': self.attributes,
+            'default': self.default, 'tablespace': self.tablespace, 'computed': self.generated, 'autoinc': self.autoinc,
+            'fk': self.fk, 'attributes': self.attributes, 'unique': self.unique,
         }
+
+    @property
+    def generated(self):
+        return self.computed
 
 
 @dataclass(slots=True, init=True)
@@ -90,13 +109,37 @@ class Index:
     tablespace: str = None
     expressions: List[str] = None
     auto_created: bool = False
-    model: Type['Model'] = None
+    # model: Type['Model'] = None
+
+    def dump(self):
+        return {
+            'name': self.name,
+            'type': self.type,
+            'tablespace': self.tablespace,
+            'expressions': self.expressions,
+            'auto_created': self.auto_created,
+        }
 
 
 @dataclass(slots=True, init=True)
 class Constraint:
     name: str
     type: str = None
-    attributes: dict = None
+    deferrable: str = False
+    expressions: List[str] = None
+    references: List[List[str]] = None
+    on_delete: str = None
+    on_update: str = None
     auto_created: bool = False
-    model: Type['Model'] = None
+
+    def dump(self):
+        return {
+            'name': self.name,
+            'type': self.type,
+            'deferrable': self.deferrable,
+            'expressions': self.expressions,
+            'references': self.references,
+            'on_delete': self.on_delete,
+            'on_update': self.on_update,
+            'auto_created': self.auto_created,
+        }

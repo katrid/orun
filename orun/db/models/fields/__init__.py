@@ -30,6 +30,7 @@ from orun.utils.ipv6 import clean_ipv6_address
 from orun.utils.itercompat import is_iterable
 from orun.utils.text import capfirst
 from orun.utils.translation import gettext_lazy as _, gettext
+from orun.db import ast
 
 if TYPE_CHECKING:
     from orun.db import metadata
@@ -38,7 +39,9 @@ if TYPE_CHECKING:
 __all__ = [
     'BaseField', 'AutoField', 'BLANK_CHOICE_DASH', 'BigAutoField', 'BigIntegerField',
     'BinaryField', 'BooleanField', 'CharField', 'CommaSeparatedIntegerField',
-    'DateField', 'DateTimeField', 'DecimalField', 'DurationField', 'SmallAutoField',
+    'DateField', 'DateTimeField', 'DecimalField', 'DurationField',
+    'IntField', 'BigintField', 'SmallintField',
+     #'SmallAutoField',
     'EmailField', 'Empty', 'Field', 'FieldDoesNotExist', 'FilePathField',
     'FloatField', 'GenericIPAddressField', 'IPAddressField', 'IntegerField',
     'NOT_PROVIDED', 'NullBooleanField', 'PositiveIntegerField', 'PositiveBigIntegerField',
@@ -113,7 +116,7 @@ class Fields(list):
         if item in self._dict:
             return self._dict[item]
         if self._att_dict is None:
-            self._att_dict = {f.attname: f for f in self if hasattr(f, 'attname')}
+            self._att_dict = {f.attname: f for f in self if hasattr(f, 'attname') and f.attname}
         if item in self._att_dict:
             return self._att_dict[item]
 
@@ -258,14 +261,16 @@ class Field[T](BaseField[T]):
                  db_index=False, rel=None, default=NOT_PROVIDED, editable=True,
                  serialize=True, unique_for_date=None, unique_for_month=None,
                  unique_for_year=None, choices: Optional[Union[dict, list, tuple]] = None, help_text=None,
-                 db_column: Optional[str] = None, db_tablespace=None, db_compute=None, db_default=NOT_PROVIDED,
+                 db_column: Optional[str] = None, db_tablespace=None, db_default=NOT_PROVIDED,
                  translate=None, copy=None, widget=None, widget_attrs=None, readonly=None,
                  defer=False,
                  auto_created=False, validators=(), error_messages=None, concrete=None,
                  getter: Union[str, Callable, None] = None, setter: Union[str, Callable, None] = None, hybrid=False,
                  on_insert_value: Union[str, Callable, None] = None, on_update_value: Union[str, Callable, None] = None,
                  on_calculate: Union[Callable, str] = None, db_calculate: Union[Callable, str] = None,
-                 group_choices=None, track_visibility=None, aggregate=None,
+                 generated_as: ast.Expr | Callable | str = None, stored=None,
+                 group_choices=None, track_visibility=None,
+                 aggregate=None, aggregate_to: dict[str, str] = None,
                  descriptor=None, **kwargs):
         self.name = name
         label = label or kwargs.get('label', kwargs.get('verbose_name'))
@@ -291,6 +296,7 @@ class Field[T](BaseField[T]):
         self.on_insert_value = on_insert_value
         self.on_update_value = on_update_value
         self.aggregate = aggregate
+        self.aggregate_to = aggregate_to
         if isinstance(choices, dict):
             choices = choices.items()
         elif isinstance(choices, (list, tuple)) and choices:
@@ -302,8 +308,18 @@ class Field[T](BaseField[T]):
         self.help_text = help_text
         self.db_index = db_index
         self.db_column: str = db_column
+        if db_column:
+            self.column = db_column
         self._db_tablespace = db_tablespace
-        self.db_compute = db_compute
+        self.generated_as = generated_as
+        if generated_as and stored is None:
+            stored = True
+            self.db_readonly = True
+        elif stored is None:
+            stored = True
+        elif stored is False:
+            self.db_readonly = False
+        self.stored = stored
         self.db_default = db_default
         self.auto_created = auto_created
         self.db_calculate = db_calculate
@@ -380,6 +396,7 @@ class Field[T](BaseField[T]):
 
     def __get__(self, instance, owner=None) -> T | Self:
         return self
+
     @property
     def on_calculate(self):
         return self._on_calculate
@@ -482,8 +499,8 @@ class Field[T](BaseField[T]):
                 break
             try:
                 if not all(
-                        is_value(value) and is_value(human_name)
-                        for value, human_name in group_choices
+                    is_value(value) and is_value(human_name)
+                    for value, human_name in group_choices
                 ):
                     break
             except (TypeError, ValueError):
@@ -521,7 +538,7 @@ class Field[T](BaseField[T]):
 
     def _check_null_allowed_for_primary_keys(self):
         if (self.primary_key and self.null and
-                not connection.features.interprets_empty_strings_as_nulls):
+            not connection.features.interprets_empty_strings_as_nulls):
             # We cannot reliably check this for backends like Oracle which
             # consider NULL and '' to be equal (and thus set up
             # character-based fields a little differently).
@@ -1095,30 +1112,97 @@ class Field[T](BaseField[T]):
         from .events import FieldEvent
         return FieldEvent(self, meth)
 
-    def get_column_def(self):
+    def _get_params(self):
+        return None
+
+    def column_definition(self, editor=None):
         from orun.db.metadata import Column
         _, datatype, params, kwargs = self.deconstruct()
+        generated = self.generated_as
+        if generated is not None:
+            generated = editor.compile_node(generated)
         return Column(
-            name=self.column, type=datatype, params=params, null=self.null, pk=self.primary_key,
-            tablespace=self.db_tablespace, computed=self.db_compute, fk=None, attributes=kwargs,
-            field=self,
+            name=self.column, type=self.get_internal_type(), params=self._get_params(), null=self.null,
+            pk=self.primary_key, tablespace=self.db_tablespace, computed=generated, stored=self.stored,
+            attributes=kwargs,
+            default=None if self.db_default is NOT_PROVIDED else self.db_default,
+            # field=self,
         )
 
     def contribute_to_table(self, editor: 'BaseDatabaseSchemaEditor', table: 'metadata.Table'):
         """
         Contribute to table metadata
+        :param editor:
         :param table:
         """
         from orun.db.metadata import Index
-        table.columns.append(self.get_column_def())
+        col = self.column_definition(editor)
+        table.columns[col.name] = col
         if self.db_index:
             ix_name = editor.create_index_name(self.model._meta.db_table, [self.column])
-            table.indexes.append(
-                Index(
-                    name=ix_name, expressions=[self.column], auto_created=True, model=self.model,
-                    # tablespace=self.db_tablespace,
-                )
+            table.indexes[ix_name] = Index(
+                name=ix_name, expressions=[self.column], auto_created=True,
+                # model=self.model,
+                # tablespace=self.db_tablespace,
             )
+
+    def __hash__(self):
+        return id(self)
+
+    def __eq__(self, other):
+        if isinstance(other, (int, float)):
+            other = ast.Constant(n=other)
+        return ast.Compare(self, [ast.Eq()], other)
+
+    def __ne__(self, other):
+        if isinstance(other, (int, float)):
+            other = ast.Constant(n=other)
+        return ast.Compare(self, [ast.NotEq()], other)
+
+    def __add__(self, other):
+        if isinstance(other, (int, float)):
+            other = ast.Constant(n=other)
+        return ast.BinOp(self, ast.Add(), other)
+
+    def __radd__(self, other):
+        if isinstance(other, (int, float)):
+            other = ast.Constant(n=other)
+        return ast.BinOp(other, ast.Add(), self)
+
+    def __sub__(self, other):
+        if isinstance(other, (int, float)):
+            other = ast.Constant(n=other)
+        return ast.BinOp(self, ast.Sub(), other)
+
+    def __rsub__(self, other):
+        if isinstance(other, (int, float)):
+            other = ast.Constant(n=other)
+        return ast.BinOp(other, ast.Sub(), self)
+
+    def __mul__(self, other):
+        if isinstance(other, (int, float)):
+            other = ast.Constant(n=other)
+        return ast.BinOp(self, ast.Mult(), other)
+
+    def __rmul__(self, other):
+        if isinstance(other, (int, float)):
+            other = ast.Constant(n=other)
+        return ast.BinOp(other, ast.Mult(), self)
+
+    def __truediv__(self, other):
+        if isinstance(other, (int, float)):
+            other = ast.Constant(n=other)
+        return ast.BinOp(self, ast.Div(), other)
+
+    def __and__(self, other):
+        if isinstance(other, (int, float)):
+            other = ast.Constant(n=other)
+        return ast.BinOp(self, ast.BitAnd(), other)
+
+    def __or__(self, other):
+        if isinstance(other, (int, float)):
+            other = ast.Constant(n=other)
+        return ast.BinOp(self, ast.BitOr(), other)
 
 
 class BooleanField(Field[bool]):
@@ -1138,6 +1222,7 @@ class BooleanField(Field[bool]):
 
     def get_internal_type(self):
         return "BooleanField"
+        #return "bool"
 
     def to_python(self, value):
         if self.null and value in self.empty_values:
@@ -1166,7 +1251,7 @@ class CharField(Field[str]):
     description = _("String (up to %(max_length)s)")
 
     def __init__(
-            self, max_length_or_label=None, db_collation: str=None, trim=True, full_text_search=False, *args, **kwargs
+        self, max_length_or_label=None, db_collation: str = None, trim=True, full_text_search=False, *args, **kwargs
     ):
         self.full_text_search = full_text_search
         if isinstance(max_length_or_label, str):
@@ -1177,6 +1262,10 @@ class CharField(Field[str]):
         self.trim = trim
         self.db_collation = db_collation
         self.validators.append(validators.MaxLengthValidator(self.max_length))
+
+    def _get_params(self):
+        return [self.max_length]
+        #return self.max_length and [self.max_length]
 
     def db_type_parameters(self, connection):
         return {'max_length': self.max_length or 512}
@@ -1219,6 +1308,7 @@ class CharField(Field[str]):
 
     def get_internal_type(self):
         return "CharField"
+        #return "varchar"
 
     def to_python(self, value):
         if isinstance(value, str) and self.trim:
@@ -1353,6 +1443,7 @@ class DateField(DateTimeCheckMixin, Field):
 
     def get_internal_type(self):
         return "DateField"
+        #return "date"
 
     def to_python(self, value):
         if value is None:
@@ -1485,6 +1576,7 @@ class DateTimeField(DateField):
 
     def get_internal_type(self):
         return "DateTimeField"
+        #return "datetime"
 
     def to_python(self, value):
         if value is None:
@@ -1586,11 +1678,14 @@ class DecimalField(Field[decimal.Decimal]):
     }
     description = _("Decimal number")
 
-    def __init__(self, max_digits=28, decimal_places=6, label=None, name=None, null=False, **kwargs):
+    def __init__(self, max_digits=28, decimal_places=6, /, *, label=None, name=None, null=False, **kwargs):
         self.max_digits, self.decimal_places = max_digits, decimal_places
         kwargs.setdefault('default', 0)
         kwargs.setdefault('db_default', 0)
         super().__init__(label, name, null=null, **kwargs)
+
+    def _get_params(self):
+        return [self.max_digits, self.decimal_places]
 
     def check(self, **kwargs):
         errors = super().check(**kwargs)
@@ -1680,6 +1775,7 @@ class DecimalField(Field[decimal.Decimal]):
 
     def get_internal_type(self):
         return "DecimalField"
+        #return "decimal"
 
     def to_python(self, value):
         if value is None:
@@ -1796,7 +1892,7 @@ class EmailField(CharField):
 
     @staticmethod
     def is_valid(value: str):
-        return re.match(r'[\w.]+@[\w.]+',value) is not None
+        return re.match(r'[\w.]+@[\w.]+', value) is not None
 
 
 class FilePathField(Field):
@@ -1871,6 +1967,7 @@ class FloatField(Field[float]):
 
     def get_internal_type(self):
         return "FloatField"
+        #return "float"
 
     def to_python(self, value):
         if value is None:
@@ -1885,7 +1982,7 @@ class FloatField(Field[float]):
             )
 
 
-class IntegerField(Field):
+class IntField(Field):
     default_error_messages = {
         'invalid': _("'%(value)s' value must be an integer."),
     }
@@ -1917,23 +2014,23 @@ class IntegerField(Field):
         internal_type = self.get_internal_type()
         min_value, max_value = connection.ops.integer_field_range(internal_type)
         if min_value is not None and not any(
-                (
-                        isinstance(validator, validators.MinValueValidator) and (
-                        validator.limit_value()
-                        if callable(validator.limit_value)
-                        else validator.limit_value
-                ) >= min_value
-                ) for validator in validators_
+            (
+                isinstance(validator, validators.MinValueValidator) and (
+                validator.limit_value()
+                if callable(validator.limit_value)
+                else validator.limit_value
+            ) >= min_value
+            ) for validator in validators_
         ):
             validators_.append(validators.MinValueValidator(min_value))
         if max_value is not None and not any(
-                (
-                        isinstance(validator, validators.MaxValueValidator) and (
-                        validator.limit_value()
-                        if callable(validator.limit_value)
-                        else validator.limit_value
-                ) <= max_value
-                ) for validator in validators_
+            (
+                isinstance(validator, validators.MaxValueValidator) and (
+                validator.limit_value()
+                if callable(validator.limit_value)
+                else validator.limit_value
+            ) <= max_value
+            ) for validator in validators_
         ):
             validators_.append(validators.MaxValueValidator(max_value))
         return validators_
@@ -1945,7 +2042,7 @@ class IntegerField(Field):
         return int(value)
 
     def get_internal_type(self):
-        return "IntegerField"
+        return "int"
 
     def to_python(self, value):
         if value is None:
@@ -1962,19 +2059,21 @@ class IntegerField(Field):
             )
 
 
-class SmallIntegerField(IntegerField):
+class SmallintField(IntField):
     description = _("Small integer")
 
     def get_internal_type(self):
         return "SmallIntegerField"
+        #return "smallint"
 
 
-class BigIntegerField(IntegerField):
+class BigintField(IntField):
     description = _("Big (8 byte) integer")
     MAX_BIGINT = 9223372036854775807
 
     def get_internal_type(self):
         return "BigIntegerField"
+        #return "bigint"
 
 
 class AutoFieldMixin:
@@ -2045,7 +2144,7 @@ class AutoFieldMeta(type):
 
     @property
     def _subclasses(self):
-        return (BigAutoField, SmallAutoField)
+        return (BigAutoField,)
 
     def __instancecheck__(self, instance):
         return isinstance(instance, self._subclasses) or super().__instancecheck__(instance)
@@ -2054,39 +2153,41 @@ class AutoFieldMeta(type):
         return issubclass(subclass, self._subclasses) or super().__subclasscheck__(subclass)
 
 
-class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):
+class AutoField(AutoFieldMixin, IntField, metaclass=AutoFieldMeta):
 
     def get_internal_type(self):
         return "AutoField"
+        #return "serial"
 
     def get_data_type(self) -> str:
-        return 'IntegerField'
+        return 'int'
 
     def rel_db_type(self, connection):
         return IntegerField().db_type(connection=connection)
 
 
-class BigAutoField(AutoFieldMixin, BigIntegerField):
+class BigAutoField(AutoFieldMixin, BigintField):
 
     def get_internal_type(self):
         return 'BigAutoField'
+        #return 'bigserial'
 
     def get_data_type(self) -> str:
-        return 'BigIntegerField'
+        return 'bigint'
 
     def rel_db_type(self, connection):
         return BigIntegerField().db_type(connection=connection)
 
 
-class SmallAutoField(AutoFieldMixin, SmallIntegerField):
-
-    def get_internal_type(self):
-        return 'SmallAutoField'
-
-    def rel_db_type(self, connection):
-        return SmallIntegerField().db_type(connection=connection)
-
-
+# class SmallAutoField(AutoFieldMixin, SmallIntegerField):
+#
+#     def get_internal_type(self):
+#         return 'SmallAutoField'
+#
+#     def rel_db_type(self, connection):
+#         return SmallIntegerField().db_type(connection=connection)
+#
+#
 class IPAddressField(Field):
     empty_strings_allowed = False
     description = _("IPv4 address")
@@ -2226,25 +2327,28 @@ class PositiveIntegerRelDbTypeMixin:
             return IntegerField().db_type(connection=connection)
 
 
-class PositiveBigIntegerField(PositiveIntegerRelDbTypeMixin, BigIntegerField):
+class UBigintField(PositiveIntegerRelDbTypeMixin, BigintField):
     description = _('Positive big integer')
 
     def get_internal_type(self):
         return 'PositiveBigIntegerField'
+        #return 'ubigint'
 
 
-class PositiveIntegerField(PositiveIntegerRelDbTypeMixin, IntegerField):
+class UIntField(PositiveIntegerRelDbTypeMixin, IntField):
     description = _("Positive integer")
 
     def get_internal_type(self):
-        return "PositiveIntegerField"
+        return 'PositiveIntegerField'
+        #return 'uint'
 
 
-class PositiveSmallIntegerField(PositiveIntegerRelDbTypeMixin, SmallIntegerField):
+class USmallintField(PositiveIntegerRelDbTypeMixin, SmallintField):
     description = _("Positive small integer")
 
     def get_internal_type(self):
-        return "PositiveSmallIntegerField"
+        return 'PositiveSmallIntegerField'
+        #return 'usmallint'
 
 
 class SlugField(CharField):
@@ -2282,6 +2386,7 @@ class TextField(Field):
 
     def get_internal_type(self):
         return "TextField"
+        #return "text"
 
     def to_python(self, value):
         if isinstance(value, str) and self.trim:
@@ -2370,6 +2475,7 @@ class TimeField(DateTimeCheckMixin, Field):
 
     def get_internal_type(self):
         return "TimeField"
+        #return "time"
 
     def to_python(self, value):
         if value is None:
@@ -2455,6 +2561,7 @@ class BinaryField(Field):
 
     def get_internal_type(self):
         return "BinaryField"
+        #return "bin"
 
     def get_placeholder(self, value, compiler, connection):
         return connection.ops.binary_placeholder_sql(value)
@@ -2498,6 +2605,7 @@ class UUIDField(Field):
 
     def get_internal_type(self):
         return "UUIDField"
+        #return "uuid"
 
     def get_db_prep_value(self, value, connection, prepared=False):
         if value is None:
@@ -2537,6 +2645,9 @@ class ChoiceField(CharField):
         kwargs['choices'] = choices
         kwargs.setdefault('max_length', 32)
         super().__init__(**kwargs)
+
+    def get_internal_type(self):
+        return "CharField"
 
     def add_choices(self, items):
         self.choices += list(items)
@@ -2585,6 +2696,14 @@ class FieldInfo(dict):
 
     def __setattr__(self, key, value):
         self[key] = value
+
+
+IntegerField = IntField
+BigIntegerField = BigintField
+SmallIntegerField = SmallintField
+PositiveIntegerField = UIntField
+PositiveBigIntegerField = UBigintField
+PositiveSmallIntegerField = USmallintField
 
 
 datatype_map = {

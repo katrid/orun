@@ -3,6 +3,7 @@ from decimal import Decimal
 import random
 
 from orun.apps.registry import Registry as Apps
+from orun.db import metadata
 from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
 from orun.db.backends.ddl_references import Statement
 from orun.db.models import UniqueConstraint, Field
@@ -430,6 +431,27 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         self.execute(sql)
         self.execute('UPDATE %s SET %s = %s' % (field.model._meta.db_table, field.column, old_column))
 
+    def create_constraint(self, table: metadata.Table, c: metadata.Constraint):
+        if c.type == 'UNIQUE':
+            sql = f'CREATE UNIQUE INDEX {self.quote_name(c.name)} ON {table.tablename} ({", ".join(c.expressions)})'
+            self.execute(sql)
+
+    def alter_column_type(self, table: metadata.Table, old: metadata.Column, new: metadata.Column):
+        # backup the old column
+        table_name = self.connection.ops.get_tablename(table.schema, table.name)
+        self.execute(f'''ALTER TABLE {table_name} RENAME COLUMN {new.name} TO _{new.name}_bkp''')
+        self.create_column(table, new)
+        try:
+            self.execute(f'''UPDATE {table_name} SET {new.name} = _{new.name}_bkp''')
+        except Exception as e:
+            pass
+
     def create_database(self, db: str):
         with self.connection.cursor() as cur:
             cur.execute('''select 1''')
+
+    def column_sql(self, col: metadata.Column) -> str:
+        sql = super().column_sql(col)
+        if col.autoinc:
+            sql += ' AUTOINCREMENT'
+        return sql

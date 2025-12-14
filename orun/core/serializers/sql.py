@@ -48,6 +48,8 @@ class Deserializer(base.Deserializer):
                 sql = open(filename, 'r', encoding='utf-8').read()
                 cursor.execute(sql)
         elif db_engine == 'sqlite':
+            if not os.path.exists(filename):
+                return Warning(f'SQL file {filename} does not exist.')
             with self.connection.cursor() as cursor:
                 sql = open(filename, 'r', encoding='utf-8').read()
                 cursor.execute(sql)

@@ -8,3 +8,4 @@ class ModelA(models.Model):
         field_groups = {
             'list_fields': ['name'],
         }
+        log_changes = False

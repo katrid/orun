@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Self, Any
 import inspect
 import warnings
 import copy
@@ -66,9 +66,9 @@ def subclass_exception(name, bases, module, attached_to):
     })
 
 
-def _has_contribute_to_class(value):
+def _has_contribute_to_class(value: Any):
     # Only call contribute_to_class() if it's bound.
-    return not inspect.isclass(value) and hasattr(value, 'contribute_to_class')
+    return hasattr(value, 'contribute_to_class') and (not inspect.isclass(value) or isinstance(value.__dict__['contribute_to_class'], classmethod))
 
 
 class ModelBase(type):
@@ -422,7 +422,7 @@ class ModelState:
 
 class Model(metaclass=ModelBase):
     _env = apps.env
-    objects: Manager
+    objects: Manager[Self]
     _meta: Options
 
     def __init__(self, *args, **kwargs):
@@ -946,7 +946,7 @@ class Model(metaclass=ModelBase):
                 )['_order__max']
             fields = meta.local_concrete_fields
             if not pk_set:
-                fields = [f for f in fields if f is not meta.auto_field]
+                fields = [f for f in fields if f is not meta.auto_field and not f.db_readonly]
 
             returning_fields = meta.db_returning_fields
             results = self._do_insert(cls._base_manager, using, fields, returning_fields, raw)

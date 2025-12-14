@@ -35,9 +35,9 @@ def emit_pre_migrate_signal(verbosity, interactive, db, **kwargs):
         )
 
 
-def emit_post_migrate_signal(verbosity, interactive, db, **kwargs):
+def emit_post_migrate_signal(verbosity, interactive, db, created_models, **kwargs):
     # Emit the post_migrate signal for every application.
-    for app_config in apps.get_app_configs():
+    for app_config in apps.app_configs.values():
         if app_config.models_module is None:
             continue
         if verbosity >= 2:
@@ -49,6 +49,7 @@ def emit_post_migrate_signal(verbosity, interactive, db, **kwargs):
             verbosity=verbosity,
             interactive=interactive,
             using=db,
+            app_models=created_models,
             **kwargs
         )
 

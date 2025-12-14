@@ -16,7 +16,6 @@ let fileList = [
   "/static/admin/assets/js/moment/moment.js",
   "/static/admin/assets/js/moment/moment-duration-format.js",
   "/static/admin/assets/js/moment/pt-br.js",
-  "/static/admin/assets/js/nunjucks.js",
   "/static/admin/assets/js/select2/select2.js",
   "/static/admin/assets/js/popper.js",
   "/static/admin/assets/js/bootstrap.min.js",

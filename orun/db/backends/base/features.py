@@ -307,6 +307,9 @@ class BaseDatabaseFeatures:
     # Does the backend support NULLS FIRST and NULLS LAST in ORDER BY?
     supports_order_by_nulls_modifier = True
 
+    # Automatic triggers
+    supports_agg_triggers = False
+
     def __init__(self, connection):
         self.connection = connection
 

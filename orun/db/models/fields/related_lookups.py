@@ -157,4 +157,3 @@ class RelatedIsNull(RelatedLookupMixin, IsNull):
 class ForeignKeyIContains(IContains):
     def process_lhs(self, compiler, connection, lhs=None):
         lhs, params = super().process_lhs(compiler, connection, lhs)
-        print(lhs, params)

@@ -1,10 +1,9 @@
 from typing import List, Any
 
-from orun.views.generic.base import TemplateView
 from .totals import Total
 
 
-class Report(TemplateView):
+class Report:
     def __init__(self):
         super().__init__()
         self.stream = []

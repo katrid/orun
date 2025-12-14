@@ -172,7 +172,7 @@ class FlatValuesListIterable(BaseIterable):
             yield row[0]
 
 
-class QuerySet:
+class QuerySet[T]:
     """Represent a lazy database lookup for a set of objects."""
 
     def __init__(self, model=None, query=None, using=None, hints=None, instances=None):
@@ -448,7 +448,7 @@ class QuerySet:
             )
         )
 
-    def create(self, **kwargs):
+    def create(self, **kwargs) -> T:
         """
         Create a new object with the given kwargs, saving it to the database
         and returning the created object.
@@ -678,12 +678,12 @@ class QuerySet:
             raise TypeError('Cannot change a query once a slice has been taken.')
         return self.reverse()._earliest(*fields)
 
-    def first(self):
+    def first(self) -> T:
         """Return the first object of a query or None if no match is found."""
         for obj in (self if self.ordered else self.order_by('pk'))[:1]:
             return obj
 
-    def last(self):
+    def last(self) -> T:
         """Return the last object of a query or None if no match is found."""
         for obj in (self.reverse() if self.ordered else self.order_by('-pk'))[:1]:
             return obj

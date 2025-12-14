@@ -178,9 +178,9 @@ class DatabaseOperations(BaseDatabaseOperations):
             return sql
 
     def quote_name(self, name):
-        if name.startswith('"') and name.endswith('"'):
-            return name  # Quoting once is enough.
-        return '"%s"' % name
+        if '"' in name:
+            return name
+        return f'"{name}"'
 
     def no_limit_value(self):
         return -1
@@ -384,3 +384,10 @@ class DatabaseOperations(BaseDatabaseOperations):
             ) for field in fields
         ]
         return 'RETURNING %s' % ', '.join(columns), ()
+
+    def get_tablename(self, schema, table):
+        if '"' in table:
+            return table
+        if schema:
+            return f'"{schema}_{table}"'
+        return f'"{table}"'

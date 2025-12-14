@@ -7,7 +7,7 @@ from orun.db.models.query import QuerySet
 from orun.db.models.fields import CharField
 
 
-class BaseManager:
+class BaseManager[T]:
     # To retain order, track each time a Manager instance is created.
     creation_counter = 0
 
@@ -102,7 +102,7 @@ class BaseManager:
         return new_methods
 
     @classmethod
-    def from_queryset(cls, queryset_class, class_name=None):
+    def from_queryset(cls, queryset_class, class_name=None) -> QuerySet[T]:
         if class_name is None:
             class_name = '%sFrom%s' % (cls.__name__, queryset_class.__name__)
         return type(class_name, (cls,), {
@@ -185,7 +185,7 @@ class BaseManager:
         return self.get_queryset().values_list(col, flat=True).first()
 
 
-class Manager(BaseManager.from_queryset(QuerySet)):
+class Manager[T](BaseManager[T].from_queryset(QuerySet[T])):
     pass
 
 

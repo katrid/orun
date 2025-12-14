@@ -7,6 +7,8 @@ TableInfo = namedtuple('TableInfo', ['name', 'type'])
 # Structure returned by the DB-API cursor.description interface (PEP 249)
 FieldInfo = namedtuple('FieldInfo', 'name type_code display_size internal_size precision scale null_ok default')
 
+METADATA_TABLE = 'orun_metadata'
+
 
 class BaseDatabaseIntrospection:
     """Encapsulate backend-specific introspection utilities."""
@@ -57,9 +59,11 @@ class BaseDatabaseIntrospection:
         the database's ORDER BY here to avoid subtle differences in sorting
         order between databases.
         """
+
         def get_names(cursor):
             return sorted(ti.name for ti in self.get_table_list(cursor)
                           if include_views or ti.type == 't')
+
         if cursor is None:
             with self.connection.cursor() as cursor:
                 return get_names(cursor)
@@ -77,6 +81,16 @@ class BaseDatabaseIntrospection:
         views that exist in the database.
         """
         raise NotImplementedError('subclasses of BaseDatabaseIntrospection may require a get_table_list() method')
+
+    def get_table_description(self, cursor, schema: str, table_name: str):
+        raise NotImplementedError('subclasses of BaseDatabaseIntrospection may require a get_table_list() method')
+
+    def get_table_metadata(self, cursor, schema: str, table_name: str):
+        table_info = self.get_table_description(cursor, schema, table_name)
+        return {
+            f.name: f
+            for f in table_info
+        }
 
     def orun_table_names(self, only_existing=False, include_views=True):
         """
@@ -194,12 +208,12 @@ class BaseDatabaseIntrospection:
         desc = cur.description
 
     def create_metadata_table(self, cur):
-        cur.execute('''CREATE TABLE orun_metadata (content TEXT)''')
-        cur.execute('''INSERT INTO orun_metadata (content) values ('{"tables": []}')''')
+        cur.execute(f'''CREATE TABLE {METADATA_TABLE} (content JSONB)''')
+        cur.execute(f'''INSERT INTO {METADATA_TABLE} (content) values ('{{"tables": []}}')''')
 
     def get_metadata(self, cur):
         try:
-            cur.execute('''select content from orun_metadata''')
+            cur.execute(f'''select content from {METADATA_TABLE}''')
         except:
             self.create_metadata_table(cur)
             return {'tables': []}

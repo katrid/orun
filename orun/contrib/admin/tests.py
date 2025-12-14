@@ -43,7 +43,7 @@ class CSPMiddleware(MiddlewareMixin):
 
 class AdminTestCaseMixin:
     def run_async_js(self, code: str):
-        self.selenium.set_script_timeout(100)
+        # self.selenium.set_script_timeout(100)
         self.selenium.execute_async_script(f"""var __done = arguments[0];{code}.then(() => __done());""")
 
     def menu_click(self, *menu):

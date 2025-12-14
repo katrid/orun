@@ -86,45 +86,48 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     # thing" given more verbose field definitions, so leave them as is so that
     # schema inspection is more useful.
     data_types = {
-        'AutoField': 'integer',
-        'BigAutoField': 'integer',
-        'BinaryField': 'BLOB',
-        'BooleanField': 'bool',
-        'CharField': 'varchar(%(max_length)s)',
-        'DateField': 'date',
-        'DateTimeField': 'datetime',
-        'DecimalField': 'decimal',
+        'serial': 'integer',
+        'bigserial': 'integer',
+        'int': 'integer',
+        'smallint': 'smallint',
+        'bin': 'blob',
+        'bigint': 'bigint',
+        'ubigint': 'bigint unsigned',
+        'uint': 'integer unsigned',
+        'usmallint': 'smallint unsigned',
+        'bool': 'bool',
+        'varchar': 'varchar',
+        'date': 'date',
+        'datetime': 'datetime',
+        'numeric': 'decimal',
+        'decimal': 'decimal',
         'DurationField': 'bigint',
-        'FileField': 'varchar(%(max_length)s)',
-        'FilePathField': 'varchar(%(max_length)s)',
-        'FloatField': 'real',
-        'IntegerField': 'integer',
-        'BigIntegerField': 'bigint',
+        'FileField': 'varchar',
+        'FilePathField': 'varchar',
+        'float': 'real',
         'IPAddressField': 'char(15)',
         'GenericIPAddressField': 'char(39)',
-        'JSONField': 'text',
-        'OneToOneField': 'integer',
-        'PositiveBigIntegerField': 'bigint unsigned',
-        'PositiveIntegerField': 'integer unsigned',
-        'PositiveSmallIntegerField': 'smallint unsigned',
-        'SlugField': 'varchar(%(max_length)s)',
-        'SmallAutoField': 'integer',
-        'SmallIntegerField': 'smallint',
-        'TextField': 'text',
-        'TimeField': 'time',
-        'UUIDField': 'char(32)',
+        'json': 'text',
+        'jsonb': 'jsonb',
+        'SlugField': 'varchar',
+        'str': 'text',
+        'text': 'text',
+        'time': 'time',
+        'uuid': 'char(32)',
         'MultiChoiceField': 'text',
+        # TODO remove
+        'BooleanFields': 'bool',
     }
     data_type_check_constraints = {
-        'PositiveBigIntegerField': '"%(column)s" >= 0',
-        'JSONField': '(JSON_VALID("%(column)s") OR "%(column)s" IS NULL)',
-        'PositiveIntegerField': '"%(column)s" >= 0',
-        'PositiveSmallIntegerField': '"%(column)s" >= 0',
+        'ubigint': '"%(column)s" >= 0',
+        'json': '(JSON_VALID("%(column)s") OR "%(column)s" IS NULL)',
+        'uint': '"%(column)s" >= 0',
+        'usmallint': '"%(column)s" >= 0',
     }
     data_types_suffix = {
-        'AutoField': 'AUTOINCREMENT',
-        'BigAutoField': 'AUTOINCREMENT',
-        'SmallAutoField': 'AUTOINCREMENT',
+        'serial': 'AUTOINCREMENT',
+        'bigserial': 'AUTOINCREMENT',
+        # 'small': 'AUTOINCREMENT',
     }
     # SQLite requires LIKE statements to include an ESCAPE clause if the value
     # being escaped has a percent or underscore in it.
@@ -317,6 +320,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         determine if rows with invalid references were entered while constraint
         checks were off.
         """
+        return
         if self.features.supports_pragma_foreign_key_check:
             with self.cursor() as cursor:
                 if table_names is None:

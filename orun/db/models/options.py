@@ -18,8 +18,9 @@ from orun.utils.text import camel_case_to_spaces, format_lazy
 from orun.utils.translation import override
 from orun.utils.module_loading import import_string
 from orun.db.models.indexes import Index
-from orun.db.models.constraints import BaseConstraint
 from orun.db import metadata
+if TYPE_CHECKING:
+    from orun.db.models.constraints import Constraint
 
 
 PROXY_PARENTS = object()
@@ -82,7 +83,7 @@ class Options:
     tablename: str = None
     name: str = None
     concrete = None
-    constraints: List[BaseConstraint] = None
+    constraints: List['Constraint'] = None
     indexes: List[Index] = None
     addon = None
     schema = None
@@ -181,7 +182,7 @@ class Options:
                 cls.qualname = cls.tablename = cls.db_table
                 if cls.db_schema and cls.name.startswith(cls.db_schema + '.'):
                     cls.tablename = cls.name.split('.', 1)[-1].replace('.', '_')
-                    cls.qualname = '{}.{}'.format(cls.db_schema, cls.tablename)
+                    cls.qualname = f'{cls.db_schema}.{cls.tablename}'
                     cls.db_table = ops.get_tablename(cls.db_schema, cls.tablename)
             else:
                 cls.qualname = cls.tablename = cls.db_table
@@ -194,12 +195,16 @@ class Options:
                 cls.managed = False
 
     def get_metadata(self, editor):
+        from .triggers import collect_triggers
         table = metadata.Table(
-            name=self.db_table, schema=self.db_schema, model=self.name,
+            name=self.db_table, schema=self.db_schema, model=self.name, tablename=self.db_table,
         )
+        # collect fields
         for f in self.local_concrete_fields:
             if f.column:
                 f.contribute_to_table(editor, table)
+        # collect constraints
+        # collect_triggers(self, editor)
         return table
 
     @property

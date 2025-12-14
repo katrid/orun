@@ -48,7 +48,11 @@ def load_fixture(schema, *filenames, **options):
 
             with transaction.atomic(options['database']):
                 if options.get('update_existing') is None or not options['update_existing']:
-                    d.deserialize()
+                    try:
+                        d.deserialize()
+                    except Exception as e:
+                        print(f'Error loading fixture {filename}: {e}')
+                        raise
                 else:
                     d.deserialize(update=True)
             if d.postpone:

@@ -88,7 +88,7 @@ class JSONField(Field):
         return value
 
     def get_internal_type(self):
-        return 'JSONField'
+        return 'json'
 
     def get_prep_value(self, value):
         if value is None:
