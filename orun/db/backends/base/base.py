@@ -1,10 +1,11 @@
+from typing import TYPE_CHECKING
 import copy
 import threading
 import time
 import warnings
 from collections import deque
 from contextlib import contextmanager
-
+import logging
 import _thread
 import pytz
 
@@ -13,13 +14,13 @@ from orun.core.exceptions import ImproperlyConfigured
 from orun.db import DEFAULT_DB_ALIAS
 from orun.db.backends import utils
 from orun.db.backends.base.validation import BaseDatabaseValidation
-from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
 from orun.db.backends.signals import connection_created
 from orun.db.transaction import TransactionManagementError
 from orun.db.utils import DatabaseError, DatabaseErrorWrapper
 from orun.utils import timezone
 from orun.utils.functional import cached_property
-import logging
+if TYPE_CHECKING:
+    from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
 
 NO_DB_ALIAS = '__no_db__'
 logger = logging.getLogger('orun.db.backends')
@@ -629,7 +630,7 @@ class BaseDatabaseWrapper:
         """
         return self.__class__({**self.settings_dict, 'NAME': None}, alias=NO_DB_ALIAS)
 
-    def schema_editor(self, *args, **kwargs) -> BaseDatabaseSchemaEditor:
+    def schema_editor(self, *args, **kwargs) -> 'BaseDatabaseSchemaEditor':
         """
         Return a new instance of this backend's SchemaEditor.
         """

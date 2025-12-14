@@ -1,10 +1,12 @@
+from typing import Sequence
+
 from orun.apps import apps as global_apps
 from orun.db import DEFAULT_DB_ALIAS, router, transaction
 
 
 def get_contenttypes_and_models(model, using, ContentType):
     if not router.allow_migrate_model(using, ContentType):
-        return None, None
+        return None
 
     ContentType.objects.clear_cache()
 
@@ -18,20 +20,19 @@ def create_contenttypes(app_models, verbosity=2, interactive=True, using=DEFAULT
     """
     from orun.contrib.contenttypes.models import ContentType
     created_models = []
-    for schema, models in app_models:
-        app_config = apps.app_configs[schema]
+    for model in app_models:
+        app_config = model._meta.addon
 
-        for model in models:
-            ct = get_contenttypes_and_models(model, using, ContentType)
+        ct = get_contenttypes_and_models(model, using, ContentType)
 
-            if ct:
-                continue
+        if ct:
+            continue
 
-            ct = ContentType.objects.using(using).create(
-                schema=model._meta.schema,
-                name=model._meta.name,
-                object_type='system',
-            )
-            created_models.append(ct)
-            if verbosity >= 2:
-                print("Adding content type '%s | %s'" % (app_config.schema, model._meta.name))
+        ct = ContentType.objects.using(using).create(
+            schema=model._meta.schema,
+            name=model._meta.name,
+            object_type='system',
+        )
+        created_models.append(ct)
+        if verbosity >= 2:
+            print("Adding content type '%s | %s'" % (app_config.schema, model._meta.name))

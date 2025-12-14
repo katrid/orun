@@ -30,16 +30,15 @@ def _get_all_permissions(opts):
 
 
 def create_permissions(app_models, verbosity=2, interactive=True, using=DEFAULT_DB_ALIAS, apps=global_apps, **kwargs):
-    for schema, models in app_models:
-        app_config = apps.app_configs[schema]
-        if not app_config.models_module:
-            return
+    try:
+        ContentType = apps.get_model('content.type')
+        Permission = apps.get_model('auth.permission')
+    except LookupError:
+        return
+    ctypes = set()
 
-        try:
-            ContentType = apps.get_model('content.type')
-            Permission = apps.get_model('auth.permission')
-        except LookupError:
-            return
+    for model in app_models:
+        app_config = model._meta.addon
 
         if not router.allow_migrate_model(using, Permission):
             return
@@ -48,16 +47,11 @@ def create_permissions(app_models, verbosity=2, interactive=True, using=DEFAULT_
         # (content_type, (codename, name))
         searched_perms = []
         # The codenames and ctypes that should exist.
-        ctypes = set()
-        for klass in models:
-            # Force looking up the content types in the current database
-            # before creating foreign keys to them.
-            klass = apps[klass]
-            ctype = ContentType.objects.db_manager(using).get_for_model(klass, for_concrete_model=False)
+        ctype = ContentType.objects.db_manager(using).get_for_model(model, for_concrete_model=False)
 
-            ctypes.add(ctype)
-            for perm in _get_all_permissions(klass._meta).items():
-                searched_perms.append((ctype, perm))
+        ctypes.add(ctype)
+        for perm in _get_all_permissions(model._meta).items():
+            searched_perms.append((ctype, perm))
 
         # Find all the Permissions that have a content_type for a model we're
         # looking for.  We don't need to check for codenames since we already have
@@ -68,6 +62,7 @@ def create_permissions(app_models, verbosity=2, interactive=True, using=DEFAULT_
             "content_type", "codename"
         ))
 
+        print('Create perm', model._meta.name)
         perms = [
             Permission(codename=codename, name=name, content_type=ct)
             for ct, (codename, name) in searched_perms

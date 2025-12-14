@@ -243,17 +243,22 @@ class ServerAction(Action):
     """
     sequence = models.IntegerField(default=5)
     model = models.ForeignKey('content.type', null=False)
+    server_method = models.ChoiceField(
+        {'python': 'Python block of code', 'action': 'Execute a list of actions'}, null=False,
+    )
+    # target_field = models.ForeignKey('content.field')
     code = models.TextField(label=_('Python Code'))
     actions = models.ManyToManyField('self')
     target_model = models.ForeignKey('content.type')
-    # target_field = models.ForeignKey('content.field')
     lines = models.OneToManyField('ui.action.server.line')
 
     class Meta:
         name = 'ui.action.server'
 
     def execute(self):
-        pass
+        if self.server_method == 'python':
+            # Execute the Python code block
+            return exec(self.code, {'self': self})
 
 
 class ServerActionLine(models.Model):

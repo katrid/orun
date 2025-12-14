@@ -15,7 +15,6 @@ from orun.core.management.sql import (
 from orun.db import DEFAULT_DB_ALIAS, connections, router
 from orun.utils.module_loading import module_has_submodule
 from orun.db.backends.base.base import BaseDatabaseWrapper
-from orun.db import metadata
 
 logger = logging.getLogger('orun.db.backends')
 
@@ -38,8 +37,16 @@ class Command(BaseCommand):
             help='Nominates a database to synchronize. Defaults to the "default" database.',
         )
         parser.add_argument(
-            '--noddl', '--no-ddl', action='store_false',
+            '--noddl', '--no-ddl', action='store_true',
             help='Sync database structure without additional DDL objects',
+        )
+        parser.add_argument(
+            '--check', action='store_true',
+            help='Check for pending migrations without making any changes to the database.',
+        )
+        parser.add_argument(
+            '--format', default='json',
+            help='Specify the output format when using --check. Supported formats: json, yaml, text (default: json).',
         )
         parser.add_argument(
             '--fake', action='store_true',
@@ -59,10 +66,10 @@ class Command(BaseCommand):
 
     @no_translations
     def handle(self, *args, **options):
-
         self.verbosity = options['verbosity']
         self.interactive = options['interactive']
-        self.no_ddl = not options['noddl']
+        self.no_ddl = options['noddl']
+        self.check_only = options['check']
 
         # Import the 'management' module within each installed app, to register
         # dispatcher events.
@@ -105,21 +112,16 @@ class Command(BaseCommand):
         #     self.verbosity, self.interactive, connection.alias, apps=pre_migrate_apps, plan=plan,
         # )
 
-        if self.verbosity >= 1:
-            self.stdout.write(self.style.MIGRATE_HEADING("Synchronizing apps without migrations:"))
         try:
-            if options['schema']:
-                self.sync_apps(connection, [app_label])
-            else:
-                self.sync_apps(connection, apps.app_configs.keys())
+            self.sync_database(connection)
         except Exception as e:
             logger.exception("Error during syncdb operation")
             raise
 
-    def sync_apps(self, connection: BaseDatabaseWrapper, app_labels):
+    def __sync_apps(self, connection: BaseDatabaseWrapper, app_labels):
         """Run the old syncdb-style operation on a list of app_labels."""
         with connection.cursor() as cursor:
-            schemas = connection.introspection.schema_names(cursor)
+            schemas = connection.introspection.schema_names(cursor) or []
             tables = connection.introspection.table_names(cursor)
             if 'orun_metadata' not in tables:
                 connection.introspection.create_metadata_table(cursor)
@@ -193,3 +195,31 @@ class Command(BaseCommand):
             emit_post_migrate_signal(
                 self.verbosity, self.interactive, connection.alias, app_models=post_model_list.items()
             )
+
+    def sync_database(self, connection: BaseDatabaseWrapper):
+        """Sync database schema for all apps."""
+        with connection.cursor() as cursor:
+            schemas = connection.introspection.schema_names(cursor) or []
+            # tables = connection.introspection.table_names(cursor)
+
+        with connection.schema_editor() as editor:
+            editor.load_metadata()
+            self.stdout.write("Checking schemas...\n")
+            for app_name, app in apps.addons.items():
+                if connection.features.schemas_allowed and app.db_schema and app.create_schema and app.db_schema not in schemas:
+                    self.stdout.write(f"Creating schema {app.db_schema}...\n")
+                    editor.create_schema(app.db_schema)
+            # create all tables before additional objects
+            created_models = []
+            self.stdout.write("Collecting changes...\n")
+            change_count = 0
+            for meth, args in editor.collect_changes():
+                change_count += 1
+                if meth == editor.create_table:
+                    created_models.append(args[0].model)
+                meth(*args)
+            if change_count > 0:
+                editor.save_metadata()
+                # emit post migrate signal
+                emit_post_migrate_signal(self.verbosity, self.interactive, connection.alias, created_models=created_models)
+            return change_count
