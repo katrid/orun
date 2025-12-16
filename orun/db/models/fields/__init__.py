@@ -41,7 +41,7 @@ __all__ = [
     'BinaryField', 'BooleanField', 'CharField', 'CommaSeparatedIntegerField',
     'DateField', 'DateTimeField', 'DecimalField', 'DurationField',
     'IntField', 'BigintField', 'SmallintField',
-     #'SmallAutoField',
+    # 'SmallAutoField',
     'EmailField', 'Empty', 'Field', 'FieldDoesNotExist', 'FilePathField',
     'FloatField', 'GenericIPAddressField', 'IPAddressField', 'IntegerField',
     'NOT_PROVIDED', 'NullBooleanField', 'PositiveIntegerField', 'PositiveBigIntegerField',
@@ -312,6 +312,7 @@ class Field[T](BaseField[T]):
             self.column = db_column
         self._db_tablespace = db_tablespace
         self.generated_as = generated_as
+        self.db_readonly = False
         if generated_as and stored is None:
             stored = True
             self.db_readonly = True
@@ -1222,7 +1223,7 @@ class BooleanField(Field[bool]):
 
     def get_internal_type(self):
         return "BooleanField"
-        #return "bool"
+        # return "bool"
 
     def to_python(self, value):
         if self.null and value in self.empty_values:
@@ -1265,7 +1266,7 @@ class CharField(Field[str]):
 
     def _get_params(self):
         return [self.max_length]
-        #return self.max_length and [self.max_length]
+        # return self.max_length and [self.max_length]
 
     def db_type_parameters(self, connection):
         return {'max_length': self.max_length or 512}
@@ -1308,7 +1309,7 @@ class CharField(Field[str]):
 
     def get_internal_type(self):
         return "CharField"
-        #return "varchar"
+        # return "varchar"
 
     def to_python(self, value):
         if isinstance(value, str) and self.trim:
@@ -1443,7 +1444,7 @@ class DateField(DateTimeCheckMixin, Field):
 
     def get_internal_type(self):
         return "DateField"
-        #return "date"
+        # return "date"
 
     def to_python(self, value):
         if value is None:
@@ -1576,7 +1577,7 @@ class DateTimeField(DateField):
 
     def get_internal_type(self):
         return "DateTimeField"
-        #return "datetime"
+        # return "datetime"
 
     def to_python(self, value):
         if value is None:
@@ -1775,7 +1776,7 @@ class DecimalField(Field[decimal.Decimal]):
 
     def get_internal_type(self):
         return "DecimalField"
-        #return "decimal"
+        # return "decimal"
 
     def to_python(self, value):
         if value is None:
@@ -1967,7 +1968,7 @@ class FloatField(Field[float]):
 
     def get_internal_type(self):
         return "FloatField"
-        #return "float"
+        # return "float"
 
     def to_python(self, value):
         if value is None:
@@ -2064,7 +2065,7 @@ class SmallintField(IntField):
 
     def get_internal_type(self):
         return "SmallIntegerField"
-        #return "smallint"
+        # return "smallint"
 
 
 class BigintField(IntField):
@@ -2073,7 +2074,7 @@ class BigintField(IntField):
 
     def get_internal_type(self):
         return "BigIntegerField"
-        #return "bigint"
+        # return "bigint"
 
 
 class AutoFieldMixin:
@@ -2157,26 +2158,35 @@ class AutoField(AutoFieldMixin, IntField, metaclass=AutoFieldMeta):
 
     def get_internal_type(self):
         return "AutoField"
-        #return "serial"
+        # return "serial"
 
     def get_data_type(self) -> str:
-        return 'int'
+        return 'serial'
 
     def rel_db_type(self, connection):
         return IntegerField().db_type(connection=connection)
+
+    def column_definition(self, editor=None):
+        col = super().column_definition(editor=editor)
+        col.autoinc = True
+        return col
 
 
 class BigAutoField(AutoFieldMixin, BigintField):
 
     def get_internal_type(self):
-        return 'BigAutoField'
-        #return 'bigserial'
+        return 'bigserial'
 
     def get_data_type(self) -> str:
         return 'bigint'
 
     def rel_db_type(self, connection):
         return BigIntegerField().db_type(connection=connection)
+
+    def column_definition(self, editor=None):
+        col = super().column_definition(editor=editor)
+        col.autoinc = True
+        return col
 
 
 # class SmallAutoField(AutoFieldMixin, SmallIntegerField):
@@ -2332,7 +2342,7 @@ class UBigintField(PositiveIntegerRelDbTypeMixin, BigintField):
 
     def get_internal_type(self):
         return 'PositiveBigIntegerField'
-        #return 'ubigint'
+        # return 'ubigint'
 
 
 class UIntField(PositiveIntegerRelDbTypeMixin, IntField):
@@ -2340,7 +2350,7 @@ class UIntField(PositiveIntegerRelDbTypeMixin, IntField):
 
     def get_internal_type(self):
         return 'PositiveIntegerField'
-        #return 'uint'
+        # return 'uint'
 
 
 class USmallintField(PositiveIntegerRelDbTypeMixin, SmallintField):
@@ -2348,7 +2358,7 @@ class USmallintField(PositiveIntegerRelDbTypeMixin, SmallintField):
 
     def get_internal_type(self):
         return 'PositiveSmallIntegerField'
-        #return 'usmallint'
+        # return 'usmallint'
 
 
 class SlugField(CharField):
@@ -2386,7 +2396,7 @@ class TextField(Field):
 
     def get_internal_type(self):
         return "TextField"
-        #return "text"
+        # return "text"
 
     def to_python(self, value):
         if isinstance(value, str) and self.trim:
@@ -2475,7 +2485,7 @@ class TimeField(DateTimeCheckMixin, Field):
 
     def get_internal_type(self):
         return "TimeField"
-        #return "time"
+        # return "time"
 
     def to_python(self, value):
         if value is None:
@@ -2561,7 +2571,7 @@ class BinaryField(Field):
 
     def get_internal_type(self):
         return "BinaryField"
-        #return "bin"
+        # return "bin"
 
     def get_placeholder(self, value, compiler, connection):
         return connection.ops.binary_placeholder_sql(value)
@@ -2605,7 +2615,7 @@ class UUIDField(Field):
 
     def get_internal_type(self):
         return "UUIDField"
-        #return "uuid"
+        # return "uuid"
 
     def get_db_prep_value(self, value, connection, prepared=False):
         if value is None:
@@ -2704,7 +2714,6 @@ SmallIntegerField = SmallintField
 PositiveIntegerField = UIntField
 PositiveBigIntegerField = UBigintField
 PositiveSmallIntegerField = USmallintField
-
 
 datatype_map = {
     str: 'StringField',
