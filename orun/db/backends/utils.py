@@ -81,7 +81,6 @@ class CursorWrapper:
             if params is None:
                 return self.cursor.execute(sql)
             else:
-                print(sql)
                 return self.cursor.execute(sql, params)
 
     def _executemany(self, sql, param_list, *ignored_wrapper_args):
