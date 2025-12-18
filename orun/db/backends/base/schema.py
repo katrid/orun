@@ -143,7 +143,6 @@ class BaseDatabaseSchemaEditor:
             self.old_metadata = metadata.Metadata(self)
             self.old_metadata.load(self.connection.introspection.get_metadata(cursor))
             self._cached_tables = self.connection.introspection.get_table_list(cursor)
-        print(self._cached_tables)
 
     def execute(self, sql, params=()):
         """Execute the given SQL statement, with optional parameters."""
@@ -672,7 +671,8 @@ class BaseDatabaseSchemaEditor:
                 # self._apply_default_value_to_null(new, new.field.db_default)
 
             if old.null != new.null:
-                # self._alter_column_null_sql(new)
+                # if new.null:
+                #     self._alter_column_null_sql(new)
                 print(f'      Column "{new.name}" null changed to {new.null}')
 
     def change_field_size(self, col: metadata.Column):
