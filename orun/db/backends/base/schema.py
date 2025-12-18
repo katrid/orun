@@ -142,6 +142,8 @@ class BaseDatabaseSchemaEditor:
         with self.connection.cursor() as cursor:
             self.old_metadata = metadata.Metadata(self)
             self.old_metadata.load(self.connection.introspection.get_metadata(cursor))
+            self._cached_tables = self.connection.introspection.get_table_list(cursor)
+        print(self._cached_tables)
 
     def execute(self, sql, params=()):
         """Execute the given SQL statement, with optional parameters."""
@@ -502,7 +504,7 @@ class BaseDatabaseSchemaEditor:
         )
 
     def alter_column_default(self, new_field: metadata.Column):
-        print('Alter column default, not ready')
+        #print('Alter column default, not ready')
         return
         if new_field.default is None:
             self.execute(
@@ -631,7 +633,7 @@ class BaseDatabaseSchemaEditor:
     def alter_column_type(self, table: metadata.Table, old: metadata.Column, new: metadata.Column):
         table_name = table.tablename
         # backup the old column
-        print('Alter column type, not ready', old.name, old.type, '->', new.type)
+        #print('Alter column type, not ready', old.name, old.type, '->', new.type)
         return
         self._column_backup(table, old)
         sql = self.sql_alter_column % {
@@ -670,11 +672,12 @@ class BaseDatabaseSchemaEditor:
                 # self._apply_default_value_to_null(new, new.field.db_default)
 
             if old.null != new.null:
-                self._alter_column_null_sql(new)
+                # self._alter_column_null_sql(new)
                 print(f'      Column "{new.name}" null changed to {new.null}')
 
     def change_field_size(self, col: metadata.Column):
-        print('      Change field size', col.name, col.type, col.params)
+        # print('      Change field size', col.name, col.type, col.params)
+        return
 
     def alter_column_null(self, table: metadata.Table, col: metadata.Column):
         sql_change = self.sql_alter_column_null % {'column': self.quote_name(col.name)}
@@ -708,10 +711,16 @@ class BaseDatabaseSchemaEditor:
 
     def compare_tables(self, old_table: metadata.Table, new_table: metadata.Table):
         # compare columns
+        with self.connection.cursor() as cur:
+            # TODO remove in favor of just using cached metadata
+            cur.execute(f'select * from {new_table.tablename} where 1=0 limit 0')
+            cols = [col[0] for col in cur.description]
+
         for k, col in new_table.columns.items():
             if k not in old_table.columns:
                 # new field
-                yield self.create_column, (new_table, col)
+                if k not in cols:
+                    yield self.create_column, (new_table, col)
             else:
                 old_col = old_table.columns[k]
                 if col != old_col:
