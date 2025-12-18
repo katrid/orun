@@ -2043,6 +2043,7 @@ class IntField(Field):
         return int(value)
 
     def get_internal_type(self):
+        return "IntegerField"
         return "int"
 
     def to_python(self, value):
@@ -2175,9 +2176,11 @@ class AutoField(AutoFieldMixin, IntField, metaclass=AutoFieldMeta):
 class BigAutoField(AutoFieldMixin, BigintField):
 
     def get_internal_type(self):
-        return 'bigserial'
+        return 'BigAutoField'
+        #return 'bigserial'
 
     def get_data_type(self) -> str:
+        return 'BigIntegerField'
         return 'bigint'
 
     def rel_db_type(self, connection):
@@ -2657,6 +2660,7 @@ class ChoiceField(CharField):
         super().__init__(**kwargs)
 
     def get_internal_type(self):
+        return "ChoiceField"
         return "CharField"
 
     def add_choices(self, items):
