@@ -200,7 +200,9 @@ class Command(BaseCommand):
         """Sync database schema for all apps."""
         with connection.cursor() as cursor:
             schemas = connection.introspection.schema_names(cursor) or []
-            # tables = connection.introspection.table_names(cursor)
+            tables = connection.introspection.table_names(cursor)
+            if 'orun_metadata' not in tables:
+                connection.introspection.create_metadata_table(cursor)
 
         with connection.schema_editor() as editor:
             editor.load_metadata()
@@ -216,7 +218,7 @@ class Command(BaseCommand):
             for meth, args in editor.collect_changes():
                 change_count += 1
                 if meth == editor.create_table:
-                    created_models.append(args[0].model)
+                    created_models.append(apps.models[args[0].model])
                 meth(*args)
             if change_count > 0:
                 editor.save_metadata()

@@ -1,6 +1,7 @@
 import psycopg2
 
 from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
+from orun.db import metadata
 from orun.db.backends.ddl_references import IndexColumns
 
 
@@ -158,3 +159,13 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         if opclasses:
             return IndexColumns(table, columns, self.quote_name, col_suffixes=col_suffixes, opclasses=opclasses)
         return super()._index_columns(table, columns, col_suffixes, opclasses)
+
+    def constraint_sql(self, c: metadata.Constraint):
+        sql = f'CONSTRAINT {self.quote_name(c.name)} {c.type} ({', '.join(c.expressions)})'
+        if c.type == 'FOREIGN KEY':
+            sql += ' ' + self.fk_sql(c)
+        if c.deferrable is None:
+            sql += ' NOT VALID'
+        else:
+            sql += f' DEFERRABLE INITIALLY {c.deferrable}'
+        return sql

@@ -98,12 +98,14 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'char': 'char',
         'text': 'text',
         'integer': 'integer',
+        'int': 'integer',
         'bigint': 'bigint',
         'smallint': 'smallint',
         'serial': 'serial',
         'bigserial': 'bigserial',
         'boolean': 'boolean',
         'datetime': 'timestamp without time zone',
+        'json': 'jsonb',
     }
     data_type_check_constraints = {
         'PositiveIntegerField': '"%(column)s" >= 0',

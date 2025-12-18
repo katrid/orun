@@ -12,6 +12,7 @@ from orun.db.utils import NotSupportedError
 
 
 class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
+    _create_table_with_constraints = True
 
     sql_delete_table = "DROP TABLE %(table)s"
     sql_create_fk = None

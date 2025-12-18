@@ -52,6 +52,7 @@ class BaseDatabaseSchemaEditor:
     statements to the databases - model creation/removal/alteration, field
     renaming, index fiddling, and so on.
     """
+    _create_table_with_constraints = False
 
     # Overrideable SQL templates
     sql_create_database = """CREATE DATABASE "%(db)s" ENCODING='UTF-8'"""
@@ -85,7 +86,7 @@ class BaseDatabaseSchemaEditor:
 
     sql_create_fk = (
         "ALTER TABLE %(table)s ADD CONSTRAINT %(name)s FOREIGN KEY (%(column)s) "
-        "REFERENCES %(to_table)s (%(to_column)s)%(deferrable)s NOT VALID"
+        "REFERENCES %(to_table)s (%(to_column)s)%(deferrable)s"
     )
     sql_create_inline_fk = None
     sql_delete_fk = sql_delete_constraint
@@ -576,14 +577,14 @@ class BaseDatabaseSchemaEditor:
         if c.type == 'FOREIGN KEY':
             sql += ' ' + self.fk_sql(c)
         if c.deferrable is not None:
-            sql += ' NOT VALID'
-            # sql += f' DEFERRABLE INITIALLY {c.deferrable}'
+            sql += f' DEFERRABLE INITIALLY {c.deferrable}'
         return sql
 
     def column_type_sql(self, col: metadata.Column) -> str:
         sql = self.connection.data_types[col.type]
-        if col.params:
-            sql += '(' + ', '.join(str(p) for p in col.params) + ')'
+        params = col.params
+        if params and isinstance(params, list) and params[0]:
+            sql += '(' + ', '.join(str(p) for p in params) + ')'
         if col.generated:
             sql += f' GENERATED ALWAYS AS {col.generated} {"VIRTUAL" if not col.stored else "STORED"}'
         else:
@@ -690,7 +691,7 @@ class BaseDatabaseSchemaEditor:
     def table_sql(self, table: metadata.Table) -> str:
         table_name = table.tablename
         cols = ', '.join(self.column_sql(c) for c in table.columns.values())
-        if table.constraints:
+        if table.constraints and self._create_table_with_constraints:
             cols += ', ' + ', '.join(self.constraint_sql(i) for i in table.constraints.values())
         return f'CREATE TABLE {table_name} ({cols})'
 

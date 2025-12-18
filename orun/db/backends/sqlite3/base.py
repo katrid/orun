@@ -91,8 +91,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'int': 'integer',
         'smallint': 'smallint',
         'bin': 'blob',
-        'bigint': 'bigint',
-        'ubigint': 'bigint unsigned',
+        'bigint': 'integer',
+        'ubigint': 'integer unsigned',
         'uint': 'integer unsigned',
         'usmallint': 'smallint unsigned',
         'bool': 'bool',
@@ -101,7 +101,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'datetime': 'datetime',
         'numeric': 'decimal',
         'decimal': 'decimal',
-        'DurationField': 'bigint',
+        'DurationField': 'integer',
         'FileField': 'varchar',
         'FilePathField': 'varchar',
         'float': 'real',
@@ -116,7 +116,19 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'uuid': 'char(32)',
         'MultiChoiceField': 'text',
         # TODO remove
-        'BooleanFields': 'bool',
+        'BigIntegerField': 'integer',
+        'BooleanField': 'bool',
+        'CharField': 'varchar',
+        'BigAutoField': 'integer',
+        'SmallIntegerField': 'integer',
+        'PositiveIntegerField': 'integer',
+        'PositiveSmallIntegerField': 'integer',
+        'DateTimeField': 'datetime',
+        'TextField': 'text',
+        'BinaryField': 'blob',
+        'FloatField': 'real',
+        'DateField': 'date',
+        'DecimalField': 'decimal',
     }
     data_type_check_constraints = {
         'ubigint': '"%(column)s" >= 0',
@@ -127,7 +139,9 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     data_types_suffix = {
         'serial': 'AUTOINCREMENT',
         'bigserial': 'AUTOINCREMENT',
-        # 'small': 'AUTOINCREMENT',
+        # TODO remove
+        'AutoField': 'AUTOINCREMENT',
+        'BigAutoField': 'AUTOINCREMENT',
     }
     # SQLite requires LIKE statements to include an ESCAPE clause if the value
     # being escaped has a percent or underscore in it.

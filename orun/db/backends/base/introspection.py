@@ -218,6 +218,8 @@ class BaseDatabaseIntrospection:
             self.create_metadata_table(cur)
             return {'tables': []}
         s = cur.fetchone()[0]
-        if s:
+        if isinstance(s, str):
             return json.loads(str(s))
+        elif isinstance(s, dict):
+            return s
         return {'tables': []}
