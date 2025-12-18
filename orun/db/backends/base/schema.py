@@ -688,8 +688,10 @@ class BaseDatabaseSchemaEditor:
         self.execute(f'ALTER TABLE {table_name} ADD COLUMN {self.column_sql(col)}')
 
     def create_constraint(self, table: metadata.Table, c: metadata.Constraint):
-        sql = f'ALTER TABLE {table.tablename} ADD {self.constraint_sql(c)}'
-        self.execute(sql)
+        # ignore for while
+        #sql = f'ALTER TABLE {table.tablename} ADD {self.constraint_sql(c)}'
+        #self.execute(sql)
+        return
 
     def table_sql(self, table: metadata.Table) -> str:
         table_name = table.tablename
