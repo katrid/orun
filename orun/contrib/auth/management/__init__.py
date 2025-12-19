@@ -37,9 +37,7 @@ def create_permissions(app_models, verbosity=2, interactive=True, using=DEFAULT_
         return
     ctypes = set()
 
-    for model in app_models:
-        app_config = model._meta.addon
-
+    for i, model in enumerate(app_models):
         if not router.allow_migrate_model(using, Permission):
             return
 
@@ -62,7 +60,7 @@ def create_permissions(app_models, verbosity=2, interactive=True, using=DEFAULT_
             "content_type", "codename"
         ))
 
-        print('Create perm', model._meta.name)
+        # print('Create perm', model._meta.name)
         perms = [
             Permission(codename=codename, name=name, content_type=ct)
             for ct, (codename, name) in searched_perms

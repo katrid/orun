@@ -383,6 +383,8 @@ class ForeignObject(RelatedField):
     one_to_many = False
     one_to_one = False
 
+    db_constraint = True
+
     requires_unique_target = True
     related_accessor_class = ReverseManyToOneDescriptor
     forward_related_accessor_class = ForwardManyToOneDescriptor
@@ -668,15 +670,16 @@ class ForeignObject(RelatedField):
         # contribute to table with fk constraint
         fk_name = 'fk_' + self.model._meta.qualname.replace('.', '_') + '__' + self.column
         ref_model = self.target_field.model
-        table.constraints[fk_name] = Constraint(
-            name=fk_name, type='FOREIGN KEY',
-            deferrable='DEFERRED',
-            expressions=[self.column],
-            on_delete='CASCADE' if self.on_delete is DB_CASCADE else None,
-            on_update='CASCADE' if self.on_update is DB_CASCADE else None,
-            references=[[ref_model._meta.db_schema, ref_model._meta.tablename], [self.target_field.attname]],
-            auto_created=True,
-        )
+        if self.db_constraint:
+            table.constraints[fk_name] = Constraint(
+                name=fk_name, type='FOREIGN KEY',
+                deferrable='DEFERRED',
+                expressions=[self.column],
+                on_delete='CASCADE' if self.on_delete is DB_CASCADE else None,
+                on_update='CASCADE' if self.on_update is DB_CASCADE else None,
+                references=[[ref_model._meta.db_schema, ref_model._meta.tablename], [self.target_field.attname]],
+                auto_created=True,
+            )
 
     def get_rel_field(self):
         return self.target_field

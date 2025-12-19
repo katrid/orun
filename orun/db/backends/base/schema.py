@@ -742,7 +742,7 @@ class BaseDatabaseSchemaEditor:
         for k, c in old_table.constraints.items():
             if k not in new_table.constraints:
                 # drop constraint
-                yield self.drop_constraint, (c,)
+                yield self.drop_constraint, (new_table, c,)
 
         # compare indexes
         for k, ix in new_table.indexes.items():
