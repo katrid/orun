@@ -46,7 +46,6 @@ class AdminModel(models.Model, helper=True):
             page = int(page)
             limit = int(limit)
             qs = qs[(page - 1) * limit:page * limit]
-
         fields = fields or []
         defer = [f.name for f in cls._meta.fields if f.defer and f.name not in fields]
         return {
