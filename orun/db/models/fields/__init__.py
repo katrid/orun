@@ -215,6 +215,8 @@ class Field[T](BaseField[T]):
     # database level.
     empty_values = list(validators.EMPTY_VALUES)
 
+    db_readonly = None
+
     # These track each time a Field instance is created. Used to retain order.
     # The auto_creation_counter is used for fields that Orun implicitly
     # creates, creation_counter is used for all user-specified fields.
