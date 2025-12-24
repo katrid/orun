@@ -6,6 +6,7 @@ import copy
 import operator
 import warnings
 from itertools import chain
+from typing import Optional
 
 import orun
 from orun.conf import settings
@@ -682,11 +683,13 @@ class QuerySet[T]:
         """Return the first object of a query or None if no match is found."""
         for obj in (self if self.ordered else self.order_by('pk'))[:1]:
             return obj
+        return None
 
     def last(self) -> T:
         """Return the last object of a query or None if no match is found."""
         for obj in (self.reverse() if self.ordered else self.order_by('-pk'))[:1]:
             return obj
+        return None
 
     def in_bulk(self, id_list=None, *, field_name='pk'):
         """

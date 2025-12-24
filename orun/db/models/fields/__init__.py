@@ -30,6 +30,7 @@ from orun.utils.ipv6 import clean_ipv6_address
 from orun.utils.itercompat import is_iterable
 from orun.utils.text import capfirst
 from orun.utils.translation import gettext_lazy as _, gettext
+from orun.db import ast
 
 if TYPE_CHECKING:
     from orun.db import metadata
@@ -267,6 +268,7 @@ class Field[T](BaseField[T]):
                  getter: Union[str, Callable, None] = None, setter: Union[str, Callable, None] = None, hybrid=False,
                  on_insert_value: Union[str, Callable, None] = None, on_update_value: Union[str, Callable, None] = None,
                  on_calculate: Union[Callable, str] = None, db_calculate: Union[Callable, str] = None,
+                 generated_as: ast.Expr | Callable | str = None, stored=None,
                  group_choices=None, track_visibility=None, aggregate=None,
                  descriptor=None, **kwargs):
         self.name = name
@@ -300,6 +302,18 @@ class Field[T](BaseField[T]):
                 choices = [(choice, choice) for choice in choices]
             else:
                 choices = list(choices)
+
+        self.generated_as = generated_as
+        self.db_readonly = False
+        if generated_as and stored is None:
+            stored = True
+            self.db_readonly = True
+        elif stored is None:
+            stored = True
+        elif stored is False:
+            self.db_readonly = False
+        self.stored = stored
+
         self.choices = choices or []
         self.help_text = help_text
         self.db_index = db_index
@@ -382,6 +396,7 @@ class Field[T](BaseField[T]):
 
     def __get__(self, instance, owner=None) -> T | Self:
         return self
+
     @property
     def on_calculate(self):
         return self._on_calculate
@@ -484,8 +499,8 @@ class Field[T](BaseField[T]):
                 break
             try:
                 if not all(
-                        is_value(value) and is_value(human_name)
-                        for value, human_name in group_choices
+                    is_value(value) and is_value(human_name)
+                    for value, human_name in group_choices
                 ):
                     break
             except (TypeError, ValueError):
@@ -523,7 +538,7 @@ class Field[T](BaseField[T]):
 
     def _check_null_allowed_for_primary_keys(self):
         if (self.primary_key and self.null and
-                not connection.features.interprets_empty_strings_as_nulls):
+            not connection.features.interprets_empty_strings_as_nulls):
             # We cannot reliably check this for backends like Oracle which
             # consider NULL and '' to be equal (and thus set up
             # character-based fields a little differently).
@@ -1097,29 +1112,38 @@ class Field[T](BaseField[T]):
         from .events import FieldEvent
         return FieldEvent(self, meth)
 
-    def get_column_def(self):
+    def _get_params(self):
+        return None
+
+    def column_definition(self, editor=None):
         from orun.db.metadata import Column
         _, datatype, params, kwargs = self.deconstruct()
+        generated = self.generated_as
+        if generated is not None:
+            generated = editor.compile_node(generated)
         return Column(
-            name=self.column, type=datatype, params=params, null=self.null, pk=self.primary_key,
-            tablespace=self.db_tablespace, computed=self.db_compute, fk=None, attributes=kwargs,
-            field=self,
+            name=self.column, type=self.get_internal_type(), params=self._get_params(), null=self.null,
+            pk=self.primary_key, tablespace=self.db_tablespace, computed=generated, stored=self.stored,
+            attributes=kwargs,
+            default=None if self.db_default is NOT_PROVIDED else self.db_default,
+            # field=self,
         )
 
     def contribute_to_table(self, editor: 'BaseDatabaseSchemaEditor', table: 'metadata.Table'):
         """
         Contribute to table metadata
+        :param editor:
         :param table:
         """
         from orun.db.metadata import Index
-        table.columns.append(self.get_column_def())
+        col = self.column_definition(editor)
+        table.columns[col.name] = col
         if self.db_index:
             ix_name = editor.create_index_name(self.model._meta.db_table, [self.column])
-            table.indexes.append(
-                Index(
-                    name=ix_name, expressions=[self.column], auto_created=True, model=self.model,
-                    # tablespace=self.db_tablespace,
-                )
+            table.indexes[ix_name] = Index(
+                name=ix_name, expressions=[self.column], auto_created=True,
+                # model=self.model,
+                # tablespace=self.db_tablespace,
             )
 
 
@@ -1168,7 +1192,7 @@ class CharField(Field[str]):
     description = _("String (up to %(max_length)s)")
 
     def __init__(
-            self, max_length_or_label=None, db_collation: str=None, trim=True, full_text_search=False, *args, **kwargs
+        self, max_length_or_label=None, db_collation: str = None, trim=True, full_text_search=False, *args, **kwargs
     ):
         self.full_text_search = full_text_search
         if isinstance(max_length_or_label, str):
@@ -1241,6 +1265,10 @@ class CharField(Field[str]):
             else:
                 value = str(value)
         return value
+
+    def _get_params(self):
+        return [self.max_length]
+        # return self.max_length and [self.max_length]
 
 
 class StringField(CharField):
@@ -1798,7 +1826,7 @@ class EmailField(CharField):
 
     @staticmethod
     def is_valid(value: str):
-        return re.match(r'[\w.]+@[\w.]+',value) is not None
+        return re.match(r'[\w.]+@[\w.]+', value) is not None
 
 
 class FilePathField(Field):
@@ -1919,23 +1947,23 @@ class IntegerField(Field):
         internal_type = self.get_internal_type()
         min_value, max_value = connection.ops.integer_field_range(internal_type)
         if min_value is not None and not any(
-                (
-                        isinstance(validator, validators.MinValueValidator) and (
-                        validator.limit_value()
-                        if callable(validator.limit_value)
-                        else validator.limit_value
-                ) >= min_value
-                ) for validator in validators_
+            (
+                isinstance(validator, validators.MinValueValidator) and (
+                validator.limit_value()
+                if callable(validator.limit_value)
+                else validator.limit_value
+            ) >= min_value
+            ) for validator in validators_
         ):
             validators_.append(validators.MinValueValidator(min_value))
         if max_value is not None and not any(
-                (
-                        isinstance(validator, validators.MaxValueValidator) and (
-                        validator.limit_value()
-                        if callable(validator.limit_value)
-                        else validator.limit_value
-                ) <= max_value
-                ) for validator in validators_
+            (
+                isinstance(validator, validators.MaxValueValidator) and (
+                validator.limit_value()
+                if callable(validator.limit_value)
+                else validator.limit_value
+            ) <= max_value
+            ) for validator in validators_
         ):
             validators_.append(validators.MaxValueValidator(max_value))
         return validators_

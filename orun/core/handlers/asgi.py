@@ -2,8 +2,11 @@ import logging
 import sys
 import tempfile
 import traceback
+import asyncio
 
 from asgiref.sync import ThreadSensitiveContext, sync_to_async
+from starlette.applications import Starlette
+from starlette.routing import WebSocketRoute, Mount
 
 from orun.conf import settings
 from orun.core import signals
@@ -15,6 +18,7 @@ from orun.http import (
 )
 from orun.urls import set_script_prefix
 from orun.utils.functional import cached_property
+from .ws import WebSocketHandler
 
 logger = logging.getLogger('orun.request')
 
@@ -296,3 +300,16 @@ class ASGIHandler(base.BaseHandler):
         if settings.FORCE_SCRIPT_NAME:
             return settings.FORCE_SCRIPT_NAME
         return scope.get('root_path', '') or ''
+
+
+def _on_startup():
+    WebSocketHandler.event_loop = asyncio.get_event_loop()
+
+
+asgi_handler = Starlette(
+    routes=[
+        WebSocketRoute('/ws', WebSocketHandler),
+        Mount('/', app=ASGIHandler()),
+    ],
+    on_startup=[_on_startup]
+)

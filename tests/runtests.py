@@ -10,7 +10,6 @@ def get_test_modules():
     modules = []
     for f in os.scandir(os.path.dirname(__file__)):
         if f.is_dir() and not f.name.startswith('_') and os.path.isfile(os.path.join(f.path, '__init__.py')):
-            print(f.name)
             modules.append(f.name)
     return modules
 
@@ -22,9 +21,9 @@ def setup():
     return test_modules
 
 
-def run_tests():
+def run_tests(options: argparse.Namespace):
     test_modules = setup()
-    runner = DiscoverRunner()
+    runner = DiscoverRunner(interactive=options.interactive)
     runner.run_tests(test_modules)
 
 
@@ -71,6 +70,6 @@ if __name__ == "__main__":
     )
 
     options = parser.parse_args()
-    os.environ.setdefault('ORUN_SETTINGS_MODULE', 'test_sqlite')
+    os.environ.setdefault('ORUN_SETTINGS_MODULE', options.settings or 'test_sqlite')
 
-    run_tests()
+    run_tests(options)

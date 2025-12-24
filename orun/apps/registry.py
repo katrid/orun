@@ -5,7 +5,7 @@ from collections import Counter, defaultdict, OrderedDict
 import functools
 import jinja2
 
-from orun.utils.module_loading import import_module
+from orun.conf import settings
 from contextvars import ContextVar
 from orun.apps import AppConfig
 from orun import SUPERUSER
@@ -317,7 +317,7 @@ class Registry:
         return self.models[name]
 
     def start_async_loop(self, loop):
-        loop.set_debug(True)
+        loop.set_debug(settings.DEBUG)
         loop.run_forever()
 
     def collect_js_assets(self):

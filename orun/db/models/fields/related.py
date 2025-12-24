@@ -660,7 +660,7 @@ class ForeignObject(RelatedField):
         while isinstance(field, OneToOneField):
             field = field.target_field
         col.type = field.get_internal_type()
-        col.type = {'bigserial': 'bigint', 'serial': 'int'}.get(col.type, col.type)
+        col.type = {'BigAutoField': 'BigIntegerField', 'AutoField': 'IntegerField'}.get(col.type, col.type)
         col.fk = self.related_model._meta.name
         return col
 
