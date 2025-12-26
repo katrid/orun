@@ -58,7 +58,7 @@ class Command(BaseCommand):
         return get_internal_wsgi_application()
 
     def handle(self, *args, **options):
-        from orun.core.handlers import ws
+        from orun.core.handlers import asgi
         addrport = options.get('addrport')
         if addrport is None:
             addrport = '127.0.0.1:8000'
@@ -68,7 +68,7 @@ class Command(BaseCommand):
 
         use_reloader = options['use_reloader']
         # uvicorn.run(asgi.ASGIHandler, host=addr, port=int(port))
-        uvicorn.run(ws.asgi_handler, host=addr, port=int(port))
+        uvicorn.run(asgi.asgi_handler, host=addr, port=int(port))
 
     def run(self, **options):
         """Run the server, using the autoreloader if needed."""
