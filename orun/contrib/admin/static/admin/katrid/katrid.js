@@ -12767,10 +12767,10 @@ var katrid;
             if (match.length) {
                 let today = new Date();
                 let day = Number.parseInt(match[0][0]);
-                let month = today.getMonth() - 1;
+                let month = today.getMonth();
                 let year = today.getFullYear();
                 if (match.length > 1) {
-                    month = Number.parseInt(match[1][0]);
+                    month = Number.parseInt(match[1][0]) - 1;
                 }
                 if (match.length > 2) {
                     let y = match[2][0];
