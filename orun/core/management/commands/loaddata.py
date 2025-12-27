@@ -76,9 +76,9 @@ def load_fixture(schema, *filenames, **options):
         hash_data = get_hash_data(fullpath)
         modified = fixture_modified(addon, relpath, hash_data)
         if modified:
-            print(f'Loading fixture: {addon.schema}, {filename}')
+            print(f'    Loading fixture: {addon.schema}, {filename}')
         else:
-            print(f'Fixture not modified, skipping: {addon.schema}, {filename}')
+            print(f'    Fixture not modified, skipping: {addon.schema}, {filename}')
             continue
         # load data from module registrable objects
         if inspect.ismodule(filename):
@@ -88,6 +88,7 @@ def load_fixture(schema, *filenames, **options):
         # notify fixture when modified or created
         if modified:
             fixture_loaded.send(sender=addon, filename=relpath, hashbytes=hash_data)
+
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
