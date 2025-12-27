@@ -12770,7 +12770,7 @@ var katrid;
                 let month = today.getMonth() - 1;
                 let year = today.getFullYear();
                 if (match.length > 1) {
-                    month = Number.parseInt(match[1][0]) - 1;
+                    month = Number.parseInt(match[1][0]);
                 }
                 if (match.length > 2) {
                     let y = match[2][0];
