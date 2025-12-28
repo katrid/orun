@@ -63,7 +63,7 @@
 {% endblock %}
 {% block content %}
   <div id="login-form" class="login-form">
-    <img class="mb-4" src="{{ company_logo or '/static/admin/assets/img/logo.png' }}" alt="" style="max-height: 80px;">
+    <img id="id-logo" class="mb-4" src="{{ company_logo or '/static/admin/assets/img/logo.png' }}" alt="" style="max-height: 80px;">
     <form class="form-signin" @submit.prevent="login(username, password, '{{ request.GET.get("next", "/web/") }}')">
       {% raw %}
       <div class="alert" :class="'alert-' + message.type" v-for="message in messages">{{ message.message }}</div>
@@ -108,5 +108,15 @@
       }
     }
   }).mount('#login-form');
+  </script>
+  <script>
+  // check if logo/image is broken
+    document.addEventListener('DOMContentLoaded', function() {
+      const logoImg = document.querySelector('#id-logo');
+      logoImg.onerror = function() {
+        console.debug('Logo image failed to load, reverting to default logo.');
+        this.src = '/static/admin/assets/img/logo.svg';
+      };
+    });
   </script>
 {% endblock %}
