@@ -12285,7 +12285,6 @@ a.user-dropdown {
 
 .app-header.navbar {
   padding: 0;
-  justify-content: flex-end;
   flex-flow: nowrap;
   flex: 0 1;
 }
