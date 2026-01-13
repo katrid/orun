@@ -63,7 +63,7 @@
 {% endblock %}
 {% block content %}
   <div id="login-form" class="login-form">
-    <img id="id-logo" class="mb-4" src="{{ company_logo or '/static/admin/assets/img/logo.png' }}" alt="" style="max-height: 80px;">
+    <img id="id-logo" class="mb-4" src="{{ company_logo or '/static/admin/assets/img/logo.svg' }}" style="max-height: 80px;">
     <form class="form-signin" @submit.prevent="login(username, password, '{{ request.GET.get("next", "/web/") }}')">
       {% raw %}
       <div class="alert" :class="'alert-' + message.type" v-for="message in messages">{{ message.message }}</div>
