@@ -49,7 +49,7 @@ def _company_logo(request: HttpRequest):
     company = apps['res.company'].objects.filter(active=True).first()
     if company and company.image:
         return company.image.url
-    return '/static/admin/assets/img/katrid-logo.png'
+    return '/static/admin/assets/img/logo.svg'
 
 
 def company_logo(request: HttpRequest):
