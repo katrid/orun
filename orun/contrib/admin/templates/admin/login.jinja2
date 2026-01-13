@@ -115,7 +115,7 @@
       const logoImg = document.querySelector('#id-logo');
       logoImg.onerror = function() {
         console.debug('Logo image failed to load, reverting to default logo.');
-        //this.src = '/static/admin/assets/img/logo.svg';
+        this.src = '/static/admin/assets/img/logo.svg';
       };
     });
   </script>

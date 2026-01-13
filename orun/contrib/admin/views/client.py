@@ -44,6 +44,14 @@ def search_menu(request: HttpRequest):
     return JsonResponse({'items': items})
 
 
+def _company_logo(request: HttpRequest):
+    # first active company
+    company = apps['res.company'].objects.filter(active=True).first()
+    if company and company.image:
+        return company.image.url
+    return '/static/admin/assets/img/katrid-logo.png'
+
+
 def company_logo(request: HttpRequest):
     # first active company
     company = apps['res.company'].objects.filter(active=True).first()
@@ -98,7 +106,7 @@ def login(request: HttpRequest, template_name='/admin/login.jinja2', **kwargs):
     context = {
         'i18n_js_catalog': javascript_catalog(request, packages=apps.addons.keys()),
         'settings': settings,
-        'company_logo': company_logo(request),
+        'company_logo': _company_logo(request),
     }
     return render(request, template_name, context, using=request.COOKIES.get('db'))
 
