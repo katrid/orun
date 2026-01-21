@@ -698,7 +698,7 @@ class BaseDatabaseSchemaEditor:
         cols = ', '.join(self.column_sql(c) for c in table.columns.values())
         if table.constraints and self._create_table_with_constraints:
             cols += ', ' + ', '.join(self.constraint_sql(i) for i in table.constraints.values())
-        return f'CREATE TABLE {table_name} ({cols})'
+        return f'CREATE TABLE IF NOT EXISTS {table_name} ({cols})'
 
     def create_table(self, table: metadata.Table):
         self.execute(self.table_sql(table))
