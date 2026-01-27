@@ -4,11 +4,12 @@ from orun.contrib.contenttypes.models import Registrable, ref
 
 
 class MenuItem(Registrable):
+    groups: list[type] = None
     parent = None
 
     def __init__(self, cls: type):
         self._cls = cls
-        self.qualname = f'{cls.__module__}.{cls.__name__}'
+        self.qualname = cls.__qualname__
 
     def _register_menu_item(self, item: type, qualname: str, parent=None):
         from .models import Menu
@@ -54,10 +55,46 @@ class MenuItem(Registrable):
         # mount the menu structure
         return self._register_menu_item(self._cls, self.qualname)
 
+    @classmethod
+    def _update_info(cls):
+        return cls(cls).update_info()
+
 
 class Group(Registrable):
     name: str = None
     description: str = None
+
+
+class AuthGroupsType(type):
+    _groups = {}
+
+    def __new__(cls, name, bases, attrs):
+        new_class = super().__new__(cls, name, bases, attrs)
+        new_class._admin_registrable = True
+        # register groups
+        groups = {}
+        for k, v in attrs.items():
+            if k.startswith('_'):
+                continue
+            elif isinstance(v, type):
+                v._admin_registrable = True
+            groups[k] = v
+        if groups:
+            new_class._groups = groups
+        return new_class
+
+
+class AuthGroups(Registrable, metaclass=AuthGroupsType):
+    @classmethod
+    def update_info(cls):
+        import orun.contrib.auth.models
+        self = cls()
+        for name, group in cls._groups.items():
+            info = {
+                'name': name,
+                'description': inspect.getdoc(group),
+            }
+            self._register_object(orun.contrib.auth.models.Group, group.__qualname__, info)
 
 
 def register_groups(**groups):
@@ -70,4 +107,3 @@ def register_groups(**groups):
         elif isinstance(v, dict):
             values.update(v)
         Group.objects.create(**values)
-
