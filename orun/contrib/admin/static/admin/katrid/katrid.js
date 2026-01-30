@@ -13071,7 +13071,7 @@ var Katrid;
             }
             show() {
                 document.body.append(this.el);
-                this._popper = Popper.createPopper(this.target, this.el, { placement: 'bottom-start' });
+                this._popper = Popper.createPopper(this.target, this.el, { placement: 'auto' });
                 this.el.classList.add('show');
             }
             hide() {
