@@ -708,6 +708,7 @@ class ForeignKey(ForeignObject):
     many_to_one = True
     one_to_many = False
     one_to_one = False
+    filter_map: dict = None
 
     rel_class = ManyToOneRel
 
@@ -740,6 +741,7 @@ class ForeignKey(ForeignObject):
         self.limit_choices_to = limit_choices_to
         kwargs.setdefault('filter', limit_choices_to)
         filter = kwargs['filter']
+        self.filter_map = kwargs.pop('filter_map', None)
 
         kwargs['rel'] = self.rel_class(
             self, to, to_field,

@@ -62,8 +62,9 @@ class AdminModel(models.Model, helper=True):
         }
 
     @classmethod
-    def _api_search(cls, request: HttpRequest, where=None, fields=None, params=None, order=None, default=None,
-                    **kwargs):
+    def _api_search(
+        cls, request: HttpRequest, where=None, fields=None, params=None, order=None, default=None, **kwargs
+    ):
         # self.check_permission('read')
         qs = cls.objects.all()
         if order:
@@ -201,7 +202,7 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def api_search_by_name(
             cls, request: HttpRequest, name=None, count=None, page=None, label_from_instance=None, name_fields=None,
-            exact=False, *args, **kwargs
+            exact=False, filter_map=None, *args, **kwargs
     ):
         fmt = kwargs.get('format')
         where = kwargs.get('params')
@@ -217,6 +218,11 @@ class AdminModel(models.Model, helper=True):
                 else:
                     q = reduce(lambda f1, f2: f1 | f2, [Q(**{f: name}) for f in name_fields])
         if where:
+            # apply filter map
+            if filter_map and isinstance(where, dict):
+                for k, fn in filter_map.items():
+                    if k in where:
+                        fn(where)
             if q is None:
                 q = Q(**where)
             else:
@@ -262,6 +268,7 @@ class AdminModel(models.Model, helper=True):
             search_params['limit'] = limit
         if field.many_to_many:
             field = field.remote_field.through._meta.fields[field.m2m_reverse_field_name()]
+        where = None
         if field.many_to_one or field.one_to_one:
             if ids is None:
                 # search_params['name_fields'] = kwargs.get(
@@ -274,9 +281,9 @@ class AdminModel(models.Model, helper=True):
                 search_params['name'] = q
                 search_params['page'] = page
                 search_params['count'] = count
-                filter = kwargs.get('filter', field.filter)
-                if filter:
-                    search_params['params'] = filter
+                where = kwargs.get('filter', field.filter)
+                if where:
+                    search_params['params'] = where
             else:
                 if isinstance(ids, (list, tuple)):
                     search_params['params'] = {'pk__in': ids}
@@ -286,9 +293,11 @@ class AdminModel(models.Model, helper=True):
                 'label_from_instance',
                 field.label_from_instance or kwargs.get('name_fields')
             )
+
             return related_model.api_search_by_name(
                 request,
                 label_from_instance=label_from_instance, exact=exact, format=fmt,
+                filter_map=field.filter_map,
                 **search_params
             )
         elif field.one_to_many:
