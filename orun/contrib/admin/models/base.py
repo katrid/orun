@@ -257,7 +257,7 @@ class AdminModel(models.Model, helper=True):
 
     class Admin:
         @classmethod
-        def prepare_field_choices_params(cls, *, where: dict):
+        def prepare_field_choices_params(cls, *, field: Field, where: dict):
             pass
 
     @api.classmethod
@@ -287,7 +287,7 @@ class AdminModel(models.Model, helper=True):
                 search_params['page'] = page
                 search_params['count'] = count
                 where = kwargs.get('filter', field.filter) or {}
-                related_model.Admin.prepare_field_choices_params(where=where)
+                related_model.Admin.prepare_field_choices_params(field=field, where=where)
                 if where:
                     search_params['params'] = where
             else:
