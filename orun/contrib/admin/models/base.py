@@ -255,6 +255,11 @@ class AdminModel(models.Model, helper=True):
     def api_get_field_choice(cls, request: HttpRequest, field: str, q, **kwargs):
         return cls.api_get_field_choices(request, field, q, exact=True, limit=1)
 
+    class Admin:
+        @classmethod
+        def prepare_field_choices_params(cls, *, where: dict):
+            pass
+
     @api.classmethod
     def api_get_field_choices(
             cls, request: HttpRequest, field: str, q=None, count=False, ids=None, page=None, exact=False, limit=None,
@@ -281,7 +286,8 @@ class AdminModel(models.Model, helper=True):
                 search_params['name'] = q
                 search_params['page'] = page
                 search_params['count'] = count
-                where = kwargs.get('filter', field.filter)
+                where = kwargs.get('filter', field.filter) or {}
+                related_model.Admin.prepare_field_choices_params(where=where)
                 if where:
                     search_params['params'] = where
             else:
