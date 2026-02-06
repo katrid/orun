@@ -40,6 +40,7 @@ if getattr(settings, 'ADMIN_API_LOGGING', False):
                         f"""{{"timestamp": "{str(datetime.datetime.now())}","user":"{request.user_id}","request": {request.body.decode('utf-8')}}}\n"""
                     )
                     logger.flush()
+    admin_api_called.connect(log_api_call)
 
 
 @login_required
