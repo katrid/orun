@@ -202,7 +202,7 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def api_search_by_name(
             cls, request: HttpRequest, name=None, count=None, page=None, label_from_instance=None, name_fields=None,
-            exact=False, filter_map=None, *args, **kwargs
+            exact=False, filter_map=None, exclude=None, *args, **kwargs
     ):
         fmt = kwargs.get('format')
         where = kwargs.get('params')
@@ -227,6 +227,11 @@ class AdminModel(models.Model, helper=True):
                 q = Q(**where)
             else:
                 q &= Q(**where)
+        if exclude:
+            if q is None:
+                q = ~Q(**exclude)
+            else:
+                q &= ~Q(**exclude)
         if q is not None:
             kwargs = {'where': q}
         qs = cls._api_search(request, *args, **kwargs)
@@ -257,7 +262,7 @@ class AdminModel(models.Model, helper=True):
 
     class Admin:
         @classmethod
-        def prepare_field_choices_params(cls, *, field: Field, where: dict):
+        def prepare_field_choices_params(cls, *, field: Field, where: dict, exclude: dict):
             pass
 
     @api.classmethod
@@ -287,7 +292,8 @@ class AdminModel(models.Model, helper=True):
                 search_params['page'] = page
                 search_params['count'] = count
                 where = kwargs.get('filter', field.filter) or {}
-                related_model.Admin.prepare_field_choices_params(field=field, where=where)
+                exclude = kwargs.get('exclude', {})  # todo replace by field.exclude
+                related_model.Admin.prepare_field_choices_params(field=field, where=where, exclude=exclude)
                 if where:
                     search_params['params'] = where
             else:
@@ -304,7 +310,8 @@ class AdminModel(models.Model, helper=True):
                 request,
                 label_from_instance=label_from_instance, exact=exact, format=fmt,
                 filter_map=field.filter_map,
-                **search_params
+                **search_params,
+                exclude=exclude,
             )
         elif field.one_to_many:
             from orun.db.models.query import QuerySet
