@@ -48,7 +48,7 @@ def rpc(request, service, meth, params):
                 logger = None
                 if settings.LOG_DIR and method not in IGNORED_METHODS:
                     logger = _get_log_file(model_name)
-                    logger.write(f"""{{"timestamp": {str(datetime.datetime.now())},"request": {request.body.decode('utf-8')}}}\n""")
+                    logger.write(f"""{{"timestamp": "{str(datetime.datetime.now())}","user":"{request.user_id}","request": {request.body.decode('utf-8')}}}\n""")
 
                 # api logging
                 args = params.get('args') or []
