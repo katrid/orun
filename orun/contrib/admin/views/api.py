@@ -2,7 +2,7 @@ import os
 import datetime
 from functools import wraps
 
-from orun import api
+from orun.core.signals import Signal
 from orun.db.models import QuerySet
 from orun.conf import settings
 from orun.core.exceptions import MethodNotFound
@@ -12,22 +12,34 @@ from orun.apps import apps
 from orun.http import HttpResponse, JsonResponse, HttpResponseForbidden, HttpRequest, Http404
 from .rpc import jsonrpc
 
+admin_api_called = Signal(providing_args=['request', 'service', 'method', 'params'])
 
-def _get_log_filename(svc: str):
-    s = os.path.join(settings.LOG_DIR, 'orun', svc)
-    if not os.path.isdir(s):
-        os.makedirs(s)
-    return os.path.join(s, 'api.log.json')
-
-
-def _get_log_file(svc: str):
-    return open(_get_log_filename(svc), 'a')
+if getattr(settings, 'ADMIN_API_LOGGING', False):
+    def _get_log_filename(svc: str):
+        s = os.path.join(settings.LOG_DIR, 'orun', svc)
+        if not os.path.isdir(s):
+            os.makedirs(s)
+        return os.path.join(s, 'api.log.json')
 
 
-IGNORED_METHODS = [
-    'api_search', 'api_get', 'api_get_field_choices', 'api_group_by', 'api_copy', 'api_get_field_choice',
-    'api_on_field_change', 'admin_get_formview_action', 'load',
-]
+    def _get_log_file(svc: str):
+        return open(_get_log_filename(svc), 'a')
+
+
+    IGNORED_METHODS = [
+        'api_search', 'api_get', 'api_get_field_choices', 'api_group_by', 'api_copy', 'api_get_field_choice',
+        'api_on_field_change', 'admin_get_formview_action', 'load',
+    ]
+
+
+    def log_api_call(sender, request, service, method, params, **kwargs):
+        if method not in IGNORED_METHODS:
+            if settings.LOG_DIR and method not in IGNORED_METHODS:
+                with _get_log_file(sender) as logger:
+                    logger.write(
+                        f"""{{"timestamp": "{str(datetime.datetime.now())}","user":"{request.user_id}","request": {request.body.decode('utf-8')}}}\n"""
+                    )
+                    logger.flush()
 
 
 @login_required
@@ -44,37 +56,30 @@ def rpc(request, service, meth, params):
             raise MethodNotFound
         meth = getattr(service, method)
         if getattr(meth, 'exposed', None):
-            try:
-                logger = None
-                if settings.LOG_DIR and method not in IGNORED_METHODS:
-                    logger = _get_log_file(model_name)
-                    logger.write(f"""{{"timestamp": "{str(datetime.datetime.now())}","user":"{request.user_id}","request": {request.body.decode('utf-8')}}}\n""")
+            admin_api_called.send(model_name, request=request, service=service, method=method, params=params)
 
-                # api logging
-                args = params.get('args') or []
-                kwargs = params.get('kwargs') or {}
-                if getattr(meth, 'pass_request', False):
-                    # inspect if the method needs to receive de request arg
-                    r = meth(request, *args, **kwargs)
-                else:
-                    r = meth(*args, **kwargs)
+            # api logging
+            args = params.get('args') or []
+            kwargs = params.get('kwargs') or {}
+            if getattr(meth, 'pass_request', False):
+                # inspect if the method needs to receive de request arg
+                r = meth(request, *args, **kwargs)
+            else:
+                r = meth(*args, **kwargs)
 
-                if isinstance(r, list) and r and isinstance(r[0], HttpResponse):
-                    return r[0]
-                elif isinstance(r, HttpResponse):
-                    return r
-
-                if isinstance(r, QuerySet):
-                    r = {
-                        'data': r,
-                        'count': getattr(r, '_count__cache', None),
-                    }
-                elif isinstance(r, models.Model):
-                    r = {'data': [r]}
+            if isinstance(r, list) and r and isinstance(r[0], HttpResponse):
+                return r[0]
+            elif isinstance(r, HttpResponse):
                 return r
-            finally:
-                if logger:
-                    logger.close()
+
+            if isinstance(r, QuerySet):
+                r = {
+                    'data': r,
+                    'count': getattr(r, '_count__cache', None),
+                }
+            elif isinstance(r, models.Model):
+                r = {'data': [r]}
+            return r
     raise MethodNotFound
 
 
