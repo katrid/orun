@@ -262,7 +262,7 @@ class AdminModel(models.Model, helper=True):
 
     class Admin:
         @classmethod
-        def prepare_field_choices_params(cls, *, field: Field, where: dict, exclude: dict):
+        def prepare_field_choices_params(cls, request: HttpRequest, *, field: Field, where: dict, exclude: dict):
             pass
 
     @api.classmethod
@@ -293,7 +293,7 @@ class AdminModel(models.Model, helper=True):
                 search_params['count'] = count
                 where = kwargs.get('filter', field.filter) or {}
                 exclude = kwargs.get('exclude', {})  # todo replace by field.exclude
-                related_model.Admin.prepare_field_choices_params(field=field, where=where, exclude=exclude)
+                related_model.Admin.prepare_field_choices_params(request, field=field, where=where, exclude=exclude)
                 if where:
                     search_params['params'] = where
             else:
