@@ -268,6 +268,7 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def api_get_field_choices(
             cls, request: HttpRequest, field: str, q=None, count=False, ids=None, page=None, exact=False, limit=None,
+            exclude=None,
             **kwargs
     ):
         fmt = kwargs.get('format', 'str')
