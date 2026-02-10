@@ -1038,6 +1038,7 @@ declare namespace Katrid.Forms {
         doViewAction(action: string, target: any): Promise<any>;
         callSubAction(action: string, selection?: any[]): Promise<void>;
         protected _evalResponseAction(res: any): Promise<any>;
+        protected _evalResult(res: any): Promise<any>;
         protected getSelectedIds(): Promise<any[]>;
         protected createComponent(): any;
         getViewType(): any;
@@ -2867,6 +2868,21 @@ declare namespace katrid.ui {
         sendMessage(msg: string): Promise<void>;
         protected parentNotification(record: any): Promise<void>;
         protected _createComment(comment: any): HTMLElement;
+    }
+}
+declare namespace oui.services {
+    class ModelService {
+        name: string;
+        constructor(name: string);
+        protected _post(url: string, data: any, params?: any): Promise<Response>;
+        call(method: string, params: Record<any, any> | any[], context?: Record<any, any>): Promise<Response>;
+    }
+}
+declare namespace oui {
+    class UIError extends Error {
+        constructor(message: string);
+    }
+    class ValidationError extends UIError {
     }
 }
 declare namespace oui.design {

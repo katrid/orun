@@ -3825,6 +3825,9 @@ var Katrid;
                 }
                 return res;
             }
+            async _evalResult(res) {
+                return res;
+            }
             getSelectedIds() {
                 return;
             }
@@ -3842,6 +3845,12 @@ var Katrid;
                         if (Array.isArray(params))
                             return me.model.service.rpc(methodName, params);
                         return me.model.service.rpc(methodName, params.args, params.kwargs);
+                    },
+                    async call(method, params) {
+                        if (!Array.isArray(params) && !(typeof params === 'object'))
+                            throw new oui.UIError('Params must be an object or an array');
+                        const model = new oui.services.ModelService(me.model.name);
+                        await me._evalResult(await model.call(method, params));
                     },
                     actionClick(selection, methodName, event) {
                         me.action.formButtonClick(selection.map(obj => obj.id), methodName);
@@ -10638,7 +10647,6 @@ var Katrid;
             }
             static async createSearchDialog(config) {
                 let model = config.model;
-                console.debug(model);
                 if (typeof model === 'string')
                     model = new Katrid.Data.Model({ name: model });
                 let viewsInfo = await model.service.loadViews({
@@ -13596,7 +13604,10 @@ var Katrid;
                                             event.stopPropagation();
                                             this.hideMenu();
                                             let fkModel = new Katrid.Data.Model({ name: field.model });
-                                            let view = await Katrid.Forms.TableView.createSearchDialog({ model: fkModel, caption: field.caption });
+                                            let view = await Katrid.Forms.TableView.createSearchDialog({
+                                                model: fkModel, caption: field.caption,
+                                                where: domain,
+                                            });
                                             let res = view.showDialog();
                                             view.ready();
                                             res = await res;
@@ -14646,6 +14657,46 @@ var katrid;
         });
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
+var oui;
+(function (oui) {
+    var services;
+    (function (services) {
+        class ModelService {
+            constructor(name) {
+                this.name = name;
+            }
+            _post(url, data, params) {
+                if (params)
+                    url += '?' + new URLSearchParams(params).toString();
+                return fetch(url, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+            }
+            call(method, params, context) {
+                return this._post(`/admin/api/${this.name}/${method}`, { params, context });
+            }
+        }
+        services.ModelService = ModelService;
+    })(services = oui.services || (oui.services = {}));
+})(oui || (oui = {}));
+var oui;
+(function (oui) {
+    class UIError extends Error {
+        constructor(message) {
+            super(message);
+            this.name = 'UIError';
+            alert(`UI Error: ${message}`);
+        }
+    }
+    oui.UIError = UIError;
+    class ValidationError extends UIError {
+    }
+    oui.ValidationError = ValidationError;
+})(oui || (oui = {}));
 var oui;
 (function (oui) {
     var design;
