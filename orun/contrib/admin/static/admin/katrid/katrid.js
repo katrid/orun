@@ -14685,6 +14685,47 @@ var oui;
 })(oui || (oui = {}));
 var oui;
 (function (oui) {
+    var bi;
+    (function (bi) {
+        function chart(config) {
+            if (config.query)
+                this.query = config.query;
+            return {
+                config: config,
+                render: (el, data, cols) => {
+                    if (data?.length)
+                        if (data[0] instanceof Array) {
+                            data = data.map(row => {
+                                let obj = {};
+                                for (let i = 0; i < row.length; i++) {
+                                    obj[cols[i]] = row[i];
+                                }
+                                return obj;
+                            });
+                        }
+                    console.debug('dasta', data);
+                    let series = [];
+                    if (config.type) {
+                        series.push({
+                            name: config.name,
+                            type: config.type,
+                            data,
+                        });
+                    }
+                    let rchart = echarts.init(el);
+                    console.debug(rchart);
+                    rchart.setOption({
+                        title: { text: config.title || 'Chart Preview', },
+                        series,
+                    });
+                }
+            };
+        }
+        bi.chart = chart;
+    })(bi = oui.bi || (oui.bi = {}));
+})(oui || (oui = {}));
+var oui;
+(function (oui) {
     class UIError extends Error {
         constructor(message) {
             super(message);

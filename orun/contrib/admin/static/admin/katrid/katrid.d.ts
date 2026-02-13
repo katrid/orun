@@ -2878,6 +2878,13 @@ declare namespace oui.services {
         call(method: string, params: Record<any, any> | any[], context?: Record<any, any>): Promise<Response>;
     }
 }
+declare var echarts: any;
+declare namespace oui.bi {
+    function chart(config: any): {
+        config: any;
+        render: (el: HTMLElement, data: any[], cols?: any[]) => void;
+    };
+}
 declare namespace oui {
     class UIError extends Error {
         constructor(message: string);
