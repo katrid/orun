@@ -44,6 +44,7 @@ class ProxyField(Field):
         kwargs.setdefault('concrete', False)
         super().__init__(**kwargs, descriptor=ProxyDescriptor(self))
         self._field_path = remote_field.split('.')
+        self.path = remote_field
 
     @cached_property
     def field_path(self):
