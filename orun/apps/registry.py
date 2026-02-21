@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 class Registry:
     loop = None
+    _namespaces: dict[str, type[AppConfig]]
 
     def __init__(self, installed_apps=()):
         # installed_apps is set to None when creating the master registry
@@ -30,6 +31,7 @@ class Registry:
         self.models: Dict[str, Type[Model]] = {}
         self.services = {}
         self.app_configs: Dict[str, AppConfig] = {}
+        self._namespaces = {}
         self.addons = self.app_configs
         self._lock = RLock()
         self._pending_operations = defaultdict(list)
@@ -51,6 +53,9 @@ class Registry:
         env.filters['defaultformat'] = default_filter
         return env
 
+    def register_app(self, app_config: type[AppConfig]):
+        self._namespaces[app_config.name] = app_config
+
     def populate(self, installed_apps=None):
         """
         Load application configurations and models.
@@ -59,9 +64,6 @@ class Registry:
 
         It is thread-safe and idempotent, but not reentrant.
         """
-        if self.ready:
-            return
-
         # populate() might be called by two threads in parallel on servers
         # that create threads before initializing the WSGI callable.
         with self._lock:
@@ -330,6 +332,12 @@ class Registry:
     def add_app(self, app_config: AppConfig):
         if self.ready:
             pass
+
+    def setup(self):
+        self.populate([ns(ns.name) for ns in self._namespaces.values()])
+
+    def get_app_config(self, app_config: type[AppConfig]):
+        return self.app_configs[app_config.name]
 
 
 from .context import Environment, LazyEnvironment

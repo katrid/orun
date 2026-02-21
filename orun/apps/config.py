@@ -31,8 +31,10 @@ class AppConfig:
     urls_module: str = None
     managed = True
 
-    def __init__(self, app_name: str, app_module):
+    def __init__(self, app_name: str, app_module: str = None):
         self.name = app_name
+        if app_module is None:
+            app_module = import_module(self.__module__)
         self.module = app_module
         self.models = []
         self.models_module = None

@@ -36,7 +36,6 @@ class Fixtures(models.Model):
             obj.update(hashbytes=hashbytes)
         except cls.DoesNotExist:
             obj = cls.objects.create(schema=sender.schema, name=filename, hashbytes=hashbytes)
-        print(sender, filename, hashbytes)
         return obj
 
 

@@ -80,6 +80,9 @@ class ModelBase(type):
     def __new__(cls, name, bases, attrs, helper=False, **kwargs):
         super_new = super().__new__
 
+        # new declaration method
+        registry = apps
+
         # Create the class.
         attr_meta = attrs.pop('Meta', None)
 
@@ -120,8 +123,15 @@ class ModelBase(type):
         meta = attr_meta or getattr(new_class, 'Meta', None)
         base_meta = getattr(new_class, '_meta', None)
 
+        if hasattr(meta, 'registry'):
+            registry = meta.registry
+
         # Look for an application configuration to attach the model to.
-        app_config = apps.get_containing_app_config(module)
+        app_config = getattr(meta, 'app_config', None)
+        if app_config is None:
+            app_config = registry.get_containing_app_config(module)
+        else:
+            app_config = registry.get_app_config(app_config)
 
         if app_config:
             schema = app_config.schema
@@ -330,7 +340,7 @@ class ModelBase(type):
             return new_class
 
         app_config.models.append(new_class)
-        apps.register_model(new_class)
+        registry.register_model(new_class)
         new_class._prepare()
         return new_class
 
