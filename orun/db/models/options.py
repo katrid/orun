@@ -130,7 +130,7 @@ class Options:
     REVERSE_PROPERTIES = {'related_objects', 'fields_map', '_relation_tree'}
 
     def __init__(self):
-        self.apps = apps
+        self.apps = getattr(self, 'registry', apps)
         self.parents = {}
         self._get_fields_cache = {}
         self.field_change_event = defaultdict(list)
