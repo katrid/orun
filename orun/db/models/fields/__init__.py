@@ -1043,7 +1043,7 @@ class Field[T](BaseField[T]):
             'readonly': self.readonly,
             'editable': self.editable,
             'type': self.get_type(),
-            'caption': capfirst(self.label),
+            'caption': self.label,
             'choices': choices,
             'onchange': self.name in self.model._meta.field_change_event if self.model else None,
             'attrs': self.widget_attrs,
