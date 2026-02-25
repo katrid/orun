@@ -17331,6 +17331,11 @@ var Katrid;
                     else if (res.messages)
                         for (let msg of res.messages)
                             Katrid.Forms.Dialogs.Alerts.success(msg);
+                    else if (res.message)
+                        Katrid.Forms.Dialogs.Alerts.success(res.message);
+                    if (res.tag === 'refresh')
+                        dataSource?.refresh();
+                    file.value = '';
                 });
             }
             static uploadTo(url, file) {
