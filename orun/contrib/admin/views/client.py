@@ -163,6 +163,12 @@ def upload_file(request, model, meth):
                 'error': True,
                 'messages': e.messages,
             })
+        except ValueError as e:
+            traceback.print_exc()
+            return JsonResponse({
+                'error': True,
+                'messages': [str(e)],
+            })
         except Exception as e:
             # print traceback.format_exc()
             traceback.print_exc()
