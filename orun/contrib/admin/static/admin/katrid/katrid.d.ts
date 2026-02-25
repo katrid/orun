@@ -3413,7 +3413,7 @@ declare namespace Katrid.Services {
     }
     class Upload {
         static callWithFiles(config: any): any;
-        static sendFile(config: any): void;
+        static sendFile(config: any): any;
         static uploadTo(url: any, file: any): JQuery.jqXHR<any>;
     }
     let data: Data;

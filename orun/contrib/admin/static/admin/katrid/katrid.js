@@ -17316,17 +17316,21 @@ var Katrid;
                 if (vm?.record?.id)
                     form.append('id', vm.record.id);
                 let dataSource = vm?.dataSource;
-                $.ajax({
+                return Service.$fetch(url, {
                     url: url,
-                    data: form,
-                    processData: false,
-                    contentType: false,
-                    type: 'POST',
-                    success: (data) => {
-                        if (dataSource)
-                            dataSource.refresh();
-                        Katrid.Forms.Dialogs.Alerts.success('Operação realizada com sucesso.');
+                    body: form,
+                    method: 'POST',
+                }).then(res => res.json()).then(res => {
+                    if (res.error) {
+                        if (res.messages)
+                            for (let msg of res.messages)
+                                Katrid.Forms.Dialogs.Alerts.error(msg);
+                        else if (res.message)
+                            Katrid.Forms.Dialogs.Alerts.error(res.message);
                     }
+                    else if (res.messages)
+                        for (let msg of res.messages)
+                            Katrid.Forms.Dialogs.Alerts.success(msg);
                 });
             }
             static uploadTo(url, file) {
