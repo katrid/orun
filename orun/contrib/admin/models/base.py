@@ -69,8 +69,11 @@ class AdminModel(models.Model, helper=True):
         qs = cls.objects.all()
         if order:
             # TODO order by custom expr
-            order_by = ['-' + field.name if '-' + field.name in order else field.name for field in
-                        [cls._meta.fields[f[1:] if f.startswith('-') else f] for f in order] if field.concrete]
+            order_by = [
+                '-' + field.name if '-' + field.name in order else field.name
+                for field in
+                [cls._meta.fields[f[1:] if f.startswith('-') else f] for f in order] if field.concrete
+            ]
             if order_by:
                 qs = qs.order_by(*order)
         domain = kwargs.get('domain')
@@ -146,10 +149,14 @@ class AdminModel(models.Model, helper=True):
                                 if not isinstance(f, ReverseManyToOneDescriptor):
                                     # resolve related field
                                     raise
+                        elif (_f := cls._meta.fields.get(k)) and isinstance(_f, models.ProxyField):
+                            f = _f
                         if k == 'OR':
                             _args.append(
                                 reduce(lambda a, b: a | b, ([Q(**{k2: v2 for k2, v2 in f.items()}) for f in v]))
                             )
+                        elif isinstance(f, models.ProxyField):
+                            _args.append(Q(**{f.path.replace('.', '__'): v}))
                         elif isinstance(f, models.ForeignKey):
                             name_fields = list(
                                 chain(*(_resolve_fk_search(fk) for fk in f.related_model._meta.get_name_fields())))
