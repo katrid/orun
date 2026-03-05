@@ -6,6 +6,8 @@ from orun.db.models.query_utils import FieldCacheMixin
 
 
 class ProxyDescriptor(FieldCacheMixin):
+    is_relation = True
+
     def __init__(self, field):
         self.field = field
 

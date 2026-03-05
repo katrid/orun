@@ -80,8 +80,8 @@ class DatabaseErrorWrapper:
                 InterfaceError,
                 Error,
         ):
-            db_exc_type = getattr(self.wrapper.Database, dj_exc_type.__name__)
-            if issubclass(exc_type, db_exc_type):
+            db_exc_type = getattr(self.wrapper.Database, dj_exc_type.__name__, None)
+            if db_exc_type and issubclass(exc_type, db_exc_type):
                 dj_exc_value = dj_exc_type(*exc_value.args)
                 # Only set the 'errors_occurred' flag for errors that may make
                 # the connection unusable.
@@ -189,6 +189,9 @@ class ConnectionHandler:
             test_settings.setdefault(key, None)
 
     def __getitem__(self, alias):
+        from orun.db.backends.base.base import BaseDatabaseWrapper
+        if isinstance(alias, BaseDatabaseWrapper):
+            return alias
         if hasattr(self._connections, alias):
             return getattr(self._connections, alias)
 
@@ -219,6 +222,17 @@ class ConnectionHandler:
             except AttributeError:
                 continue
             connection.close()
+
+    def new_connection(self, alias: str):
+        """
+        Return a new connection for the given alias. This is used by the
+        test runner to create a separate connection for testing.
+        """
+        self.ensure_defaults(alias)
+        self.prepare_test_settings(alias)
+        db = self.databases[alias]
+        backend = load_backend(db['ENGINE'])
+        return backend.DatabaseWrapper(db, alias)
 
 
 class ConnectionRouter:
@@ -262,6 +276,7 @@ class ConnectionRouter:
 
     db_for_read = _router_func('db_for_read')
     db_for_write = _router_func('db_for_write')
+    db_for_readonly = _router_func('db_for_readonly')
 
     def allow_relation(self, obj1, obj2, **hints):
         for router in self.routers:

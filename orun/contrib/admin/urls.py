@@ -34,6 +34,7 @@ urlpatterns = [
     # admin api
     path('admin/api/report/<str:qualname>/', views.api.admin_report_api),
     path('admin/api/heartbeat/', views.client.heartbeat),
+    path('admin/api/call/<service>/<meth>', views.api.call),
 
     # help center
     path('admin/help-center/', views.help.help_center),

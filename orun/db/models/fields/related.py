@@ -751,7 +751,7 @@ class ForeignKey(ForeignObject):
             parent_link=parent_link,
             on_delete=on_delete,
         )
-        kwargs.setdefault('db_index', False)
+        kwargs.setdefault('db_index', True)
 
         super().__init__(
             to, on_delete, from_fields=[RECURSIVE_RELATIONSHIP_CONSTANT], to_fields=[to_field], **kwargs

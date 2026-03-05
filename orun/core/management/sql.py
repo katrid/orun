@@ -1,4 +1,5 @@
 import sys
+from itertools import groupby
 
 from orun.apps import apps
 from orun.db import models
@@ -37,7 +38,9 @@ def emit_pre_migrate_signal(verbosity, interactive, db, **kwargs):
 
 def emit_post_migrate_signal(verbosity, interactive, db, created_models, **kwargs):
     # Emit the post_migrate signal for every application.
-    for app_config in apps.app_configs.values():
+    # group models by app
+    for app_config, app_models in groupby(created_models, lambda m: m._meta.addon):
+        app_models = list(app_models)
         if app_config.models_module is None:
             continue
         if verbosity >= 2:
@@ -49,7 +52,7 @@ def emit_post_migrate_signal(verbosity, interactive, db, created_models, **kwarg
             verbosity=verbosity,
             interactive=interactive,
             using=db,
-            app_models=created_models,
+            app_models=app_models,
             **kwargs
         )
 

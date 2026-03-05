@@ -111,6 +111,9 @@ class Index:
     auto_created: bool = False
     # model: Type['Model'] = None
 
+    def __str__(self):
+        return ', '.join(self.expressions)
+
     def dump(self):
         return {
             'name': self.name,

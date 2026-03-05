@@ -1,6 +1,6 @@
 import os
 import datetime
-from functools import wraps
+import json
 
 from orun.core.signals import Signal
 from orun.db.models import QuerySet
@@ -81,6 +81,23 @@ def rpc(request, service, meth, params):
             elif isinstance(r, models.Model):
                 r = {'data': [r]}
             return r
+    raise MethodNotFound
+
+
+@login_required
+@transaction.atomic
+def call(request: HttpRequest, service: str, meth: str):
+    cls = apps.services[service]
+    api_cls = getattr(cls, 'Admin', None)
+    meth = getattr(api_cls, meth)
+    if getattr(meth, 'exposed', True):
+        if request.content_type == 'application/json':
+            data = request.json
+        else:
+            data = request.POST.dict()
+            if 'data' in request.POST:
+                data = {'files': list(request.FILES.values()), **json.loads(request.POST['data'])}
+        return meth(request, **data)
     raise MethodNotFound
 
 

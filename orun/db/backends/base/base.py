@@ -19,11 +19,20 @@ from orun.db.transaction import TransactionManagementError
 from orun.db.utils import DatabaseError, DatabaseErrorWrapper
 from orun.utils import timezone
 from orun.utils.functional import cached_property
+
 if TYPE_CHECKING:
     from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
 
 NO_DB_ALIAS = '__no_db__'
 logger = logging.getLogger('orun.db.backends')
+
+DEFAULT_SETTINGS = {
+    'ATOMIC_REQUESTS': False,
+    'AUTOCOMMIT': True,
+    'CONN_MAX_AGE': 0,
+    'OPTIONS': {},
+    'TIME_ZONE': None,
+}
 
 
 class BaseDatabaseWrapper:
@@ -55,6 +64,8 @@ class BaseDatabaseWrapper:
         # `settings_dict` should be a dictionary containing keys such as
         # NAME, USER, etc. It's called `settings_dict` instead of `settings`
         # to disambiguate it from Orun settings modules.
+        for k, v in DEFAULT_SETTINGS.items():
+            settings_dict.setdefault(k, v)
         self.settings_dict = settings_dict
         self.alias = alias
         # Query logging in debug mode or when explicitly enabled.
@@ -690,3 +701,10 @@ class BaseDatabaseWrapper:
 
     def get_notices(self):
         return None
+
+    def __enter__(self):
+        self.ensure_connection()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()

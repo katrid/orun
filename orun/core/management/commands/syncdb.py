@@ -1,5 +1,3 @@
-import os
-import time
 from collections import OrderedDict
 from importlib import import_module
 import logging
@@ -15,6 +13,7 @@ from orun.core.management.sql import (
 from orun.db import DEFAULT_DB_ALIAS, connections, router
 from orun.utils.module_loading import module_has_submodule
 from orun.db.backends.base.base import BaseDatabaseWrapper
+from orun.db.migrations.operations.base import Operation
 
 logger = logging.getLogger('orun.db.backends')
 
@@ -214,14 +213,26 @@ class Command(BaseCommand):
             # create all tables before additional objects
             created_models = []
             self.stdout.write("Collecting changes...\n")
-            change_count = 0
-            for meth, args in editor.collect_changes():
-                change_count += 1
-                if meth == editor.create_table:
-                    created_models.append(apps.models[args[0].model])
-                meth(*args)
-            if change_count > 0:
+            changes = list(editor.collect_changes())
+            for change in changes:
+                if isinstance(change, Operation):
+                    if not change.postpone:
+                        change.apply(editor)
+                elif isinstance(change, tuple):
+                    meth, args = change
+                    if meth == editor.create_table:
+                        created_models.append(apps.models[args[0].model])
+                    meth(*args)
+            if changes:
                 editor.save_metadata()
                 # emit post migrate signal
                 emit_post_migrate_signal(self.verbosity, self.interactive, connection.alias, created_models=created_models)
-            return change_count
+
+        postponed_changes = [c for c in changes if isinstance(c, Operation) and c.postpone]
+        if postponed_changes:
+            self.stdout.write("Running deferred operations...\n")
+            with connection.schema_editor() as editor:
+                for change in postponed_changes:
+                    self.stdout.write(change.describe() + "...\n")
+                    change.apply(editor)
+        return len(changes)

@@ -2,15 +2,13 @@ import logging
 import json
 from datetime import datetime
 from collections import defaultdict
-import decimal
-from multiprocessing.spawn import old_main_modules
 
 from orun.db.backends.ddl_references import (
     Columns, Expressions, ForeignKeyName, IndexName, Statement, Table,
 )
 from orun.db.backends.utils import names_digest, split_identifier
 from orun.db.models.fields import Field, DecimalField, NOT_PROVIDED, CharField, IntegerField, FloatField, DateField
-from orun.db.backends.base.introspection import FieldInfo
+from orun.db.migrations.operations.indexes import CreateIndex, DropIndex
 from orun.db.models import Model
 from orun.db.models.sql import Query
 from orun.db.transaction import TransactionManagementError, atomic
@@ -553,8 +551,8 @@ class BaseDatabaseSchemaEditor:
         with self.connection.cursor() as cursor:
             cursor.execute('''UPDATE orun_metadata SET content = %s''', [s])
 
-    def drop_index(self, ix: metadata.Index):
-        self.execute(f'''DROP INDEX IF EXISTS {ix.name}''')
+    def drop_index(self, table: metadata.Table, ix: metadata.Index):
+        self.execute(f'''DROP INDEX IF EXISTS {ix.name} ON {table.name}''')
 
     def index_sql(self, table: metadata.Table, ix: metadata.Index):
         table_name = table.tablename
@@ -702,9 +700,6 @@ class BaseDatabaseSchemaEditor:
 
     def create_table(self, table: metadata.Table):
         self.execute(self.table_sql(table))
-        # create indexes
-        for ix in table.indexes.values():
-            self.create_index(table, ix)
 
     def sync_table(self, old_table: metadata.Table, new_table: metadata.Table):
         changes = self.compare_tables(old_table, new_table)
@@ -730,6 +725,7 @@ class BaseDatabaseSchemaEditor:
         for k, col in old_table.columns.items():
             if k not in new_table.columns:
                 # instead of remove column, let's drop not null
+                # drop a column may represent a critical data loss!!
                 if not col.null:
                     # drop not null
                     yield self.alter_column_null, (new_table, col,)
@@ -748,17 +744,22 @@ class BaseDatabaseSchemaEditor:
         for k, ix in new_table.indexes.items():
             if k not in old_table.indexes:
                 # create new index
-                yield self.create_index, (new_table, ix)
+                yield CreateIndex(new_table, ix)
+                # yield self.create_index, (new_table, ix)
         for k, ix in old_table.indexes.items():
             if k not in new_table.indexes:
                 # drop removed index
-                yield self.drop_index, (ix,)
+                yield DropIndex(new_table, ix)
+                # yield self.drop_index, (ix,)
 
     def collect_changes(self):
         for k, table in self.new_metadata.tables.items():
             if table.model not in self.old_metadata.tables:
                 # new table
                 yield self.create_table, (table,)
+                # create indexes
+                for ix in table.indexes.values():
+                    yield CreateIndex(table, ix)
             else:
                 old_table = self.old_metadata.tables[k]
                 yield from self.compare_tables(old_table, table)
