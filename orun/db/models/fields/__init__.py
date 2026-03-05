@@ -892,7 +892,7 @@ class Field[T](BaseField[T]):
         else:
             self.attname = self.column = None
         if self.label is None and self.name:
-            self.label = self.name.replace('_', ' ')
+            self.label = capfirst(self.name.replace('_', ' '))
 
     def contribute_to_class(self, cls, name):
         """
