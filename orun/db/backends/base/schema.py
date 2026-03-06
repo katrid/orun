@@ -552,12 +552,12 @@ class BaseDatabaseSchemaEditor:
             cursor.execute('''UPDATE orun_metadata SET content = %s''', [s])
 
     def drop_index(self, table: metadata.Table, ix: metadata.Index):
-        self.execute(f'''DROP INDEX IF EXISTS {ix.name} ON {table.name}''')
+        self.execute(f'''DROP INDEX IF EXISTS {self.quote_name(ix.name)} ON {table.name}''')
 
     def index_sql(self, table: metadata.Table, ix: metadata.Index):
         table_name = table.tablename
         t = ix.type + ' ' if ix.type else ''
-        return f'CREATE {t}INDEX IF NOT EXISTS {ix.name} ON {table_name} ({', '.join(ix.expressions)})'
+        return f'CREATE {t}INDEX IF NOT EXISTS {self.quote_name(ix.name)} ON {table_name} ({', '.join(ix.expressions)})'
 
     def create_index(self, table: metadata.Table, ix: metadata.Index):
         self.execute(self.index_sql(table, ix))
