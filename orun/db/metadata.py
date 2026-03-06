@@ -107,7 +107,7 @@ class Index:
     name: str
     type: str = None
     tablespace: str = None
-    expressions: List[str] = None
+    expressions: Sequence[str] = None
     auto_created: bool = False
     # model: Type['Model'] = None
 
