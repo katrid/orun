@@ -13,7 +13,10 @@ class Index:
         self.expressions = expressions
 
     def get_metadata(self):
-        return metadata.Constraint(self.name, type=self.type, expressions=self.expressions)
+        return metadata.Index(name=self.name, type=self.type, expressions=self.expressions)
+
+    def clone(self):
+        return self.__class__(self.expressions, name=self.name)
 
 
 class UniqueIndex(Index):
