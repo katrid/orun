@@ -199,6 +199,8 @@ class Options:
         table = metadata.Table(
             name=self.db_table, schema=self.db_schema, model=self.name, tablename=self.db_table,
         )
+        # collect indexes
+        table.indexes = {ix.name: ix.get_metadata() for ix in self.indexes}
         # collect fields
         for f in self.local_concrete_fields:
             if f.column:
@@ -1070,11 +1072,10 @@ class Options:
         new_objs = []
         for obj in objs:
             obj = obj.clone()
-            obj.name = obj.name % {
-                'app_label': self.schema,
-                'class': self.model_name,
-                'model_name': self.name,
-            }
+            obj.name = obj.name.format_map({
+                'schema': self.schema,
+                'model': self.name.replace('.', '_'),
+            })
             new_objs.append(obj)
         return new_objs
 
