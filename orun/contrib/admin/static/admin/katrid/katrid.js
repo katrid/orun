@@ -5809,6 +5809,7 @@ var Katrid;
                 this.children = [];
             }
             childrenNotification(record) {
+                console.debug('count', this.children.length);
                 for (let child of this.children)
                     child.parentNotification(record);
                 for (let cb of this._callbacks)
@@ -14612,7 +14613,7 @@ var katrid;
                     let res = await svc.rpc('get_messages', null, {
                         model_name: this.datasource.model.name, id
                     });
-                    if (res.comments) {
+                    if (res.comments?.length) {
                         for (let comment of res.comments)
                             this._panel.appendChild(this._createComment(comment));
                         await svc.rpc('clear_notifications', null, { model: this.datasource.model.name, id });
@@ -17477,6 +17478,23 @@ var Katrid;
             callSubAction(action, data) {
                 return this.post('admin_call_sub_action', { params: { ids: data.ids } });
             }
+            callWithFiles(meth, files, data) {
+                const formData = new FormData();
+                formData.append('data', JSON.stringify(data || {}));
+                if (files instanceof FileList)
+                    for (let i = 0; i < files.length; i++)
+                        formData.append('files', files[i]);
+                if (Array.isArray(files))
+                    for (let file of files)
+                        formData.append('files', file);
+                else if (files instanceof File)
+                    formData.append('files', files);
+                console.debug('send as form data', files);
+                return Katrid.Services.Service.$fetch(`/admin/api/call/${this.name}/${meth}`, {
+                    method: 'POST',
+                    body: formData,
+                }).then(res => res.json());
+            }
             write(data, params) {
                 return new Promise((resolve, reject) => {
                     this.post('api_write', { kwargs: { data } }, params)
@@ -18439,6 +18457,25 @@ var katrid;
         ui.openFileDialog = openFileDialog;
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
+var oui;
+(function (oui) {
+    var dialogs;
+    (function (dialogs) {
+        async function openFileDialog(accept, multiple = false) {
+            let input = document.createElement('input');
+            input.type = 'file';
+            input.style.display = 'none';
+            input.accept = accept;
+            input.multiple = multiple;
+            return new Promise((resolve, reject) => {
+                input.addEventListener('change', () => resolve(input), { once: true });
+                input.addEventListener('cancel', () => resolve(null));
+                input.click();
+            });
+        }
+        dialogs.openFileDialog = openFileDialog;
+    })(dialogs = oui.dialogs || (oui.dialogs = {}));
+})(oui || (oui = {}));
 var katrid;
 (function (katrid) {
     var filters;

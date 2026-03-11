@@ -3454,6 +3454,7 @@ declare namespace Katrid.Services {
         doViewAction(data: any): Promise<unknown>;
         callAdminViewAction(data: any): Promise<unknown>;
         callSubAction(action: string, data: any): Promise<unknown>;
+        callWithFiles(meth: string, files: File | File[] | FileList, data?: Record<string, any>): any;
         write(data: any, params?: any): Promise<unknown>;
         groupBy(grouping: any, params: any): any;
         autoReport(): Promise<unknown>;
@@ -3621,6 +3622,9 @@ declare namespace Katrid.ui {
     export {};
 }
 declare namespace katrid.ui {
+    function openFileDialog(accept: string, multiple?: boolean): Promise<HTMLInputElement>;
+}
+declare namespace oui.dialogs {
     function openFileDialog(accept: string, multiple?: boolean): Promise<HTMLInputElement>;
 }
 declare namespace katrid.filters {
