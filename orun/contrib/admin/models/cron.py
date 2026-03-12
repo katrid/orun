@@ -1,9 +1,12 @@
 import datetime
 from dateutil.relativedelta import relativedelta
 import traceback
+import asyncio
+import json
 
 from orun.db import models
 from orun.contrib import auth
+from orun.contrib.admin.jobs import JobManager, JobItem
 from orun.utils.translation import gettext_lazy as _
 
 
@@ -24,9 +27,18 @@ class Cron(models.Model):
         'months': _('Months'),
         'minutes': _('Minutes'),
     }
+    job_type = models.ChoiceField(
+        {
+            'report': _('Send Report'),
+            'action': _('Action'),
+        },
+        default='report',
+    )
     action = models.ForeignKey('ui.action.server')
+    report = models.ForeignKey('ui.action.report')
+    default_report_format = models.ChoiceField({'pdf': 'PDF', 'md': 'Markdown', 'html': 'HTML'}, default='pdf')
     name = models.CharField(256, null=False)
-    user = models.ForeignKey('auth.user', default=auth.current_user, null=False)
+    user = models.ForeignKey('auth.user')
     active = models.BooleanField(default=True)
     interval_type = models.SelectionField(INTERVAL_TYPE, default='month', label=_('Interval Type'),)
     interval = models.PositiveIntegerField(help_text='Repeat every x.', default=1, label=_('Interval'))
@@ -35,6 +47,10 @@ class Cron(models.Model):
     next_call = models.DateTimeField(label='Next Execution', required=True, default=datetime.datetime.now, help_text='Next planned execution datetime for this job.')
     last_call = models.DateTimeField(label='Last Execution', required=False, null=True, help_text='Last execution datetime for this job.')
     priority = models.IntegerField(default=5, help_text='Job priority: 0 higher priority; 10 lower priority.')
+    # report destination
+    groups = models.ManyToManyField('auth.group', help_text='Groups to receive the report')
+    users = models.ManyToManyField('auth.user', help_text='Users to receive the report')
+    params = models.TextField()  # TODO implement channels
 
     class Meta:
         name = 'admin.cron'
@@ -44,7 +60,14 @@ class Cron(models.Model):
         return INTERVAL_TYPES[self.interval_type](self.interval)
 
     def _callback(self):
-        self.action.execute()
+        if self.job_type == 'report':
+            params = self.params and self.params.strip()
+            if params.startswith('{'):
+                params = json.loads(params)
+            if 'telegram_ids' in params:
+                self.report.send_to(params['telegram_ids'])
+        else:
+            self.action.execute()
 
     def process(self):
         if not self.active:
@@ -82,3 +105,9 @@ class Cron(models.Model):
                 # Log the error or handle it as needed
                 print(f"Error processing cron job {cron.id}: {e}")
                 traceback.format_exc()
+
+    @staticmethod
+    async def setup_loop():
+        while True:
+            Cron.process_all()
+            await asyncio.sleep(3600)
