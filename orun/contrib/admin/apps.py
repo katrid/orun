@@ -24,9 +24,12 @@ class AdminConfig(AppConfig):
             raise
 
     def init_app(self, registry):
-        from .jobs import JobManager
+        from .jobs import JobManager, JobItem
+        from orun.contrib.admin.models import Cron
+
         if getattr(settings, 'ADMIN_AUTOMATION', None):
             self._app_started(registry)
+        registry.loop.create_task(Cron.setup_loop())
         registry.loop.create_task(JobManager.jobs_loop())
 
     def register_object(self, name: str, obj):
