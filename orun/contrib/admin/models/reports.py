@@ -6,7 +6,6 @@ import json
 import os
 import uuid
 from collections import defaultdict
-import mimetypes
 
 from jinja2 import Template, Environment, pass_context
 
@@ -407,6 +406,27 @@ class ReportAction(Action):
             return inst.execute(**kwparams)
         elif report.report_type == 'query':
             return report._read(True)
+
+    def _execute(self, params=None):
+        if self.qualname:
+            klass = import_string(self.qualname)
+            inst = klass(None, params)
+            kwparams = {}
+            if isinstance(params, list):
+                for p in params:
+                    if 'value1' in p:
+                        val = p['value1']
+                        if p['type'] == 'DateField':
+                            val = datetime.datetime.strptime(val, '%Y-%m-%d')
+                        kwparams[p['name']] = val
+            elif isinstance(params, dict):
+                kwparams = params
+            return inst.execute(**kwparams)
+        elif self.report_type == 'query':
+            return self._read(True)
+
+    def send_to(self, recipients: Iterable[str]):
+        pass
 
     def __call__(self, request: HttpRequest, params: dict = None):
         if self.qualname:
