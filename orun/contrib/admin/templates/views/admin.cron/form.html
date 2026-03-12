@@ -1,0 +1,23 @@
+<form>
+  <field name="name"/>
+  <field name="active"/>
+  <field name="job_type"/>
+  <field name="action" v-show="record.job_type === 'action'"/>
+  <field name="report"/>
+  <field name="default_report_format"/>
+  <field name="interval_type"/>
+  <field name="interval"/>
+  <field name="limit"/>
+  <field name="repeat_missed"/>
+  <field name="next_call"/>
+  <field name="last_call"/>
+  <field name="priority"/>
+  <fieldset v-show="record.job_type === 'report'">
+    <legend>{{ _('Recipients') }}</legend>
+    <div class="row">
+      <field name="groups" cols="6"/>
+      <field name="users" cols="6"/>
+      <field name="params"/>
+    </div>
+  </fieldset>
+</form>
