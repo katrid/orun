@@ -5,7 +5,7 @@ import datetime
 import decimal
 
 from jinja2 import Template
-from orun.db import connection
+from orun.db import connections, DEFAULT_DB_ALIAS
 from orun.db.models.fields import datatype_map
 from orun.core.exceptions import ObjectDoesNotExist
 from orun.http import HttpRequest
@@ -139,10 +139,11 @@ class ReportAction(Action):
         if values is None:
             values = {}
         _sql = ''
+        conn = connections['reports'] if connections.has('reports') else connections[DEFAULT_DB_ALIAS]
         # macro/template evaluation
         if sql and '/*%' in sql:
             sql = Template(sql, '/*%', '%*/').render(values)
-        if connection.vendor == 'mssql':
+        if conn.vendor == 'mssql':
             vars.append('SET DATEFORMAT ymd')
             for k, v in self._values.items():
                 vars.append(f'declare @{k} varchar(max)')
@@ -153,13 +154,13 @@ class ReportAction(Action):
                 _sql = '\n'.join(vars)
                 _sql += f'''\nselect {",".join(select)}\n'''
             _sql += sql.replace(':', '@')
-        elif connection.vendor == 'postgresql':
+        elif conn.vendor == 'postgresql':
             _sql = re.sub(r':(\w+)', r'%(\1)s', sql)
             params = dict(self._values)
         else:
             _sql += sql
 
-        cur = connection.cursor()
+        cur = conn.cursor()
         cur.execute(_sql, params)
         self.fields = cur.cursor.description
         rows = [[float(col) if isinstance(col, decimal.Decimal) else col for col in row] for row in cur.fetchall()]
@@ -189,9 +190,10 @@ class ReportAction(Action):
             pass
         rows, cur = self._prepare(sql, params)
         desc = cur.cursor.description
+        conn = connections['reports'] if connections.has('reports') else connections[DEFAULT_DB_ALIAS]
         if with_description:
             fields = [
-                {'name': f[0], 'type': connection.introspection.get_field_type(f[1], f) if f[1] in connection.introspection.data_types_reverse else f[1].__name__, 'size': f[2]}
+                {'name': f[0], 'type': conn.introspection.get_field_type(f[1], f) if f[1] in conn.introspection.data_types_reverse else f[1].__name__, 'size': f[2]}
                 for f in desc
             ]
         else:
