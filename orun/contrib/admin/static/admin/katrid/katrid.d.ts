@@ -955,6 +955,7 @@ declare namespace Katrid.Forms {
         render(): HTMLElement;
         protected _modal: bootstrap.Modal;
         closeDialog(): void;
+        protected destroy(): void;
         renderTo(container: HTMLElement): void;
         onHashChange(params: any): Promise<void>;
     }
@@ -2163,6 +2164,7 @@ declare namespace Katrid.Forms {
         protected createDialog(content: HTMLElement, buttons?: string[] | any[]): HTMLElement;
         showDialog(options?: any): Promise<void>;
         $onFieldChange(field: Katrid.Data.Field, value: any): void;
+        protected destroy(): void;
         static createNew(config: ICreateNewConfig): Promise<FormView>;
         getDisplayText(): string;
         saveAndClose(commit?: boolean): Promise<void>;

@@ -3597,6 +3597,9 @@ var Katrid;
             }
             closeDialog() {
                 this._modal.hide();
+                this.destroy();
+            }
+            destroy() {
             }
             renderTo(container) {
                 this.container = container;
@@ -5835,8 +5838,9 @@ var Katrid;
                 }, this.requestInterval);
             }
             destroy() {
-                if (this._masterSource)
+                if (this._masterSource) {
                     this._masterSource.children.splice(this._masterSource.children.indexOf(this), 1);
+                }
             }
             flush(validate = true, browsing = true) {
                 if (validate)
@@ -9836,6 +9840,7 @@ ${Katrid.i18n.gettext('Delete')}
                         this._modal.dispose();
                         el.remove();
                         this._modal = null;
+                        this.destroy();
                     });
                     this._modal.show();
                 });
@@ -9855,6 +9860,10 @@ ${Katrid.i18n.gettext('Delete')}
                 }
                 if (field.onChange && this.datasource)
                     this.datasource.$onFieldChange(field, value, this.datasource.record);
+            }
+            destroy() {
+                super.destroy();
+                this.datasource.destroy();
             }
             static async createNew(config) {
                 let svc = new Katrid.Services.ModelService(config.model);
