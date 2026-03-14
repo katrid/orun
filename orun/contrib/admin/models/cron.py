@@ -5,9 +5,13 @@ import asyncio
 import json
 
 from orun.db import models
-from orun.contrib import auth
-from orun.contrib.admin.jobs import JobManager, JobItem
+from orun.db.context import connect
+from orun import api
+from orun.core.signals import Signal
 from orun.utils.translation import gettext_lazy as _
+
+
+on_send_report = Signal()
 
 
 INTERVAL_TYPES = {
@@ -61,11 +65,7 @@ class Cron(models.Model):
 
     def _callback(self):
         if self.job_type == 'report':
-            params = self.params and self.params.strip()
-            if params.startswith('{'):
-                params = json.loads(params)
-            if 'telegram_ids' in params:
-                self.report.send_to(params['telegram_ids'])
+            on_send_report.send(sender=self, content=self._execute_report_now())
         else:
             self.action.execute()
 
@@ -109,5 +109,16 @@ class Cron(models.Model):
     @staticmethod
     async def setup_loop():
         while True:
-            Cron.process_all()
+            async with connect():
+                Cron.process_all()
             await asyncio.sleep(3600)
+
+    @api.classmethod
+    def execute_now(cls, id):
+        if isinstance(id, list):
+            id = id[0]
+        rep = cls.objects.get(id=id)
+        rep._callback()
+
+    def _execute_report_now(self):
+        return self.report.render_as_string()
