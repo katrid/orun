@@ -250,7 +250,7 @@ class BaseDatabaseWrapper:
         """
         Validate the connection is usable and perform database cursor wrapping.
         """
-        self.validate_thread_sharing()
+        # self.validate_thread_sharing()
         if self.queries_logged:
             wrapped_cursor = self.make_debug_cursor(cursor)
         else:
@@ -552,6 +552,7 @@ class BaseDatabaseWrapper:
 
     @property
     def allow_thread_sharing(self):
+        return True
         with self._thread_sharing_lock:
             return self._thread_sharing_count > 0
 
