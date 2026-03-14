@@ -2,6 +2,7 @@ import importlib.util
 import traceback
 
 from orun.db import models
+from orun.db.context import connect
 from orun.utils.translation import gettext_lazy as _
 
 
@@ -40,7 +41,8 @@ class Automation(models.Model):
 
     @classmethod
     def setup(cls):
-        cls._setup()
+        with connect():
+            cls._setup()
 
     @classmethod
     def _setup(cls):
