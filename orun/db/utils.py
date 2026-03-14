@@ -189,6 +189,10 @@ class ConnectionHandler:
             test_settings.setdefault(key, None)
 
     def __getitem__(self, alias):
+        # lets try to find in the contextvar
+        from .context import Connection
+        if conn := Connection.get_connection(alias):
+            return conn
         from orun.db.backends.base.base import BaseDatabaseWrapper
         if isinstance(alias, BaseDatabaseWrapper):
             return alias
@@ -233,6 +237,9 @@ class ConnectionHandler:
         db = self.databases[alias]
         backend = load_backend(db['ENGINE'])
         return backend.DatabaseWrapper(db, alias)
+
+    def has(self, alias: str):
+        return alias in self.databases
 
 
 class ConnectionRouter:
