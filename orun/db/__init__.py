@@ -7,6 +7,7 @@ from orun.db.utils import (
     InterfaceError, InternalError, NotSupportedError, OperationalError,
     ProgrammingError,
 )
+
 if TYPE_CHECKING:
     from orun.db.backends.base.base import BaseDatabaseWrapper
 
@@ -28,6 +29,7 @@ class DefaultConnectionProxy:
     need to access the DatabaseWrapper object itself, use
     connections[DEFAULT_DB_ALIAS] instead.
     """
+
     def __getattr__(self, item):
         return getattr(connections[DEFAULT_DB_ALIAS], item)
 
