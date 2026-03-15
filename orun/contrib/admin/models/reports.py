@@ -1,4 +1,4 @@
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Protocol
 import datetime
 from decimal import Decimal
 import warnings
@@ -19,13 +19,18 @@ from orun.template import loader
 from orun.utils.translation import gettext_lazy as _, gettext
 from orun.utils.module_loading import import_string
 from orun.contrib.auth.models import Group
-from .action import Action
+from .action import Action, ActionGroups
 
 try:
     from orun.reports.engines import get_engine, ConnectionProxy
     import reptile
 except:
     pass
+
+
+class ContactRecipient(Protocol):
+    def send_message(self, subject: str, body: str, attachments: dict = None, media: str = 'mail') -> bool | Exception:
+        ...
 
 
 class ReportCategory(models.Model):
@@ -38,7 +43,8 @@ class ReportCategory(models.Model):
     @api.classmethod
     def admin_get_groups(cls, category_id):
         groups = {g.pk: g.allow_by_default for g in Group.objects.only('pk', 'allow_by_default').filter(active=True)}
-        groups.update({g.group_id: g.allow for g in ReportCategoryGroups.objects.only('group_id').filter(category_id=category_id)})
+        groups.update({g.group_id: g.allow for g in
+                       ReportCategoryGroups.objects.only('group_id').filter(category_id=category_id)})
         return groups
 
     @api.classmethod
@@ -64,15 +70,9 @@ class ReportCategoryGroups(models.Model):
 
     @classmethod
     def get_user_perms(cls, user):
-        groups =  {g.pk: g.allow_by_default for g in user.groups.filter(active=True)}
+        groups = {g.pk: g.allow_by_default for g in user.groups.filter(active=True)}
         cats = ReportCategory.objects.values('id', 'name')
         cats_id = {c['id']: {g for g, v in groups.items() if v} for c in cats}
-        perms = [
-            {
-                'group_id': g.group_id, 'category_id': g.category_id, 'allow': g.allow,
-            }
-            for g in cls.objects.only('group_id').filter(group_id__in=list(groups.keys()), group__active=True)
-        ]
         for g in cls.objects.only('group_id', 'allow').filter(group_id__in=list(groups.keys()), group__active=True):
             if g.allow:
                 cats_id[g.category_id].add(g.group_id)
@@ -364,6 +364,17 @@ class ReportAction(Action):
             info['sql'] = self.sql
         return info
 
+    @classmethod
+    def get_user_perms(cls, user):
+        groups = {g.pk: g.allow_by_default for g in user.groups.filter(active=True)}
+        rep_ids = {c['id']: {g for g, v in groups.items() if v} for c in cls.objects.values('id', 'name')}
+        for g in ActionGroups.objects.filter(group_id__in=list(groups.keys()), group__active=True):
+            if g.allow:
+                rep_ids[g.action_id].add(g.group_id)
+            else:
+                rep_ids[g.action_id].discard(g.group_id)
+        return [k for k, v in rep_ids.items() if v]
+
     @api.classmethod
     def list_all(cls, request: HttpRequest):
         user = request.user
@@ -373,13 +384,15 @@ class ReportAction(Action):
             # apply permissions
             categories = ReportCategoryGroups.get_user_perms(user)
             qs = qs.filter(models.Q(category_id__in=categories) | models.Q(category=None))
+            qs = qs.filter(id__in=cls.get_user_perms(user))
+        usr_txt = gettext("User Report")
         return {
             'data': [
                 {
                     'id': q.pk,
                     'category_id': q.category_id,
                     'category': str(q.category) if q.category else gettext('Uncategorized'),
-                    'name': q.name + f' ({gettext("User Report")})' if q.owner_type == 'user' else q.name,
+                    'name': q.name + f' ({usr_txt})' if q.owner_type == 'user' else q.name,
                     # 'params': q.params,
                 }
                 # todo check permission
@@ -425,8 +438,12 @@ class ReportAction(Action):
         elif self.report_type == 'query':
             return self._read(True)
 
-    def send_to(self, recipients: Iterable[str]):
-        pass
+    def render_as_string(self):
+        if self.qualname:
+            cls = import_string(self.qualname)
+            inst = cls()
+            return inst.render_to_markdown()
+        raise NotImplemented
 
     def __call__(self, request: HttpRequest, params: dict = None):
         if self.qualname:
