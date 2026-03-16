@@ -66,7 +66,12 @@ class Cron(models.Model):
 
     def _callback(self):
         if self.job_type == 'report':
-            on_send_report.send(sender=self, content=self._execute_report_now(), format='markdown')
+            content = self._execute_report_now()
+            if content:
+                on_send_report.send(sender=self, content=content, format='markdown')
+            else:
+                # nothing to send
+                pass
         else:
             self.action.execute()
 
