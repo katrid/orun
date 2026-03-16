@@ -73,7 +73,7 @@ class ReportAction(Action):
         return filename
 
     def get_absolute_url_for(self, filename: str):
-        return f'http://{settings.DEFAULT_HOSTNAME}/web/reports/' + filename
+        return f'http://{settings.DEFAULT_HOST}/web/reports/' + filename
 
     @classmethod
     def update_info(cls):
