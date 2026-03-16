@@ -1,10 +1,14 @@
+import uuid
 from typing import Optional, Type
+import os
+from pathlib import Path
 from enum import Enum
 import re
 import datetime
 import decimal
 
 from jinja2 import Template
+from orun.conf import settings
 from orun.db import connections, DEFAULT_DB_ALIAS
 from orun.db.models.fields import datatype_map
 from orun.core.exceptions import ObjectDoesNotExist
@@ -58,6 +62,18 @@ class ReportAction(Action):
                         self._values[f'{k}2'] = None
                     elif op == 'in' and 'value1' in p:
                         self._values[k] = ','.join([str(s) if isinstance(s, (int, float)) or (isinstance(s, str) and s.isnumeric()) else "'" + str(s).replace("'", "''") + "'" for s in p.get('value1') if s is not None])
+
+    def write_file(self, file_format: str, data: str | bytes) -> str:
+        """Create a new unique file in the report path with a given data and format"""
+        filename = uuid.uuid4().hex + f'.{file_format}'
+        if not os.path.exists(settings.REPORT_PATH):
+            os.makedirs(settings.REPORT_PATH)
+        with open(os.path.join(settings.REPORT_PATH, filename), 'w' if isinstance(data, str) else 'wb') as f:
+            f.write(data)
+        return filename
+
+    def get_absolute_url_for(self, filename: str):
+        return f'http://{settings.DEFAULT_HOSTNAME}/web/reports/' + filename
 
     @classmethod
     def update_info(cls):

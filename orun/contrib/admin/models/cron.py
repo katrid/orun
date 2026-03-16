@@ -1,9 +1,10 @@
+import os
 import datetime
 from dateutil.relativedelta import relativedelta
 import traceback
 import asyncio
-import json
 
+from orun.conf import settings
 from orun.db import models
 from orun.db.context import connect
 from orun import api
@@ -65,7 +66,7 @@ class Cron(models.Model):
 
     def _callback(self):
         if self.job_type == 'report':
-            on_send_report.send(sender=self, content=self._execute_report_now())
+            on_send_report.send(sender=self, content=self._execute_report_now(), format='markdown')
         else:
             self.action.execute()
 
