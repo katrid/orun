@@ -3597,7 +3597,6 @@ var Katrid;
             }
             closeDialog() {
                 this._modal.hide();
-                this.destroy();
             }
             destroy() {
             }
