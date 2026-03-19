@@ -87,6 +87,12 @@ var Katrid;
     Katrid.html = html;
     Katrid.globalData = {};
 })(Katrid || (Katrid = {}));
+var oui;
+(function (oui) {
+    oui.version = '0.1.0';
+})(oui || (oui = {}));
+globalThis.Katrid = Katrid;
+globalThis.oui = oui;
 var katrid;
 (function (katrid) {
     var mobile;
@@ -6034,6 +6040,7 @@ var Katrid;
         })(RecordState = Data.RecordState || (Data.RecordState = {}));
         class DataRecord {
             constructor(obj = {}) {
+                this.$loaded = false;
                 this.$data = obj;
                 if (!this.hasOwnProperty('id'))
                     this.id = obj.id;
@@ -6188,7 +6195,7 @@ var Katrid;
                     this.visible = info.visible;
                 this.name = info.name;
                 this.info = info;
-                this.cssClass = info.type;
+                this.cssClass = info.type || this.constructor.name;
                 this.caption = info.caption || info.name;
                 this.helpText = this.info.help_text;
                 this.required = this.info.required === true;
@@ -6509,6 +6516,8 @@ var Katrid;
                 return 'view.param.String';
             }
             format(value) {
+                if (value == null)
+                    return '';
                 return value.toString();
             }
             getParamValue(value) {
@@ -6918,6 +6927,11 @@ var Katrid;
             }
             listSpanTemplate() {
                 return `<span class="grid-field-readonly">{{ $filters.toFixed(record.${this.name}, ${this.decimalPlaces}) }}</span>`;
+            }
+            format(value) {
+                if (value != null)
+                    return Katrid.filtersRegistry.toFixed(value, this.decimalPlaces);
+                return super.format(value);
             }
         }
         Data.DecimalField = DecimalField;
@@ -9324,6 +9338,7 @@ var Katrid;
             set record(value) {
                 this._record = value;
                 this.vm.record = value;
+                console.debug('data callback', this.dataCallbacks.length);
                 for (let cb of this.dataCallbacks)
                     cb(this.vm.record);
                 if (this.element)
@@ -14438,6 +14453,92 @@ var Katrid;
         })(Widgets = Forms.Widgets || (Forms.Widgets = {}));
     })(Forms = Katrid.Forms || (Katrid.Forms = {}));
 })(Katrid || (Katrid = {}));
+var oui;
+(function (oui) {
+    var forms;
+    (function (forms) {
+        class TableColumn {
+            constructor(field) {
+                this.field = field;
+                this.visible = field.visible;
+                this.title = field.caption;
+                this.dataIndex = field.name;
+                this.cssClass = field.constructor.name;
+            }
+        }
+        forms.TableColumn = TableColumn;
+        class TableFieldWidget {
+            constructor(config) {
+                this.config = config;
+                if (config.el)
+                    this.create(config.el);
+            }
+            create(el) {
+                this.el = el;
+                if (!this.config.model)
+                    throw new Error('Model is required to create table field widget');
+                this._recreateColumns();
+            }
+            _recreateColumns() {
+                this.columns = [];
+                for (const f of Object.values(this.config.model.fields))
+                    this.columns.push(new TableColumn(f));
+                this._recreateElement();
+            }
+            _recreateElement() {
+                this.el.innerHTML = '';
+                this._createElement(this.el);
+            }
+            _createElement(container) {
+                const table = document.createElement('table');
+                table.className = 'table table-sm table-stripped data-table';
+                this._table = table;
+                const thead = table.createTHead();
+                this._headerRow = thead.insertRow();
+                this._tbody = this._table.createTBody();
+                for (const f of this.columns)
+                    this._createColumn(f);
+                container.appendChild(table);
+            }
+            _createColumn(col) {
+                const th = document.createElement('th');
+                th.innerHTML = col.title;
+                this._headerRow.appendChild(th);
+            }
+            setData(data) {
+                this.dataRows = data;
+                this._loadData(data);
+            }
+            _loadData(data) {
+                this._destroyRows();
+                for (const row of data)
+                    this._createRow(row);
+            }
+            _destroyRows() {
+                this._tbody.innerHTML = '';
+            }
+            _createRow(record) {
+                const tr = this._tbody.insertRow();
+                for (const c of this.columns) {
+                    tr.appendChild(this._createCell(c, record[c.dataIndex]));
+                }
+                if (this.config.rowClick)
+                    tr.addEventListener('click', (event) => this.config.rowClick(record, tr, event));
+                tr.dataset.id = record.id;
+                return tr;
+            }
+            _createCell(col, val) {
+                const td = document.createElement('td');
+                td.className = col.cssClass;
+                if (col.field) {
+                    td.innerText = col.field.format(val);
+                }
+                return td;
+            }
+        }
+        forms.TableFieldWidget = TableFieldWidget;
+    })(forms = oui.forms || (oui.forms = {}));
+})(oui || (oui = {}));
 var Katrid;
 (function (Katrid) {
     var Forms;

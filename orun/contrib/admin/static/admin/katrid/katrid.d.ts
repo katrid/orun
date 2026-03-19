@@ -108,6 +108,9 @@ declare namespace Katrid {
 }
 declare namespace katrid {
 }
+declare namespace oui {
+    const version = "0.1.0";
+}
 declare var __katridMobileHost: any;
 declare namespace katrid.mobile {
     const isAndroid: boolean;
@@ -1486,6 +1489,7 @@ declare namespace Katrid.Data {
         $pending: Record<string, any>;
         $data: Record<string, any>;
         $modified: string[];
+        $loaded: boolean;
         id: any;
         [key: string]: any;
         $transient: Record<string, any>;
@@ -1685,6 +1689,7 @@ declare namespace Katrid.Data {
         constructor(info: any);
         formControl(fieldEl: Element): HTMLElement;
         listSpanTemplate(): string;
+        format(value: any): string;
     }
     class TextField extends StringField {
         tag: string;
@@ -2843,6 +2848,43 @@ declare namespace Katrid.Forms.Widgets {
         addField(fld: HTMLElement): void;
         createField(field: Katrid.Data.Field): void;
         compile(): void;
+    }
+    export {};
+}
+declare namespace oui.forms {
+    interface TableConfig {
+        el: HTMLElement;
+        model: Katrid.Data.Model;
+        field?: Katrid.Data.OneToManyField;
+        rowClick?: (row: Record<string, any>, el: HTMLElement, event: MouseEvent) => void;
+    }
+    export class TableColumn {
+        field?: Katrid.Data.Field;
+        title: string;
+        visible: boolean;
+        dataIndex: string | number;
+        cssClass: string;
+        constructor(field?: Katrid.Data.Field);
+    }
+    export class TableFieldWidget {
+        config: TableConfig;
+        columns: TableColumn[];
+        el: HTMLElement;
+        constructor(config: TableConfig);
+        create(el: HTMLElement): void;
+        protected _recreateColumns(): void;
+        protected _recreateElement(): void;
+        protected _headerRow: HTMLTableRowElement;
+        protected _table: HTMLTableElement;
+        protected _tbody: HTMLTableSectionElement;
+        protected _createElement(container: HTMLElement): void;
+        protected _createColumn(col: TableColumn): void;
+        dataRows: Record<string, any>[];
+        setData(data: Record<string, any>[]): void;
+        protected _loadData(data: Record<string, any>[]): void;
+        protected _destroyRows(): void;
+        protected _createRow(record: Record<string, any>): HTMLTableRowElement;
+        protected _createCell(col: TableColumn, val: any): HTMLTableCellElement;
     }
     export {};
 }
