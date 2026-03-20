@@ -194,6 +194,11 @@ class ReportAction(Action):
     def get_queryset(self, with_description=False, as_dict=False, fields=None, where=None):
         pass
 
+    def get_template_html(self):
+        return '''
+        <html><head><link rel="stylesheet" href="/static/admin/katrid/style.css"><meta charset="utf-8"></head><pre>%s</pre></html>
+        '''
+
     def read(self, where=None, with_description=False, as_dict=False, *args, **kwargs):
         params = {}
         if where:
