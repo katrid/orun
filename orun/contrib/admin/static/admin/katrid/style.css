@@ -13391,22 +13391,24 @@ dialog.dialog .dialog-footer .btn {
   border: 0;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
-.dropdown-menu-notifications .dropdown-item {
+.dropdown-menu-notifications .dropdown-item.message-notification {
   border: 1px solid rgb(224, 224, 224);
+  padding-top: 14px;
 }
-.dropdown-menu-notifications .dropdown-item.unread {
+.dropdown-menu-notifications .dropdown-item.message-notification.unread {
   background-color: rgb(245, 245, 245);
   font-weight: 600;
 }
-.dropdown-menu-notifications .dropdown-item h3, .dropdown-menu-notifications .dropdown-item .h3 {
+.dropdown-menu-notifications .dropdown-item.message-notification h3, .dropdown-menu-notifications .dropdown-item.message-notification .h3 {
   font-size: 9pt;
   font-weight: 600;
   margin: 0;
 }
-.dropdown-menu-notifications .dropdown-item .timestamp {
+.dropdown-menu-notifications .dropdown-item.message-notification .timestamp {
   font-size: 8pt;
+  position: relative;
   right: 10px;
-  top: 10px;
+  top: -12px;
   color: rgb(171, 171, 171);
 }
 

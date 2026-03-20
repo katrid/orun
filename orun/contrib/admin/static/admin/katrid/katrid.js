@@ -3074,7 +3074,7 @@ var Katrid;
             }
             createNotificationMessageItem(menu, msg) {
                 let el = document.createElement('a');
-                el.className = 'dropdown-item';
+                el.className = 'dropdown-item message-notification';
                 let s = '';
                 if (msg.date_time) {
                     let m = moment(msg.date_time);
