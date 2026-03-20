@@ -19,6 +19,9 @@
 
 {% block content %}{% endblock %}
 <script src="/static/admin/katrid/katrid.deps.js"></script>
+{% if lang %}
+<script src="/static/admin/moment/locale/{{ lang }}.js"></script>
+{% endif %}
 {% if i18n_js_catalog %}
   <script>
   {{ i18n_js_catalog }}

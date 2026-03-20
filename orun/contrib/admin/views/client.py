@@ -23,6 +23,7 @@ def index(request: HttpRequest, template_name='/admin/index.jinja2', **context):
         'user_info': json.dumps(request.user.user_info()),
         'settings': settings,
         'js_assets': '\n'.join(apps.collect_js_assets()),
+        'lang': settings.LANGUAGE_CODE,
     })
     if settings.USE_I18N:
         from .i18n import javascript_catalog
