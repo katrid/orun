@@ -30,6 +30,8 @@ class Message(models.Model):
     model = models.CharField(128)
     object_id = models.BigIntegerField()
     object_name = models.CharField()
+    action = models.ForeignKey('ui.action')
+    url = models.TextField()
     message_type = models.SelectionField(
         (
             ('email', _('Email')),
@@ -80,7 +82,20 @@ class Message(models.Model):
             'object_id': self.object_id,
             'object_name': self.object_name,
             'model': self.model,
+            'url': self.url,
         }
+
+    @classmethod
+    def post_notification(cls, *, author_id, content, recipients, url=None):
+        msg = cls.objects.create(
+            author_id=author_id,
+            content=content,
+            url=url,
+            message_type='notification',
+        )
+        msg.partners.set(recipients)
+        for recipient in recipients:
+            msg.send_notification(recipient.pk)
 
     @api.classmethod
     def post_message(cls, model_name, id, content=None, *, user_id=None, **kwargs):

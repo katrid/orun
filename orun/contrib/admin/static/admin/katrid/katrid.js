@@ -3089,7 +3089,10 @@ var Katrid;
                 el.innerHTML = s;
                 el.addEventListener('click', () => {
                     el.classList.remove('unread');
-                    this.openObject(msg.model, msg.object_id);
+                    if (msg.model && msg.object_id)
+                        this.openObject(msg.model, msg.object_id);
+                    const model = new Katrid.Services.ModelService('mail.notification');
+                    model.rpc('clear_notification', null, { notification_id: msg.notification_id });
                 });
                 menu.appendChild(el);
             }
@@ -3442,6 +3445,10 @@ var Katrid;
                 };
                 this._applyDataDefinition(data);
                 return data;
+            }
+            addDataCallback(data) {
+            }
+            removeDataCallback(data) {
             }
             createComponent() {
                 let me = this;
@@ -9338,7 +9345,6 @@ var Katrid;
             set record(value) {
                 this._record = value;
                 this.vm.record = value;
-                console.debug('data callback', this.dataCallbacks.length);
                 for (let cb of this.dataCallbacks)
                     cb(this.vm.record);
                 if (this.element)
@@ -9346,6 +9352,10 @@ var Katrid;
             }
             addDataCallback(cb) {
                 this.dataCallbacks.push(cb);
+            }
+            removeDataCallback(cb) {
+                if (this.dataCallbacks.includes(cb))
+                    this.dataCallbacks.splice(cb, 1);
             }
             get state() {
                 return this._state;
@@ -9669,7 +9679,6 @@ ${Katrid.i18n.gettext('Delete')}
                         newParams.id = value;
                         let url = new URLSearchParams(newParams);
                         let newUrl = '#/app/?' + url.toString();
-                        setTimeout(() => this.refresh(), 1000);
                         window.history.pushState('', '', newUrl);
                     }
                 }, 100);
@@ -14472,6 +14481,8 @@ var oui;
                 this.config = config;
                 if (config.el)
                     this.create(config.el);
+                this.multiSelection = config.multiSelection;
+                this._parentCallback = (record) => this.parentCallback(record);
             }
             create(el) {
                 this.el = el;
@@ -14534,6 +14545,19 @@ var oui;
                     td.innerText = col.field.format(val);
                 }
                 return td;
+            }
+            get parent() {
+                return this._parent;
+            }
+            set parent(value) {
+                if (this._parent)
+                    this._parent.removeDataCallback(this._parentCallback);
+                this._parent = value;
+                if (this._parentCallback)
+                    this._parent.addDataCallback(this._parentCallback);
+            }
+            parentCallback(record) {
+                console.debug('load children data?');
             }
         }
         forms.TableFieldWidget = TableFieldWidget;

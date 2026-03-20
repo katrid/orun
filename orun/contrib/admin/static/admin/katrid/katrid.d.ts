@@ -826,6 +826,7 @@ declare namespace Katrid.Core {
         date_time?: string;
         object_id?: any;
         model?: string;
+        notification_id?: string | number;
     }
     interface IMenuInfo {
         id?: any;
@@ -944,6 +945,8 @@ declare namespace Katrid.Forms {
         protected create(info: IView): void;
         protected _applyDataDefinition(data: any): any;
         protected getComponentData(): any;
+        addDataCallback(data: any): void;
+        removeDataCallback(data: any): void;
         protected createComponent(): any;
         protected cloneTemplate(): HTMLElement;
         domTemplate(): HTMLElement;
@@ -2132,6 +2135,7 @@ declare namespace Katrid.Forms {
         get record(): any;
         set record(value: any);
         addDataCallback(cb: any): void;
+        removeDataCallback(cb: any): void;
         get state(): DataSourceState;
         set state(value: DataSourceState);
         setState(state: DataSourceState): void;
@@ -2857,6 +2861,7 @@ declare namespace oui.forms {
         model: Katrid.Data.Model;
         field?: Katrid.Data.OneToManyField;
         rowClick?: (row: Record<string, any>, el: HTMLElement, event: MouseEvent) => void;
+        multiSelection?: boolean;
     }
     export class TableColumn {
         field?: Katrid.Data.Field;
@@ -2870,6 +2875,8 @@ declare namespace oui.forms {
         config: TableConfig;
         columns: TableColumn[];
         el: HTMLElement;
+        multiSelection: boolean;
+        protected _parentCallback: (record: Record<string, any>) => void;
         constructor(config: TableConfig);
         create(el: HTMLElement): void;
         protected _recreateColumns(): void;
@@ -2885,6 +2892,10 @@ declare namespace oui.forms {
         protected _destroyRows(): void;
         protected _createRow(record: Record<string, any>): HTMLTableRowElement;
         protected _createCell(col: TableColumn, val: any): HTMLTableCellElement;
+        protected _parent: Katrid.Forms.BaseView;
+        get parent(): Katrid.Forms.BaseView;
+        set parent(value: Katrid.Forms.BaseView);
+        protected parentCallback(record: Record<string, any>): void;
     }
     export {};
 }

@@ -3,6 +3,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import traceback
 import asyncio
+from itertools import chain
 
 from orun.conf import settings
 from orun.db import models
@@ -68,7 +69,10 @@ class Cron(models.Model):
         if self.job_type == 'report':
             content = self._execute_report_now()
             if content:
-                on_send_report.send(sender=self, content=content, format='markdown')
+                recipients = list(chain.from_iterable([g.users.all() for g in self.groups.all()]))
+                if self.users:
+                    recipients.extend(self.users.all())
+                on_send_report.send(sender=self, content=content, author_id=self.user_id, format='html', recipients=recipients)
             else:
                 # nothing to send
                 pass
@@ -110,7 +114,7 @@ class Cron(models.Model):
             except Exception as e:
                 # Log the error or handle it as needed
                 print(f"Error processing cron job {cron.id}: {e}")
-                traceback.format_exc()
+                traceback.print_exc()
 
     @staticmethod
     async def setup_loop():
