@@ -11,6 +11,7 @@ from orun.contrib.auth.decorators import login_required
 from orun.contrib import auth
 from orun.apps import apps
 from orun.views.static import serve
+from orun.db.transaction import atomic
 
 View = apps['ui.view']
 
@@ -157,7 +158,8 @@ def upload_file(request, model, meth):
     meth = getattr(model, meth)
     if meth.exposed:
         try:
-            res = meth(**request.POST.dict(), files=[file for file in request.FILES.getlist('files')])
+            with atomic():
+                res = meth(**request.POST.dict(), files=[file for file in request.FILES.getlist('files')])
         except ValidationError as e:
             traceback.print_exc()
             return JsonResponse({
