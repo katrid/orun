@@ -375,3 +375,5 @@ msgstr "Valor Definido pelo Usuário"
 msgid "Make Field Mandatory"
 msgstr "Tornar Campo Obrigatório"
 
+msgid "Save and new"
+msgstr "Salvar e novo"

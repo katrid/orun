@@ -9556,6 +9556,11 @@ var Katrid;
         :disabled="loadingRecord">
       </button>
       <ul class="dropdown-menu">
+        <li>
+          <a class="dropdown-item" title="Save and insert a new record" v-on:click="saveAndNew()">
+            ${Katrid.i18n.gettext('Save and new')}
+          </a>
+        </li>
         <li><a class="dropdown-item">${Katrid.i18n.gettext('Save as draft')}</a></li>
       </ul>
     </div>
@@ -9746,6 +9751,10 @@ ${Katrid.i18n.gettext('Delete')}
                     },
                     save() {
                         me.save();
+                    },
+                    async saveAndNew() {
+                        await me.save();
+                        this.insert();
                     },
                     discard() {
                         me.discard();
