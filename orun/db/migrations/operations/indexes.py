@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
-from .base import Operation
+
 from orun.db.metadata import Table, Index
+from .base import Operation
 
 if TYPE_CHECKING:
     from orun.db.backends.base.schema import BaseDatabaseSchemaEditor

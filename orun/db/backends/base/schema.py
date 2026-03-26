@@ -9,6 +9,7 @@ from orun.db.backends.ddl_references import (
 from orun.db.backends.utils import names_digest, split_identifier
 from orun.db.models.fields import Field, DecimalField, NOT_PROVIDED, CharField, IntegerField, FloatField, DateField
 from orun.db.migrations.operations.indexes import CreateIndex, DropIndex
+from orun.db.migrations.operations.constraints import CreateConstraint, DropConstraint
 from orun.db.models import Model
 from orun.db.models.sql import Query
 from orun.db.transaction import TransactionManagementError, atomic
@@ -687,9 +688,8 @@ class BaseDatabaseSchemaEditor:
 
     def create_constraint(self, table: metadata.Table, c: metadata.Constraint):
         # ignore for while
-        #sql = f'ALTER TABLE {table.tablename} ADD {self.constraint_sql(c)}'
-        #self.execute(sql)
-        return
+        sql = f'ALTER TABLE {table.tablename} ADD {self.constraint_sql(c)}'
+        self.execute(sql)
 
     def table_sql(self, table: metadata.Table) -> str:
         table_name = table.tablename
@@ -734,11 +734,13 @@ class BaseDatabaseSchemaEditor:
         for k, c in new_table.constraints.items():
             if k not in old_table.constraints:
                 # create new constraint
-                yield self.create_constraint, (new_table, c)
+                # yield self.create_constraint, (new_table, c)
+                yield CreateConstraint(new_table, c)
         for k, c in old_table.constraints.items():
             if k not in new_table.constraints:
                 # drop constraint
-                yield self.drop_constraint, (new_table, c,)
+                # yield self.drop_constraint, (new_table, c,)
+                yield DropConstraint(new_table, c)
 
         # compare indexes
         for k, ix in new_table.indexes.items():
