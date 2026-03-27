@@ -240,7 +240,7 @@ class AdminModel(models.Model, helper=True):
             else:
                 q &= ~Q(**exclude)
         if q is not None:
-            kwargs = {'where': q}
+            kwargs.update({'where': q})
         qs = cls._api_search(request, *args, **kwargs)
         limit = kwargs.get('limit') or 20
         if count:
