@@ -1,0 +1,90 @@
+/* themes/default/overlay.css */
+.wait-overlay {
+  &::backdrop {
+    background: rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* themes/default/homepage.css */
+.homepage-view {
+  flex: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: initial;
+  padding: 16px;
+  h1 {
+    font-size: 1rem;
+    color: white;
+    margin: 0;
+    padding-top: 5px;
+  }
+  .toolbar {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    display: flex;
+    float: right;
+  }
+  .homepage-content {
+    flex: auto;
+  }
+  .homepage-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    .drag-placeholder {
+      border: 3px dashed rgb(106, 121, 213);
+      border-radius: 8px;
+      background-color: rgba(255, 255, 255, 0.5);
+    }
+    &:empty {
+      background-color: rgba(255, 255, 255, 0.5);
+      border-radius: 10px;
+    }
+  }
+  .portlet-selector-item {
+    cursor: pointer;
+    user-select: none;
+  }
+}
+.oui-app {
+  .portlet {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    &.drag-ghost {
+      pointer-events: none;
+    }
+    &.dragging {
+      opacity: 0.5;
+    }
+    .portlet-header {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgb(198, 198, 198);
+      cursor: move;
+      user-select: none;
+      h3 {
+        margin: 0;
+        font-size: 1rem;
+      }
+    }
+    .portlet-body {
+      padding: 16px;
+      overflow: auto;
+      min-height: 30px;
+    }
+  }
+}
+.toolbox-header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 10px 12px;
+  h5 {
+    margin: 0;
+  }
+  .btn-close {
+    margin-left: auto;
+  }
+}
+
+/* themes/default/index.css */

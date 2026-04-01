@@ -289,7 +289,7 @@ declare namespace Katrid.Actions {
         static actionType: string;
         static hooks: any[];
         get content(): any;
-        onHashChange(params: any): void;
+        onHashChange(params: any): Promise<void>;
     }
     class HomepageView {
         actionId: string;
@@ -877,6 +877,7 @@ declare namespace Katrid.Core {
         private _actionManager;
         constructor(config: any);
         beforeUnload(event: any): void;
+        setAction(action: Katrid.Actions.Action): Promise<void>;
         get actionManager(): ActionManager;
         render(): void;
         protected hideMessageCounter(): void;
@@ -1616,7 +1617,6 @@ declare namespace Katrid.Data.Fields {
     function fromInfo(config: any, name?: string): Katrid.Data.Field;
     function fromArray(fields: any[] | Record<string, any>): any;
 }
-declare var moment: any;
 declare namespace Katrid.Data {
     class DateField extends Field {
         widgetHelp: string;

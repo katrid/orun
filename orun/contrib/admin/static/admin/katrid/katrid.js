@@ -639,19 +639,15 @@ var Katrid;
             get content() {
                 return this.info['content'];
             }
-            onHashChange(params) {
-                super.onHashChange(params);
-                let home = new HomepageView();
-                console.log('action info', this.info.id);
-                home.actionId = this.info.id;
-                this.element.append(home.element);
-                let content = this.content;
-                if (content) {
-                    if (typeof content === 'string')
-                        content = JSON.parse(content);
-                    home.load(content);
-                }
-                home.render();
+            async onHashChange(params) {
+                await super.onHashChange(params);
+                const view = new oui.actions.HomepageView({
+                    el: this.element,
+                    info: {
+                        layout: '3-cols-25-50-25',
+                    }
+                });
+                view.appendTo(this.element);
             }
         }
         Actions.Homepage = Homepage;
@@ -670,9 +666,13 @@ var Katrid;
                 let btn = document.createElement('a');
                 btn.classList.add('btn', 'btn-edit', 'btn-secondary');
                 btn.innerHTML = '<i class="fas fa-pen"></i>';
+                btn.addEventListener('click', () => this.edit());
+                toolbar.append(btn);
+                btn = document.createElement('a');
+                btn.classList.add('btn', 'btn-secondary', 'dropdown-toggle');
+                btn.innerText = Katrid.i18n.gettext('Layout');
                 toolbar.append(btn);
                 div.append(toolbar);
-                btn.addEventListener('click', () => this.edit());
                 div.classList.add('homepage-view', 'col-12');
                 this.element = div;
             }
@@ -695,10 +695,8 @@ var Katrid;
                 if (this._rendered)
                     return;
                 this._rendered = true;
-                console.log('panels', this.panels);
                 for (let panel of this.panels) {
                     let p = this.createPanel();
-                    console.log('panel', p.load);
                     p.load(panel);
                     this.element.append(p);
                 }
@@ -2904,6 +2902,12 @@ var Katrid;
                 if (this.actionManager.action?.beforeUnload)
                     return this.actionManager.action.beforeUnload(event);
             }
+            async setAction(action) {
+                this.actionManager.empty();
+                this.actionManager.action = action;
+                await action.renderTo(this.actionManager);
+                await action.onHashChange({});
+            }
             get actionManager() {
                 return this._actionManager;
             }
@@ -4677,7 +4681,10 @@ var Katrid;
           <h4 class="text-muted">${katrid.i18n.gettext('Query Viewer')}</h4></div>
         <div class="d-flex flex-row flex-grow-1">
           <div class="position-relative" style="flex: 0 0 250px">
-          <div id="report-explorer" class="position-absolute" style="left:0;top:0;right:0;bottom:0;width: 250px"></div>
+          <div id="report-explorer" class="position-absolute d-flex flex-column" style="left:0;top:0;right:0;bottom:0;width: 250px">
+          <input id="search-report" type="search" class="form-control" placeholder="${katrid.i18n.gettext('Search...')}">
+          <div id="tv-report-explorer" style="flex: auto"></div>
+          </div>
           </div>
           <div class="query-view card flex-grow-1"></div>
         </div>
@@ -4708,7 +4715,7 @@ var Katrid;
                             }
                         };
                     }
-                    const treeView = new katrid.ui.TreeView(this.el.querySelector('#report-explorer'));
+                    const treeView = new katrid.ui.TreeView(this.el.querySelector('#tv-report-explorer'));
                     const categories = Object.groupBy(res.data, ({ category_id }) => category_id);
                     const catCtxMenu = (node, evt) => {
                         if (!Katrid.webApp.userInfo.superuser)
