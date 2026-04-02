@@ -272,6 +272,20 @@ class AdminModel(models.Model, helper=True):
         def prepare_field_choices_params(cls, request: HttpRequest, *, field: Field, where: dict, exclude: dict):
             pass
 
+        @classmethod
+        def get_field_help_text(cls, field: models.Field):
+            model = field.model
+            help_text = field.help_text
+            if not field.help_text:
+                # collect md documentation
+                if model._meta.addon and model._meta.addon.path:
+                    app_docs = os.path.join(model._meta.addon.docs_path, 'models', model._meta.name, 'fields',
+                                            f'{field.name}.md')
+                    if os.path.isfile(app_docs):
+                        with open(app_docs) as f:
+                            help_text = f.read()
+            return help_text
+
     @api.classmethod
     def api_get_field_choices(
             cls, request: HttpRequest, field: str, q=None, count=False, ids=None, page=None, exact=False, limit=None,

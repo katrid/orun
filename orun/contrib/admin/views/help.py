@@ -82,8 +82,8 @@ def get_model_help(app, model_name: str):
             content += '\n\n'
     # append fields documentation
     for f in model._meta.fields:
-        if f.help_text:
-            content += f'\n\n### {f.label}:  \n(`{f.name}`)  \n{f.help_text}'
+        if (help_text := f.help_text) or (help_text := f.model.Admin.get_field_help_text(f)):
+            content += f'\n\n### {f.label}:  \n(`{f.name}`)  \n{help_text}'
     return content
 
 
@@ -109,7 +109,8 @@ def _get_content_file(filename: str):
             if models:
                 content += '\n'.join(
                     f'- [{m._meta.verbose_name_plural}]({app_name}/$models/{m._meta.name})  \n{m._meta.help_text or ""}'
-                    for m in models)
+                    for m in models
+                )
             else:
                 content += 'No models found.'
     return prepare_content(content) if content else ''
