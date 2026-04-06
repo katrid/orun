@@ -65,6 +65,7 @@ def prepare_content(content: str):
         filename = match.group('filename')
         content_file = _get_content_file(filename)
         content = content.replace(match.group(0), content_file)
+        return content
     return content
 
 
@@ -84,6 +85,12 @@ def get_model_help(app, model_name: str):
     for f in model._meta.fields:
         if (help_text := f.help_text) or (help_text := f.model.Admin.get_field_help_text(f)):
             content += f'\n\n### {f.label}:  \n(`{f.name}`)  \n{help_text}'
+        if f.one_to_many:
+            ## process nested fields
+            o2m_model = f.related_model
+            for f2 in o2m_model._meta.fields:
+                if (help_text := f2.help_text) or (help_text := f2.model.Admin.get_field_help_text(f2)):
+                    content += f'\n\n#### {f2.label}:  \n(`{f2.name}`)  \n{help_text}'
     return content
 
 
