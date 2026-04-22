@@ -3,6 +3,7 @@ from orun.db import models
 from orun.utils.translation import gettext_lazy as _, gettext
 from orun.utils.module_loading import import_string
 from orun.http import HttpRequest
+from core.config import get_user_profile, set_user_profile
 from .action import Action
 
 
@@ -24,15 +25,25 @@ class Homepage(Action):
         home.update(content=layout)
         return True
 
-    def _get_info(self, request, context):
-        res = super()._get_info(request, context)
+    def _get_info(self, request: HttpRequest, context):
         # check if exists a user defined homepage
-        try:
-            home = UserHomepage.objects.get(homepage_id=self.pk, user_id=context['user_id'])
-            res['content'] = home.content
-        except UserHomepage.DoesNotExist:
-            pass
-        return res
+        user_id = int(request.user_id)
+        content = get_user_profile(user_id, f'admin://ui.action.homepage/{self.pk}') or self.content
+        return {
+            'id': self.pk,
+            'name': self.name,
+            'type': self.action_type,
+            'usage': self.usage,
+            'description': self.description,
+            'content': content
+        }
+    
+    @api.classmethod
+    def save_profile(cls, request: HttpRequest, action_id: int, data: dict):
+        """Save user homepage layout"""
+        user_id = int(request.user_id)
+        set_user_profile(user_id, f'admin://ui.action.homepage/{action_id}', data['content'])
+        return True
 
 
 class HomepageGroup(models.Model):
