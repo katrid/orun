@@ -134,7 +134,7 @@ declare namespace katrid {
         getItem(key: string): Promise<string | any>;
     }
 }
-declare namespace oui.data {
+declare namespace katrid.db {
     class ClientDatabase {
         dbName: string;
         version: number;
@@ -290,6 +290,7 @@ declare namespace Katrid.Actions {
         static hooks: any[];
         get content(): any;
         onHashChange(params: any): Promise<void>;
+        saveUserChanges(data: any): Promise<void>;
     }
     class HomepageView {
         actionId: string;
@@ -1556,6 +1557,7 @@ declare namespace Katrid.Data {
         name: string;
         boundFields: Katrid.Forms.BoundField[];
         total: string;
+        widgetAttrs: Record<string, any>;
         constructor(info: IFieldInfo);
         create(): void;
         setChoices(choices: any): void;
@@ -1588,7 +1590,7 @@ declare namespace Katrid.Data {
         createTooltip(section: HTMLElement): void;
         listCreate(view: Katrid.Forms.ListRenderer, fieldEl: HTMLElement): void;
         tableCreate(row: HTMLElement, header: HTMLElement): void;
-        formSpanTemplate(): string;
+        formSpanTemplate(prefix?: string): string;
         listSpanTemplate(): string;
         listCaptionTemplate(): string;
         cardCreate(): HTMLSpanElement;
@@ -1621,7 +1623,7 @@ declare namespace Katrid.Data {
     class DateField extends Field {
         widgetHelp: string;
         loadInfo(info: any): void;
-        formSpanTemplate(): string;
+        formSpanTemplate(prefix?: string): string;
         toJSON(val: any): any;
         getParamTemplate(): string;
         getParamValue(value: any): any;
@@ -1632,7 +1634,7 @@ declare namespace Katrid.Data {
         listSpanTemplate(): string;
     }
     class DateTimeField extends DateField {
-        formSpanTemplate(): string;
+        formSpanTemplate(prefix?: string): string;
         create(): void;
         listSpanTemplate(): string;
         formControl(fieldEl: HTMLElement): HTMLElement;
@@ -1641,7 +1643,7 @@ declare namespace Katrid.Data {
     class TimeField extends Field {
         loadInfo(info: any): void;
         create(): void;
-        formSpanTemplate(): string;
+        formSpanTemplate(prefix?: string): string;
         tag: string;
     }
 }
@@ -1651,7 +1653,7 @@ declare namespace Katrid.Data {
         getFilterConditions(): any[];
     }
     class ChoiceField extends Field {
-        formSpanTemplate(): string;
+        formSpanTemplate(prefix?: string): string;
         formControl(fieldEl: Element): HTMLElement;
     }
     class PasswordField extends StringField {
@@ -1660,7 +1662,7 @@ declare namespace Katrid.Data {
     }
     class BooleanField extends Field {
         constructor(info: any);
-        formSpanTemplate(): string;
+        formSpanTemplate(prefix?: string): string;
         create(): void;
         getParamTemplate(): string;
         getFilterConditions(): any[];
@@ -1676,13 +1678,13 @@ declare namespace Katrid.Data {
         setValue(record: Katrid.Data.DataRecord, value: any): void;
         toJSON(val: any): any;
         $set(val: any): any;
-        formSpanTemplate(): string;
+        formSpanTemplate(prefix?: string): string;
         getParamValue(value: any): any;
     }
     class IntegerField extends NumericField {
         loadInfo(info: any): void;
         create(): void;
-        formSpanTemplate(): string;
+        formSpanTemplate(prefix?: string): string;
         formControl(fieldEl: Element): HTMLElement;
         toJSON(val: any): any;
     }
@@ -1712,7 +1714,7 @@ declare namespace Katrid.Data {
         vFilter: string;
         formControl(fieldEl?: HTMLElement): HTMLElement;
         listSpanTemplate(): string;
-        formSpanTemplate(): string;
+        formSpanTemplate(prefix?: string): string;
         create(): void;
         setChoices(choices: any): void;
         getParamTemplate(): string;
@@ -1742,11 +1744,13 @@ declare namespace Katrid.Data {
         required?: boolean;
         visible?: boolean;
         primaryKey?: boolean;
+        readonly?: boolean;
         choices?: string[] | Record<string, any>;
         defaultValue?: any;
         cols?: number;
         helpText?: string;
         views?: any;
+        widgetAttrs?: any;
     }
 }
 declare namespace Katrid.Data {
@@ -1789,7 +1793,7 @@ declare namespace Katrid.Data {
         formControl(fieldEl?: Element): HTMLElement;
     }
 }
-declare namespace katrid.db {
+declare namespace katrid.db.old {
     class ClientDatabase {
         config: any;
         db: IDBDatabase;
@@ -3987,6 +3991,9 @@ declare namespace katrid.ui {
 }
 declare namespace katrid.ui.dialogs {
     function showExceptionAlert(msg: string): void;
+    class ValidationError extends Error {
+        constructor(message: string);
+    }
 }
 declare namespace katrid.ui {
     class Toast {

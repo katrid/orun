@@ -165,10 +165,9 @@ var katrid;
     }
     katrid.localData = localData;
 })(katrid || (katrid = {}));
-var oui;
-(function (oui) {
-    var data;
-    (function (data) {
+(function (katrid) {
+    var db;
+    (function (db) {
         class ClientDatabase {
             constructor(dbName, version = 1) {
                 this.dbName = dbName;
@@ -244,7 +243,7 @@ var oui;
                 });
             }
         }
-        data.ClientDatabase = ClientDatabase;
+        db.ClientDatabase = ClientDatabase;
         class ClientTable {
             constructor(tableName) {
                 this.tableName = tableName;
@@ -284,9 +283,9 @@ var oui;
                 });
             }
         }
-        data.ClientTable = ClientTable;
-    })(data = oui.data || (oui.data = {}));
-})(oui || (oui = {}));
+        db.ClientTable = ClientTable;
+    })(db = katrid.db || (katrid.db = {}));
+})(katrid || (katrid = {}));
 var katrid;
 (function (katrid) {
     var ui;
@@ -641,13 +640,26 @@ var Katrid;
             }
             async onHashChange(params) {
                 await super.onHashChange(params);
+                const content = this.info['content'] || {
+                    layout: '3-cols-25-50-25',
+                };
+                if (content) {
+                    console.debug('load from content', content);
+                }
                 const view = new oui.actions.HomepageView({
                     el: this.element,
-                    info: {
-                        layout: '3-cols-25-50-25',
+                    info: content
+                });
+                view.onUserChange = () => this.saveUserChanges(view.dump());
+            }
+            async saveUserChanges(data) {
+                const svc = new Katrid.Services.ModelService('ui.action.homepage');
+                svc.call('save_profile', {
+                    action_id: this.info.id,
+                    data: {
+                        content: JSON.stringify(data),
                     }
                 });
-                view.appendTo(this.element);
             }
         }
         Actions.Homepage = Homepage;
@@ -6215,6 +6227,8 @@ var Katrid;
                 this.required = this.info.required === true;
                 this.onChange = this.info.onchange;
                 this.nolabel = false;
+                if (info.widgetAttrs)
+                    this.widgetAttrs = info.widgetAttrs;
                 if (info.choices)
                     this.setChoices(info.choices);
                 this.defaultValue = info.defaultValue;
@@ -6493,12 +6507,12 @@ var Katrid;
                 th.setAttribute('v-on:click', `columnClick('${this.name}')`);
                 header.append(th);
             }
-            formSpanTemplate() {
+            formSpanTemplate(prefix = 'record') {
                 if (this.hasChoices)
-                    return `{{ $fields['${this.name}'].displayChoices[record.${this.name}] || '${this.emptyText}' }}`;
+                    return `{{ $fields['${this.name}'].displayChoices[${prefix}.${this.name}] || '${this.emptyText}' }}`;
                 if (this.attrs['input-type'] === 'password')
                     return '<span>********</span>';
-                return `<span>{{ record.${this.name} }}</span>`;
+                return `<span>{{ ${prefix}.${this.name} }}</span>`;
             }
             listSpanTemplate() {
                 return this.formSpanTemplate();
@@ -6657,8 +6671,8 @@ var Katrid;
                     info.cols = 3;
                 super.loadInfo(info);
             }
-            formSpanTemplate() {
-                return `{{ $filters.date(record.${this.name}, 'shortDate') || '${this.emptyText}' }}`;
+            formSpanTemplate(prefix = 'record') {
+                return `{{ $filters.date(${prefix}.${this.name}, 'shortDate') || '${this.emptyText}' }}`;
             }
             toJSON(val) {
                 return val;
@@ -6711,8 +6725,8 @@ var Katrid;
         }
         Data.DateField = DateField;
         class DateTimeField extends DateField {
-            formSpanTemplate() {
-                return `{{ $filters.date(record.${this.name}, 'short') || '${this.emptyText}' }}`;
+            formSpanTemplate(prefix = 'record') {
+                return `{{ $filters.date(${prefix}.${this.name}, 'short') || '${this.emptyText}' }}`;
             }
             create() {
                 super.create();
@@ -6744,8 +6758,8 @@ var Katrid;
             create() {
                 super.create();
             }
-            formSpanTemplate() {
-                return `{{ record.${this.name} || '${this.emptyText}' }}`;
+            formSpanTemplate(prefix = 'record') {
+                return `{{ ${prefix}.${this.name} || '${this.emptyText}' }}`;
             }
         }
         Data.TimeField = TimeField;
@@ -6776,8 +6790,8 @@ var Katrid;
         }
         Data.StringField = StringField;
         class ChoiceField extends Data.Field {
-            formSpanTemplate() {
-                return `{{ $fields.${this.name}.displayChoices[record.${this.name}] || '${this.emptyText}' }}`;
+            formSpanTemplate(prefix = 'record') {
+                return `{{ $fields.${this.name}.displayChoices[${prefix}.${this.name}] || '${this.emptyText}' }}`;
             }
             formControl(fieldEl) {
                 let control = document.createElement('select');
@@ -6814,8 +6828,8 @@ var Katrid;
                 super(info);
                 this.nolabel = true;
             }
-            formSpanTemplate() {
-                return `{{ record.${this.name} == null ? '${this.emptyText}' : (record.${this.name} ? '${Katrid.i18n.gettext('yes')}' : '${Katrid.i18n.gettext('no')}') }}`;
+            formSpanTemplate(prefix = 'record') {
+                return `{{ ${prefix}.${this.name} == null ? '${this.emptyText}' : (${prefix}.${this.name} ? '${Katrid.i18n.gettext('yes')}' : '${Katrid.i18n.gettext('no')}') }}`;
             }
             create() {
                 super.create();
@@ -6881,8 +6895,8 @@ var Katrid;
             $set(val) {
                 return this.toJSON(val);
             }
-            formSpanTemplate() {
-                return `{{ ((record.${this.name} != null) && $filters.toFixed(record.${this.name}, {minimumFractionDigits: 2, maximunFractionDigits: ${this.decimalPlaces}})) || '${this.emptyText}' }}`;
+            formSpanTemplate(prefix = 'record') {
+                return `{{ ((${prefix}.${this.name} != null) && $filters.toFixed(${prefix}.${this.name}, {minimumFractionDigits: 2, maximunFractionDigits: ${this.decimalPlaces}})) || '${this.emptyText}' }}`;
             }
             getParamValue(value) {
                 if (typeof value === 'string') {
@@ -6907,8 +6921,8 @@ var Katrid;
                 this.tag = 'input';
                 this.decimalPlaces = 0;
             }
-            formSpanTemplate() {
-                return `{{ record.${this.name} || '${this.emptyText}' }}`;
+            formSpanTemplate(prefix = 'record') {
+                return `{{ ${prefix}.${this.name} || '${this.emptyText}' }}`;
             }
             formControl(fieldEl) {
                 let el = super.formControl(fieldEl);
@@ -7049,10 +7063,10 @@ var Katrid;
             listSpanTemplate() {
                 return `<a v-show="record.${this.name}" class="grid-field-readonly">{{ $filters.foreignKey(record.${this.name}) }}</a><span v-show="!record.${this.name}">${this.emptyText}</span>`;
             }
-            formSpanTemplate() {
+            formSpanTemplate(prefix = 'record') {
                 if (Katrid.webApp?.currentMenu)
-                    return `<a v-show="record.${this.name}" :href="'#/app/?menu_id=${Katrid.webApp.currentMenu.id}&model=${this.model}&view_type=form&id=' + $filters.pk(record.${this.name})" v-on:click.prevent="openRelatedObject(record.${this.name}, $fields.${this.name}, $event)">{{ $filters.foreignKey(record.${this.name}) }} </a><span v-show="!record.${this.name}">${this.emptyText}</span>`;
-                return `<a v-show="record.${this.name}" href="#">{{ $filters.foreignKey(record.${this.name}) }} </a><span v-show="!record.${this.name}">${this.emptyText}</span>`;
+                    return `<a v-show="${prefix}.${this.name}" :href="'#/app/?menu_id=${Katrid.webApp.currentMenu.id}&model=${this.model}&view_type=form&id=' + $filters.pk(record.${this.name})" v-on:click.prevent="openRelatedObject(record.${this.name}, $fields.${this.name}, $event)">{{ $filters.foreignKey(record.${this.name}) }} </a><span v-show="!record.${this.name}">${this.emptyText}</span>`;
+                return `<a v-show="${prefix}.${this.name}" href="#">{{ $filters.foreignKey(record.${this.name}) }} </a><span v-show="!record.${this.name}">${this.emptyText}</span>`;
             }
             create() {
                 super.create();
@@ -7367,101 +7381,104 @@ var katrid;
 (function (katrid) {
     var db;
     (function (db_1) {
-        class ClientDatabase {
-            constructor(config) {
-                this.config = config;
-                this.name = config.name;
-                this.version = config.version;
-                this.tables = config.tables;
-            }
-            table(tableName) {
-                return new ClientTable({ name: tableName, db: this });
-            }
-            open() {
-                return new Promise((resolve, reject) => {
-                    let req = indexedDB.open(this.name, this.version);
-                    req.onerror = reject;
-                    req.onsuccess = () => {
-                        this.db = req.result;
-                        resolve(this.db);
-                    };
-                    if (this.config.onupgradeneeded)
-                        req.onupgradeneeded = this.config.onupgradeneeded;
-                    else
-                        req.onupgradeneeded = evt => {
-                            console.log('upgrade neeed');
-                            const db = evt.target.result;
-                            if (this.tables) {
-                                for (let t of this.tables.filter(s => !db.objectStoreNames.contains(s)))
-                                    if (typeof t === 'string')
-                                        db.createObjectStore(t, { keyPath: 'id' });
-                                    else
-                                        db.createObjectStore(t.name, t.options);
-                            }
+        var old;
+        (function (old) {
+            class ClientDatabase {
+                constructor(config) {
+                    this.config = config;
+                    this.name = config.name;
+                    this.version = config.version;
+                    this.tables = config.tables;
+                }
+                table(tableName) {
+                    return new ClientTable({ name: tableName, db: this });
+                }
+                open() {
+                    return new Promise((resolve, reject) => {
+                        let req = indexedDB.open(this.name, this.version);
+                        req.onerror = reject;
+                        req.onsuccess = () => {
+                            this.db = req.result;
+                            resolve(this.db);
                         };
-                });
+                        if (this.config.onupgradeneeded)
+                            req.onupgradeneeded = this.config.onupgradeneeded;
+                        else
+                            req.onupgradeneeded = evt => {
+                                console.log('upgrade neeed');
+                                const db = evt.target.result;
+                                if (this.tables) {
+                                    for (let t of this.tables.filter(s => !db.objectStoreNames.contains(s)))
+                                        if (typeof t === 'string')
+                                            db.createObjectStore(t, { keyPath: 'id' });
+                                        else
+                                            db.createObjectStore(t.name, t.options);
+                                }
+                            };
+                    });
+                }
+                transaction(tables, mode = 'readwrite') {
+                    return this.db.transaction(tables, mode);
+                }
             }
-            transaction(tables, mode = 'readwrite') {
-                return this.db.transaction(tables, mode);
+            old.ClientDatabase = ClientDatabase;
+            class ClientTable {
+                constructor(config) {
+                    this.db = config.db;
+                    this.name = config.name;
+                }
+                all(query) {
+                    return new Promise((resolve, reject) => {
+                        const tx = this.db.transaction([this.name], 'readonly');
+                        const store = tx.objectStore(this.name);
+                        const req = store.getAll(query);
+                        req.onsuccess = evt => resolve(req.result);
+                        req.onerror = evt => reject(tx.error);
+                    });
+                }
+                delete(key) {
+                    return new Promise((resolve, reject) => {
+                        const tx = this.db.transaction([this.name], 'readwrite');
+                        const store = tx.objectStore(this.name);
+                        const req = store.delete(key);
+                        req.onsuccess = evt => resolve(req.result);
+                        req.onerror = evt => reject(tx.error);
+                    });
+                }
+                clear() {
+                    return new Promise((resolve, reject) => {
+                        const tx = this.db.transaction([this.name], 'readwrite');
+                        const store = tx.objectStore(this.name);
+                        const req = store.clear();
+                        req.onsuccess = evt => resolve(req.result);
+                        req.onerror = evt => reject(tx.error);
+                    });
+                }
+                get(key) {
+                    return new Promise((resolve, reject) => {
+                        const tx = this.db.transaction([this.name], 'readonly');
+                        const store = tx.objectStore(this.name);
+                        const req = store.get(key);
+                        req.onsuccess = evt => resolve(req.result);
+                        req.onerror = evt => reject(tx.error);
+                    });
+                }
+                put(item, key) {
+                    return new Promise((resolve, reject) => {
+                        const tx = this.db.transaction([this.name], 'readwrite');
+                        const store = tx.objectStore(this.name);
+                        let req;
+                        if (key != null)
+                            req = store.put(item);
+                        else
+                            req = store.put(item, key);
+                        req.onsuccess = evt => resolve(req.result);
+                        req.onerror = evt => reject(tx.error);
+                    });
+                }
             }
-        }
-        db_1.ClientDatabase = ClientDatabase;
-        class ClientTable {
-            constructor(config) {
-                this.db = config.db;
-                this.name = config.name;
-            }
-            all(query) {
-                return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction([this.name], 'readonly');
-                    const store = tx.objectStore(this.name);
-                    const req = store.getAll(query);
-                    req.onsuccess = evt => resolve(req.result);
-                    req.onerror = evt => reject(tx.error);
-                });
-            }
-            delete(key) {
-                return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction([this.name], 'readwrite');
-                    const store = tx.objectStore(this.name);
-                    const req = store.delete(key);
-                    req.onsuccess = evt => resolve(req.result);
-                    req.onerror = evt => reject(tx.error);
-                });
-            }
-            clear() {
-                return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction([this.name], 'readwrite');
-                    const store = tx.objectStore(this.name);
-                    const req = store.clear();
-                    req.onsuccess = evt => resolve(req.result);
-                    req.onerror = evt => reject(tx.error);
-                });
-            }
-            get(key) {
-                return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction([this.name], 'readonly');
-                    const store = tx.objectStore(this.name);
-                    const req = store.get(key);
-                    req.onsuccess = evt => resolve(req.result);
-                    req.onerror = evt => reject(tx.error);
-                });
-            }
-            put(item, key) {
-                return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction([this.name], 'readwrite');
-                    const store = tx.objectStore(this.name);
-                    let req;
-                    if (key != null)
-                        req = store.put(item);
-                    else
-                        req = store.put(item, key);
-                    req.onsuccess = evt => resolve(req.result);
-                    req.onerror = evt => reject(tx.error);
-                });
-            }
-        }
-        db_1.ClientTable = ClientTable;
+            old.ClientTable = ClientTable;
+        })(old = db_1.old || (db_1.old = {}));
     })(db = katrid.db || (katrid.db = {}));
 })(katrid || (katrid = {}));
 var katrid;
@@ -19920,6 +19937,14 @@ var katrid;
                 throw new Error(msg);
             }
             dialogs.showExceptionAlert = showExceptionAlert;
+            class ValidationError extends Error {
+                constructor(message) {
+                    super(message);
+                    this.name = 'ValidationError';
+                    Katrid.Forms.Dialogs.Alerts.error(message);
+                }
+            }
+            dialogs.ValidationError = ValidationError;
         })(dialogs = ui.dialogs || (ui.dialogs = {}));
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));

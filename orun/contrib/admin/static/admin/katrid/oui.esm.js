@@ -669,19 +669,20 @@ var DataWidget = class extends BaseWidget {
 
 // src/portlets/index.ts
 var portletRegistry = {};
-function registerPortlet(qualnameOrPortlet, portletClass) {
-  if (typeof qualnameOrPortlet === "string") {
-    if (!portletClass)
-      throw new Error("Portlet class must be provided when category is specified");
-    portletRegistry[qualnameOrPortlet] = portletClass;
-  } else if (qualnameOrPortlet instanceof Function) {
-    portletRegistry[qualnameOrPortlet.name] = qualnameOrPortlet;
+function registerPortlet(portletClass, moduleName) {
+  if (moduleName) {
+    const qualName = `${moduleName}.${portletClass.name}`;
+    if (!portletClass["type"])
+      portletClass["type"] = qualName;
+    portletRegistry[qualName] = portletClass;
+  } else if (portletClass instanceof Function) {
+    portletRegistry[portletClass.type || portletClass.name] = portletClass;
   } else {
     throw new Error("Invalid arguments for registerPortlet");
   }
 }
 var DEFAULT_MAX_HEIGHT = 500;
-var BasePortlet = class extends DataWidget {
+var BasePortlet = class _BasePortlet extends DataWidget {
   constructor(config) {
     super(config);
     this.config = config;
@@ -689,9 +690,16 @@ var BasePortlet = class extends DataWidget {
   }
   static fromInfo(w) {
     const cls = portletRegistry[w.type];
-    if (!cls)
-      throw new Error(`Unknown portlet type: ${w.type}`);
-    const p = new cls();
+    if (!cls) {
+      console.error(`Unknown portlet type: ${w.type}`);
+      return;
+    }
+    let p;
+    if (cls.prototype instanceof _BasePortlet)
+      p = new cls();
+    else {
+      p = portletRegistry["CustomPortlet"].from(cls);
+    }
     p.load(w);
     return p;
   }
@@ -816,7 +824,7 @@ var BasePortlet = class extends DataWidget {
       };
       const onPointerUp = (evt2) => {
         ghost.remove();
-        if (this.dragRect)
+        if (this.dragRect && lastTarget)
           this.element.dispatchEvent(
             new CustomEvent("ouiDragSuccess", {
               detail: {
@@ -853,7 +861,7 @@ var BasePortlet = class extends DataWidget {
     div.className = "portlet-header";
     this.element.appendChild(div);
     const h3 = document.createElement("h3");
-    h3.textContent = this.title;
+    h3.textContent = this.title || this.constructor["info"]?.name;
     div.appendChild(h3);
     this.element.appendChild(div);
     this.createDragEvents(div);
@@ -915,7 +923,7 @@ var PortletSelector = class extends BaseWidget {
       item.classList.add("portlet-selector-item", "list-group-item", "list-group-item-action");
       const caption = info.name || k;
       if (info.description)
-        item.innerHTML = `<h5 class="mb-1">${caption}</h5><p class="mb-1">${info.description}</p>`;
+        item.innerHTML = `<h5 class="mb-1">${caption}</h5><small class="mb-1">${info.description}</small>`;
       else
         item.innerHTML = `<h5 class="mb-1">${caption}</h5>`;
       item.onclick = () => {
@@ -938,6 +946,8 @@ var PortletSelector = class extends BaseWidget {
     toolbox.innerHTML = '<div class="toolbox-header"><h5 class="modal-title">Select a Portlet</h5><button type="button" class="btn-close" aria-label="Close"></button></div>';
     toolbox.querySelector(".btn-close").addEventListener("click", () => {
       toolbox.remove();
+      if (this.onClose)
+        this.onClose();
     });
     this.create();
     toolbox.appendChild(this.element);
@@ -948,20 +958,30 @@ var PortletSelector = class extends BaseWidget {
 
 // src/portlets/custom.ts
 var CustomPortlet = class _CustomPortlet extends BasePortlet {
-  static from(fn) {
-    const portlet = new _CustomPortlet();
-    portlet.content = fn(portlet);
-    return portlet;
-  }
   static {
     this.type = "CustomPortlet";
   }
+  static from(fn) {
+    const portlet = new _CustomPortlet();
+    if (fn.info.name)
+      portlet.title = fn.info.name;
+    portlet._functionalType = fn.type;
+    portlet.content = fn(portlet);
+    return portlet;
+  }
+  dump() {
+    const info = super.dump();
+    info["type"] = this._functionalType;
+    return info;
+  }
   createBody() {
     const el = super.createBody();
-    el.appendChild(this.content);
+    if (this.content)
+      el.appendChild(this.content);
     return el;
   }
 };
+registerPortlet(CustomPortlet);
 
 // src/actions/homepage.ts
 var Homepage = class {
@@ -973,6 +993,15 @@ var HomepageView = class extends BaseWidget {
     if (config.info)
       this.load(config.info);
   }
+  get title() {
+    return this._title;
+  }
+  set title(value) {
+    this._title = value;
+    const h1 = this.element.querySelector("h1");
+    if (h1)
+      h1.textContent = value;
+  }
   createToolbar() {
     const toolbar = document.createElement("div");
     toolbar.classList.add("toolbar");
@@ -980,7 +1009,7 @@ var HomepageView = class extends BaseWidget {
     btn.type = "button";
     btn.classList.add("btn", "toolbar-button");
     btn.innerHTML = '<i class="fa-solid fa-pencil"></i>';
-    btn.addEventListener("click", () => this.showPortletSelector());
+    btn.addEventListener("click", () => this.togglePortletSelector());
     toolbar.appendChild(btn);
     btn = document.createElement("button");
     btn.type = "button";
@@ -1004,13 +1033,21 @@ var HomepageView = class extends BaseWidget {
     });
     toolbar.appendChild(btn);
     let el = document.createElement("div");
-    el.innerHTML = '<h1 class="g-col-8">Homepage</h1>';
+    el.innerHTML = `<h1 class="g-col-8">${this._title || "My Homepage"}</h1>`;
+    el.querySelector("h1").addEventListener("click", () => this.changeTitle());
     el.className = "grid";
     this.element.appendChild(el);
     let toolbarWrapper = document.createElement("div");
     toolbarWrapper.className = "g-col-4";
     toolbarWrapper.appendChild(toolbar);
     el.appendChild(toolbarWrapper);
+  }
+  changeTitle() {
+    const newTitle = prompt("Enter homepage title", this.element.querySelector("h1").textContent);
+    if (newTitle !== null) {
+      this.element.querySelector("h1").textContent = newTitle;
+      this.onUserChange?.();
+    }
   }
   createContent(container) {
     const content = document.createElement("div");
@@ -1053,8 +1090,10 @@ var HomepageView = class extends BaseWidget {
       if (info.columns)
         this.columns = info.columns.map((c) => ({
           element: null,
-          widgets: c.widgets?.length && c.widgets.map((w) => BasePortlet.fromInfo(w)) || []
+          // if error loading, ignore the widget and continue loading the others
+          widgets: c.widgets?.length && c.widgets.map((w) => BasePortlet.fromInfo(w)).filter((w) => w) || []
         }));
+      console.debug("");
       this.setLayout(info.layout);
     } finally {
       this._loaded = true;
@@ -1151,17 +1190,21 @@ var HomepageView = class extends BaseWidget {
     this.createPortlet(portlet, col.element);
     this.onUserChange?.();
   }
-  showPortletSelector() {
-    const selector = new PortletSelector();
-    selector.showToolbox(this.element);
-    selector.onSelect = (portletClass) => this.addNewPortlet(portletClass);
-    return selector;
+  togglePortletSelector() {
+    if (!this._selector) {
+      this._selector = new PortletSelector();
+      this._selector.showToolbox(this.element);
+      this._selector.onSelect = (portletClass) => this.addNewPortlet(portletClass);
+      this._selector.onClose = () => this._selector = null;
+    }
+    return this._selector;
   }
 };
 
 // src/portlets/all.ts
 var all_exports = {};
 __export(all_exports, {
+  CustomPortlet: () => CustomPortlet,
   ModelViewPortlet: () => ModelViewPortlet,
   ReportPortlet: () => ReportPortlet,
   registerPortlet: () => registerPortlet
