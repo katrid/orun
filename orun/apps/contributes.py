@@ -1,4 +1,5 @@
-from typing import TypedDict, Optional, Any, Literal
+"""Extensibility contributions for the addons."""
+from typing import TypedDict, Optional, Any, Literal, Self
 
 
 class ConfigurationProperty(TypedDict):
@@ -14,13 +15,13 @@ class ConfigurationProperty(TypedDict):
     format: Optional[str]
     enum: Optional[list[str] | dict[str, str]]
     items: Optional[list[Any]]
-    properties: dict[str, ConfigurationProperty]
+    properties: dict[str, Self]
 
 
 class Configuration(TypedDict):
     title: str
     description: str
-    properties: dict[str, dict]
+    properties: dict[str, ConfigurationProperty]
 
 
 class Contributes(TypedDict):
