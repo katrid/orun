@@ -1140,11 +1140,14 @@ class Field[T](BaseField[T]):
         table.columns[col.name] = col
         if self.db_index:
             ix_name = editor.create_index_name(self.model._meta.db_table, [self.column])
-            table.indexes[ix_name] = Index(
+            ix = Index(
                 name=ix_name, expressions=[self.column], auto_created=True,
                 # model=self.model,
                 # tablespace=self.db_tablespace,
             )
+            if self.unique:
+                ix.type = 'UNIQUE'
+            table.indexes[ix_name] = ix
 
 
 class BooleanField(Field[bool]):

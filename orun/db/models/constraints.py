@@ -21,8 +21,7 @@ class Constraint:
         self.deferred = deferred
 
     def get_metadata(self):
-        return metadata.Constraint(self.name, type=self.type, deferred=self.deferred,
-                                   expressions=self.get_expressions())
+        return metadata.Constraint(self.name, type=self.type, deferrable=self.deferred, expressions=self.get_expressions())
 
     def get_expressions(self):
         return None
@@ -42,9 +41,13 @@ class CheckConstraint(Constraint):
 class UniqueConstraint(Constraint):
     type = 'UNIQUE'
 
-    def __init__(self, fields: list[str], /, *, deferred: bool = False):
-        super().__init__(deferred=deferred)
+    def __init__(self, fields: list[str], /, *, name: str = None, deferred: bool = False):
+        super().__init__(name=name, deferred=deferred)
         self.fields = fields
 
     def get_expressions(self):
         return self.fields
+
+    def clone(self):
+        return self.__class__(self.fields, name=self.name, deferred=self.deferred)
+

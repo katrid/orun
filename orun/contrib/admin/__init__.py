@@ -25,6 +25,10 @@ def register_action(cls: type):
     return cls
 
 
+def register_actions(cls: type):
+    cls._actions = True
+
+
 def register_menu(cls: type):
     from .site import admin_site
     from .admin import MenuItem

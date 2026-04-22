@@ -19,11 +19,14 @@ def _load_from_module(addon, options, module):
     for member in members:
         if inspect.ismodule(member):
             if member.__name__.startswith(f'{module.__name__}.'):
-                _load_from_module(member)
+                _load_from_module(member, options)
         if isinstance(member, type) and member.__module__.startswith(module.__name__):
             if getattr(member, '_admin_registrable', None):
                 if issubclass(member, Registrable):
-                    member.update_info()
+                    if hasattr(member, '_update_info'):
+                        member._update_info()
+                    else:
+                        member.update_info()
                 else:
                     member._admin_registrable.update_info()
 

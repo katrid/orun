@@ -10,9 +10,10 @@ from orun.http import HttpRequest
 
 from orun.contrib.auth.models import Group
 from orun.contrib.contenttypes.models import ContentType, ref
+from .base import AdminModel
 
 
-class Action(models.Model):
+class Action(AdminModel):
     name = models.CharField(128, _('Name'), null=False, translate=True)
     action_type = models.CharField(32, _('Action Type'), null=False)
     usage = models.TextField(label=_('Usage'))
@@ -52,7 +53,8 @@ class Action(models.Model):
             if isinstance(name_or_id, str):
                 name_or_id = ref(name_or_id)
         info = cls.get(name_or_id).get_action()._get_info(request, context)
-        info['type'] = info.pop('action_type')
+        if 'action_type' in info:
+            info['type'] = info.pop('action_type')
         return info
 
     def execute(self):

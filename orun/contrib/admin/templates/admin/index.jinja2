@@ -8,6 +8,7 @@
     // start katrid application
     let app = new Katrid.Core.WebApplication({
       el: document.getElementById('page-content'),
+      enableMessages: true,
       menu: {{ menu }},
       userInfo: {{ user_info }},
       title: {{ settings.ADMIN_SITE_TITLE | tojson }},

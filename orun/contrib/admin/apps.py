@@ -12,7 +12,10 @@ class AdminConfig(AppConfig):
     js_templates = [
         'static/admin/katrid/templates.html',
     ]
-    dependencies = ['orun.contrib.auth']
+    dependencies = [
+        'orun.contrib.auth',
+        'core',
+    ]
     urls_module = 'orun.contrib.admin.urls'
 
     def _app_started(self, sender, **kwargs):
