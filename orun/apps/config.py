@@ -9,6 +9,8 @@ from orun.conf import settings
 from orun.utils.module_loading import import_string, module_has_submodule
 from orun.core.exceptions import ImproperlyConfigured
 
+from  .contributes import Contributes
+
 
 APPS_MODULE_NAME = 'apps'
 MODELS_MODULE_NAME = 'models'
@@ -50,6 +52,10 @@ class AppConfig:
         # '/path/to/orun/contrib/admin'.
         if not hasattr(self, 'path'):
             self.path = self._path_from_module(app_module)
+
+    @classmethod
+    def contributes(cls) -> Contributes:
+        pass
 
     @classmethod
     def create(cls, entry, registry=None):
