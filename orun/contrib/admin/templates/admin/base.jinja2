@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html {% block html_attrs %}{% endblock %} class="{% block html_class %}katrid-app{% endblock %}">
+<html {% block html_attrs %}{% endblock %} class="{% block html_class %}katrid-app oui-app{% endblock %}">
 <head>
   <title>{% block page_title %}{{ settings.ADMIN_SITE_TITLE }}{% endblock %}</title>
   <meta charset="UTF-8">
@@ -10,7 +10,10 @@
   <link href="/static/admin/assets/css/fontawesome.css" rel="stylesheet">
   {% endblock %}
   {# katrid.admin theme #}
-  {% block css_theme %}<link href="/static/admin/katrid/style.css" rel="stylesheet">{% endblock %}
+  {% block css_theme %}
+    <link href="/static/admin/katrid/style.css" rel="stylesheet">
+    <link href="/static/admin/katrid/oui.css" rel="stylesheet">
+  {% endblock %}
 
   {# extra head #}
   {% block extra_head %}{% endblock %}
@@ -25,6 +28,7 @@
   </script>
 {% endif %}
 <script src="/static/admin/katrid/katrid.js"></script>
+<script src="/static/admin/katrid/oui.min.js"></script>
 <script src="/static/admin/assets/js/select2/select2.js"></script>
 <link href="/static/admin/assets/js/select2/select2.css" rel="stylesheet" type="text/css">
 
