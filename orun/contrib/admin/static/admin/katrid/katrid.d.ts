@@ -134,7 +134,7 @@ declare namespace katrid {
         getItem(key: string): Promise<string | any>;
     }
 }
-declare namespace katrid.db {
+declare namespace katrid.old.db {
     class ClientDatabase {
         dbName: string;
         version: number;
@@ -1793,7 +1793,7 @@ declare namespace Katrid.Data {
         formControl(fieldEl?: Element): HTMLElement;
     }
 }
-declare namespace katrid.db.old {
+declare namespace katrid.db {
     class ClientDatabase {
         config: any;
         db: IDBDatabase;
@@ -1815,6 +1815,9 @@ declare namespace katrid.db.old {
         get(key: string | number): Promise<any>;
         put(item: any, key?: string | number): Promise<any>;
     }
+}
+declare namespace katrid.db.old {
+    const ClientDatabase: typeof db.ClientDatabase;
 }
 declare namespace katrid.ui {
     type ConfirmConfig = {

@@ -166,125 +166,128 @@ var katrid;
     katrid.localData = localData;
 })(katrid || (katrid = {}));
 (function (katrid) {
-    var db;
-    (function (db) {
-        class ClientDatabase {
-            constructor(dbName, version = 1) {
-                this.dbName = dbName;
-                this.version = version;
-                this._active = false;
+    var old;
+    (function (old) {
+        var db;
+        (function (db) {
+            class ClientDatabase {
+                constructor(dbName, version = 1) {
+                    this.dbName = dbName;
+                    this.version = version;
+                    this._active = false;
+                }
+                open() {
+                    let req;
+                    req = indexedDB.open(this.dbName, this.version);
+                    return new Promise((resolve, reject) => {
+                        req.onsuccess = (evt) => {
+                            this._active = true;
+                            this.db = evt.target.result;
+                            resolve(this.db);
+                        };
+                        req.onerror = (evt) => reject(evt);
+                        req.onupgradeneeded = (evt) => this.onUpgradeNeeded?.(evt);
+                    });
+                }
+                close() {
+                    return new Promise((resolve, reject) => {
+                        this.db.onclose = evt => {
+                            this._active = false;
+                            resolve();
+                        };
+                        this.db.close();
+                    });
+                }
+                async addRecord(storeName, record) {
+                    if (!this._active)
+                        await this.open();
+                    const tx = this.db.transaction(storeName, 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    return new Promise((resolve, reject) => {
+                        const req = store.add(record);
+                        req.onsuccess = (evt) => resolve(req.result);
+                        req.onerror = (evt) => reject(evt);
+                    });
+                }
+                async putRecord(storeName, record, key) {
+                    if (!this._active)
+                        await this.open();
+                    const tx = this.db.transaction(storeName, 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    return new Promise((resolve, reject) => {
+                        tx.onerror = evt => {
+                            console.error(evt.target.error);
+                            reject(evt);
+                        };
+                        tx.oncomplete = evt => console.debug('putRecord tx complete');
+                        const req = store.put(record, key);
+                        req.onsuccess = (evt) => {
+                            tx.commit();
+                            resolve(req.result);
+                        };
+                        req.onerror = (evt) => {
+                            console.error(evt.target.error);
+                            reject(evt.target);
+                        };
+                    });
+                }
+                async getRecord(storeName, key) {
+                    if (!this._active)
+                        await this.open();
+                    const tx = this.db.transaction(storeName, 'readonly');
+                    const store = tx.objectStore(storeName);
+                    return new Promise((resolve, reject) => {
+                        const req = store.get(key);
+                        req.onsuccess = (evt) => {
+                            resolve(req.result);
+                        };
+                        req.onerror = (evt) => reject(evt);
+                    });
+                }
             }
-            open() {
-                let req;
-                req = indexedDB.open(this.dbName, this.version);
-                return new Promise((resolve, reject) => {
-                    req.onsuccess = (evt) => {
-                        this._active = true;
-                        this.db = evt.target.result;
-                        resolve(this.db);
-                    };
-                    req.onerror = (evt) => reject(evt);
-                    req.onupgradeneeded = (evt) => this.onUpgradeNeeded?.(evt);
-                });
+            db.ClientDatabase = ClientDatabase;
+            class ClientTable {
+                constructor(tableName) {
+                    this.tableName = tableName;
+                }
+                open() {
+                    this._tx = this.database.db.transaction(this.tableName, 'readwrite');
+                    this._store = this._tx.objectStore(this.tableName);
+                }
+                close() {
+                }
+                add(record) {
+                    return new Promise((resolve, reject) => {
+                        const req = this._store.add(record);
+                        req.onsuccess = (evt) => resolve(req.result);
+                        req.onerror = evt => reject(req.error);
+                    });
+                }
+                get(key) {
+                    return new Promise((resolve, reject) => {
+                        const req = this._store.get(key);
+                        req.onsuccess = evt => resolve(req.result);
+                        req.onerror = evt => reject(req.error);
+                    });
+                }
+                put(key, record) {
+                    return new Promise((resolve, reject) => {
+                        const req = this._store.put(record, key);
+                        req.onsuccess = evt => resolve(req.result);
+                        req.onerror = evt => reject(req.error);
+                    });
+                }
+                delete(key) {
+                    return new Promise((resolve, reject) => {
+                        const req = this._store.delete(key);
+                        req.onsuccess = evt => resolve();
+                        req.onerror = evt => reject(req.error);
+                    });
+                }
             }
-            close() {
-                return new Promise((resolve, reject) => {
-                    this.db.onclose = evt => {
-                        this._active = false;
-                        resolve();
-                    };
-                    this.db.close();
-                });
-            }
-            async addRecord(storeName, record) {
-                if (!this._active)
-                    await this.open();
-                const tx = this.db.transaction(storeName, 'readwrite');
-                const store = tx.objectStore(storeName);
-                return new Promise((resolve, reject) => {
-                    const req = store.add(record);
-                    req.onsuccess = (evt) => resolve(req.result);
-                    req.onerror = (evt) => reject(evt);
-                });
-            }
-            async putRecord(storeName, record, key) {
-                if (!this._active)
-                    await this.open();
-                const tx = this.db.transaction(storeName, 'readwrite');
-                const store = tx.objectStore(storeName);
-                return new Promise((resolve, reject) => {
-                    tx.onerror = evt => {
-                        console.error(evt.target.error);
-                        reject(evt);
-                    };
-                    tx.oncomplete = evt => console.debug('putRecord tx complete');
-                    const req = store.put(record, key);
-                    req.onsuccess = (evt) => {
-                        tx.commit();
-                        resolve(req.result);
-                    };
-                    req.onerror = (evt) => {
-                        console.error(evt.target.error);
-                        reject(evt.target);
-                    };
-                });
-            }
-            async getRecord(storeName, key) {
-                if (!this._active)
-                    await this.open();
-                const tx = this.db.transaction(storeName, 'readonly');
-                const store = tx.objectStore(storeName);
-                return new Promise((resolve, reject) => {
-                    const req = store.get(key);
-                    req.onsuccess = (evt) => {
-                        resolve(req.result);
-                    };
-                    req.onerror = (evt) => reject(evt);
-                });
-            }
-        }
-        db.ClientDatabase = ClientDatabase;
-        class ClientTable {
-            constructor(tableName) {
-                this.tableName = tableName;
-            }
-            open() {
-                this._tx = this.database.db.transaction(this.tableName, 'readwrite');
-                this._store = this._tx.objectStore(this.tableName);
-            }
-            close() {
-            }
-            add(record) {
-                return new Promise((resolve, reject) => {
-                    const req = this._store.add(record);
-                    req.onsuccess = (evt) => resolve(req.result);
-                    req.onerror = evt => reject(req.error);
-                });
-            }
-            get(key) {
-                return new Promise((resolve, reject) => {
-                    const req = this._store.get(key);
-                    req.onsuccess = evt => resolve(req.result);
-                    req.onerror = evt => reject(req.error);
-                });
-            }
-            put(key, record) {
-                return new Promise((resolve, reject) => {
-                    const req = this._store.put(record, key);
-                    req.onsuccess = evt => resolve(req.result);
-                    req.onerror = evt => reject(req.error);
-                });
-            }
-            delete(key) {
-                return new Promise((resolve, reject) => {
-                    const req = this._store.delete(key);
-                    req.onsuccess = evt => resolve();
-                    req.onerror = evt => reject(req.error);
-                });
-            }
-        }
-        db.ClientTable = ClientTable;
-    })(db = katrid.db || (katrid.db = {}));
+            db.ClientTable = ClientTable;
+        })(db = old.db || (old.db = {}));
+    })(old = katrid.old || (katrid.old = {}));
 })(katrid || (katrid = {}));
 var katrid;
 (function (katrid) {
@@ -7381,104 +7384,110 @@ var katrid;
 (function (katrid) {
     var db;
     (function (db_1) {
+        class ClientDatabase {
+            constructor(config) {
+                this.config = config;
+                this.name = config.name;
+                this.version = config.version;
+                this.tables = config.tables;
+            }
+            table(tableName) {
+                return new ClientTable({ name: tableName, db: this });
+            }
+            open() {
+                return new Promise((resolve, reject) => {
+                    let req = indexedDB.open(this.name, this.version);
+                    req.onerror = reject;
+                    req.onsuccess = () => {
+                        this.db = req.result;
+                        resolve(this.db);
+                    };
+                    if (this.config.onupgradeneeded)
+                        req.onupgradeneeded = this.config.onupgradeneeded;
+                    else
+                        req.onupgradeneeded = evt => {
+                            console.log('upgrade neeed');
+                            const db = evt.target.result;
+                            if (this.tables) {
+                                for (let t of this.tables.filter(s => !db.objectStoreNames.contains(s)))
+                                    if (typeof t === 'string')
+                                        db.createObjectStore(t, { keyPath: 'id' });
+                                    else
+                                        db.createObjectStore(t.name, t.options);
+                            }
+                        };
+                });
+            }
+            transaction(tables, mode = 'readwrite') {
+                return this.db.transaction(tables, mode);
+            }
+        }
+        db_1.ClientDatabase = ClientDatabase;
+        class ClientTable {
+            constructor(config) {
+                this.db = config.db;
+                this.name = config.name;
+            }
+            all(query) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.name], 'readonly');
+                    const store = tx.objectStore(this.name);
+                    const req = store.getAll(query);
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(tx.error);
+                });
+            }
+            delete(key) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.name], 'readwrite');
+                    const store = tx.objectStore(this.name);
+                    const req = store.delete(key);
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(tx.error);
+                });
+            }
+            clear() {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.name], 'readwrite');
+                    const store = tx.objectStore(this.name);
+                    const req = store.clear();
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(tx.error);
+                });
+            }
+            get(key) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.name], 'readonly');
+                    const store = tx.objectStore(this.name);
+                    const req = store.get(key);
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(tx.error);
+                });
+            }
+            put(item, key) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.name], 'readwrite');
+                    const store = tx.objectStore(this.name);
+                    let req;
+                    if (key != null)
+                        req = store.put(item);
+                    else
+                        req = store.put(item, key);
+                    req.onsuccess = evt => resolve(req.result);
+                    req.onerror = evt => reject(tx.error);
+                });
+            }
+        }
+        db_1.ClientTable = ClientTable;
+    })(db = katrid.db || (katrid.db = {}));
+})(katrid || (katrid = {}));
+(function (katrid) {
+    var db;
+    (function (db) {
         var old;
         (function (old) {
-            class ClientDatabase {
-                constructor(config) {
-                    this.config = config;
-                    this.name = config.name;
-                    this.version = config.version;
-                    this.tables = config.tables;
-                }
-                table(tableName) {
-                    return new ClientTable({ name: tableName, db: this });
-                }
-                open() {
-                    return new Promise((resolve, reject) => {
-                        let req = indexedDB.open(this.name, this.version);
-                        req.onerror = reject;
-                        req.onsuccess = () => {
-                            this.db = req.result;
-                            resolve(this.db);
-                        };
-                        if (this.config.onupgradeneeded)
-                            req.onupgradeneeded = this.config.onupgradeneeded;
-                        else
-                            req.onupgradeneeded = evt => {
-                                console.log('upgrade neeed');
-                                const db = evt.target.result;
-                                if (this.tables) {
-                                    for (let t of this.tables.filter(s => !db.objectStoreNames.contains(s)))
-                                        if (typeof t === 'string')
-                                            db.createObjectStore(t, { keyPath: 'id' });
-                                        else
-                                            db.createObjectStore(t.name, t.options);
-                                }
-                            };
-                    });
-                }
-                transaction(tables, mode = 'readwrite') {
-                    return this.db.transaction(tables, mode);
-                }
-            }
-            old.ClientDatabase = ClientDatabase;
-            class ClientTable {
-                constructor(config) {
-                    this.db = config.db;
-                    this.name = config.name;
-                }
-                all(query) {
-                    return new Promise((resolve, reject) => {
-                        const tx = this.db.transaction([this.name], 'readonly');
-                        const store = tx.objectStore(this.name);
-                        const req = store.getAll(query);
-                        req.onsuccess = evt => resolve(req.result);
-                        req.onerror = evt => reject(tx.error);
-                    });
-                }
-                delete(key) {
-                    return new Promise((resolve, reject) => {
-                        const tx = this.db.transaction([this.name], 'readwrite');
-                        const store = tx.objectStore(this.name);
-                        const req = store.delete(key);
-                        req.onsuccess = evt => resolve(req.result);
-                        req.onerror = evt => reject(tx.error);
-                    });
-                }
-                clear() {
-                    return new Promise((resolve, reject) => {
-                        const tx = this.db.transaction([this.name], 'readwrite');
-                        const store = tx.objectStore(this.name);
-                        const req = store.clear();
-                        req.onsuccess = evt => resolve(req.result);
-                        req.onerror = evt => reject(tx.error);
-                    });
-                }
-                get(key) {
-                    return new Promise((resolve, reject) => {
-                        const tx = this.db.transaction([this.name], 'readonly');
-                        const store = tx.objectStore(this.name);
-                        const req = store.get(key);
-                        req.onsuccess = evt => resolve(req.result);
-                        req.onerror = evt => reject(tx.error);
-                    });
-                }
-                put(item, key) {
-                    return new Promise((resolve, reject) => {
-                        const tx = this.db.transaction([this.name], 'readwrite');
-                        const store = tx.objectStore(this.name);
-                        let req;
-                        if (key != null)
-                            req = store.put(item);
-                        else
-                            req = store.put(item, key);
-                        req.onsuccess = evt => resolve(req.result);
-                        req.onerror = evt => reject(tx.error);
-                    });
-                }
-            }
-            old.ClientTable = ClientTable;
-        })(old = db_1.old || (db_1.old = {}));
+            old.ClientDatabase = katrid.db.ClientDatabase;
+        })(old = db.old || (db.old = {}));
     })(db = katrid.db || (katrid.db = {}));
 })(katrid || (katrid = {}));
 var katrid;

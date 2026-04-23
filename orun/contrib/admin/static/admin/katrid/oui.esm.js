@@ -727,6 +727,8 @@ var BasePortlet = class _BasePortlet extends DataWidget {
   }
   createDragEvents(el) {
     el.addEventListener("pointerdown", (evt) => {
+      if (evt.button !== 0)
+        return;
       const ghost = this.createGhost();
       let dragging = false;
       const ox = evt.clientX;
