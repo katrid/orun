@@ -1303,9 +1303,57 @@ var ModelViewPortlet = class extends BasePortlet {
   }
 };
 registerPortlet(ModelViewPortlet);
+
+// src/dialogs/index.ts
+var dialogs_exports = {};
+__export(dialogs_exports, {
+  ModalResult: () => ModalResult,
+  createDialog: () => createDialog,
+  modalResultText: () => modalResultText,
+  showDialog: () => showDialog
+});
+
+// src/dialogs/consts.ts
+var ModalResult = /* @__PURE__ */ ((ModalResult2) => {
+  ModalResult2[ModalResult2["OK"] = 1] = "OK";
+  ModalResult2[ModalResult2["CANCEL"] = 2] = "CANCEL";
+  ModalResult2[ModalResult2["YES"] = 3] = "YES";
+  ModalResult2[ModalResult2["NO"] = 4] = "NO";
+  ModalResult2[ModalResult2["NONE"] = 0] = "NONE";
+  return ModalResult2;
+})(ModalResult || {});
+var modalResultText = {
+  [1 /* OK */]: "OK",
+  [2 /* CANCEL */]: "Cancel",
+  [3 /* YES */]: "Yes",
+  [4 /* NO */]: "No"
+};
+
+// src/dialogs/index.ts
+function createDialog(config) {
+  const el = document.createElement("dialog");
+  if (config.title)
+    el.innerHTML = `
+    
+        <header class="dialog-header">${config.title}</header>
+    `;
+  el.className = "dialog";
+  if (config.content instanceof HTMLElement)
+    el.appendChild(config.content);
+  return el;
+}
+function showDialog(config) {
+  const dlg = createDialog(config);
+  document.body.appendChild(dlg);
+  if (config.modal == null || config.modal)
+    dlg.showModal();
+  else
+    dlg.show();
+}
 export {
   homepage_exports as actions,
   menu_exports as controls,
+  dialogs_exports as dialogs,
   table_utils_exports as grids,
   all_exports as portlets
 };

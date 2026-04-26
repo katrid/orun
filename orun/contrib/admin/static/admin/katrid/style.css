@@ -13743,7 +13743,6 @@ h3.popover-title, .popover-title.h3 {
 .katrid-app dialog.dialog {
   display: flex;
   flex-direction: column;
-  width: 500px;
 }
 .katrid-app dialog.dialog .dialog-body {
   flex: 1;
@@ -15104,17 +15103,17 @@ table-field .table tbody tr {
 }
 @media (min-width: 992px) {
   .katrid-app .modal-lg, .oui-app .modal-lg {
-    max-width: 900px;
+    width: 900px;
   }
 }
 @media (min-width: 1200px) {
   .katrid-app .modal-lg, .oui-app .modal-lg {
-    max-width: 1000px;
+    width: 1000px;
   }
 }
 @media (min-width: 1400px) {
   .katrid-app .modal-lg, .oui-app .modal-lg {
-    max-width: 1200px;
+    width: 1200px;
   }
 }
 .katrid-app #header, .oui-app #header {

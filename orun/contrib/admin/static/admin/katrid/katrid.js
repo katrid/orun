@@ -13118,6 +13118,23 @@ var Katrid;
 (function (Katrid) {
     var UI;
     (function (UI) {
+        function adjustPopoverPos(target, popover) {
+            const rect = target.getBoundingClientRect();
+            let x = rect.left + window.scrollX;
+            let y = rect.bottom + window.scrollY;
+            if (y + popover.offsetHeight > window.innerHeight)
+                y = rect.top - popover.offsetHeight - 10;
+            if (x + popover.offsetWidth > window.innerWidth)
+                x = rect.left - popover.offsetWidth + target.offsetWidth;
+            if (x < 0)
+                x = 0;
+            if (y < 0)
+                y = 0;
+            Object.assign(popover.style, {
+                left: `${x}px`,
+                top: `${y}px`,
+            });
+        }
         UI.keyCode = {
             BACKSPACE: 8,
             COMMA: 188,
@@ -13157,13 +13174,22 @@ var Katrid;
                 }
             }
             show() {
-                document.body.append(this.el);
-                this._popper = Popper.createPopper(this.target, this.el, { placement: 'auto' });
+                const dlg = this.target.closest('dialog');
+                if (dlg) {
+                    this.el.setAttribute('popover', 'auto');
+                    dlg.appendChild(this.el);
+                    adjustPopoverPos(this.target, this.el);
+                    this.el.showPopover();
+                }
+                else {
+                    document.body.appendChild(this.el);
+                    this._popper = Popper.createPopper(this.target, this.el, { placement: 'auto' });
+                }
                 this.el.classList.add('show');
             }
             hide() {
                 this.el.classList.remove('show');
-                this._popper.destroy();
+                this._popper?.destroy();
                 this.el.remove();
             }
             get visible() {
@@ -13174,6 +13200,7 @@ var Katrid;
                     for (let item of items)
                         this.addItem(item);
                     this.move(1);
+                    adjustPopoverPos(this.target, this.el);
                 }
             }
             clearItems() {
@@ -20025,6 +20052,7 @@ var katrid;
                 msg = katrid.i18n.gettext('Please wait...');
             }
             waitDialog ??= ui.createDialogElement({ message: msg });
+            document.body.appendChild(waitDialog);
             waitDialog.showModal();
         }
         ui.showWaitDialog = showWaitDialog;
@@ -20041,6 +20069,28 @@ var katrid;
             }
         }
         ui.WaitDialog = WaitDialog;
+        let modalOverlay;
+        function createModalOverlay() {
+            if (!modalOverlay) {
+                const el = document.createElement('dialog');
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape')
+                        e.preventDefault();
+                });
+                el.classList.add('wait-overlay');
+                el.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+                document.body.append(el);
+                modalOverlay = el;
+            }
+            modalOverlay.showModal();
+            return modalOverlay;
+        }
+        ui.createModalOverlay = createModalOverlay;
+        function destroyModalOverlay(el) {
+            modalOverlay.remove();
+            modalOverlay = null;
+        }
+        ui.destroyModalOverlay = destroyModalOverlay;
     })(ui = katrid.ui || (katrid.ui = {}));
 })(katrid || (katrid = {}));
 var katrid;

@@ -4019,6 +4019,8 @@ declare namespace katrid.ui {
         static show(msg?: string): void;
         static hide(): void;
     }
+    function createModalOverlay(): HTMLDialogElement;
+    function destroyModalOverlay(el: HTMLDialogElement): void;
 }
 declare namespace katrid.ui {
     class CellInput {
