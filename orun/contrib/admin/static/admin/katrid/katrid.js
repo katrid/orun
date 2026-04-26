@@ -2753,7 +2753,11 @@ var katrid;
                         }
                         a.addEventListener('click', evt => {
                             evt.preventDefault();
-                            this.navigateTo(a.href.slice(a.href.indexOf('#') + 1));
+                            const href = a.getAttribute('href');
+                            if (href.startsWith('http') || href.startsWith('//'))
+                                window.open(href, '_blank');
+                            else
+                                this.navigateTo(a.href.slice(a.href.indexOf('#') + 1));
                         });
                     });
                 }

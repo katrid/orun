@@ -115,7 +115,7 @@ def _get_content_file(filename: str):
             models = app.get_models(False)
             if models:
                 content += '\n'.join(
-                    f'- [{m._meta.verbose_name_plural}]({app_name}/$models/{m._meta.name})  \n{m._meta.help_text or ""}'
+                    f'- [{m._meta.verbose_name_plural}](#/{app_name}/$models/{m._meta.name})  \n{m._meta.help_text or ""}'
                     for m in models
                 )
             else:
