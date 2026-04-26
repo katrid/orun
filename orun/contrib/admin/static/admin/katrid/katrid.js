@@ -13176,15 +13176,14 @@ var Katrid;
             show() {
                 const dlg = this.target.closest('dialog');
                 if (dlg) {
-                    this.el.setAttribute('popover', 'auto');
                     dlg.appendChild(this.el);
-                    adjustPopoverPos(this.target, this.el);
-                    this.el.showPopover();
                 }
                 else {
                     document.body.appendChild(this.el);
-                    this._popper = Popper.createPopper(this.target, this.el, { placement: 'auto' });
                 }
+                this.el.setAttribute('popover', 'auto');
+                this.el.showPopover();
+                adjustPopoverPos(this.target, this.el);
                 this.el.classList.add('show');
             }
             hide() {
