@@ -13120,6 +13120,15 @@ var Katrid;
     (function (UI) {
         function adjustPopoverPos(target, popover) {
             const rect = target.getBoundingClientRect();
+            const popoverRect = popover.getBoundingClientRect();
+            if (popoverRect.height > window.innerHeight) {
+                popover.style.maxHeight = `${window.innerHeight}px`;
+                popover.style.overflowY = 'auto';
+            }
+            if (popoverRect.width > window.innerWidth) {
+                popover.style.maxWidth = `${window.innerWidth}px`;
+                popover.style.overflowX = 'auto';
+            }
             let x = rect.left + window.scrollX;
             let y = rect.bottom + window.scrollY;
             if (y + popover.offsetHeight > window.innerHeight)
@@ -13187,8 +13196,8 @@ var Katrid;
                 this.el.classList.add('show');
             }
             hide() {
+                this.el.hidePopover();
                 this.el.classList.remove('show');
-                this._popper?.destroy();
                 this.el.remove();
             }
             get visible() {
