@@ -1512,7 +1512,26 @@ declare namespace Katrid.Data {
     }
 }
 declare namespace katrid.sql {
-    function exec(query: string, params: any): Promise<any>;
+    function exec(query?: string | From | Map<number, From>, params?: any): Promise<any>;
+    function addQuery(node: From): Promise<unknown>;
+    function endSelection(): void;
+    class Selection {
+        constructor();
+    }
+    class From {
+        modelName: string;
+        config?: any;
+        $resolve: (res: any) => void;
+        constructor(modelName: string, config?: any);
+        select(...fields: string[]): From;
+        orderBy(...fields: string[]): From;
+        where(conditions: Record<string, any>): From;
+        limit(limit: number): From;
+        offset(offset: number): From;
+        clone(): From;
+        serialize(): any;
+    }
+    function from(modelName: string, config?: any): From;
 }
 declare namespace Katrid.Data {
     interface FieldValidation {
@@ -3545,19 +3564,6 @@ declare namespace Katrid.Services {
         $fetch(url: any, data: any, params?: any): void;
     }
 }
-declare namespace katrid.sql {
-    class Select {
-    }
-    class From {
-    }
-    class Alias {
-        name: string;
-        constructor(name: string);
-    }
-    function select(): void;
-    function from(): void;
-}
-declare const select: typeof katrid.sql.select;
 declare namespace katrid.test {
     function click(selector: string): void;
     function modelActionTour(args: any): Promise<void>;

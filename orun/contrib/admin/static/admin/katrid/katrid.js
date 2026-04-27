@@ -6176,10 +6176,89 @@ var katrid;
     var sql;
     (function (sql) {
         async function exec(query, params) {
-            let res = await Katrid.Services.Service.$post('/sql/exec/', { query, params, withDescription: true, asDict: true });
-            return res;
+            if (query === undefined)
+                query = currentSelection;
+            if (query instanceof Map) {
+                const res = await Katrid.Services.Service.$post('/sql/exec/', { ast: Object.fromEntries([...query].map(n => [n[0], n[1].serialize()])) });
+                if (currentSelection === query)
+                    endSelection();
+                for (const [k, v] of Object.entries(res)) {
+                    const node = currentSelection.get(parseInt(k));
+                    if (node)
+                        node.$resolve(v);
+                }
+                return res;
+            }
+            else if (query instanceof From) {
+                return await Katrid.Services.Service.$post('/sql/exec/', { ast: query.serialize() });
+            }
+            else {
+                return await Katrid.Services.Service.$post('/sql/exec/', { query, params, withDescription: true, asDict: true });
+            }
         }
         sql.exec = exec;
+        let currentSelection = new Map();
+        let _hashCounter = 0;
+        function addQuery(node) {
+            const hash = ++_hashCounter;
+            currentSelection.set(hash, node);
+            return new Promise((resolve, reject) => {
+                node.$resolve = resolve;
+            });
+        }
+        sql.addQuery = addQuery;
+        function endSelection() {
+            currentSelection.clear();
+        }
+        sql.endSelection = endSelection;
+        class Selection {
+            constructor() {
+            }
+        }
+        sql.Selection = Selection;
+        class From {
+            constructor(modelName, config) {
+                this.modelName = modelName;
+                this.config = config;
+                this.config ??= {};
+            }
+            select(...fields) {
+                const newNode = this.clone();
+                newNode.config.fields = fields;
+                return newNode;
+            }
+            orderBy(...fields) {
+                const newNode = this.clone();
+                newNode.config.orderBy = fields;
+                return newNode;
+            }
+            where(conditions) {
+                const newNode = this.clone();
+                newNode.config.where = conditions;
+                return newNode;
+            }
+            limit(limit) {
+                const newNode = this.clone();
+                newNode.config.limit = limit;
+                return newNode;
+            }
+            offset(offset) {
+                const newNode = this.clone();
+                newNode.config.offset = offset;
+                return newNode;
+            }
+            clone() {
+                return new From(this.modelName, Object.assign({}, this.config));
+            }
+            serialize() {
+                return Object.assign({ model: this.modelName }, this.config);
+            }
+        }
+        sql.From = From;
+        function from(modelName, config) {
+            return new From(modelName, config);
+        }
+        sql.from = from;
     })(sql = katrid.sql || (katrid.sql = {}));
 })(katrid || (katrid = {}));
 var Katrid;
@@ -17850,31 +17929,6 @@ var Katrid;
         Services.WebSQLAdapter = WebSQLAdapter;
     })(Services = Katrid.Services || (Katrid.Services = {}));
 })(Katrid || (Katrid = {}));
-var katrid;
-(function (katrid) {
-    var sql;
-    (function (sql) {
-        class Select {
-        }
-        sql.Select = Select;
-        class From {
-        }
-        sql.From = From;
-        class Alias {
-            constructor(name) {
-                this.name = name;
-            }
-        }
-        sql.Alias = Alias;
-        function select() {
-        }
-        sql.select = select;
-        function from() {
-        }
-        sql.from = from;
-    })(sql = katrid.sql || (katrid.sql = {}));
-})(katrid || (katrid = {}));
-const select = katrid.sql.select;
 var katrid;
 (function (katrid) {
     var test;
