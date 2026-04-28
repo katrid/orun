@@ -272,6 +272,8 @@ class AdminModel(models.Model, helper=True):
         return cls.api_get_field_choices(request, field, q, exact=True, limit=1)
 
     class Admin:
+        readonly = False
+
         @classmethod
         def prepare_field_choices_params(cls, request: HttpRequest, *, field: Field, where: dict, exclude: dict):
             pass
