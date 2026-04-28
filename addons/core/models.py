@@ -16,7 +16,7 @@ class UserProfile(models.Model):
     value = models.JSONField()
 
     class Meta:
-        name= 'auth.user.profile'
+        name = 'auth.user.profile'
         constraints = [
             models.UniqueConstraint(['user', 'key'], name='auth_user_profile')
         ]

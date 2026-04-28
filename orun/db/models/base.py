@@ -570,7 +570,7 @@ class Model(metaclass=ModelBase):
             return ' - '.join(
                 [str(val) if isinstance(val := getattr(self, f.name), Model) else str(f.value_to_json(val)) for f in
                  name_fields])
-        return '%s object (%s)' % (self._meta.name, self.pk)
+        return f'{self._meta.verbose_name or self._meta.name} object ({self.pk})'
 
     def __eq__(self, other):
         if not isinstance(other, Model):
@@ -2004,9 +2004,11 @@ class Model(metaclass=ModelBase):
         before_insert.send(self, values)
 
     def after_insert(self, values):
+        self.before_save(None, values)
         after_insert.send(self, values)
 
     def before_update(self, old, values):
+        self.before_save(old, update=True)
         # trigger before update signal
         before_update.send(self, values)
 

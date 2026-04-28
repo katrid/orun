@@ -12,6 +12,9 @@ class AdminConfig(AppConfig):
     js_templates = [
         'static/admin/katrid/templates.html',
     ]
+    js_assets = [
+        '<script type="text/javascript" src="/static/admin/components/portlets.js"></script>'
+    ]
     dependencies = [
         'orun.contrib.auth',
         'core',

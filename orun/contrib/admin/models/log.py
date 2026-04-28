@@ -1,41 +1,59 @@
+import datetime
+
+from orun import api
+from orun.http import HttpRequest
 from orun.db import models
+from orun.utils.translation import gettext as _
+from .base import admin_change_log
+
+__all__ = ["LogEntry"]
 
 
 class LogEntry(models.Model):
     """
     Log entries on the internal database logging
     """
-    user = models.ForeignKey('auth_user', null=False, db_index=True)
-    action = models.ForeignKey('ui.action')  # optional ui action
-    object_id = models.BigIntegerField()
-    content_type = models.ForeignKey('content.type', on_delete=models.SET_NULL)
-    content_object = models.CharField(200)
-    change_message = models.TextField()
+
+    user = models.ForeignKey("auth.user", null=False, db_index=True)
+    performed_at = models.DateTimeField(auto_now_add=True)
+    details = models.JSONField()
+    # action = models.ForeignKey('ui.action')  # optional ui action
+    # object_id = models.BigIntegerField()
+    # content_type = models.ForeignKey('content.type', on_delete=models.SET_NULL)
+    # content_object = models.TextField()
+    # change_message = models.TextField()
 
     class Meta:
         log_changes = False
-        name = 'ui.admin.log'
+        name = "admin.log.entry"
+
+    @api.classmethod
+    def get_entries(cls, request: HttpRequest):
+        entries = cls.objects.filter(user_id=int(request.user_id))
+        return {
+            'entries': [
+                {
+                    'timestamp': entry.performed_at,
+                    'details': entry.details,
+                }
+                for entry in entries
+            ]
+        }
 
 
-class UserMenuCounter(models.Model):
-    """
-    Rank the number of times that an action is accessed by user on Admin UI
-    """
-    user = models.ForeignKey('auth.user', null=False, db_index=True, on_delete=models.DB_CASCADE)
-    menu = models.ForeignKey('ui.menu', null=False, on_delete=models.DB_CASCADE)
-    counter = models.PositiveIntegerField(default=0)
 
-    class Meta:
-        log_changes = False
-        name = 'ui.admin.user.menu.counter'
+def _log_change(sender, request: HttpRequest, codename, record: models.Model, *args, **kwargs):
+    if record._meta.log_changes:
+        LogEntry.objects.create(
+            user_id=int(request.user_id),
+            performed_at=datetime.datetime.now(),
+            details={
+                "codename": codename,
+                "model": record._meta.name,
+                "object_id": record.pk,
+                "record_name": str(record),
+            },
+        )
 
-    @classmethod
-    def hit(cls, user, action):
-        """
-        Log a new entry to user to the action
-        :param user:
-        :param action:
-        :return:
-        """
-        counter = cls.objects.get_or_create(user=user, action=action)
-        counter.update(counter=counter.counter + 1)
+
+admin_change_log.connect(_log_change)

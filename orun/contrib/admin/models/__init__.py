@@ -7,3 +7,5 @@ from .portlets import *
 from .cron import *
 from .automations import *
 from .addons import *
+from .log import *
+from .ux import *

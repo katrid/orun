@@ -7,10 +7,14 @@ from orun.db import models
 from orun.utils.translation import gettext_lazy as _
 from orun.utils.module_loading import import_string
 from orun.http import HttpRequest
+from orun.core.signals import Signal
 
 from orun.contrib.auth.models import Group
 from orun.contrib.contenttypes.models import ContentType, ref
 from .base import AdminModel
+
+
+action_hit = Signal()
 
 
 class Action(AdminModel):
@@ -45,6 +49,10 @@ class Action(AdminModel):
     def get_action(self):
         return apps[self.action_type].objects.get(pk=self.pk)
 
+    def _hit(self, request: HttpRequest):
+        # todo async it to task
+        action_hit.send(sender=self, request=request)
+
     @api.classmethod
     def load(cls, request: HttpRequest, name_or_id, context=None):
         try:
@@ -52,7 +60,9 @@ class Action(AdminModel):
         except ValueError:
             if isinstance(name_or_id, str):
                 name_or_id = ref(name_or_id)
-        info = cls.get(name_or_id).get_action()._get_info(request, context)
+        action = cls.get(name_or_id).get_action()
+        action._hit(request)
+        info = action._get_info(request, context)
         if 'action_type' in info:
             info['type'] = info.pop('action_type')
         return info

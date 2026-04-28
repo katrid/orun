@@ -20,6 +20,7 @@ from orun.template.loader import select_template
 from orun.contrib.admin.models import ui
 from orun.db.models import NOT_PROVIDED, Field, BooleanField, Q, ObjectDoesNotExist
 from orun.db.models.signals import (
+    Signal,
     before_insert, before_update, before_delete,
     after_insert, after_update, after_delete,
 )
@@ -28,6 +29,9 @@ from orun.db.models.aggregates import Count
 from orun.utils.encoding import force_str
 
 PAGE_SIZE = 10
+
+
+admin_change_log = Signal()
 
 
 class AdminModel(models.Model, helper=True):
@@ -427,6 +431,8 @@ class AdminModel(models.Model, helper=True):
 
     @api.classmethod
     def api_delete(cls, request: HttpRequest, ids):
+        if cls.Admin.readonly:
+            raise PermissionDenied("Model is read-only")
         # self.check_permission('delete')
         ids = [v for v in cls._api_search(request, {'pk__in': ids}).only('pk')]
         r = []
@@ -434,6 +440,7 @@ class AdminModel(models.Model, helper=True):
             raise ObjectDoesNotExist()
         for obj in ids:
             r.append(obj.pk)
+            admin_change_log.send(sender=cls, request=request, codename='delete', record=obj)
             obj.delete()
         return r
 
@@ -461,16 +468,23 @@ class AdminModel(models.Model, helper=True):
 
     @api.classmethod
     def api_write(cls, data):
+        if cls.Admin.readonly:
+            raise PermissionDenied("Model is read-only")
         if isinstance(data, dict):
             data = [data]
         res = []
         for row in data:
             pk = row.pop('id', None)
+            codename = 'create'
             if pk:
+                codename = 'update'
                 obj = cls.objects.get(pk=pk)
             else:
+                # dispatch admin update event
                 obj = cls()
             cls._from_json(obj, row)
+            # dispatch admin create event
+            admin_change_log.send(sender=cls, request=cls._env.request, codename=codename, record=obj)
             res.append(obj.pk)
         return res
 
