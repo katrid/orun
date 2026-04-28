@@ -7,3 +7,4 @@ except ModuleNotFoundError:
 from . import dashboard
 from . import portlets
 from . import help
+from . import query

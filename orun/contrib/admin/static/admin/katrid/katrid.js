@@ -6179,7 +6179,7 @@ var katrid;
             if (query === undefined)
                 query = currentSelection;
             if (query instanceof Map) {
-                const res = await Katrid.Services.Service.$post('/sql/exec/', { ast: Object.fromEntries([...query].map(n => [n[0], n[1].serialize()])) });
+                const res = await Katrid.Services.Service.$post('/admin/query/exec/', { query: Object.fromEntries([...query].map(n => [n[0], n[1].serialize()])) });
                 if (currentSelection === query)
                     endSelection();
                 for (const [k, v] of Object.entries(res)) {
@@ -6190,7 +6190,7 @@ var katrid;
                 return res;
             }
             else if (query instanceof From) {
-                return await Katrid.Services.Service.$post('/sql/exec/', { ast: query.serialize() });
+                return await Katrid.Services.Service.$post('/admin/query/exec/', { query: query.serialize() });
             }
             else {
                 return await Katrid.Services.Service.$post('/sql/exec/', { query, params, withDescription: true, asDict: true });

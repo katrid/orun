@@ -1262,10 +1262,16 @@ table-field .table tbody tr {
   .katrid-app .modal-lg, .oui-app .modal-lg {
     width: 1000px;
   }
+  .katrid-app .modal-xl, .oui-app .modal-xl {
+    width: 1100px;
+  }
 }
 @media (min-width: 1400px) {
   .katrid-app .modal-lg, .oui-app .modal-lg {
     width: 1200px;
+  }
+  .katrid-app .modal-xl, .oui-app .modal-xl {
+    width: 1300px;
   }
 }
 .katrid-app #header, .oui-app #header {
