@@ -1,5 +1,5 @@
 (function () {
-  function logEntryPortlet(portlet) {
+  function myActivitiesPorlet(portlet) {
     let el = document.createElement('div');
     let table = document.createElement('table');
     table.className = 'table table-striped table-bordered table-hover';
@@ -27,12 +27,12 @@
     return el;
   }
 
-  logEntryPortlet.info = {
+  myActivitiesPorlet.info = {
     name: 'Minhas Atividades Recentes', description: 'Tabela de registro das suas atividades recentes', category: 'Core',
   }
 
 
-  function recentActions() {
+  function recentActionsPortlet() {
     let el = document.createElement('div');
     let table = document.createElement('table');
     table.className = 'table table-striped table-bordered table-hover';
@@ -61,10 +61,10 @@
   }
 
 
-  recentActions.info = {
+  recentActionsPortlet.info = {
     name: 'Ações Mais Acessadas', description: 'Registro das ações mais acessadas pelo usuário', category: 'Core',
   }
 
-  oui.portlets.registerPortlet(logEntryPortlet, 'admin');
-  oui.portlets.registerPortlet(recentActions, 'admin');
+  oui.portlets.registerPortlet(myActivitiesPorlet, 'admin');
+  oui.portlets.registerPortlet(recentActionsPortlet, 'admin');
 })();
