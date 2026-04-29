@@ -13210,10 +13210,12 @@ var Katrid;
             }
             let x = rect.left + window.scrollX;
             let y = rect.bottom + window.scrollY;
-            if (popoverRect.bottom > window.innerHeight)
-                y = window.scrollY + window.innerHeight - (y + popoverRect.bottom);
-            if (popoverRect.right > window.innerWidth)
-                x = window.scrollX + window.innerWidth - (x + popoverRect.right);
+            if ((y + popoverRect.height) > window.innerHeight)
+                y = window.scrollY + window.innerHeight - popoverRect.height;
+            if ((x + popoverRect.width) > window.innerWidth) {
+                console.error(window.scrollX, window.innerWidth, x, popoverRect.width);
+                x = window.scrollX + window.innerWidth - popoverRect.width;
+            }
             if (x < 0)
                 x = window.scrollX;
             if (y < 0)
