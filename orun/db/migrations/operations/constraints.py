@@ -8,6 +8,8 @@ from .base import Operation
 
 
 class ConstraintOperation(Operation):
+    postpone = True
+
     def __init__(self, table: Table, constraint: Constraint):
         self.table = table
         self.constraint = constraint
