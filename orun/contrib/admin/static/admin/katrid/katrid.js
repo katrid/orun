@@ -13210,10 +13210,10 @@ var Katrid;
             }
             let x = rect.left + window.scrollX;
             let y = rect.bottom + window.scrollY;
-            if ((y + popover.offsetHeight) > window.innerHeight)
-                y = y + popover.offsetHeight - window.innerHeight;
-            if (x + popover.offsetWidth > window.innerWidth)
-                x = rect.left + popover.offsetWidth - target.offsetWidth;
+            if (popoverRect.bottom > window.innerHeight)
+                y = window.scrollY + window.innerHeight - (y + popoverRect.bottom);
+            if (popoverRect.right > window.innerWidth)
+                x = window.scrollX + window.innerWidth - (x + popoverRect.right);
             if (x < 0)
                 x = window.scrollX;
             if (y < 0)
@@ -13295,6 +13295,7 @@ var Katrid;
                 for (let el of this._elements)
                     el.remove();
                 this._elements = [];
+                adjustPopoverPos(this.target, this.el);
             }
             init() {
                 this.cancelSearch();
