@@ -13201,23 +13201,23 @@ var Katrid;
             const rect = target.getBoundingClientRect();
             const popoverRect = popover.getBoundingClientRect();
             if (popoverRect.height > window.innerHeight) {
-                popover.style.maxHeight = `${window.innerHeight}px`;
+                popover.style.maxHeight = `${window.innerHeight - 10}px`;
                 popover.style.overflowY = 'auto';
             }
             if (popoverRect.width > window.innerWidth) {
-                popover.style.maxWidth = `${window.innerWidth}px`;
+                popover.style.maxWidth = `${window.innerWidth - 10}px`;
                 popover.style.overflowX = 'auto';
             }
             let x = rect.left + window.scrollX;
             let y = rect.bottom + window.scrollY;
-            if (y + popover.offsetHeight > window.innerHeight)
-                y = rect.top - popover.offsetHeight - 10;
+            if ((y + popover.offsetHeight) > window.innerHeight)
+                y = y + popover.offsetHeight - window.innerHeight;
             if (x + popover.offsetWidth > window.innerWidth)
-                x = rect.left - popover.offsetWidth + target.offsetWidth;
+                x = rect.left + popover.offsetWidth - target.offsetWidth;
             if (x < 0)
-                x = 0;
+                x = window.scrollX;
             if (y < 0)
-                y = 0;
+                y = window.scrollY;
             Object.assign(popover.style, {
                 left: `${x}px`,
                 top: `${y}px`,
