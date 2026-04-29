@@ -13199,27 +13199,32 @@ var Katrid;
     (function (UI) {
         function adjustPopoverPos(target, popover) {
             const rect = target.getBoundingClientRect();
-            const popoverRect = popover.getBoundingClientRect();
+            let popoverRect = popover.getBoundingClientRect();
+            let ph = popoverRect.height;
             if (popoverRect.height > window.innerHeight) {
-                popover.style.maxHeight = `${window.innerHeight - 10}px`;
+                ph = window.innerHeight - 10;
+                popover.style.maxHeight = `${ph}px`;
                 popover.style.overflowY = 'auto';
             }
+            let pw = popoverRect.width;
             if (popoverRect.width > window.innerWidth) {
-                popover.style.maxWidth = `${window.innerWidth - 10}px`;
+                pw = window.innerWidth - 10;
+                popover.style.maxWidth = `${pw}px`;
                 popover.style.overflowX = 'auto';
             }
+            popoverRect = popover.getBoundingClientRect();
             let x = rect.left + window.scrollX;
             let y = rect.bottom + window.scrollY;
-            if ((y + popoverRect.height) > window.innerHeight)
-                y = window.scrollY + window.innerHeight - popoverRect.height;
-            if ((x + popoverRect.width) > window.innerWidth) {
-                console.error(window.scrollX, window.innerWidth, x, popoverRect.width);
-                x = window.scrollX + window.innerWidth - popoverRect.width;
-            }
+            const wy = window.scrollY + window.innerHeight;
+            const ww = window.scrollX + window.innerWidth;
+            if ((y + ph) > wy)
+                y = wy - ph;
+            if ((x + popoverRect.width) > ww)
+                x = ww - pw;
             if (x < 0)
-                x = window.scrollX;
+                x = 0;
             if (y < 0)
-                y = window.scrollY;
+                y = 0;
             Object.assign(popover.style, {
                 left: `${x}px`,
                 top: `${y}px`,
