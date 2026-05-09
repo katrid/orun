@@ -739,7 +739,7 @@ class ForeignKey(ForeignObject):
 
         # limit_choices_to should be used to validate relation values before update
         self.limit_choices_to = limit_choices_to
-        kwargs.setdefault('filter', limit_choices_to)
+        kwargs.setdefault('filter', kwargs.pop('where', limit_choices_to))
         filter = kwargs['filter']
         self.filter_map = kwargs.pop('filter_map', None)
 
