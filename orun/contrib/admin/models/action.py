@@ -40,6 +40,7 @@ class Action(AdminModel):
         field_groups = {
             'list_fields': ['name', 'action_type', 'usage']
         }
+        ux_track_counter = False
 
     def save(self, *args, **kwargs):
         if not self.action_type:
@@ -51,7 +52,8 @@ class Action(AdminModel):
 
     def _hit(self, request: HttpRequest):
         # todo async it to task
-        action_hit.send(sender=self, request=request)
+        if self._meta.ux_track_counter:
+            action_hit.send(sender=self, request=request)
 
     @api.classmethod
     def load(cls, request: HttpRequest, name_or_id, context=None):
@@ -140,6 +142,7 @@ class WindowAction(Action):
         field_groups = {
             'list_fields': ['name', 'action_type', 'usage', 'view', 'model', 'view_mode', 'limit', 'auto_search']
         }
+        ux_track_counter = True
 
     def _get_views(self):
         modes = self.view_mode.split(',')
@@ -211,6 +214,7 @@ class ViewAction(Action):
 
     class Meta:
         name = 'ui.action.view'
+        ux_track_counter = True
 
     def _get_info(self, request, context):
         from orun.contrib.admin.models.ui import View
