@@ -132,7 +132,7 @@ class View(models.Model):
         if pos == 'append':
             for child in element:
                 target.append(child)
-        elif pos == 'insert':
+        elif pos == 'insert' or pos == 'prepend':
             for child in reversed(element):
                 target.insert(0, etree.fromstring(etree.tostring(child)))
         elif pos == 'before':
