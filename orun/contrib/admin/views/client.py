@@ -42,7 +42,7 @@ def is_authenticated(request: HttpRequest):
 def search_menu(request: HttpRequest):
     from orun.contrib.admin.models import Menu
     term = request.json.get('term')
-    items = Menu.admin_search_menu(request, term)
+    items = Menu.Admin.admin_search_menu(request, term)
     return JsonResponse({'items': items})
 
 
