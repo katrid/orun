@@ -13266,6 +13266,7 @@ var Katrid;
                         this.template = options.template;
                     if (options.source)
                         this.source = options.source;
+                    this.groupBy = options.groupBy;
                 }
             }
             show() {
@@ -13289,15 +13290,43 @@ var Katrid;
             get visible() {
                 return this.el.classList.contains('show');
             }
+            _loadItems(items) {
+                for (let item of items)
+                    this.addItem(item);
+                adjustPopoverPos(this.target, this.el);
+            }
+            addLegend(text) {
+                let legend = document.createElement('div');
+                legend.classList.add('dropdown-legend', 'text-muted');
+                legend.textContent = text;
+                this.el.append(legend);
+            }
+            addSeparator() {
+                let separator = document.createElement('div');
+                separator.classList.add('dropdown-separator');
+                this.el.append(separator);
+            }
             loadItems(items) {
                 if (items.length) {
-                    for (let item of items)
-                        this.addItem(item);
+                    if (this.groupBy) {
+                        let groupedItems = Object.groupBy(items, obj => obj[this.groupBy] || '');
+                        for (const [key, subItems] of Object.entries(groupedItems)) {
+                            console.debug('key', key, subItems);
+                            if (key)
+                                this.addLegend(key);
+                            else
+                                this.addSeparator();
+                            this._loadItems(subItems);
+                        }
+                    }
+                    else {
+                        this._loadItems(items);
+                    }
                     this.move(1);
-                    adjustPopoverPos(this.target, this.el);
                 }
             }
             clearItems() {
+                this.el.innerHTML = '';
                 this.items = [];
                 for (let el of this._elements)
                     el.remove();
@@ -18224,11 +18253,19 @@ var Katrid;
                 }
                 this.inputSearch = document.querySelector('#navbar-search');
                 this.autocomplete = new AppGlobalSearch(this.inputSearch, this.app.config.menu);
-                const toolTip = new Katrid.ui.Tooltip(this.querySelector('.navbar-search'), { helpText: `<h5>Pesquisa rápida</h5>Cliente: <strong>cli: &lt;nome do cliente&gt;</strong>
+                const toolTip = new Katrid.ui.Tooltip(this.querySelector('.navbar-search'), {
+                    helpText: `<h5>Pesquisa rápida</h5>Cliente: <strong>cli: &lt;nome do cliente&gt;</strong>
 <br>Forncedor: <strong>for: &lt;nome do cliente&gt;</strong>
 <br>Nota Fiscal: <strong>nf: &lt;num da nota&gt;</strong>
-` });
+`
+                });
                 this.inputSearch.addEventListener('input', () => toolTip.hide());
+                document.addEventListener('keydown', evt => {
+                    if ((document.activeElement === document.body) && ((evt.key === '/' && !evt.altKey && !evt.metaKey) || (evt.key === 'Search'))) {
+                        evt.preventDefault();
+                        this.inputSearch.focus();
+                    }
+                });
             }
             loadModules(items) {
                 this.nav = document.querySelector('#navbar');
@@ -18431,24 +18468,29 @@ var Katrid;
                         clearTimeout(timeout);
                         setTimeout(async () => {
                             let res = [];
-                            let term = query.term.normalize('NFD').replace(/\p{Diacritic}/gu, "");
-                            let re = new RegExp(term, 'i');
-                            let aRes = Katrid.Services.Service.$post('/web/menu/search/', { term }).then(res => res.items);
+                            const term = query.term.normalize('NFD').replace(/\p{Diacritic}/gu, "");
+                            const re = new RegExp(term, 'i');
                             if (!this._localMenuCache.length)
                                 menu.forEach(item => this._registerMenuItem(item));
+                            let aRes = Katrid.Services.Service.$post('/web/menu/search/', { term }).then(res => res.items);
+                            try {
+                                aRes = await aRes;
+                                if (aRes.recent) {
+                                    res = res.concat(aRes.recent?.entries.map(entry => ({ id: entry.id, text: entry.description, category: 'Recents' })));
+                                }
+                                if (aRes.items)
+                                    res = res.concat(aRes.items);
+                            }
+                            catch (e) {
+                                console.error(e);
+                            }
                             for (let item of this._localMenuCache)
                                 if (re.test(item.normalized)) {
                                     res.push({ id: item.id, text: item.fullPath, href: item.href });
                                     if (res.length > 5)
                                         break;
                                 }
-                            try {
-                                aRes = await aRes;
-                            }
-                            catch (error) {
-                                aRes = [];
-                            }
-                            resolve(res.concat(aRes));
+                            resolve(res);
                         }, 300);
                     });
                 });
@@ -18484,7 +18526,10 @@ var Katrid;
                 this.term = '';
             }
             createMenu() {
-                this.menu = new UI.DropdownMenu(this, { source: this._source, target: this.input.parentElement });
+                this.menu = new UI.DropdownMenu(this, {
+                    source: this._source, target: this.input.parentElement,
+                    groupBy: 'category',
+                });
             }
             invalidateValue() {
                 this.selectedItem = this.$selectedItem;
@@ -19172,33 +19217,35 @@ var Katrid;
                     placement: 'top-start',
                 };
                 let helpText = config?.helpText;
-                this.target = el;
-                let title = el.getAttribute('data-title');
-                if (title)
-                    el.removeAttribute('data-title');
-                let mouseout;
-                el.addEventListener('mouseenter', evt => {
-                    if (lastTooltip)
-                        lastTooltip.hide();
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => {
-                        lastTooltip = this;
-                        let s = el.getAttribute('data-tooltip') || '';
-                        if (s)
-                            s += '<br>';
-                        s += (title || helpText);
-                        if (s)
-                            this.show(s);
-                    }, DELAY);
-                    mouseout = setTimeout(() => this.hide(), 150000);
-                }, false);
-                el.addEventListener('mouseleave', evt => {
-                    clearTimeout(timeout);
-                    clearTimeout(mouseout);
-                    mouseout = setTimeout(() => {
-                    });
-                    this.hide();
-                }, false);
+                if (el) {
+                    this.target = el;
+                    let title = el.getAttribute('data-title');
+                    if (title)
+                        el.removeAttribute('data-title');
+                    let mouseout;
+                    el.addEventListener('mouseenter', evt => {
+                        if (lastTooltip)
+                            lastTooltip.hide();
+                        clearTimeout(timeout);
+                        timeout = setTimeout(() => {
+                            lastTooltip = this;
+                            let s = el.getAttribute('data-tooltip') || '';
+                            if (s)
+                                s += '<br>';
+                            s += (title || helpText);
+                            if (s)
+                                this.show(s);
+                        }, DELAY);
+                        mouseout = setTimeout(() => this.hide(), 150000);
+                    }, false);
+                    el.addEventListener('mouseleave', evt => {
+                        clearTimeout(timeout);
+                        clearTimeout(mouseout);
+                        mouseout = setTimeout(() => {
+                        });
+                        this.hide();
+                    }, false);
+                }
             }
             createElement(text) {
                 const div = document.createElement('div');

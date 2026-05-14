@@ -2735,6 +2735,7 @@ declare namespace Katrid.UI {
         _loading: boolean;
         delay: number;
         items: DropdownItem[];
+        groupBy: string;
         private _pendingTimeout;
         private _elements;
         private _wait;
@@ -2745,6 +2746,9 @@ declare namespace Katrid.UI {
         show(): void;
         hide(): void;
         get visible(): boolean;
+        protected _loadItems(items: any[]): void;
+        addLegend(text: string): void;
+        addSeparator(): void;
         loadItems(items: any[]): void;
         clearItems(): void;
         _pending: any;
@@ -3607,7 +3611,7 @@ declare namespace Katrid.UI {
         private _timeout;
         private _menuClicked;
         app: Katrid.Core.WebApplication;
-        protected inputSearch: any;
+        protected inputSearch: HTMLInputElement;
         protected autocomplete: AppGlobalSearch;
         protected create(): void;
         loadModules(items: IMenuInfo[]): void;

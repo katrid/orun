@@ -27,7 +27,7 @@ class UxCounter(models.Model):
     """
 
     user = models.ForeignKey("auth.user", null=False, on_delete=models.DB_CASCADE)
-    action_id = models.BigIntegerField(null=False, db_index=True)
+    action = models.ForeignKey('ui.action', null=False, db_index=True, on_delete=models.DB_CASCADE)
     counter = models.BigIntegerField(default=0, db_index=True)
     last_access = models.DateTimeField(auto_now=True, db_index=True)
 
@@ -49,17 +49,24 @@ class UxCounter(models.Model):
         counter.update(counter=counter.counter + 1)
 
     @api.classmethod
-    def get_entries(cls, request: HttpRequest):
+    def get_entries(cls, request: HttpRequest, term: str = None):
         """
         Get the latest actions by user
         """
-        entries = cls.objects.filter(user_id=int(request.user_id)).order_by('-last_access')[:10]
-        actions = {a[0]: a[1] for a in Action.objects.filter(pk__in=[obj.action_id for obj in entries]).values_list('id', 'name')}
+        entries = cls.objects.filter(user_id=int(request.user_id))
+        if term:
+            entries = entries.filter(action_id__name__contains=term)
+        entries = entries.order_by("-last_access")[:10]
+        actions = {
+            a[0]: a[1]
+            for a in Action.objects.filter(pk__in=[obj.action_id for obj in entries]).values_list("id", "name")
+        }
         return {
             "entries": [
                 {
                     "last_access": obj.last_access,
-                    "description": actions.get(obj.action_id, 'Unknown'),
+                    "description": actions.get(obj.action_id, "Unknown"),
+                    "action_id": obj.action_id,
                 }
                 for obj in entries
             ]
@@ -68,5 +75,6 @@ class UxCounter(models.Model):
 
 def _action_hit(sender, request, *args, **kwargs):
     UxCounter.hit(int(request.user_id), sender.pk)
+
 
 action_hit.connect(_action_hit)

@@ -13934,6 +13934,14 @@ dialog.dialog .dialog-footer .btn {
   color: black;
 }
 
+.dropdown-menu .dropdown-separator {
+  border-top: 1px solid #e5e5e5;
+  margin: 0;
+}
+.dropdown-menu .dropdown-legend {
+  padding: 5px 10px;
+  border-bottom: 1px solid #e5e5e5;
+}
 .dropdown-menu .dropdown-item {
   cursor: pointer;
   user-select: none;
