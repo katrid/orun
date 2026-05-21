@@ -7008,7 +7008,7 @@ var Katrid;
                 this.decimalPlaces = 0;
             }
             formSpanTemplate(prefix = 'record') {
-                return `{{ ${prefix}.${this.name} || '${this.emptyText}' }}`;
+                return `{{ ${prefix}.${this.name} == null ? '${this.emptyText}' : ${prefix}.${this.name} }}`;
             }
             formControl(fieldEl) {
                 let el = super.formControl(fieldEl);
@@ -12846,14 +12846,19 @@ var Katrid;
                     vm.$emit('update:modelValue', applyValue(this.value));
                 });
                 this.$format = $format;
+                if (!this._invalidDate) {
+                    this._invalidDate = moment.invalid()._locale?._invalidDate || 'Invalid date';
+                }
                 let applyValue = (value) => {
                     value = input.value;
                     if (format === 'L')
                         this.$lastValue = moment(value, $format).format('YYYY-MM-DD');
                     else
                         this.$lastValue = moment(value, $format).format('YYYY-MM-DDTHH:mm:ss');
-                    if (this.$lastValue === 'Invalid date')
+                    if (this.$lastValue === this._invalidDate) {
+                        console.debug('Invalid date', value);
                         this.$lastValue = null;
+                    }
                     vm.$emit('change', this.$lastValue);
                     return this.$lastValue;
                 };
