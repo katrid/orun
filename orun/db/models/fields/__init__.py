@@ -1326,7 +1326,7 @@ class DateTimeCheckMixin:
         return []
 
 
-class DateField(DateTimeCheckMixin, Field):
+class DateField(DateTimeCheckMixin, Field[datetime.date]):
     empty_strings_allowed = False
     default_error_messages = {
         'invalid': _("'%(value)s' value has an invalid date format. It must be "
@@ -1974,6 +1974,8 @@ class IntegerField(Field):
     def get_prep_value(self, value):
         value = super().get_prep_value(value)
         if value is None:
+            return None
+        if value == '':
             return None
         return int(value)
 
