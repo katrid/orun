@@ -78,7 +78,7 @@ class ReptileEngine:
                     where[k] = datetime.datetime.strptime(v, '%Y-%m-%d').date()
         # format params
         where['DISPLAY_PARAMS'] = kwargs['params'].get('displayParams')
-        where['MEDIA_DIR'] = settings.MEDIA_DIR
+        where['MEDIA_DIR'] = settings.MEDIA_ROOT
         company = kwargs['company']
         vars = {}
         if company:
