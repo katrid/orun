@@ -19,6 +19,7 @@ from orun.template import loader
 from orun.utils.translation import gettext_lazy as _, gettext
 from orun.utils.module_loading import import_string
 from orun.contrib.auth.models import Group
+from orun.core.files.storage import default_storage
 from .action import Action, ActionGroups
 
 try:
@@ -667,5 +668,6 @@ try:
     report_env.globals['MIN'] = MIN
     report_env.globals['avg'] = avg
     report_env.globals['total'] = total
+    report_env.globals['read'] = lambda fname: open(os.path.join(settings.MEDIA_ROOT, fname), 'rb').read()
 except:
     pass
