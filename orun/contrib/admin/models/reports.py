@@ -668,6 +668,6 @@ try:
     report_env.globals['MIN'] = MIN
     report_env.globals['avg'] = avg
     report_env.globals['total'] = total
-    report_env.globals['read'] = lambda fname: open(os.path.join(settings.MEDIA_ROOT, fname), 'rb').read()
+    report_env.globals['read'] = lambda fname: open(os.path.join(settings.MEDIA_ROOT, fname), 'rb').read() if os.path.isfile(os.path.join(settings.MEDIA_ROOT, fname)) else None
 except:
     pass
