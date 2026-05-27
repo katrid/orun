@@ -11,6 +11,7 @@ import reptile
 import reptile.engines.qt
 
 from orun.reports.data import default_connection
+from orun.conf import settings
 from orun.apps import apps
 import orun.reports.filters
 # from reptile.exports import pdf
@@ -78,7 +79,9 @@ class ReptileEngine:
         # format params
         where['DISPLAY_PARAMS'] = kwargs['params'].get('displayParams')
         company = kwargs['company']
-        vars = {}
+        vars = {
+            'media_dir': settings.MEDIA_ROOT,
+        }
         if company:
             if company.report_header:
                 vars['report_header'] = "'%s'" % company.report_header.replace("'", "'''")
