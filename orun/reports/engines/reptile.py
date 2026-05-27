@@ -78,10 +78,9 @@ class ReptileEngine:
                     where[k] = datetime.datetime.strptime(v, '%Y-%m-%d').date()
         # format params
         where['DISPLAY_PARAMS'] = kwargs['params'].get('displayParams')
+        where['MEDIA_DIR'] = settings.MEDIA_DIR
         company = kwargs['company']
-        vars = {
-            'media_dir': settings.MEDIA_ROOT,
-        }
+        vars = {}
         if company:
             if company.report_header:
                 vars['report_header'] = "'%s'" % company.report_header.replace("'", "'''")
