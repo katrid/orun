@@ -3,8 +3,8 @@ from orun.utils.translation import gettext_lazy as _
 
 
 class Sequence(models.Model):
-    name = models.CharField(verbose_name=_('Name'), null=False)
-    code = models.CharField(verbose_name=_('Sequence Code'))
+    name = models.CharField(label=_('Name'), null=False)
+    code = models.CharField(label=_('Sequence Code'))
     company = models.ForeignKey('res.company', default=lambda self: self.env.company_id)
     implementation = models.CharField(16, choices=(
         ('standard', _('Standard')),
@@ -27,6 +27,7 @@ class Sequence(models.Model):
         self.update(next_id=self.next_id + self.step, current_id=self.next_id)
         if self.code:
             return self.code.format(current_id=self.current_id, next_id=self.next_id)
+        return self.current_id
 
 
 class SequenceDateRange(models.Model):
