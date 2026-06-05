@@ -1,11 +1,12 @@
 from orun.db import models
 from orun.utils.translation import gettext_lazy as _
+from orun.contrib.erp import current_company_id
 
 
 class Sequence(models.Model):
     name = models.CharField(label=_('Name'), null=False)
     code = models.CharField(label=_('Sequence Code'))
-    company = models.ForeignKey('res.company', default=lambda self: self.env.company_id)
+    company = models.ForeignKey('res.company')
     implementation = models.CharField(16, choices=(
         ('standard', _('Standard')),
         ('no gap', _('No gap')),
