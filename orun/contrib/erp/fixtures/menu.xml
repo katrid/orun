@@ -22,6 +22,7 @@
     <menuitem id="menu.settings.server" name="Server Settings">
       <menuitem id="menu.settings.cron" name="Job Scheduler" action="admin.action.view.cron"/>
       <menuitem id="menu.settings.automation" name="Automations" action="action.view.automations"/>
+      <menuitem id="menu.settings.sequence" name="Sequences" action="erp.admin.SequenceAction"/>
     </menuitem>
     <menuitem id="menu.settings.db" name="Database Dictionary">
       <menuitem id="menu.settings.ir.models" name="Models" action="action.view.ir.model"/>

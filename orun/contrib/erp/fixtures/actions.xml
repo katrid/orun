@@ -61,5 +61,8 @@
   <action id="admin.action.view.cron" type="ui.action.window" name="Job Scheduler" model="admin.cron">
     <field name="view_mode">list,form</field>
   </action>
+  <action id="erp.admin.SequenceAction" type="ui.action.window" name="Sequence" model="ir.sequence">
+    <field name="view_mode">list,form</field>
+  </action>
   <delete id="action.view.ir.query.category"/>
 </data>
