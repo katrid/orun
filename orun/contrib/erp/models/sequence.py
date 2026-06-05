@@ -25,7 +25,7 @@ class Sequence(models.Model):
         ordering = ('name',)
         
     def get_next(self):
-        self.update(next_id=self.next_id + self.step, current_id=self.next_id)
+        self.update(next_id=(self.next_id or 0) + self.step, current_id=self.next_id or self.step)
         if self.code:
             return self.code.format(current_id=self.current_id, next_id=self.next_id)
         return self.current_id
