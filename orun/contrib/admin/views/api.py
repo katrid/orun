@@ -89,15 +89,18 @@ def rpc(request, service, meth, params):
 def call(request: HttpRequest, service: str, meth: str):
     cls = apps.services[service]
     api_cls = getattr(cls, 'Admin', None)
-    meth = getattr(api_cls, meth)
-    if getattr(meth, 'exposed', True):
-        if request.content_type == 'application/json':
-            data = request.json
-        else:
-            data = request.POST.dict()
-            if 'data' in request.POST:
-                data = {'files': list(request.FILES.values()), **json.loads(request.POST['data'])}
-        return meth(request, **data)
+    if not meth.startswith('_'):
+        fn = getattr(api_cls, meth)
+        if getattr(fn, 'exposed', True):
+            if request.content_type == 'application/json':
+                data = request.json
+                if 'params' in data:
+                    data = data['params']
+            else:
+                data = request.POST.dict()
+                if 'data' in request.POST:
+                    data = {'files': list(request.FILES.values()), **json.loads(request.POST['data'])}
+            return fn(request, **data)
     raise MethodNotFound
 
 
