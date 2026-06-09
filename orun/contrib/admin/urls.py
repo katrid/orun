@@ -32,6 +32,7 @@ urlpatterns = [
     path('api/public/query/<int:id>/', views.api.public_query),
 
     # admin api
+    path('admin/query/exec/', views.query.exec_query),
     path('admin/api/report/<str:qualname>/', views.api.admin_report_api),
     path('admin/api/heartbeat/', views.client.heartbeat),
     path('admin/api/call/<service>/<meth>', views.api.call),
