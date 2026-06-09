@@ -250,6 +250,8 @@ class ReportAction(Action):
         else:
             # TODO get the current user company
             company = apps['auth.user'].objects.get(pk=1).user_company
+        if isinstance(params, dict) and settings.MEDIA_ROOT:
+            params['media_dir'] = settings.MEDIA_ROOT
         export_data = {
             'connection': ConnectionProxy(connection),
             'name': self.name,
