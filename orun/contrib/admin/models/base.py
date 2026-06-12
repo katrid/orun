@@ -193,7 +193,7 @@ class AdminModel(models.Model, helper=True):
         if 'auth.rule' in apps.models:
             Rule = apps.models['auth.rule']
             current_user = request.user
-            current_user_id = request.user_id
+            current_user_id = current_user.pk
             if current_user_id == SUPERUSER or current_user.is_superuser:
                 return qs
             ctx = {'current_user': current_user, 'current_user_id': current_user.pk, 'user': current_user,
