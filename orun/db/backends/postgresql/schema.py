@@ -169,3 +169,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         else:
             sql += f' DEFERRABLE INITIALLY {c.deferrable}'
         return sql
+
+    def drop_index(self, table: metadata.Table, ix: metadata.Index):
+        self.execute(f'''DROP INDEX IF EXISTS {self.quote_name(ix.name)}''')
+
