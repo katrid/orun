@@ -886,6 +886,11 @@ class ForeignKey(ForeignObject):
             return None
         elif isinstance(value, self.related_model):
             return value.pk
+        elif isinstance(value, str):
+            # find by natural key
+            if self.related_model._meta.has_natural_key:
+                # TODO use subquery for performance
+                return self.related_model.objects.filter(**{self.related_model._meta.natural_key: value}).only('pk').first()
         else:
             return self.target_field.get_db_prep_save(value, connection=connection)
 
