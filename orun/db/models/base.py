@@ -934,7 +934,7 @@ class Model(metaclass=ModelBase):
         if pk_set and not force_insert:
             base_qs = cls._base_manager.using(using)
             values = [(f, None, (getattr(self, f.attname) if raw else f.pre_save(self, False)))
-                      for f in non_pks]
+                      for f in non_pks if not f.db_readonly]
             forced_update = update_fields or force_update
             updated = self._do_update(base_qs, using, pk_val, values, update_fields,
                                       forced_update)
