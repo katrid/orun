@@ -306,7 +306,7 @@ class Field[T](BaseField[T]):
         self.generated_as = generated_as
         self.db_readonly = False
         if generated_as and stored is None:
-            stored = True
+            stored = False
             self.db_readonly = True
         elif stored is None:
             stored = True
@@ -1120,7 +1120,8 @@ class Field[T](BaseField[T]):
         _, datatype, params, kwargs = self.deconstruct()
         generated = self.generated_as
         if generated is not None:
-            generated = editor.compile_node(generated)
+            # string generated is already sql statement
+            generated = editor.compile_node(generated) if not isinstance(generated, str) else generated
         return Column(
             name=self.column, type=self.get_internal_type(), params=self._get_params(), null=self.null,
             pk=self.primary_key, tablespace=self.db_tablespace, computed=generated, stored=self.stored,
