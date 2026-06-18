@@ -312,6 +312,8 @@ for app in apps.addons.values():
     if app.routes:
         apps_routes.extend(app.routes())
 
+print('start routes',  apps_routes)
+
 asgi_handler = Starlette(
     routes=[
         WebSocketRoute('/ws', WebSocketHandler),
