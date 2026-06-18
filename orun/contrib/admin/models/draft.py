@@ -27,7 +27,7 @@ class Draft(AdminModel):
     class Admin(AdminModel.Admin):
         @classmethod
         def sync_draft(cls, request: HttpRequest, client_id: str, content_type: str, content: str, public: bool = True):
-            draft = cls.sync_draft(user_id=int(request.user_id), client_id=client_id, content_type=content_type, content=content, public=public)
+            draft = Draft.sync_draft(user_id=int(request.user_id), client_id=client_id, content_type=content_type, content=content, public=public)
             return JsonResponse({'id': draft.id})
 
     @classmethod
