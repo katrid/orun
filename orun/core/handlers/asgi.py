@@ -306,9 +306,16 @@ def _on_startup():
     WebSocketHandler.event_loop = asyncio.get_event_loop()
 
 
+from orun.apps import apps
+apps_routes = []
+for app in apps.addons.values():
+    if app.routes:
+        apps_routes.extend(app.routes())
+
 asgi_handler = Starlette(
     routes=[
         WebSocketRoute('/ws', WebSocketHandler),
+        *apps_routes,
         Mount('/', app=ASGIHandler()),
     ],
     on_startup=[_on_startup]
