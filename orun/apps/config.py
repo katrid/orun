@@ -1,8 +1,10 @@
+from typing import Callable
 import inspect
 import os
 from importlib import import_module
 import glob
-from typing import List
+
+from starlette.routing import Route, Mount
 
 from orun.core.signals import Signal
 from orun.conf import settings
@@ -23,7 +25,7 @@ class AppConfig:
     db_schema: str = None
     create_schema = True
     verbose_name: str = None
-    js_assets: List[str] = None
+    js_assets: list[str] = None
     fixtures = None
     default_language = None
     dependencies = None
@@ -32,8 +34,9 @@ class AppConfig:
     version: str = None
     urls_module: str = None
     managed = True
+    routes: Callable[[], list] = None
 
-    def __init__(self, app_name: str, app_module: str = None):
+    def __init__(self, app_name: str, app_module: str | None = None):
         self.name = app_name
         if app_module is None:
             app_module = import_module(self.__module__)
