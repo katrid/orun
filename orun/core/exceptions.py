@@ -148,7 +148,7 @@ class ValidationError(Exception):
                     messages = ValidationError(messages)
                 self.error_dict[field] = messages.error_list
 
-        elif isinstance(message, list):
+        elif isinstance(message, (list, tuple)):
             self.error_list = []
             for message in message:
                 # Normalize plain strings to instances of ValidationError.
