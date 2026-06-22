@@ -586,7 +586,7 @@ class BaseDatabaseSchemaEditor:
         if params and isinstance(params, list) and params[0]:
             sql += '(' + ', '.join(str(p) for p in params) + ')'
         if col.generated:
-            sql += f' GENERATED ALWAYS AS ({col.generated}) {"VIRTUAL" if not col.stored else "STORED"}'
+            sql += f' GENERATED ALWAYS AS ({col.generated}) {"STORED" if col.stored else "VIRTUAL"}'
         else:
             if col.default is not None:
                 sql += ' DEFAULT ' + self.prepare_default(col.default)
