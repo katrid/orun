@@ -1758,6 +1758,9 @@ class DecimalField(Field[decimal.Decimal]):
             data = 0
         super().save_form_data(instance, data)
 
+    def _get_params(self):
+        return [self.max_digits, self.decimal_places]
+
 
 class DurationField(Field):
     """
