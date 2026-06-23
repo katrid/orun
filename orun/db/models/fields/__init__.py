@@ -305,8 +305,8 @@ class Field[T](BaseField[T]):
 
         self.generated_as = generated_as
         self.db_readonly = False
-        if generated_as and stored is None:
-            stored = False
+        if generated_as:
+            stored = False if stored is False else True
             self.db_readonly = True
         elif stored is None:
             stored = True
