@@ -371,6 +371,18 @@ class RelatedField(FieldCacheMixin, Field):
     def get_cache_name(self):
         return self.name
 
+    # def __getitem__(self, item):
+    #     """Return a field on target model"""
+    #     return RelatedFieldPath((self, item))
+
+
+class RelatedFieldPath:
+    def __init__(self, path_info):
+        self.path_info = path_info
+
+    def __repr__(self):
+        return '.'.join(f.name if isinstance(f, Field) else f for f in self.path_info)
+
 
 class ForeignObject(RelatedField):
     """
