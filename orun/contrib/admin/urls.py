@@ -41,5 +41,6 @@ urlpatterns = [
     path('admin/help-center/', views.help.help_center),
     path('admin/help-center/toc/', views.help.toc),
     path('admin/help-center/get/', views.help.get_content),
+    path('admin/help-center/schema', views.help.get_schema),
     re_path(r'admin/help-center/docs/images/(?P<app_name>[^\/]+)/(?P<path>.+)', views.help.get_image),
 ]

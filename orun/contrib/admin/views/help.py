@@ -136,3 +136,21 @@ def get_image(request: HttpRequest, app_name, path: str):
         content_type, _ = mimetypes.guess_type(path)
         return FileResponse(open(path, 'rb'), content_type=content_type)
     return None
+
+
+def get_schema(request: HttpRequest):
+    models = {}
+    for model_name, model in apps.models.values():
+        models[model_name] = {
+            'table_name': model._meta.db_table,
+            'db_schema': model._meta.db_schema,
+            'doc': model._meta.help_text,
+            'caption': model._meta.verbose_name,
+            'defintion': {
+                'fields': {
+                    f.name: f.fieldinfo
+                    for f in model._meta.fields
+                }
+            },
+        }
+    return JsonResponse({'models': models})
