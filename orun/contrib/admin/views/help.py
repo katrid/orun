@@ -140,7 +140,7 @@ def get_image(request: HttpRequest, app_name, path: str):
 
 def get_schema(request: HttpRequest):
     models = {}
-    for model_name, model in apps.models.values():
+    for model_name, model in apps.models.items():
         models[model_name] = {
             'table_name': model._meta.db_table,
             'db_schema': model._meta.db_schema,
