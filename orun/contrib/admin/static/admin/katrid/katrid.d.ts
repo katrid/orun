@@ -2173,6 +2173,9 @@ declare namespace Katrid.Forms {
         protected addSumHook(field: Katrid.Data.Field, el: HTMLElement): void;
         private _attributes;
         beforeRender(template: HTMLElement): HTMLElement;
+        private _propsCallback;
+        private _propsTimeout;
+        showProperties(): void;
         createToolbar(): HTMLElement;
         createElement(): void;
         protected createToolbarButtons(container: HTMLElement): Element;

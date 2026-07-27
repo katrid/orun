@@ -24,7 +24,7 @@ from orun.db.models.signals import (
     before_insert, before_update, before_delete,
     after_insert, after_update, after_delete,
 )
-from orun.http import HttpRequest, HttpResponse
+from orun.http import HttpRequest, HttpResponse, Http404, JsonResponse
 from orun.db.models.aggregates import Count
 from orun.utils.encoding import force_str
 
@@ -291,6 +291,19 @@ class AdminModel(models.Model, helper=True):
                         with open(app_docs) as f:
                             help_text = f.read()
             return help_text
+        
+        @classmethod
+        def get_record_info(cls, request: HttpRequest, model: str, id: int):
+            try:
+                record = apps.models[model].objects.get(id=id)
+                return JsonResponse({
+                    'created_by': record.created_by,
+                    'created_at': record.created_on,
+                    'updated_by': record.updated_by,
+                    'updated_at': record.updated_on,
+                })
+            except apps.models[model].DoesNotExist:
+                raise Http404()
 
     @api.classmethod
     def api_get_field_choices(

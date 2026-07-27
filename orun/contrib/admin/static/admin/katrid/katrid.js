@@ -9575,7 +9575,7 @@ var Katrid;
                     let templ = Katrid.html(`<div class="v-form form-view data-form">
       <div class="content">
         <header class="content-container-heading"></header>
-        <div class="page-sheet">
+        <div class="page-sheet" style="position:relative;display: flex">
           <div class="content container">
             <div class="form-sheet panel-default data-panel">
               <a class="maximize-button" role="button" title="${Katrid.i18n.gettext('Maximize')}"
@@ -9586,6 +9586,31 @@ var Katrid;
               </div>
             </div>
           </div>
+
+          <button type="button" class="btn btn-soft-secondary" id="btn-properties" style="transform:rotate(-90deg);position:absolute;top:0;right:0;transform-origin:bottom right;z-index: 1" v-on:click="$view.showProperties()">
+          Propriedades
+          </button>
+
+          <aside class="card" v-if="propertiesVisible" style="max-width: 250px;overflow: auto;">
+          <div class="properties-panel card-body">
+          <div class="row">
+          <div class="col-12">
+          <label class="control-label"> Criado por: <span v-text="properties?.created_by?.text"></span> </label>
+          </div>
+          <div class="col-12">
+          <label class="control-label"> Criado em: <span v-text="$filters.date(properties?.created_at, 'short')"></span> </label>
+          </div>
+          <div class="col-12">
+          <label class="control-label"> Modificado por: <span v-text="properties?.updated_by?.text"></span> </label>
+          </div>
+          <div class="col-12">
+          <label class="control-label"> Modificado em: <span v-text="$filters.date(properties?.updated_at, 'short')"></span> </label>
+          </div>
+          </div>
+</div>
+</div>
+          </div>
+          </aside>
         </div>
       </div>
     </div>`);
@@ -9609,6 +9634,28 @@ var Katrid;
                     templ.append(form);
                     templ.setAttribute('v-form', null);
                     return templ;
+                }
+            }
+            showProperties() {
+                this.vm.propertiesVisible = !this.vm.propertiesVisible;
+                if (!this._propsCallback) {
+                    const loadProps = async (data) => {
+                        const svc = new Katrid.Services.ModelService(this.model.name);
+                        const res = await Katrid.Services.ModelService.$post(`/admin/api/call/${this.model.name}/get_record_info`, { params: { model: this.model.name, id: data.id } });
+                        if ('created_by' in res) {
+                            this.vm.properties = res;
+                        }
+                    };
+                    this._propsCallback = (data) => {
+                        if (this._propsTimeout) {
+                            clearTimeout(this._propsTimeout);
+                        }
+                        this._propsTimeout = setTimeout(async () => {
+                            loadProps(data);
+                        }, 1000);
+                    };
+                    loadProps(this.vm.record);
+                    this.addDataCallback(this._propsCallback);
                 }
             }
             createToolbar() {
@@ -9742,6 +9789,8 @@ ${Katrid.i18n.gettext('Delete')}
                     recordIndex: this._recordIndex,
                     recordCount: this.recordCount,
                     readonlyFields: null,
+                    propertiesVisible: false,
+                    properties: {},
                 };
                 this._applyDataDefinition(data);
                 return data;
