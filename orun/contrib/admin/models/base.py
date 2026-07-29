@@ -493,7 +493,7 @@ class AdminModel(models.Model, helper=True):
             raise ObjectDoesNotExist()
         for obj in ids:
             r.append(obj.pk)
-            admin_change_log.send(sender=cls, request=request, method='delete', service=cls, params=obj)
+            admin_change_log.send(sender=cls, request=request, method='delete', service=cls, params=obj, record=obj)
             obj.delete()
         return r
 
