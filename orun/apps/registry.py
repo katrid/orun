@@ -123,12 +123,19 @@ class Registry:
 
         self.template_env = self.create_template_env()
 
-    def setup_loop(self):
+    _loop_started = False
+
+    def setup_loop(self, tasks=True):
         import asyncio
+        if self._loop_started:
+            return
+        self._loop_started = True
         self.loop = asyncio.new_event_loop()
         for addon in self.app_configs.values():
-            if hasattr(addon, 'init_app'):
+            if hasattr(addon, 'init_app') and tasks is True:
                 addon.init_app(self)
+            if hasattr(addon, 'create_tasks') and (tasks is True or addon.name in tasks):
+                addon.create_tasks(self)
         Thread(target=self.start_async_loop, args=(self.loop,), daemon=True).start()
 
     def __getitem__(self, item) -> 'ModelBase':
