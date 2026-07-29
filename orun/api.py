@@ -36,22 +36,26 @@ class RecordProxy:
         return self.__instance__.__call__(self.env, *args, **kwargs)
 
 
-def _register_method(fn, meth_name, pass_request=None):
+def _register_method(fn, meth_name, pass_request=None, alters_data=False):
     if pass_request is None and 'request' in fn.__annotations__:
         pass_request = True
     fn.exposed = True
     fn.pass_request = pass_request
+    fn.alters_data = alters_data
     fn = builtins.classmethod(fn)
+    fn.alters_data = alters_data
     fn.meth_name = meth_name
     fn.exposed = True
     fn.pass_request = pass_request
     return fn
 
 
-def classmethod(name_or_fn=None) -> classmethod:
+def classmethod(name_or_fn=None, **kwargs) -> builtins.classmethod:
+    if name_or_fn is None:
+        return partial(classmethod, **kwargs)
     if callable(name_or_fn):
         name_or_fn.pass_request = None
-        return _register_method(name_or_fn, name_or_fn.__name__)
+        return _register_method(name_or_fn, name_or_fn.__name__, **kwargs)
     if isinstance(name_or_fn, str):
         return partial(_register_method, meth_name=name_or_fn)
 
@@ -63,7 +67,7 @@ def expose(fn: Callable):
     pass
 
 
-def method(*args, select=None, each=None, request=None):
+def method(*args, select=None, each=None, request=None, alters_data=False):
 
     def decorator(fn, meth_name=None):
         meth_name = meth_name or fn.__name__
@@ -97,7 +101,7 @@ def method(*args, select=None, each=None, request=None):
             elif isinstance(self, Model):
                 return fn(self, *args, **kwargs)
 
-        return _register_method(wrapped, meth_name, pass_request=request)
+        return _register_method(wrapped, meth_name, pass_request=request, alters_data=alters_data)
 
     arg = args and args[0]
     if isinstance(arg, str):

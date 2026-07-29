@@ -3,6 +3,7 @@ import sys
 import tempfile
 import traceback
 import asyncio
+from contextlib import asynccontextmanager
 
 from asgiref.sync import ThreadSensitiveContext, sync_to_async
 from starlette.applications import Starlette
@@ -302,8 +303,11 @@ class ASGIHandler(base.BaseHandler):
         return scope.get('root_path', '') or ''
 
 
-def _on_startup():
+@asynccontextmanager
+async def _lifespan(app: Starlette):
     WebSocketHandler.event_loop = asyncio.get_event_loop()
+    yield
+    print('Shutting down...')
 
 
 from orun.apps import apps
@@ -318,5 +322,5 @@ asgi_handler = Starlette(
         *apps_routes,
         Mount('/', app=ASGIHandler()),
     ],
-    on_startup=[_on_startup]
+    lifespan=_lifespan
 )

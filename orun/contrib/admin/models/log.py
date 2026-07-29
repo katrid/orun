@@ -42,13 +42,13 @@ class LogEntry(models.Model):
 
 
 
-def _log_change(sender, request: HttpRequest, codename, record: models.Model, *args, **kwargs):
+def _log_change(sender, request: HttpRequest, method, record: models.Model, *args, **kwargs):
     if record._meta.log_changes:
         LogEntry.objects.create(
             user_id=int(request.user_id),
             performed_at=datetime.datetime.now(),
             details={
-                "codename": codename,
+                "codename": method,
                 "model": record._meta.name,
                 "object_id": record.pk,
                 "record_name": str(record),

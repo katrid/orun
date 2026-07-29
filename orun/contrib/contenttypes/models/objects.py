@@ -59,19 +59,19 @@ class Object(models.Model):
         return cls.objects.get(name=ref_id).object_id
 
 
-class Association(models.Model):
-    source_model = models.ForeignKey(ContentType, null=False)
-    source_model_name = models.CharField(proxy='source_model.name')
-    source_id = models.BigIntegerField()
-    source_object = GenericForeignKey('source_model', 'source_id')
-    dest_model = models.ForeignKey(ContentType, null=False)
-    dest_model_name = models.CharField(proxy='dest_model.name')
-    dest_id = models.BigIntegerField()
-    dest_object = GenericForeignKey('dest_model', 'target_id')
-    comment = models.TextField()
-
-    class Meta:
-        name = 'content.association'
+# class Association(models.Model):
+#     source_model = models.ForeignKey(ContentType, null=False)
+#     source_model_name = models.CharField(proxy='source_model.name')
+#     source_id = models.BigIntegerField()
+#     source_object = GenericForeignKey('source_model', 'source_id')
+#     dest_model = models.ForeignKey(ContentType, null=False)
+#     dest_model_name = models.CharField(proxy='dest_model.name')
+#     dest_id = models.BigIntegerField()
+#     dest_object = GenericForeignKey('dest_model', 'target_id')
+#     comment = models.TextField()
+#
+#     class Meta:
+#         name = 'content.association'
 
 
 class Registrable:

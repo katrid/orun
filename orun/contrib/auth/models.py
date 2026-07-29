@@ -424,7 +424,7 @@ class AbstractUser(PermissionsMixin, AbstractBaseUser):
         null=False,
     )
     is_active = models.BooleanField(
-        _('active'),
+        _('Is active'),
         default=True,
         help_text=_(
             'Designates whether this user should be treated as active. '

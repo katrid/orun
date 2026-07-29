@@ -672,3 +672,4 @@ SECURE_SSL_REDIRECT = False
 ADMIN_SITE_TITLE = 'Orun Admin'
 
 LOG_DIR = None
+START_TASKS = False

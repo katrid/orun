@@ -21,8 +21,12 @@ from orun.contrib.admin.models import ui
 from orun.db.models import NOT_PROVIDED, Field, BooleanField, Q, ObjectDoesNotExist
 from orun.db.models.signals import (
     Signal,
-    before_insert, before_update, before_delete,
-    after_insert, after_update, after_delete,
+    before_insert,
+    before_update,
+    before_delete,
+    after_insert,
+    after_update,
+    after_delete,
 )
 from orun.http import HttpRequest, HttpResponse, Http404, JsonResponse
 from orun.db.models.aggregates import Count
@@ -35,7 +39,7 @@ admin_change_log = Signal()
 
 
 class AdminModel(models.Model, helper=True):
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def api_search(cls, request: HttpRequest, fields=None, count=None, page=None, limit=None, **kwargs):
         qs = cls._api_search(request, fields=fields, **kwargs)
         if count:
@@ -49,7 +53,7 @@ class AdminModel(models.Model, helper=True):
         if limit:
             page = int(page)
             limit = int(limit)
-            qs = qs[(page - 1) * limit:page * limit]
+            qs = qs[(page - 1) * limit : page * limit]
         fields = fields or []
         defer = [f.name for f in cls._meta.fields if f.defer and f.name not in fields]
         return {
@@ -57,7 +61,7 @@ class AdminModel(models.Model, helper=True):
             'count': count,
         }
 
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def api_list_id(cls, request: HttpRequest, where=None, limit=PAGE_SIZE):
         qs = cls._api_search(request, fields=[cls._meta.pk.name], where=where)
         qs = qs[:limit]
@@ -75,8 +79,8 @@ class AdminModel(models.Model, helper=True):
             # TODO order by custom expr
             order_by = [
                 '-' + field.name if '-' + field.name in order else field.name
-                for field in
-                [cls._meta.fields[f[1:] if f.startswith('-') else f] for f in order] if field.concrete
+                for field in [cls._meta.fields[f[1:] if f.startswith('-') else f] for f in order]
+                if field.concrete
             ]
             if order_by:
                 qs = qs.order_by(*order)
@@ -115,7 +119,9 @@ class AdminModel(models.Model, helper=True):
             default = {}
             # filter active records only
             if cls._meta.active_field is not None:
-                if not params or (cls._meta.active_field not in params and not cls._meta.active_field + '__in' in params):
+                if not params or (
+                    cls._meta.active_field not in params and not cls._meta.active_field + '__in' in params
+                ):
                     default[cls._meta.active_field] = True
 
         if where:
@@ -163,15 +169,13 @@ class AdminModel(models.Model, helper=True):
                             _args.append(Q(**{f.path.replace('.', '__'): v}))
                         elif isinstance(f, models.ForeignKey):
                             name_fields = list(
-                                chain(*(_resolve_fk_search(fk) for fk in f.related_model._meta.get_name_fields())))
+                                chain(*(_resolve_fk_search(fk) for fk in f.related_model._meta.get_name_fields()))
+                            )
                             if len(name_fields) == 1:
                                 _args.append(Q(**{f'{f.name}__{name_fields[0]}': v}))
                             elif name_fields:
                                 _args.append(
-                                    reduce(
-                                        lambda f1, f2: f1 | f2,
-                                        [Q(**{f'{f.name}__{fk}': v}) for fk in name_fields]
-                                    )
+                                    reduce(lambda f1, f2: f1 | f2, [Q(**{f'{f.name}__{fk}': v}) for fk in name_fields])
                                 )
                             else:
                                 kwargs[k] = v
@@ -196,8 +200,12 @@ class AdminModel(models.Model, helper=True):
             current_user_id = current_user.pk
             if current_user_id == SUPERUSER or current_user.is_superuser:
                 return qs
-            ctx = {'current_user': current_user, 'current_user_id': current_user.pk, 'user': current_user,
-                   'user_id': current_user.pk}
+            ctx = {
+                'current_user': current_user,
+                'current_user_id': current_user.pk,
+                'user': current_user,
+                'user_id': current_user.pk,
+            }
             for r in Rule.get_rules(cls._meta.name):
                 rule = r.eval_rule(ctx)
                 if isinstance(rule, dict):
@@ -210,10 +218,20 @@ class AdminModel(models.Model, helper=True):
     def _api_format_choice(self, format=None, **context):
         return {'id': self.pk, 'text': str(self)}
 
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def api_search_by_name(
-            cls, request: HttpRequest, name=None, count=None, page=None, label_from_instance=None, name_fields=None,
-            exact=False, filter_map=None, exclude=None, *args, **kwargs
+        cls,
+        request: HttpRequest,
+        name=None,
+        count=None,
+        page=None,
+        label_from_instance=None,
+        name_fields=None,
+        exact=False,
+        filter_map=None,
+        exclude=None,
+        *args,
+        **kwargs,
     ):
         fmt = kwargs.get('format')
         where = kwargs.get('params')
@@ -251,13 +269,14 @@ class AdminModel(models.Model, helper=True):
             count = qs.count()
         if page:
             page = int(page)
-            qs = qs[(page - 1) * limit:page * limit]
+            qs = qs[(page - 1) * limit : page * limit]
         else:
             qs = qs[:limit]
         if isinstance(label_from_instance, list):
             label_from_instance = lambda obj, format, label_from_instance=label_from_instance: (
                 obj.pk,
-                ' - '.join([str(getattr(obj, f, '')) for f in label_from_instance if f in cls._meta.fields_dict]))
+                ' - '.join([str(getattr(obj, f, '')) for f in label_from_instance if f in cls._meta.fields_dict]),
+            )
         if callable(label_from_instance):
             res = [label_from_instance(obj, fmt) for obj in qs]
         else:
@@ -267,7 +286,7 @@ class AdminModel(models.Model, helper=True):
             'items': res,
         }
 
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def api_get_field_choice(cls, request: HttpRequest, field: str, q, **kwargs):
         return cls.api_get_field_choices(request, field, q, exact=True, limit=1)
 
@@ -285,31 +304,42 @@ class AdminModel(models.Model, helper=True):
             if not field.help_text:
                 # collect md documentation
                 if model._meta.addon and model._meta.addon.path:
-                    app_docs = os.path.join(model._meta.addon.docs_path, 'models', model._meta.name, 'fields',
-                                            f'{field.name}.md')
+                    app_docs = os.path.join(
+                        model._meta.addon.docs_path, 'models', model._meta.name, 'fields', f'{field.name}.md'
+                    )
                     if os.path.isfile(app_docs):
                         with open(app_docs) as f:
                             help_text = f.read()
             return help_text
-        
+
         @classmethod
         def get_record_info(cls, request: HttpRequest, model: str, id: int):
             try:
                 record = apps.models[model].objects.get(id=id)
-                return JsonResponse({
-                    'created_by': record.created_by,
-                    'created_at': record.created_on,
-                    'updated_by': record.updated_by,
-                    'updated_at': record.updated_on,
-                })
+                return JsonResponse(
+                    {
+                        'created_by': record.created_by,
+                        'created_at': record.created_on,
+                        'updated_by': record.updated_by,
+                        'updated_at': record.updated_on,
+                    }
+                )
             except apps.models[model].DoesNotExist:
                 raise Http404()
 
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def api_get_field_choices(
-            cls, request: HttpRequest, field: str, q=None, count=False, ids=None, page=None, exact=False, limit=None,
-            exclude=None,
-            **kwargs
+        cls,
+        request: HttpRequest,
+        field: str,
+        q=None,
+        count=False,
+        ids=None,
+        page=None,
+        exact=False,
+        limit=None,
+        exclude=None,
+        **kwargs,
     ):
         fmt = kwargs.get('format', 'str')
         field = cls._meta.fields[field]
@@ -343,19 +373,21 @@ class AdminModel(models.Model, helper=True):
                 else:
                     search_params['params'] = {'pk': ids}
             label_from_instance = kwargs.get(
-                'label_from_instance',
-                field.label_from_instance or kwargs.get('name_fields')
+                'label_from_instance', field.label_from_instance or kwargs.get('name_fields')
             )
 
             return related_model.api_search_by_name(
                 request,
-                label_from_instance=label_from_instance, exact=exact, format=fmt,
+                label_from_instance=label_from_instance,
+                exact=exact,
+                format=fmt,
                 filter_map=field.filter_map,
                 **search_params,
                 exclude=exclude,
             )
         elif field.one_to_many:
             from orun.db.models.query import QuerySet
+
             where = kwargs['filter']
             qs = field.get_queryset(where)
             return {
@@ -375,7 +407,7 @@ class AdminModel(models.Model, helper=True):
     def admin_dispatch_view_action(cls, request, action_name, target, **kwargs):
         pass
 
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def api_get_defaults(cls, context=None, *args, **kwargs):
         r = {}
         defaults = (context or {}).get('default', {})
@@ -400,7 +432,7 @@ class AdminModel(models.Model, helper=True):
             r[cls._meta.name_field] = kwargs['creation_name']
         return r or None
 
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def api_group_by(cls, request: HttpRequest, grouping: List[str], params):
         where = params
         field_name = grouping[0]
@@ -416,11 +448,13 @@ class AdminModel(models.Model, helper=True):
                 key = row[field.name]
                 count = row['pk__count']
                 s = f'{str(field.remote_field.model.objects.get(pk=key)) if key else gettext("(Undefined)")} ({count})'
-                res.append({
-                    '$params': {field_name: key},
-                    field_name: s,
-                    '$count': count,
-                })
+                res.append(
+                    {
+                        '$params': {field_name: key},
+                        field_name: s,
+                        '$count': count,
+                    }
+                )
             return res
         elif field.choices:
             choices = dict(field.flatchoices)
@@ -430,24 +464,28 @@ class AdminModel(models.Model, helper=True):
                 s = force_str(choices.get(k, k), strings_only=True)
                 if k in values and count:
                     s += f' ({count})'
-                res.append({
-                    '$params': {field_name: k},
-                    field_name: s,
-                    '$count': count,
-                })
+                res.append(
+                    {
+                        '$params': {field_name: k},
+                        field_name: s,
+                        '$count': count,
+                    }
+                )
             for k, v in [(k, v) for k, v in values.items() if k not in choices]:
-                res.append({
-                    '$params': {field_name: k},
-                    field_name: (gettext("(Undefined)") if k is None else k) + f' {(v)}',
-                    '$count': v,
-                })
+                res.append(
+                    {
+                        '$params': {field_name: k},
+                        field_name: (gettext('(Undefined)') if k is None else k) + f' {(v)}',
+                        '$count': v,
+                    }
+                )
             return res
         return list(qs)
 
     @api.classmethod
     def api_delete(cls, request: HttpRequest, ids):
         if cls.Admin.readonly:
-            raise PermissionDenied("Model is read-only")
+            raise PermissionDenied('Model is read-only')
         # self.check_permission('delete')
         ids = [v for v in cls._api_search(request, {'pk__in': ids}).only('pk')]
         r = []
@@ -455,7 +493,7 @@ class AdminModel(models.Model, helper=True):
             raise ObjectDoesNotExist()
         for obj in ids:
             r.append(obj.pk)
-            admin_change_log.send(sender=cls, request=request, codename='delete', record=obj)
+            admin_change_log.send(sender=cls, request=request, method='delete', service=cls, params=obj)
             obj.delete()
         return r
 
@@ -483,8 +521,9 @@ class AdminModel(models.Model, helper=True):
 
     @api.classmethod
     def api_write(cls, data):
+        from orun.contrib.admin.views.api import admin_api_commit
         if cls.Admin.readonly:
-            raise PermissionDenied("Model is read-only")
+            raise PermissionDenied('Model is read-only')
         if isinstance(data, dict):
             data = [data]
         res = []
@@ -499,11 +538,15 @@ class AdminModel(models.Model, helper=True):
                 obj = cls()
             cls._from_json(obj, row)
             # dispatch admin create event
-            admin_change_log.send(sender=cls, request=cls._env.request, codename=codename, record=obj)
+            from orun.contrib.contenttypes.models import ContentType
+            admin_change_log.send(
+                sender=cls, request=cls._env.request, service=cls, method=codename, record=obj, params=row,
+                model=cls._meta.name, object_id=obj.pk,
+            )
             res.append(obj.pk)
         return res
 
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def admin_on_field_change(cls, field, record, *args, **kwargs):
         res = {}
         vals = {}
@@ -522,11 +565,9 @@ class AdminModel(models.Model, helper=True):
         obj = getattr(self, field.proxy_field[0])
         if obj is not None:
             obj = getattr(obj, field.proxy_field[1])
-        return {
-            'value': {field.name: obj}
-        }
+        return {'value': {field.name: obj}}
 
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def admin_get_formview_action(cls, request: HttpRequest, id=None):
         return {
             'type': 'ui.action.window',
@@ -535,17 +576,17 @@ class AdminModel(models.Model, helper=True):
             'viewModes': ['form'],
             'viewMode': 'form',
             'target': 'current',
-            'viewsInfo': {
-                'form': cls._admin_get_view_info(request, 'form')
-            },
+            'viewsInfo': {'form': cls._admin_get_view_info(request, 'form')},
             'context': {},
         }
 
     def _get_external_id(self):
         result = defaultdict(list)
-        for obj in self.objects['ir.object'].objects.filter(model_name=self._meta.name,
-                                                            object_id__in=self._get_pk_vals()).only('schema', 'name',
-                                                                                                    'object_id'):
+        for obj in (
+            self.objects['ir.object']
+            .objects.filter(model_name=self._meta.name, object_id__in=self._get_pk_vals())
+            .only('schema', 'name', 'object_id')
+        ):
             result[obj.object_id].append('%s.%s' % (obj.schema, obj.name))
         return result
 
@@ -559,14 +600,15 @@ class AdminModel(models.Model, helper=True):
         model = field.model
         # collect md documentation
         if model._meta.addon and model._meta.addon.path:
-            app_docs = os.path.join(model._meta.addon.docs_path, 'models', model._meta.name, 'fields',
-                                    f'{field.name}.md')
+            app_docs = os.path.join(
+                model._meta.addon.docs_path, 'models', model._meta.name, 'fields', f'{field.name}.md'
+            )
             if os.path.isfile(app_docs):
                 with open(app_docs) as f:
                     info['help_text'] = f.read()
         return info
 
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def admin_get_fields_info(cls, view_id=None, view_type='form', toolbar=False, context=None, xml=None):
         opts = cls._meta
         if xml is not None:
@@ -577,11 +619,7 @@ class AdminModel(models.Model, helper=True):
                 fields.append(opts.fields[xml.attrib.get('date-start')])
                 if 'date-end' in xml.attrib:
                     fields.append(opts.fields[xml.attrib.get('date-end')])
-            return {
-                f.name: cls.admin_get_field_info(f, view_type)
-                for f in fields
-                if f.serialize
-            }
+            return {f.name: cls.admin_get_field_info(f, view_type) for f in fields if f.serialize}
         if view_type == 'search':
             searchable_fields = opts.searchable_fields
             if searchable_fields:
@@ -610,7 +648,7 @@ class AdminModel(models.Model, helper=True):
             xml_content = view.get_xml(cls, {'request': cls._env.request, 'opts': model._meta})
             r = {
                 'template': etree.tostring(xml_content, encoding='utf-8').decode('utf-8'),
-                'fields': cls.admin_get_fields_info(view_type=view_type, xml=xml_content)
+                'fields': cls.admin_get_fields_info(view_type=view_type, xml=xml_content),
             }
         else:
             content = cls._admin_get_default_view(request, view_type=view_type)
@@ -621,18 +659,20 @@ class AdminModel(models.Model, helper=True):
         if toolbar and view_type != 'search':
             bindings = apps['ui.action'].get_bindings(cls._meta.name)
             r['toolbar'] = {
-                'print': [action.to_dict() for action in bindings['print'] if
-                          view_type == 'list' or not action.multiple],
-                'action': [action.to_dict() for action in bindings['action'] if
-                           view_type == 'list' or not action.multiple],
+                'print': [
+                    action.to_dict() for action in bindings['print'] if view_type == 'list' or not action.multiple
+                ],
+                'action': [
+                    action.to_dict() for action in bindings['action'] if view_type == 'list' or not action.multiple
+                ],
             }
         return r
 
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def admin_get_view_info(cls, request: HttpRequest, view_type, view=None, toolbar=False):
         return cls._admin_get_view_info(request, view_type, view, toolbar)
 
-    @api.classmethod
+    @api.classmethod(alters_data=False)
     def admin_load_views(cls, request: HttpRequest, views=None, toolbar=False, **kwargs):
         if views is None and 'action' in kwargs:
             Action = apps['ui.action.window']
@@ -648,7 +688,7 @@ class AdminModel(models.Model, helper=True):
             'views': {
                 mode: cls.admin_get_view_info(request, view_type=mode, view=v, toolbar=toolbar)
                 for mode, v in views.items()
-            }
+            },
         }
 
     @classmethod
@@ -661,7 +701,8 @@ class AdminModel(models.Model, helper=True):
                 'views/%s/%s.xml' % (cls._meta.addon.schema, view_type),
                 'views/%s.jinja2' % view_type,
                 'views/%s.pug' % view_type,
-            ], using='jinja2'
+            ],
+            using='jinja2',
         )
 
     @classmethod
@@ -707,6 +748,7 @@ class AdminModel(models.Model, helper=True):
         qs = cls._api_search(request, where=where, fields=fields)
         if format == 'xlsx':
             import xlsxwriter
+
             buf = io.BytesIO()
             wb = xlsxwriter.Workbook(buf, {'in_memory': True})
             sheet = wb.add_worksheet()
@@ -717,8 +759,9 @@ class AdminModel(models.Model, helper=True):
                 sheet.write_row(i + 1, 0, [serialize(cls._meta.fields[f], getattr(obj, f, None)) for f in fields])
             wb.close()
             buf.seek(0)
-            res = HttpResponse(buf.read(),
-                               content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            res = HttpResponse(
+                buf.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
             res['Content-Disposition'] = f'attachment; filename={cls._meta.verbose_name_plural.replace("/", " ")}.xlsx'
             return res
 
@@ -727,6 +770,7 @@ class AdminModel(models.Model, helper=True):
         # TODO generate preview data and show a client side dialog
         for file in files:
             import pandas as pd
+
             buf = io.BytesIO(file.read())
             df = pd.read_excel(buf)
             not_found = []
@@ -758,7 +802,7 @@ class AdminModel(models.Model, helper=True):
                     gettext('The following fields were not found in the model: %s') % ', '.join(not_found)
                 )
             cols = list(field_map.keys())
-            field_dict  = {f: cls._meta.fields.find(f) for f in field_map.values()}
+            field_dict = {f: cls._meta.fields.find(f) for f in field_map.values()}
 
             def get_value(field_name, col, data_row):
                 field = field_dict[field_name]
@@ -773,20 +817,20 @@ class AdminModel(models.Model, helper=True):
                         return input_value
                     else:
                         name_fields = _resolve_fk_search(field)
-                        return field.related_model.objects.filter(
-                            **{fname.split('__', 1)[1]: input_value for fname in name_fields if '__' in fname}
-                        ).only('pk').first()
+                        return (
+                            field.related_model.objects.filter(
+                                **{fname.split('__', 1)[1]: input_value for fname in name_fields if '__' in fname}
+                            )
+                            .only('pk')
+                            .first()
+                        )
                 if input_value == '':
                     return None
                 return input_value
 
             ids = []
             for row in df.values:
-                ids.append(
-                    cls.objects.create(
-                        **{f: get_value(f, c, row) for c, f in field_map.items()}
-                    ).pk
-                )
+                ids.append(cls.objects.create(**{f: get_value(f, c, row) for c, f in field_map.items()}).pk)
             return {
                 'message': gettext('%s records imported successfully.') % len(df),
                 'ids': ids,

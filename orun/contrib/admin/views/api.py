@@ -1,6 +1,7 @@
 import os
 import datetime
 import json
+import inspect
 
 from orun.core.signals import Signal
 from orun.db.models import QuerySet
@@ -13,24 +14,30 @@ from orun.http import HttpResponse, JsonResponse, HttpResponseForbidden, HttpReq
 from .rpc import jsonrpc
 
 admin_api_called = Signal(providing_args=['request', 'service', 'method', 'params'])
+admin_api_commit = Signal(providing_args=['request', 'service', 'method', 'params'])
 
 if getattr(settings, 'ADMIN_API_LOGGING', False):
+
     def _get_log_filename(svc: str):
         s = os.path.join(settings.LOG_DIR, 'orun', svc)
         if not os.path.isdir(s):
             os.makedirs(s)
         return os.path.join(s, 'api.log.json')
 
-
     def _get_log_file(svc: str):
         return open(_get_log_filename(svc), 'a')
 
-
     IGNORED_METHODS = [
-        'api_search', 'api_get', 'api_get_field_choices', 'api_group_by', 'api_copy', 'api_get_field_choice',
-        'api_on_field_change', 'admin_get_formview_action', 'load',
+        'api_search',
+        'api_get',
+        'api_get_field_choices',
+        'api_group_by',
+        'api_copy',
+        'api_get_field_choice',
+        'api_on_field_change',
+        'admin_get_formview_action',
+        'load',
     ]
-
 
     def log_api_call(sender, request, service, method, params, **kwargs):
         if method not in IGNORED_METHODS:
@@ -40,6 +47,7 @@ if getattr(settings, 'ADMIN_API_LOGGING', False):
                         f"""{{"timestamp": "{str(datetime.datetime.now())}","user":"{request.user_id}","request": {request.body.decode('utf-8')}}}\n"""
                     )
                     logger.flush()
+
     admin_api_called.connect(log_api_call)
 
 
@@ -57,9 +65,9 @@ def rpc(request, service, meth, params):
             raise MethodNotFound
         meth = getattr(service, method)
         if getattr(meth, 'exposed', None):
+            # api logging
             admin_api_called.send(model_name, request=request, service=service, method=method, params=params)
 
-            # api logging
             args = params.get('args') or []
             kwargs = params.get('kwargs') or {}
             if getattr(meth, 'pass_request', False):
@@ -80,6 +88,9 @@ def rpc(request, service, meth, params):
                 }
             elif isinstance(r, models.Model):
                 r = {'data': [r]}
+            # dispatch after commit
+            if getattr(meth, 'alters_data', False):
+                admin_api_commit.send(model_name, request=request, model=service._meta.name, method=method, params={'args': args, 'kwargs': kwargs})
             return r
     raise MethodNotFound
 
@@ -115,14 +126,16 @@ def view_model(request: HttpRequest, service: str):
     """
     cls = apps.models[service]
     views_info = cls.admin_load_views()
-    return JsonResponse({
-        'type': 'ui.action.window',
-        'caption': cls._meta.verbose_name,
-        'model': service,
-        'viewModes': ['list', 'form', 'search'],
-        'viewsInfo': views_info['views'],
-        'fields': views_info['fields'],
-    })
+    return JsonResponse(
+        {
+            'type': 'ui.action.window',
+            'caption': cls._meta.verbose_name,
+            'model': service,
+            'viewModes': ['list', 'form', 'search'],
+            'viewsInfo': views_info['views'],
+            'fields': views_info['fields'],
+        }
+    )
 
 
 @login_required
@@ -171,6 +184,7 @@ def public_query(request, id=None):
 
 def admin_report_api(request: HttpRequest, qualname: str):
     from orun.contrib.admin.models.reports import ReportAction
+
     rep = ReportAction.objects.only('pk').filter(qualname=qualname).first()
     if rep:
         params = request.json

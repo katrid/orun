@@ -1,5 +1,5 @@
 from .models import ContentType, ContentTypeManager
-from .objects import Object, ObjectManager, Association, Registrable
+from .objects import Object, ObjectManager, Registrable
 from .attachment import Attachment
 
 
