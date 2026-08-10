@@ -6,6 +6,7 @@ import copy
 from functools import reduce
 from itertools import chain
 import io
+import logging
 
 from orun.apps import apps
 from orun.core.exceptions import FieldDoesNotExist, ValidationError
@@ -34,11 +35,44 @@ from orun.utils.encoding import force_str
 
 PAGE_SIZE = 10
 
+logger = logging.getLogger('orun.admin')
+
 
 admin_change_log = Signal()
 
 
+class DocumentLogger:
+    def __init__(self, obj=None):
+        if obj:
+            self._model = obj.__class__
+            self.model_name = self._model._meta.name
+            self.pk = obj.pk
+        else:
+            self._model = None
+            self.model_name = None
+            self.pk = None
+
+    def info(self, msg: dict | str):
+        logger.info(msg, extra={'extra': {'model': self.model_name, 'object_id': self.pk}})
+
+    def error(self, msg: dict | str):
+        logger.error(msg, extra={'extra': {'model': self.model_name, 'object_id': self.pk}})
+
+    def debug(self, msg: dict | str):
+        logger.debug(msg, extra={'extra': {'model': self.model_name, 'object_id': self.pk}})
+
+    def warning(self, msg: dict | str):
+        logger.warning(msg, extra={'extra': {'model': self.model_name, 'object_id': self.pk}})
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self.__class__(owner)
+        return DocumentLogger(instance)
+
+
 class AdminModel(models.Model, helper=True):
+    logger = DocumentLogger()
+
     @api.classmethod(alters_data=False)
     def api_search(cls, request: HttpRequest, fields=None, count=None, page=None, limit=None, **kwargs):
         qs = cls._api_search(request, fields=fields, **kwargs)
@@ -494,8 +528,14 @@ class AdminModel(models.Model, helper=True):
         for obj in ids:
             r.append(obj.pk)
             admin_change_log.send(
-                sender=cls, request=request, method='delete', service=cls, params={'id': obj.pk}, record=obj,
-                model=cls._meta.name, object_id=obj.pk,
+                sender=cls,
+                request=request,
+                method='delete',
+                service=cls,
+                params={'id': obj.pk},
+                record=obj,
+                model=cls._meta.name,
+                object_id=obj.pk,
             )
             obj.delete()
         return r
@@ -525,6 +565,7 @@ class AdminModel(models.Model, helper=True):
     @api.classmethod
     def api_write(cls, data):
         from orun.contrib.admin.views.api import admin_api_commit
+
         if cls.Admin.readonly:
             raise PermissionDenied('Model is read-only')
         if isinstance(data, dict):
@@ -542,10 +583,18 @@ class AdminModel(models.Model, helper=True):
             cls._from_json(obj, row)
             # dispatch admin create event
             from orun.contrib.contenttypes.models import ContentType
+
             admin_change_log.send(
-                sender=cls, request=cls._env.request, service=cls, method=codename, record=obj, params=row,
-                model=cls._meta.name, object_id=obj.pk,
+                sender=cls,
+                request=cls._env.request,
+                service=cls,
+                method=codename,
+                record=obj,
+                params=row,
+                model=cls._meta.name,
+                object_id=obj.pk,
             )
+
             res.append(obj.pk)
         return res
 
