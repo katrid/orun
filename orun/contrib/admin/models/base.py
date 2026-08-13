@@ -792,8 +792,6 @@ class AdminModel(models.Model, helper=True):
 
         def serialize(field, value):
             if value is not None:
-                if isinstance(value, Promise):
-                    return str(value)
                 if isinstance(field, models.ForeignKey):
                     return str(value)
                 return value
@@ -808,7 +806,7 @@ class AdminModel(models.Model, helper=True):
             wb = xlsxwriter.Workbook(buf, {'in_memory': True})
             sheet = wb.add_worksheet()
             header_style = wb.add_format({'bold': True})
-            caps = [cls._meta.get_field(f).label for f in fields]
+            caps = [str(cls._meta.get_field(f).label) for f in fields]
             sheet.write_row(0, 0, caps, header_style)
             for i, obj in enumerate(qs):
                 sheet.write_row(i + 1, 0, [serialize(cls._meta.fields[f], getattr(obj, f, None)) for f in fields])
