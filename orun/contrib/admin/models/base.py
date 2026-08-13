@@ -9,6 +9,7 @@ import io
 import logging
 
 from orun.apps import apps
+from orun.utils.functional import Promise
 from orun.core.exceptions import FieldDoesNotExist, ValidationError
 from orun.utils.xml import get_xml_fields, etree
 from orun.utils.translation import gettext
@@ -792,6 +793,8 @@ class AdminModel(models.Model, helper=True):
         def serialize(field, value):
             if value is not None:
                 if isinstance(field, models.ForeignKey):
+                    return str(value)
+                if isinstance(value, Promise):
                     return str(value)
                 return value
 
