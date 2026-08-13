@@ -792,9 +792,9 @@ class AdminModel(models.Model, helper=True):
 
         def serialize(field, value):
             if value is not None:
-                if isinstance(field, models.ForeignKey):
-                    return str(value)
                 if isinstance(value, Promise):
+                    return str(value)
+                if isinstance(field, models.ForeignKey):
                     return str(value)
                 return value
 
