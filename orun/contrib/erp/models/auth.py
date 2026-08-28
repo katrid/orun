@@ -13,7 +13,7 @@ from orun.contrib.auth.models import AbstractUser, Permission, Group, GroupPermi
 
 from .partner import Partner
 from .company import Company
-from ...admin.models import ActionGroups
+from ...admin.models import ActionGroups, AdminModel
 
 
 class User(AbstractUser, Partner):

@@ -177,12 +177,12 @@ class WindowAction(Action):
         # check if there's a specified view
         if view_id:
             views_info[self.view.view_type] = model._admin_get_view_info(
-                request, view_type=self.view_type, view=view_id, toolbar=True
+                request, view_type=self.view_type, view=view_id, toolbar=True, context=context
             )
         views_info.update({
-            k: model._admin_get_view_info(request, view_type=k, view=None, toolbar=True) for k in modes if k not in views_info
+            k: model._admin_get_view_info(request, view_type=k, view=None, toolbar=True, context=context) for k in modes if k not in views_info
         })
-        info['viewsInfo']['search'] = model._admin_get_view_info(request, view_type='search')
+        info['viewsInfo']['search'] = model._admin_get_view_info(request, view_type='search', context=context)
         if not request.user.has_perm(('create', 'update', 'delete'), model._meta.name):
             for vi in info['viewsInfo'].values():
                 vi['readonly'] = True

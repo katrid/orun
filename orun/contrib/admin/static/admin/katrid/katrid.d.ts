@@ -2278,7 +2278,7 @@ declare namespace Katrid.Forms {
         beforeRender(): HTMLElement;
         controller: Katrid.Forms.Views.Search.SearchViewController;
         render(): HTMLElement;
-        load(query: any): void;
+        load(params: any): void;
         protected _createFavoritesMenu(): void;
         saveSearch(): void;
         renderTo(container: HTMLElement): void;

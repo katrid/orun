@@ -688,7 +688,7 @@ class AdminModel(models.Model, helper=True):
             return r
 
     @classmethod
-    def _admin_get_view_info(cls, request, view_type, view=None, toolbar=False):
+    def _admin_get_view_info(cls, request, view_type, view=None, toolbar=False, context=None):
         View = apps['ui.view']
         model = apps['content.type']
 
@@ -698,13 +698,13 @@ class AdminModel(models.Model, helper=True):
             view = View.objects.get(pk=view)
 
         if view:
-            xml_content = view.get_xml(cls, {'request': cls._env.request, 'opts': model._meta})
+            xml_content = view.get_xml(cls, {'request': cls._env.request, 'opts': model._meta, 'context': context or {}})
             r = {
                 'template': etree.tostring(xml_content, encoding='utf-8').decode('utf-8'),
                 'fields': cls.admin_get_fields_info(view_type=view_type, xml=xml_content),
             }
         else:
-            content = cls._admin_get_default_view(request, view_type=view_type)
+            content = cls._admin_get_default_view(request, view_type=view_type, context=context)
             r = {
                 'template': content,
                 'fields': cls.admin_get_fields_info(view_type=view_type, xml=content),
@@ -759,9 +759,9 @@ class AdminModel(models.Model, helper=True):
         )
 
     @classmethod
-    def _admin_get_default_view(cls, request, view_type):
+    def _admin_get_default_view(cls, request, view_type, context=None):
         template = cls._admin_select_template(view_type)
-        templ = template.render(context=dict(opts=cls._meta, _=gettext, request=request))
+        templ = template.render(context=dict(opts=cls._meta, _=gettext, request=request, context=context))
         xml = ui.etree.fromstring(templ)
         ui.resolve_refs(xml)
         templ = ui.etree.tostring(xml, encoding='utf-8')

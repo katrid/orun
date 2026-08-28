@@ -781,6 +781,7 @@ var Katrid;
                     return this.currentAction.context;
                 return {
                     user_id: Katrid.app.userInfo.id,
+                    company_id: Katrid.app.userInfo.company?.id
                 };
             }
             empty() {
@@ -10569,15 +10570,18 @@ var Katrid;
                     this.createVm(this.element);
                     this.controller = new Katrid.Forms.Views.Search.SearchViewController(this);
                     this.controller.setContent(this.domTemplate());
-                    if (this.action?.context.search_default)
+                    if (this.action?.context.search_default) {
+                        console.debug('load default', this.action.context.search_default);
                         setTimeout(() => this.load(this.action.context.search_default));
+                    }
                 }
                 if (this.container)
                     this.container.append(this.element);
                 this._createFavoritesMenu();
                 return this.element;
             }
-            load(query) {
+            load(params) {
+                this.controller.load(params);
             }
             _createFavoritesMenu() {
                 let menu = this.element.querySelector('#btn-favorites').parentElement.querySelector('.dropdown-menu');
@@ -11469,10 +11473,11 @@ var Katrid;
                         });
                     }
                     getByName(name) {
-                        for (let item of this.filterGroups)
-                            for (let subitem of item)
+                        for (let item of this.filterGroups) {
+                            for (let subitem of item.items)
                                 if (subitem.name === name)
                                     return subitem;
+                        }
                         for (let group of this.groups)
                             for (let item of group.items)
                                 if (item.name === name)
