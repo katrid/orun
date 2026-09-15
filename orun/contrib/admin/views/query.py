@@ -1,11 +1,14 @@
 from typing import Any
 from dataclasses import dataclass
+import logging
 
 from orun.apps import apps
 from orun.core.exceptions import PermissionDenied
 from orun.http import HttpRequest, JsonResponse
 from orun.utils.translation import gettext as _
 from orun.contrib.auth.decorators import login_required
+
+logger = logging.getLogger('admin')
 
 
 @dataclass(kw_only=True)
@@ -21,6 +24,7 @@ class QuerySpec:
 @login_required
 def exec_query(request: HttpRequest):
     query = request.json['query']
+    logger.info('exec_query', query)
     if isinstance(query, dict):
         return JsonResponse(_exec_single_query(request, query))
 
