@@ -24,7 +24,7 @@ class QuerySpec:
 @login_required
 def exec_query(request: HttpRequest):
     query = request.json['query']
-    logger.info('exec_query', query)
+    logger.info({'exec_query': query})
     if isinstance(query, dict):
         return JsonResponse(_exec_single_query(request, query))
 
