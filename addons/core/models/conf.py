@@ -18,7 +18,7 @@ class UserProfile(models.Model):
     class Meta:
         name = 'auth.user.profile'
         constraints = [
-            models.UniqueConstraint(['user', 'key'], name='auth_user_profile')
+            models.UniqueConstraint(['user_id', 'key'], name='uq_auth_user_profile')
         ]
         exposed = False
 
