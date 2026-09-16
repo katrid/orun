@@ -164,8 +164,9 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         sql = f'CONSTRAINT {self.quote_name(c.name)} {c.type} ({', '.join(c.expressions)})'
         if c.type == 'FOREIGN KEY':
             sql += ' ' + self.fk_sql(c)
-        if c.deferrable is None:
-            sql += ' NOT VALID'
+        if not c.deferrable or c.deferrable == 'NOT VALID':
+            if c.type != 'UNIQUE':
+                sql += ' NOT VALID'
         else:
             sql += f' DEFERRABLE INITIALLY {c.deferrable}'
         return sql

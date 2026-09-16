@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from orun.apps import apps
 
 
-__all__ = ['Metadata', 'Table', 'Column', 'Index', 'Constraint']
+__all__ = ['Metadata', 'Table', 'Column', 'Index', 'Constraint', 'Trigger', 'AggTrigger']
+
+VERSION = 0.1
 
 
 class Metadata:
@@ -17,7 +19,8 @@ class Metadata:
 
     def dump(self):
         return {
-            'tables': [t.dump() for t in self.tables.values()]
+            'tables': [t.dump() for t in self.tables.values()],
+            'version': VERSION,
         }
 
     def load(self, meta: dict):
@@ -31,7 +34,7 @@ class Metadata:
         }
 
 
-@dataclass(slots=True)
+@dataclass
 class Table:
     model: str = None
     name: str = None
@@ -41,11 +44,15 @@ class Table:
     constraints: dict[str, 'Constraint'] = None
     columns: dict[str, 'Column'] = None
     tablename: str = None
+    triggers: dict[str, 'Trigger'] = None
+    agg_triggers: dict[str, 'AggTrigger'] = None
 
     def __post_init__(self):
         self.columns = {}
         self.indexes = {}
         self.constraints = {}
+        self.triggers = {}
+        self.agg_triggers = {}
 
     def dump(self):
         return {
@@ -53,6 +60,8 @@ class Table:
             'columns': {k: c.dump() for k, c in self.columns.items()},
             'constraints': {k: c.dump() for k, c in self.constraints.items()},
             'indexes': {k: c.dump() for k, c in self.indexes.items()},
+            'triggers': {k: t.dump() for k, t in self.triggers.items()},
+            'agg_triggers': {k: t.dump() for k, t in self.agg_triggers.items()},
         }
 
     @classmethod
@@ -128,7 +137,7 @@ class Index:
 class Constraint:
     name: str
     type: str = None
-    deferrable: str = False
+    deferrable: str | None = None
     expressions: List[str] = None
     references: List[List[str]] = None
     on_delete: str = None
@@ -145,4 +154,29 @@ class Constraint:
             'on_delete': self.on_delete,
             'on_update': self.on_update,
             'auto_created': self.auto_created,
+        }
+
+@dataclass(init=True)
+class Trigger:
+    name: str
+    code: str
+    definition: object
+
+    def dump(self):
+        return {
+            'name': self.name,
+            'code': self.code,
+        }
+
+
+@dataclass
+class AggTrigger:
+    name: str
+    code: str
+    definition: dict
+
+    def dump(self):
+        return {
+            'name': self.name,
+            'code': self.code,
         }

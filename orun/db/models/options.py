@@ -128,6 +128,7 @@ class Options:
         'default_manager',
     }
     REVERSE_PROPERTIES = {'related_objects', 'fields_map', '_relation_tree'}
+    db_messages: Dict[str, str] | None = None
 
     def __init__(self):
         self.apps = getattr(self, 'registry', apps)
@@ -206,8 +207,9 @@ class Options:
             if f.column:
                 f.contribute_to_table(editor, table)
         # collect constraints
-        # table.constraints = {c.name: c.get_metadata() for c in self.constraints}
+        table.constraints = {c.name: c.get_metadata() for c in self.constraints}
         # collect_triggers(self, editor)
+        # collect triggers
         return table
 
     @property
@@ -1128,4 +1130,6 @@ def classmethod_helper(fn, class_helper):
         wrapped.exposed = fn.exposed
     if getattr(fn, 'pass_request', None):
         wrapped.pass_request = fn.pass_request
+    if getattr(fn, 'alters_data', None):
+        wrapped.alters_data = fn.alters_data
     return classmethod(wrapped)

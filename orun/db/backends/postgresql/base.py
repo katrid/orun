@@ -11,7 +11,8 @@ from orun.conf import settings
 from orun.core.exceptions import ImproperlyConfigured
 from orun.db import connections
 from orun.db.backends.base.base import BaseDatabaseWrapper
-from orun.db.utils import DatabaseError as WrappedDatabaseError
+from orun.db.utils import DatabaseError as WrappedDatabaseError, DatabaseErrorWrapper
+import orun.db.utils
 from orun.utils.functional import cached_property
 from orun.utils.safestring import SafeText
 from orun.utils.version import get_version_tuple
@@ -20,6 +21,7 @@ try:
     import psycopg2 as Database
     import psycopg2.extensions
     import psycopg2.extras
+    import psycopg2.errors
 except ImportError as e:
     raise ImproperlyConfigured("Error loading psycopg2 module: %s" % e)
 
@@ -312,3 +314,23 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         if self.connection is not None:
             return self.connection.notices
         return None
+
+    def _wrap_database_errors(self):
+        return PostgresErrorWrapper(self)
+
+
+class PostgresErrorWrapper(DatabaseErrorWrapper):
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type and issubclass(exc_type, psycopg2.errors.IntegrityError):
+            if exc_type is psycopg2.errors.UniqueViolation:
+                new_exc = orun.db.utils.UniqueViolation(*exc_value.args)
+            elif exc_type is psycopg2.errors.NotNullViolation:
+                new_exc = orun.db.utils.NotNullViolation(*exc_value.args)
+            else:
+                new_exc = orun.db.utils.IntegrityError(*exc_value.args)
+            new_exc.constraint_name = exc_value.diag.constraint_name
+            new_exc.schema_name = exc_value.diag.schema_name
+            new_exc.table_name = exc_value.diag.table_name
+            new_exc.column_name = exc_value.diag.column_name
+            raise new_exc.with_traceback(traceback) from exc_value
+        super().__exit__(exc_type, exc_value, traceback)

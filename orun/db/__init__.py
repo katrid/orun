@@ -5,14 +5,14 @@ from orun.db.utils import (
     DEFAULT_DB_ALIAS, ORUN_VERSION_PICKLE_KEY, ConnectionHandler,
     ConnectionRouter, DatabaseError, DataError, Error, IntegrityError,
     InterfaceError, InternalError, NotSupportedError, OperationalError,
-    ProgrammingError,
+    ProgrammingError, UniqueViolation,
 )
 
 if TYPE_CHECKING:
     from orun.db.backends.base.base import BaseDatabaseWrapper
 
 __all__ = [
-    'connection', 'connections', 'router', 'DatabaseError', 'IntegrityError',
+    'connection', 'connections', 'router', 'DatabaseError', 'IntegrityError', 'UniqueViolation',
     'InternalError', 'ProgrammingError', 'DataError', 'NotSupportedError',
     'Error', 'InterfaceError', 'OperationalError', 'DEFAULT_DB_ALIAS',
     'ORUN_VERSION_PICKLE_KEY', 'execute',

@@ -1,3 +1,4 @@
+from typing import Optional, Union, Callable, TYPE_CHECKING, overload, Self, Literal
 import copy
 import datetime
 import decimal
@@ -7,7 +8,6 @@ import uuid
 import warnings
 from base64 import b64decode, b64encode
 from functools import partialmethod
-from typing import Optional, Union, Callable, TYPE_CHECKING, overload, Self
 
 from orun.apps import apps
 from orun.conf import settings
@@ -242,7 +242,6 @@ class Field[T](BaseField[T]):
     hidden = False
 
     related_model = None
-    _on_calculate: Callable = None
 
     template = None
     widget_attrs = None
@@ -256,21 +255,54 @@ class Field[T](BaseField[T]):
 
     description = property(_description)
 
-    def __init__(self, label: str = None, name: str = None, primary_key=False,
-                 max_length: Optional[int] = None, unique=False, null=True, required: Optional[bool] = None,
-                 db_index=False, rel=None, default=NOT_PROVIDED, editable=True,
-                 serialize=True, unique_for_date=None, unique_for_month=None,
-                 unique_for_year=None, choices: Optional[Union[dict, list, tuple]] = None, help_text=None,
-                 db_column: Optional[str] = None, db_tablespace=None, db_compute=None, db_default=NOT_PROVIDED,
-                 translate=None, copy=None, widget=None, widget_attrs=None, readonly=None,
-                 defer=False,
-                 auto_created=False, validators=(), error_messages=None, concrete=None,
-                 getter: Union[str, Callable, None] = None, setter: Union[str, Callable, None] = None, hybrid=False,
-                 on_insert_value: Union[str, Callable, None] = None, on_update_value: Union[str, Callable, None] = None,
-                 on_calculate: Union[Callable, str] = None, db_calculate: Union[Callable, str] = None,
-                 generated_as: ast.Expr | Callable | str = None, stored=None,
-                 group_choices=None, track_visibility=None, aggregate=None,
-                 descriptor=None, **kwargs):
+    def __init__(
+        self,
+        label: str | None = None,
+        name: str | None = None,
+        primary_key=False,
+        max_length: Optional[int] = None,
+        unique=False,
+        null=True,
+        required: Optional[bool] = None,
+        db_index=False,
+        rel=None,
+        default=NOT_PROVIDED,
+        editable=True,
+        serialize=True,
+        unique_for_date=None,
+        unique_for_month=None,
+        unique_for_year=None,
+        choices: Optional[Union[dict, list, tuple]] = None,
+        help_text=None,
+        db_column: Optional[str] = None,
+        db_tablespace=None,
+        db_compute=None,
+        db_default=NOT_PROVIDED,
+        translate=None,
+        copy=None,
+        widget=None,
+        widget_attrs=None,
+        readonly=None,
+        defer: bool | Literal['lazy'] = False,
+        auto_created=False,
+        validators=(),
+        error_messages=None,
+        concrete=None,
+        getter: Union[str, Callable, None] = None,
+        setter: Union[str, Callable, None] = None,
+        hybrid=False,
+        on_insert_value: str | Callable | None = None,
+        on_update_value: str | Callable | None = None,
+        db_calculate: Callable | str | None = None,
+        generated_as: ast.Expr | Callable | str | None = None,
+        stored=None,
+        group_choices=None,
+        track_visibility=None,
+        aggregate=None,
+        aggregate_from=None,
+        descriptor=None,
+        **kwargs,
+    ):
         self.name = name
         label = label or kwargs.get('label', kwargs.get('verbose_name'))
         self.label = label  # May be set by set_attributes_from_name
@@ -295,6 +327,7 @@ class Field[T](BaseField[T]):
         self.on_insert_value = on_insert_value
         self.on_update_value = on_update_value
         self.aggregate = aggregate
+        self.aggregate_from = aggregate_from
         if isinstance(choices, dict):
             choices = choices.items()
         elif isinstance(choices, (list, tuple)) and choices:
@@ -327,10 +360,6 @@ class Field[T](BaseField[T]):
 
         if getter is not None and descriptor is None:
             descriptor = HybridDescriptor(self, getter, setter) if hybrid else PropertyDescriptor(self, getter, setter)
-        elif on_calculate is not None and descriptor is None:
-            self._on_calculate = on_calculate
-            from orun.db.models.fields.descriptors import CalculatedAttribute
-            descriptor = CalculatedAttribute(self)
         self.descriptor = descriptor
         if descriptor is not None:
             self.is_calculated = True
@@ -396,22 +425,6 @@ class Field[T](BaseField[T]):
 
     def __get__(self, instance, owner=None) -> T | Self:
         return self
-
-    @property
-    def on_calculate(self):
-        return self._on_calculate
-
-    @on_calculate.setter
-    def on_calculate(self, value):
-        self._on_calculate = value
-
-    def _calculate(self, qs):
-        if isinstance(self._on_calculate, str):
-            self._on_calculate = getattr(self.model, self._on_calculate)
-        if callable(self._on_calculate):
-            self._on_calculate(qs.model, qs)
-        elif isinstance(self._on_calculate, classmethod):
-            self._on_calculate.__func__(qs.model, qs)
 
     def __str__(self):
         """
@@ -1115,13 +1128,10 @@ class Field[T](BaseField[T]):
     def _get_params(self):
         return None
 
-    def column_definition(self, editor=None):
+    def column_definition(self, editor):
         from orun.db.metadata import Column
         _, datatype, params, kwargs = self.deconstruct()
         generated = self.generated_as
-        if generated is not None:
-            # string generated is already sql statement
-            generated = editor.compile_node(generated) if not isinstance(generated, str) else generated
         return Column(
             name=self.column, type=self.get_internal_type(), params=self._get_params(), null=self.null,
             pk=self.primary_key, tablespace=self.db_tablespace, computed=generated, stored=self.stored,
@@ -1136,7 +1146,7 @@ class Field[T](BaseField[T]):
         :param editor:
         :param table:
         """
-        from orun.db.metadata import Index
+        from orun.db.metadata import Index, Trigger, AggTrigger
         col = self.column_definition(editor)
         table.columns[col.name] = col
         if self.db_index:
@@ -1149,6 +1159,13 @@ class Field[T](BaseField[T]):
             if self.unique:
                 ix.type = 'UNIQUE'
             table.indexes[ix_name] = ix
+
+        # auto generated triggers
+        if self.aggregate_from:
+            for k in ('u', 'i', 'd'):
+                trg_name = editor.create_trigger_name(f'__aggtr_{k}_', self.model._meta.db_table, self.column)
+                # trigger = AggTrigger(name=trg_name, code='')
+                # table.triggers[trg_name] = trg_name
 
 
 class BooleanField(Field[bool]):
@@ -1725,7 +1742,7 @@ class DecimalField(Field[decimal.Decimal]):
         if isinstance(value, str):
             value = value.replace(',', '.')
             try:
-                return decimal.Decimal(value)
+                return float(value)
             except decimal.InvalidOperation:
                 raise exceptions.ValidationError(
                     self.error_messages['invalid'],

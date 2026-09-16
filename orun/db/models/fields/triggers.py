@@ -6,7 +6,7 @@ from orun.db.models.base import Model
 from . import Field
 
 
-def resolve_field_path(model: type[Model], field_path: str) -> Generator[Field]:
+def resolve_field_path(model: type[Model], field_path: str):
     return (
         f
         for s in field_path.split('.')
@@ -26,7 +26,7 @@ class JoinInfo:
             self.join_type = 'inner'
 
 
-def _get_joins(field_path: Sequence[Field]) -> Generator[JoinInfo]:
+def _get_joins(field_path: Sequence[Field]):
     return (JoinInfo(f.model, f.related_model, (f, f.remote_field.target_field)) for f in field_path if f.many_to_one)
 
 
@@ -54,8 +54,31 @@ class TriggerDefinition:
     pass
 
 
-class TriggerAggregation:
-    statements: list[TriggerUpdateStatement]
+class AggFieldTrigger:
+    def __init__(self, field, expression, *, suffix=None, prefix=None):
+        self.field = field
+        self.suffix = suffix
+        self.model = field.model
+        self.expression = expression
+        self.prefix = prefix
+        self.events = ('insert', 'update', 'delete')
+
+    def __repr__(self) -> str:
+        return 'AggTrigger(' + ','.join(f'After{ev.capitalize()}({repr(self.expression)})' for ev in self.events) + ')'
+
+    @classmethod
+    def from_field(cls, field: Field):
+        return cls(field, field.aggregate_from)
+
+    def get_name(self, event: str | None = None):
+        name = self.field.name
+        if event:
+            name = f'{event[0]}_{name}'
+        if self.prefix:
+            name = f'{self.prefix}_{name}'
+        if self.suffix:
+            name = f'{name}_{self.suffix}'
+        return name
 
 
 class FieldTriggerAggregation:

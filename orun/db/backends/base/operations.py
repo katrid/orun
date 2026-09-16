@@ -361,7 +361,9 @@ class BaseDatabaseOperations:
         Return a quoted version of the given table, index, or column name. Do
         not quote the given name if it's already been quoted.
         """
-        raise NotImplementedError('subclasses of BaseDatabaseOperations may require a quote_name() method')
+        if name.startswith('"'):
+            return name
+        return f'"{name}"'
 
     def get_tablename(self, schema, table):
         if schema:

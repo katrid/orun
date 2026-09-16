@@ -23,3 +23,6 @@ def setup(set_prefix=True):
             '/' if settings.FORCE_SCRIPT_NAME is None else settings.FORCE_SCRIPT_NAME
         )
     apps.populate(settings.INSTALLED_APPS)
+
+    if settings.START_TASKS:
+        apps.setup_loop(settings.START_TASKS)

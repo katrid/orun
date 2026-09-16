@@ -591,13 +591,16 @@ class BaseDatabaseWrapper:
         """
         pass
 
+    def _wrap_database_errors(self):
+        return DatabaseErrorWrapper(self)
+
     @cached_property
     def wrap_database_errors(self):
         """
         Context manager and decorator that re-throws backend-specific database
         exceptions using Orun's common wrappers.
         """
-        return DatabaseErrorWrapper(self)
+        return self._wrap_database_errors()
 
     def chunked_cursor(self):
         """

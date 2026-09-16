@@ -10,6 +10,7 @@ from orun.db.backends.utils import names_digest, split_identifier
 from orun.db.models.fields import Field, DecimalField, NOT_PROVIDED, CharField, IntegerField, FloatField, DateField
 from orun.db.migrations.operations.indexes import CreateIndex, DropIndex
 from orun.db.migrations.operations.constraints import CreateConstraint, DropConstraint
+from orun.db.migrations.operations.triggers import CreateTrigger, DropTrigger, CreateAggTrigger
 from orun.db.models import Model
 from orun.db.models.sql import Query
 from orun.db.transaction import TransactionManagementError, atomic
@@ -367,6 +368,12 @@ class BaseDatabaseSchemaEditor:
 
     def create_index_name(self, table_name, column_names, suffix=""):
         return self._create_index_name(table_name, column_names, suffix)
+
+    def create_trigger_name(self, prefix: str, table_name: str, suffix):
+        name = f'{prefix}_{table_name}_{suffix}'
+        if (max_name_len := self.connection.ops.max_name_length()) and len(name) > max_name_len:
+            name = f'{prefix}_{names_digest(table_name, length=8)}'
+        return name
 
     def _create_index_name(self, table_name, column_names, suffix=""):
         """
@@ -762,6 +769,15 @@ class BaseDatabaseSchemaEditor:
                 # create indexes
                 for ix in table.indexes.values():
                     yield CreateIndex(table, ix)
+                # create constraints
+                for c in table.constraints.values():
+                    yield CreateConstraint(table, c)
+                # create triggers
+                for t in table.triggers.values():
+                    yield CreateTrigger(table, t)
+                # create agg triggers
+                for t in table.agg_triggers.values():
+                    yield CreateAggTrigger(table, t)
             else:
                 old_table = self.old_metadata.tables[k]
                 yield from self.compare_tables(old_table, table)
@@ -784,3 +800,9 @@ class BaseDatabaseSchemaEditor:
             return '/'
         elif isinstance(node, Field):
             return node.column
+
+    def create_agg_trigger(self, trigger: metadata.AggTrigger):
+        compiler = self.connection.ops.vsql_compiler()(self.connection)
+        sources = compiler.gen_agg_trigger_code(trigger)
+        for s in sources:
+            self.execute(s)

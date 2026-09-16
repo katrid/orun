@@ -34,6 +34,17 @@ class OperationalError(DatabaseError):
 
 
 class IntegrityError(DatabaseError):
+    constraint_name: str | None = None
+    schema_name: str | None = None
+    table_name: str | None = None
+    column_name: str | None = None
+
+
+class NotNullViolation(IntegrityError):
+    pass
+
+
+class UniqueViolation(IntegrityError):
     pass
 
 

@@ -12,7 +12,7 @@ import orun
 from orun.conf import settings
 from orun.core import exceptions
 from orun.db import (
-    ORUN_VERSION_PICKLE_KEY, IntegrityError, NotSupportedError, connections,
+    ORUN_VERSION_PICKLE_KEY, IntegrityError, UniqueViolation, NotSupportedError, connections,
     router, transaction,
 )
 from orun.db.models import AutoField, DateField, DateTimeField, sql
@@ -1306,7 +1306,13 @@ class QuerySet[T]:
             using = self.db
         query = sql.InsertQuery(self.model, ignore_conflicts=ignore_conflicts)
         query.insert_values(fields, objs, raw=raw)
-        return query.get_compiler(using=using).execute_sql(returning_fields)
+        try:
+            return query.get_compiler(using=using).execute_sql(returning_fields)
+        except UniqueViolation as e:
+            if self.model and self.model._meta.db_messages and e.constraint_name and (msg := self.model._meta.db_messages.get(e.constraint_name)):
+                new_exc = UniqueViolation(msg)
+                raise new_exc.with_traceback(e.__traceback__) from e
+            raise
     _insert.alters_data = True
     _insert.queryset_only = False
 
