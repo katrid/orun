@@ -680,7 +680,7 @@ class ForeignObject(RelatedField):
         from orun.db.metadata import Constraint
         super().contribute_to_table(editor, table)
         # contribute to table with fk constraint
-        fk_name = 'fk_' + self.model._meta.qualname.replace('.', '_') + '__' + self.column
+        fk_name = 'fk_' + self.model._meta.qualname.replace('.', '_').replace('"', '') + '__' + self.column
         ref_model = self.target_field.model
         if self.db_constraint:
             table.constraints[fk_name] = Constraint(
