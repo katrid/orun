@@ -207,7 +207,7 @@ class Options:
             if f.column:
                 f.contribute_to_table(editor, table)
         # collect constraints
-        table.constraints = {c.name: c.get_metadata() for c in self.constraints}
+        table.constraints |= {c.name: c.get_metadata() for c in self.constraints}
         # collect_triggers(self, editor)
         # collect triggers
         return table
