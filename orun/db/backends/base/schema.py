@@ -9,7 +9,7 @@ from orun.db.backends.ddl_references import (
 from orun.db.backends.utils import names_digest, split_identifier
 from orun.db.models.fields import Field, DecimalField, NOT_PROVIDED, CharField, IntegerField, FloatField, DateField
 from orun.db.migrations.operations.indexes import CreateIndex, DropIndex
-from orun.db.migrations.operations.constraints import CreateConstraint, DropConstraint
+from orun.db.migrations.operations.constraints import CreateConstraint, DropConstraint, Operation
 from orun.db.migrations.operations.triggers import CreateTrigger, DropTrigger, CreateAggTrigger
 from orun.db.models import Model
 from orun.db.models.sql import Query
@@ -125,7 +125,10 @@ class BaseDatabaseSchemaEditor:
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is None:
             for sql in self.deferred_sql:
-                self.execute(sql)
+                if isinstance(sql, Operation):
+                    sql.apply(self)
+                else:
+                    self.execute(sql)
         if self.atomic_migration:
             self.atomic.__exit__(exc_type, exc_value, traceback)
         # postponed sql must be executed in a new transaction
@@ -768,10 +771,12 @@ class BaseDatabaseSchemaEditor:
                 yield self.create_table, (table,)
                 # create indexes
                 for ix in table.indexes.values():
-                    yield CreateIndex(table, ix)
+                    idx = CreateIndex(table, ix)
+                    self.deferred_sql.append(idx)
                 # create constraints
                 for c in table.constraints.values():
-                    yield CreateConstraint(table, c)
+                    constraint = CreateConstraint(table, c)
+                    self.deferred_sql.append(constraint)
                 # create triggers
                 for t in table.triggers.values():
                     yield CreateTrigger(table, t)
