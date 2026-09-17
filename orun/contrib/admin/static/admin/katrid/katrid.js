@@ -14103,6 +14103,11 @@ var Katrid;
             let table = document.createElement('div');
             table.className = 'table-responsive';
             table.append(template);
+            const recCount = `<span class="badge badge-info" v-if="selectionLength" v-text="selectionLength.toString() + '/' + modelValue?.length"></span>`;
+            let div = document.createElement('div');
+            div.innerHTML = recCount;
+            header.append(div);
+            console.debug('create o2m field');
             let fieldSection = document.createElement('div');
             fieldSection.className = 'onetomany-grid';
             fieldSection.append(header);
@@ -14137,6 +14142,7 @@ var Katrid;
                 this.$view.datasource.parent = this.$parent.$view.datasource;
             },
             render() {
+                console.debug('o2m', this.modelValue);
                 this.readonly = this.$field.readonly;
                 if (!this.$compiledTemplate) {
                     let el = beforeRender(this.$field, this.$view.renderTemplate(this.$view.domTemplate()));
