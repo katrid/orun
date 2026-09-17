@@ -1,3 +1,4 @@
+import traceback
 from collections import OrderedDict
 from importlib import import_module
 import logging
@@ -231,8 +232,11 @@ class Command(BaseCommand):
         postponed_changes = [c for c in changes if isinstance(c, Operation) and c.postpone]
         if postponed_changes:
             self.stdout.write("Running deferred operations...\n")
-            with connection.schema_editor() as editor:
-                for change in postponed_changes:
-                    self.stdout.write(change.describe() + "...\n")
-                    change.apply(editor)
+            for change in postponed_changes:
+                try:
+                    with connection.schema_editor() as editor:
+                        self.stdout.write(change.describe() + "...\n")
+                        change.apply(editor)
+                except Exception as e:
+                    traceback.print_exc()
         return len(changes)

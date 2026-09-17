@@ -685,7 +685,7 @@ class ForeignObject(RelatedField):
         if self.db_constraint:
             table.constraints[fk_name] = Constraint(
                 name=fk_name, type='FOREIGN KEY',
-                deferrable='DEFERRED',
+                deferrable='NOT VALID',
                 expressions=[self.column],
                 on_delete='CASCADE' if self.on_delete is DB_CASCADE else None,
                 on_update='CASCADE' if self.on_update is DB_CASCADE else None,
