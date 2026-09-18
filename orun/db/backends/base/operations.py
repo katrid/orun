@@ -367,7 +367,7 @@ class BaseDatabaseOperations:
 
     def get_tablename(self, schema, table):
         if schema:
-            return '"{}"."{}"'.format(schema, table)
+            return f'"{schema}"."{table}"'
         return table
 
     def random_function_sql(self):
