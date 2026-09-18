@@ -10,6 +10,7 @@ from orun.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from orun.db import connections
 from orun.db.models import AutoField, Manager, UniqueConstraint
 from orun.db.models.fields import CharField, Fields, Field
+from orun.db.models.fields.backup import NOT_PROVIDED
 from orun.db.models.query_utils import PathInfo
 from orun.utils.translation import gettext_lazy as _
 from orun.utils.datastructures import ImmutableList, OrderedSet
@@ -77,8 +78,8 @@ class Options:
     proxy = False
     swapped = False
     overridden = False
-    db_table: str = None
-    db_schema: str = None
+    db_table: str | None = None
+    db_schema: str | None | NOT_PROVIDED = NOT_PROVIDED
     db_tablespace: str = None
     tablename: str = None
     name: str = None
@@ -177,14 +178,17 @@ class Options:
                 cls.name = f'{cls.schema}.{camel_case_to_spaces(cls.object_name).replace(" ", ".")}'
 
             if cls.db_table is None:
-                cls.tablename = cls.db_table = cls.name.replace('.', '_').lower()
-                if cls.db_schema is None and cls.addon:
-                    cls.db_schema = cls.addon.db_schema or ''
-                cls.qualname = cls.tablename = cls.db_table
-                if cls.db_schema and cls.name.startswith(cls.db_schema + '.'):
-                    cls.tablename = cls.name.split('.', 1)[-1].replace('.', '_')
-                    cls.qualname = f'{cls.db_schema}.{cls.tablename}'
-                    cls.db_table = ops.get_tablename(cls.db_schema, cls.tablename)
+                if cls.db_schema is NOT_PROVIDED:
+                    if cls.addon:
+                        cls.db_schema = cls.addon.db_schema
+                    else:
+                        cls.db_schema = None
+                if isinstance(cls.db_schema, str) and cls.name.startswith(cls.db_schema + '.'):
+                    cls.tablename = cls.name.split('.', 1)[-1].lower().replace('.', '_')
+                else:
+                    cls.tablename = cls.name.replace('.', '_').lower()
+                cls.qualname = f'{cls.db_schema}.{cls.tablename}' if cls.db_schema else cls.tablename
+                cls.db_table = ops.get_tablename(cls.db_schema, cls.tablename)
             else:
                 cls.qualname = cls.tablename = cls.db_table
 
