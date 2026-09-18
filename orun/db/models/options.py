@@ -8,9 +8,8 @@ from orun.apps import apps
 from orun.conf import settings
 from orun.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from orun.db import connections
-from orun.db.models import AutoField, Manager, UniqueConstraint
+from orun.db.models import AutoField, Manager, UniqueConstraint, NOT_PROVIDED
 from orun.db.models.fields import CharField, Fields, Field
-from orun.db.models.fields.backup import NOT_PROVIDED
 from orun.db.models.query_utils import PathInfo
 from orun.utils.translation import gettext_lazy as _
 from orun.utils.datastructures import ImmutableList, OrderedSet
