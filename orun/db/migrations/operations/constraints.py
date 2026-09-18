@@ -28,4 +28,4 @@ class DropConstraint(ConstraintOperation):
         return f'Drop constraint "{self.constraint.name}" on table {self.table.name} ({self.constraint})'
 
     def apply(self, editor: 'BaseDatabaseSchemaEditor'):
-        editor.create_constraint(self.table, self.constraint)
+        editor.drop_constraint(self.table, self.constraint)
