@@ -741,28 +741,28 @@ class BaseDatabaseSchemaEditor:
                     yield self.alter_column_null, (new_table, col,)
 
         # compare constraints
-        for k, c in new_table.constraints.items():
-            if k not in old_table.constraints:
-                # create new constraint
-                # yield self.create_constraint, (new_table, c)
-                yield CreateConstraint(new_table, c)
         for k, c in old_table.constraints.items():
             if k not in new_table.constraints:
                 # drop constraint
                 # yield self.drop_constraint, (new_table, c,)
                 yield DropConstraint(new_table, c)
+        for k, c in new_table.constraints.items():
+            if k not in old_table.constraints:
+                # create new constraint
+                # yield self.create_constraint, (new_table, c)
+                yield CreateConstraint(new_table, c)
 
         # compare indexes
-        for k, ix in new_table.indexes.items():
-            if k not in old_table.indexes:
-                # create new index
-                yield CreateIndex(new_table, ix)
-                # yield self.create_index, (new_table, ix)
         for k, ix in old_table.indexes.items():
             if k not in new_table.indexes:
                 # drop removed index
                 yield DropIndex(new_table, ix)
                 # yield self.drop_index, (ix,)
+        for k, ix in new_table.indexes.items():
+            if k not in old_table.indexes:
+                # create new index
+                yield CreateIndex(new_table, ix)
+                # yield self.create_index, (new_table, ix)
 
     def collect_changes(self):
         for k, table in self.new_metadata.tables.items():
