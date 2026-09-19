@@ -240,13 +240,14 @@ class ReportAction(Action):
             company = apps['res.company'].objects.get(pk=binding_params['company_id'])
         elif isinstance(params, dict) and (data_params := params.get('data')):
             # find company in params
-            for p in data_params:
-                if p['name'] == 'company_id':
-                    pvalue = p['value1']
-                    if pvalue and isinstance(pvalue, list):
-                        pvalue = pvalue[0]
-                    company = apps['res.company'].objects.get(pk=pvalue)
-                    break
+            if isinstance(data_params, list):
+                for p in data_params:
+                    if p['name'] == 'company_id':
+                        pvalue = p['value1']
+                        if pvalue and isinstance(pvalue, list):
+                            pvalue = pvalue[0]
+                        company = apps['res.company'].objects.get(pk=pvalue)
+                        break
         else:
             # TODO get the current user company
             company = apps['auth.user'].objects.get(pk=1).user_company
@@ -396,7 +397,7 @@ class ReportAction(Action):
                     'category_id': q.category_id,
                     'category': str(q.category) if q.category else gettext('Uncategorized'),
                     'name': q.name + f' ({usr_txt})' if q.owner_type == 'user' else q.name,
-                    # 'params': q.params,
+                    'usage': q.usage,
                 }
                 # todo check permission
                 for q in qs
