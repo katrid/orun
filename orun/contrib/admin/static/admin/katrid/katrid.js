@@ -4709,7 +4709,45 @@ var Katrid;
           <div class="query-view card flex-grow-1"></div>
         </div>
       `;
+                const searchReportElement = this.el.querySelector('#search-report');
+                searchReportElement.addEventListener('input', () => {
+                    this.searchReport(searchReportElement.value);
+                });
+                this._elementTree = this.el.querySelector('#tv-report-explorer');
                 this.load();
+            }
+            searchReport(repName) {
+                if (repName.trim()) {
+                    this._hideTree();
+                    this._showSearchResult(repName);
+                }
+                else {
+                    this._showTree();
+                }
+            }
+            _hideTree() {
+                this._elementTree.remove();
+            }
+            _showTree() {
+                this.el.querySelector('#report-explorer').appendChild(this._elementTree);
+            }
+            _showSearchResult(repName) {
+                if (this.elSearchResult)
+                    this.elSearchResult.remove();
+                this.elSearchResult = document.createElement('div');
+                this.elSearchResult.className = 'list-group';
+                for (const cat of Object.values(this.categories)) {
+                    for (const rep of cat) {
+                        if (rep.name.toLowerCase().includes(repName.toLowerCase())) {
+                            const a = document.createElement('a');
+                            a.className = 'list-group-item list-group-item-action';
+                            a.innerText = rep.name;
+                            this.elSearchResult.appendChild(a);
+                            a.addEventListener('click', () => rep.onclick());
+                        }
+                    }
+                }
+                this.el.querySelector('#report-explorer').appendChild(this.elSearchResult);
             }
             async load() {
                 this.container = this.el.querySelector('.query-view');
@@ -4737,6 +4775,7 @@ var Katrid;
                     }
                     const treeView = new katrid.ui.TreeView(this.el.querySelector('#tv-report-explorer'));
                     const categories = Object.groupBy(res.data, ({ category_id }) => category_id);
+                    this.categories = categories;
                     const catCtxMenu = (node, evt) => {
                         if (!Katrid.webApp.userInfo.superuser)
                             return;

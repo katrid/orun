@@ -1187,9 +1187,16 @@ declare namespace Katrid.BI {
         el: HTMLElement;
         container: HTMLElement;
         constructor(el: HTMLElement);
+        private _elementTree;
         protected create(): void;
         queryId: number | string;
         query: Katrid.Services.Query;
+        searchReport(repName: string): void;
+        protected categories: Record<number, any>;
+        private _hideTree;
+        private _showTree;
+        protected elSearchResult: HTMLElement;
+        private _showSearchResult;
         load(): Promise<void>;
         metadata: any;
         params: Katrid.Reports.Param[];
