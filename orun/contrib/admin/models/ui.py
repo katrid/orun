@@ -186,7 +186,8 @@ class View(models.Model):
         for child in children:
             self.merge(xml, etree.fromstring(child._get_content(context)))
 
-        # self._eval_permissions(context['user'], xml)
+        if (request := context.get('request')) or (user := context.get('user_id')):
+            self._eval_permissions((request and int(request.user_id)) or user, xml)
         resolve_refs(xml)
         return xml
 
@@ -210,7 +211,7 @@ class View(models.Model):
         for child in children:
             perm = child.attrib.pop('has-perm', None)
             if perm:
-                if perm in perms or Permission.has_perm(user_id, self.model, perm):
+                if perm in perms or not Permission.has_perm(user_id, self.model, perm):
                     perms.add(perm)
                     child.getparent().remove(child)
 
