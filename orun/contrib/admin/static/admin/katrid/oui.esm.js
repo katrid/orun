@@ -858,6 +858,9 @@ var BasePortlet = class _BasePortlet extends DataWidget {
     this.dragRect = dragRect;
     return dragRect;
   }
+  setTitle(title) {
+    this.titleElement.textContent = title;
+  }
   createHeader() {
     const div = document.createElement("div");
     div.className = "portlet-header";
@@ -865,6 +868,7 @@ var BasePortlet = class _BasePortlet extends DataWidget {
     const h3 = document.createElement("h3");
     h3.textContent = this.title || this.constructor["info"]?.name;
     div.appendChild(h3);
+    this.titleElement = h3;
     this.element.appendChild(div);
     this.createDragEvents(div);
     return div;
@@ -969,11 +973,19 @@ var CustomPortlet = class _CustomPortlet extends BasePortlet {
       portlet.title = fn.info.name;
     portlet._functionalType = fn.type;
     portlet.content = fn(portlet);
+    portlet._fn = fn;
     return portlet;
+  }
+  load(info) {
+    super.load(info);
+    if (info.data)
+      this.data = info.data;
   }
   dump() {
     const info = super.dump();
     info["type"] = this._functionalType;
+    if (this._fn.dump)
+      info["data"] = this._fn.dump();
     return info;
   }
   createBody() {
@@ -992,6 +1004,7 @@ var HomepageView = class extends BaseWidget {
   constructor(config) {
     super(config);
     this.config = config;
+    this._colCount = 0;
     if (config.info)
       this.load(config.info);
   }
@@ -1095,13 +1108,13 @@ var HomepageView = class extends BaseWidget {
           // if error loading, ignore the widget and continue loading the others
           widgets: c.widgets?.length && c.widgets.map((w) => BasePortlet.fromInfo(w)).filter((w) => w) || []
         }));
-      console.debug("");
       this.setLayout(info.layout);
     } finally {
       this._loaded = true;
     }
   }
   dump() {
+    this.columns.length = this._colCount;
     const info = {
       layout: this._layout,
       columns: this.columns ? this.columns.map((c) => ({ widgets: c.widgets.map((w) => w.dump()) })) : void 0
@@ -1134,45 +1147,53 @@ var HomepageView = class extends BaseWidget {
     switch (layout) {
       case "1-col": {
         this._addColumn(0).classList.add("homepage-col-100", "g-col-12");
+        this._colCount = 1;
         break;
       }
       case "2-cols-50-50": {
         this._addColumn(0).classList.add("homepage-col-50", "g-col-6");
         this._addColumn(1).classList.add("homepage-col-50", "g-col-6");
+        this._colCount = 2;
         break;
       }
       case "2-cols-70-30": {
         this._addColumn(0).classList.add("homepage-col-70", "g-col-8");
         this._addColumn(1).classList.add("homepage-col-30", "g-col-4");
+        this._colCount = 2;
         break;
       }
       case "2-cols-30-70": {
         this._addColumn(0).classList.add("homepage-col-30", "g-col-4");
         this._addColumn(1).classList.add("homepage-col-70", "g-col-8");
+        this._colCount = 2;
         break;
       }
       case "3-cols-33-33-33": {
         this._addColumn(0).classList.add("homepage-col-33", "g-col-4");
         this._addColumn(1).classList.add("homepage-col-33", "g-col-4");
         this._addColumn(2).classList.add("homepage-col-33", "g-col-4");
+        this._colCount = 3;
         break;
       }
       case "3-cols-50-25-25": {
         this._addColumn(0).classList.add("homepage-col-50", "g-col-6");
         this._addColumn(1).classList.add("homepage-col-25", "g-col-3");
         this._addColumn(2).classList.add("homepage-col-25", "g-col-3");
+        this._colCount = 3;
         break;
       }
       case "3-cols-25-50-25": {
         this._addColumn(0).classList.add("homepage-col-25", "g-col-3");
         this._addColumn(1).classList.add("homepage-col-50", "g-col-6");
         this._addColumn(2).classList.add("homepage-col-25", "g-col-3");
+        this._colCount = 3;
         break;
       }
       case "3-cols-25-25-50": {
         this._addColumn(0).classList.add("homepage-col-25", "g-col-3");
         this._addColumn(1).classList.add("homepage-col-25", "g-col-3");
         this._addColumn(2).classList.add("homepage-col-50", "g-col-6");
+        this._colCount = 3;
         break;
       }
     }
@@ -1186,7 +1207,7 @@ var HomepageView = class extends BaseWidget {
     else {
       portlet = CustomPortlet.from(portletClass);
     }
-    colIndex ??= this.columns.length === 3 ? 1 : 0;
+    colIndex ??= this._colCount === 3 ? 1 : 0;
     const col = this.columns[colIndex];
     col.widgets.push(portlet);
     this.createPortlet(portlet, col.element);
@@ -1308,25 +1329,34 @@ registerPortlet(ModelViewPortlet);
 var dialogs_exports = {};
 __export(dialogs_exports, {
   ModalResult: () => ModalResult,
+  ModalSize: () => ModalSize,
   createDialog: () => createDialog,
   modalResultText: () => modalResultText,
   showDialog: () => showDialog
 });
 
 // src/dialogs/consts.ts
-var ModalResult = /* @__PURE__ */ ((ModalResult2) => {
-  ModalResult2[ModalResult2["OK"] = 1] = "OK";
-  ModalResult2[ModalResult2["CANCEL"] = 2] = "CANCEL";
-  ModalResult2[ModalResult2["YES"] = 3] = "YES";
-  ModalResult2[ModalResult2["NO"] = 4] = "NO";
-  ModalResult2[ModalResult2["NONE"] = 0] = "NONE";
-  return ModalResult2;
+var ModalResult = /* @__PURE__ */ ((ModalResult3) => {
+  ModalResult3["OK"] = "ok";
+  ModalResult3["CANCEL"] = "cancel";
+  ModalResult3["YES"] = "yes";
+  ModalResult3["NO"] = "no";
+  ModalResult3["NONE"] = "none";
+  return ModalResult3;
 })(ModalResult || {});
+var ModalSize = /* @__PURE__ */ ((ModalSize2) => {
+  ModalSize2[ModalSize2["SMALL"] = 0] = "SMALL";
+  ModalSize2[ModalSize2["MEDIUM"] = 1] = "MEDIUM";
+  ModalSize2[ModalSize2["LARGE"] = 2] = "LARGE";
+  ModalSize2[ModalSize2["EXTRA"] = 3] = "EXTRA";
+  ModalSize2[ModalSize2["FULL"] = 4] = "FULL";
+  return ModalSize2;
+})(ModalSize || {});
 var modalResultText = {
-  [1 /* OK */]: "OK",
-  [2 /* CANCEL */]: "Cancel",
-  [3 /* YES */]: "Yes",
-  [4 /* NO */]: "No"
+  ["ok" /* OK */]: "OK",
+  ["cancel" /* CANCEL */]: "Cancel",
+  ["yes" /* YES */]: "Yes",
+  ["no" /* NO */]: "No"
 };
 
 // src/dialogs/index.ts
@@ -1334,21 +1364,95 @@ function createDialog(config) {
   const el = document.createElement("dialog");
   if (config.title)
     el.innerHTML = `
-    
         <header class="dialog-header">${config.title}</header>
     `;
-  el.className = "dialog";
+  let modalSize = {
+    [0 /* SMALL */]: "sm",
+    [1 /* MEDIUM */]: "md",
+    [2 /* LARGE */]: "lg",
+    [3 /* EXTRA */]: "xl",
+    [4 /* FULL */]: "fullscreen"
+  }[config.size ?? 2 /* LARGE */];
+  el.className = `dialog modal-${modalSize}`;
   if (config.content instanceof HTMLElement)
     el.appendChild(config.content);
+  const footer = document.createElement("footer");
+  footer.className = "dialog-footer";
+  if (config.buttons)
+    createButtons(footer, config);
+  el.appendChild(footer);
+  el.addEventListener("close", (evt) => {
+    el.remove();
+  });
   return el;
 }
 function showDialog(config) {
   const dlg = createDialog(config);
+  dlg.addEventListener("cancel", () => {
+    dlg.remove();
+  });
   document.body.appendChild(dlg);
   if (config.modal == null || config.modal)
     dlg.showModal();
   else
     dlg.show();
+  return new Promise((resolve, reject) => {
+    dlg.addEventListener("close", (evt) => {
+      resolve(dlg.returnValue);
+    });
+    dlg.addEventListener("cancel", (evt) => {
+      resolve(null);
+    });
+  });
+}
+function createButtons(container, config) {
+  for (const btn of config.buttons) {
+    if (typeof btn === "string") {
+      const button = document.createElement("button");
+      button.className = "btn btn-secondary";
+      switch (btn) {
+        case "ok":
+          button.className = "btn btn-primary";
+          button.textContent = katrid.i18n.gettext("OK");
+          break;
+        case "cancel":
+          button.textContent = katrid.i18n.gettext("Cancel");
+          break;
+        case "yes":
+          button.textContent = katrid.i18n.gettext("Yes");
+          break;
+        case "no":
+          button.textContent = katrid.i18n.gettext("No");
+          break;
+        case "close":
+          button.textContent = katrid.i18n.gettext("Close");
+          break;
+        default:
+          button.textContent = btn;
+      }
+      button.addEventListener("click", (evt) => {
+        container.closest("dialog").close(btn);
+        container.dispatchEvent(new CustomEvent("dialog-button-click", { detail: { button: btn } }));
+      });
+      container.appendChild(button);
+    } else if (btn instanceof HTMLElement) {
+      container.appendChild(btn);
+    } else if (btn.text) {
+      const button = document.createElement("button");
+      button.className = "btn btn-secondary";
+      button.textContent = btn.text;
+      button.type = "button";
+      if (btn.click)
+        button.addEventListener("click", btn.click);
+      else {
+        button.addEventListener("click", (evt) => {
+          console.debug("button clicked", btn.modalResult);
+          container.closest("dialog").close(btn.modalResult);
+        });
+      }
+      container.appendChild(button);
+    }
+  }
 }
 export {
   homepage_exports as actions,

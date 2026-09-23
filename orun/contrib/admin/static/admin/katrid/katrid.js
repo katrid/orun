@@ -4743,6 +4743,8 @@ var Katrid;
                             a.className = 'list-group-item list-group-item-action';
                             a.innerText = rep.name;
                             this.elSearchResult.appendChild(a);
+                            if (rep.usage)
+                                console.debug(rep.name, rep.usage);
                             a.addEventListener('click', () => rep.onclick());
                         }
                     }
