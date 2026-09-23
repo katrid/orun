@@ -45,7 +45,10 @@ admin_change_log = Signal()
 class DocumentLogger:
     def __init__(self, obj=None):
         if obj:
-            self._model = obj.__class__
+            if isinstance(obj, type):
+                self._model = obj
+            else:
+                self._model = obj.__class__
             self.model_name = self._model._meta.name
             self.pk = obj.pk
         else:
