@@ -64,6 +64,7 @@ VIEW_TYPE = {
     'dashboard': 'Dashboard',
     'custom': 'Custom',
     'class': 'Class',
+    'workflow': 'Workflow',
 }
 
 
@@ -191,8 +192,6 @@ class View(models.Model):
 
     def _eval_permissions(self, user_id, xml):
         """Remove elements without properly permissions"""
-
-        _groups = {}
         children = xml.xpath("//*[@groups]")
         for child in children:
             pass
@@ -206,12 +205,14 @@ class View(models.Model):
             # if not _groups[groups]:
             #     child.getparent().remove(child)
         # python has permissions
-        children = xml.xpath("//*[@if-permission]")
+        children = xml.xpath("//*[@has-perm]")
+        perms = set()
         for child in children:
-            perm = child.attrib['if-permission']
-            child.attrib.pop('if-permission')
-            if perm and Permission.has_perm(user_id, self.model, perm):
-                child.getparent().remove(child)
+            perm = child.attrib.pop('has-perm', None)
+            if perm:
+                if perm in perms or Permission.has_perm(user_id, self.model, perm):
+                    perms.add(perm)
+                    child.getparent().remove(child)
 
     def _get_content(self, context):
         if self.template_name:
@@ -282,6 +283,11 @@ class View(models.Model):
                 pass
         else:
             views_env.from_string
+
+    @api.classmethod
+    def get_view_content(cls, id: int):
+        view = cls.objects.get(pk=id)
+        return view.render({})
 
 
 class CustomView(models.Model):
