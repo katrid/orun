@@ -19,6 +19,16 @@
   <script src="/static/admin/libs/fullcalendar/main.min.js"></script>
   <script src="/static/admin/libs/plotly/plotly.min.js"></script>
 
+  <script async type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@12.0.0/+esm'
+  window.mermaid = mermaid;
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "default",
+        look: "classic",
+      });
+  </script>
+
 {% endblock %}
 {% block additional_assets %}
   {{ js_assets | safe }}
