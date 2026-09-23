@@ -1,5 +1,8 @@
 from orun.conf import settings
-from orun.utils.functional import SimpleLazyObject
+from contextvars import ContextVar
+from contextlib import contextmanager
+
+from types import TracebackType
 
 
 class LazyEnvironment:
@@ -17,6 +20,7 @@ class LazyEnvironment:
 
 class Environment:
     _old_env = None
+    _token = None
 
     def __init__(self, registry, **kwargs):
         self._registry = registry
@@ -25,7 +29,9 @@ class Environment:
 
     @property
     def user(self):
-        return (self.request and self.request.user) or self._registry.models[settings.AUTH_USER_MODEL].objects.get(self.user_id)
+        return (self.request and self.request.user) or self._registry.models[settings.AUTH_USER_MODEL].objects.get(
+            self.user_id
+        )
 
     @property
     def user_id(self):
@@ -47,3 +53,40 @@ class Environment:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._registry._local_ctx.env = self._old_env
         self._registry._local_var.set(self._old_env)
+
+
+from contextvars import ContextVar
+
+
+class Context:
+    __slots__ = ('_values', '_ctx_var', '_tokens')
+
+    def __init__(self, **kwargs):
+        self._values = kwargs
+        self._ctx_var = ContextVar('context', default=kwargs)
+        self._tokens = ContextVar('context_tokens', default=None)
+
+    def __call__(self, **kwargs):
+        scope = object.__new__(type(self))
+        scope._values = kwargs
+        scope._ctx_var = self._ctx_var
+        scope._tokens = self._tokens
+        return scope
+
+    def __enter__(self):
+        previous = self._tokens.get()
+        token = self._ctx_var.set(self._values)
+        self._tokens.set((token, previous))
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        token, previous = self._tokens.get()
+        self._ctx_var.reset(token)
+        self._tokens.set(previous)
+        return False
+
+    def __getitem__(self, item):
+        return self._ctx_var.get().get(item)
+
+    def __getattr__(self, item):
+        return self._ctx_var.get().get(item)

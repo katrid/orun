@@ -10,6 +10,7 @@ from contextvars import ContextVar
 from orun.apps import AppConfig
 from orun import SUPERUSER
 from orun.core.exceptions import ImproperlyConfigured, AppRegistryNotReady
+
 if TYPE_CHECKING:
     from orun.db.models.base import ModelBase, Model
 
@@ -23,7 +24,7 @@ class Registry:
         # because it cannot be populated at that point. Other registries must
         # provide a list of installed apps and are populated immediately.
         if installed_apps is None and hasattr(sys.modules[__name__], 'apps'):
-            raise RuntimeError("You must supply an installed_apps argument.")
+            raise RuntimeError('You must supply an installed_apps argument.')
 
         # set to False if the current process is not the main
         self.main = True
@@ -49,6 +50,7 @@ class Registry:
 
     def create_template_env(self):
         from orun.utils.filters import default_filter
+
         env = jinja2.Environment()
         env.filters['defaultformat'] = default_filter
         return env
@@ -93,12 +95,9 @@ class Registry:
 
             # Check for duplicate app names.
             counts = Counter(app_config.name for app_config in self.app_configs.values())
-            duplicates = [
-                name for name, count in counts.most_common() if count > 1]
+            duplicates = [name for name, count in counts.most_common() if count > 1]
             if duplicates:
-                raise ImproperlyConfigured(
-                    "Application names aren't unique, "
-                    "duplicates: %s" % ", ".join(duplicates))
+                raise ImproperlyConfigured("Application names aren't unique, duplicates: %s" % ', '.join(duplicates))
 
             self.app_ready = True
 
@@ -127,6 +126,7 @@ class Registry:
 
     def setup_loop(self, tasks=True):
         import asyncio
+
         if self._loop_started:
             return
         self._loop_started = True
@@ -169,7 +169,7 @@ class Registry:
         candidates = []
         for app_config in reversed(list(self.app_configs.values())):
             if object_name.startswith(app_config.name):
-                subpath = object_name[len(app_config.name):]
+                subpath = object_name[len(app_config.name) :]
                 if subpath == '' or subpath[0] == '.':
                     candidates.append(app_config)
         if candidates:
@@ -185,6 +185,7 @@ class Registry:
         """Raise an exception if all apps haven't been imported yet."""
         if not self.app_ready:
             from orun.conf import settings
+
             # If "not ready" is due to unconfigured settings, accessing
             # INSTALLED_APPS raises a more helpful ImproperlyConfigured
             # exception.
@@ -232,15 +233,13 @@ class Registry:
         installed = {app_config.name for app_config in self.get_app_configs()}
         if not available.issubset(installed):
             raise ValueError(
-                "Available apps isn't a subset of installed apps, extra apps: %s"
-                % ", ".join(available - installed)
+                "Available apps isn't a subset of installed apps, extra apps: %s" % ', '.join(available - installed)
             )
 
         self.stored_apps.append(self.app_configs)
         self.app_configs = OrderedDict(
-            (label, app_config)
-            for label, app_config in self.app_configs.items()
-            if app_config.name in available)
+            (label, app_config) for label, app_config in self.app_configs.items() if app_config.name in available
+        )
         self.clear_cache()
 
     def unset_available_apps(self):
@@ -346,9 +345,20 @@ class Registry:
     def get_app_config(self, app_config: type[AppConfig]):
         return self.app_configs[app_config.name]
 
+    def find_module_by_name(self, mod_name: str):
+        if mod_name in self.addons:
+            return self.addons[mod_name]
+        while '.' in mod_name:
+            mod_name = mod_name.rsplit('.', 1)[0]
+            if mod_name in self.addons:
+                return self.addons[mod_name]
+        return None
+
 
 from .context import Environment, LazyEnvironment
+
 apps = Registry()
+
 
 def get_dependencies(addon, registry):
     r = []
@@ -357,7 +367,7 @@ def get_dependencies(addon, registry):
     deps = addon.dependencies
     if deps:
         for dep in addon.dependencies:
-            r += get_dependencies(dep,registry)
+            r += get_dependencies(dep, registry)
         return r + list(addon.dependencies)
     return []
 
@@ -381,5 +391,3 @@ def adjust_dependencies(app_configs, registry=apps):
             else:
                 app_configs.insert(i + 1, entry)
     return app_configs
-
-
