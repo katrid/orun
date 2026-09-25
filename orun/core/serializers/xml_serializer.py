@@ -4,6 +4,7 @@ A XML Deserializer. Shortcut to deserialize complex structured Xml files.
 import functools
 import os
 from xml.etree import ElementTree as etree
+import json
 
 from orun.core.exceptions import ObjectDoesNotExist
 from orun.core.serializers import base
@@ -192,6 +193,13 @@ class Deserializer(base.Deserializer):
             'name': name,
             'model': model,
         }
+        views = {}
+        for view in obj:
+            if view.tag == 'views':
+                vt = view.attrib.get('type')
+                views[vt] = view.attrib.get('ref')
+        if views:
+            fields['views'] = json.dumps(views)
         action = {
             'model': act,
             'id': obj.attrib['id'],
