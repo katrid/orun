@@ -134,6 +134,7 @@ class WindowAction(Action):
     limit = models.IntegerField(default=100, label=_('Limit'))
     auto_search = models.BooleanField(default=True, label=_('Auto Search'))
     # views = models.TextField(getter='_get_views', editable=False, serializable=True)
+    views = models.TextField()
     view_list = models.OneToManyField('ui.action.window.view')
     view_type = models.SelectionField(VIEW_MODE, default='form')
 
