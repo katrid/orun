@@ -194,6 +194,7 @@ class WindowAction(Action):
         if not request.user.has_perm(('create', 'update', 'delete'), model._meta.name):
             for vi in info['viewsInfo'].values():
                 vi['readonly'] = True
+        info['views'] = None
         return info
 
     def get_help_text(self, model) -> str:
