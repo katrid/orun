@@ -196,8 +196,8 @@ class Deserializer(base.Deserializer):
         views = {}
         for view in obj:
             if view.tag == 'views':
-                vt = view.attrib.get('type')
-                views[vt] = view.attrib.get('ref')
+                for v in view:
+                    views[v.attrib.get('type')] = v.attrib.get('ref')
         if views:
             fields['views'] = json.dumps(views)
         action = {
