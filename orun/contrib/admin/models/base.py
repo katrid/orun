@@ -7,6 +7,7 @@ from functools import reduce
 from itertools import chain
 import io
 import logging
+import json
 
 from orun.apps import apps
 from orun.utils.functional import Promise
@@ -736,6 +737,8 @@ class AdminModel(models.Model, helper=True):
             views = {mode: None for mode in action.view_mode.split(',')}
             if 'search' not in views:
                 views['search'] = None
+            if views_ref := action.get_views_ref():
+                views.update(views_ref)
         elif views is None:
             views = {'form': None, 'list': None, 'search': None}
 
