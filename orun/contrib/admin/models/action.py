@@ -145,6 +145,13 @@ class WindowAction(Action):
         }
         ux_track_counter = True
 
+    def get_views_ref(self):
+        if self.views:
+            views = json.loads(self.views)
+            for k, v in views.items():
+                views[k] = ref(v)
+            return views
+
     def _get_views(self):
         modes = self.view_mode.split(',')
         views = self.view_list.all()
