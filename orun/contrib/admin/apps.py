@@ -17,6 +17,7 @@ class AdminConfig(AppConfig):
     ]
     dependencies = [
         'orun.contrib.auth',
+        'orun.contrib.comments',
         'erp.core',
     ]
     urls_module = 'orun.contrib.admin.urls'
