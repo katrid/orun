@@ -4,7 +4,7 @@ from urllib.parse import urlsplit
 
 from orun.apps import apps
 from orun.apps import contributes
-from core.models import CoreSettings, UserProfile
+from erp.core.models import CoreSettings, UserProfile
 
 KEY_NAME = "core://settings/"
 PROFILE_KEY = "core://user.profile/"

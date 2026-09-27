@@ -32,7 +32,7 @@ class Draft(models.Model):
 
 
 class ContentTemplate(models.Model):
-    content_type = models.ForeignKey(ContentType, on_delete=models.DB_CASCADE, null=False)
+    model = models.ForeignKey('content.model', on_delete=models.DB_CASCADE, null=False)
     user = models.ForeignKey('auth.user', on_delete=models.DB_CASCADE, null=False)
     public = models.BooleanField(default=True, help_text='All users with content creation permission can view this template')
     content = models.TextField()
