@@ -1,4 +1,4 @@
-from typing import Optional, Callable, List
+from typing import Optional, Callable, List, Self
 import functools
 import inspect
 from functools import partial
@@ -368,7 +368,9 @@ class RelatedField(FieldCacheMixin, Field):
                 "The relation has multiple target fields, but only single target field was asked for")
         return target_fields[0]
 
-    def get_cache_name(self):
+
+    @cached_property
+    def cache_name(self):
         return self.name
 
     # def __getitem__(self, item):
@@ -523,7 +525,7 @@ class ForeignObject(RelatedField):
             from_field_name = self.from_fields[index]
             to_field_name = self.to_fields[index]
             from_field = (
-                self if from_field_name == RECURSIVE_RELATIONSHIP_CONSTANT
+                self if (from_field_name == RECURSIVE_RELATIONSHIP_CONSTANT or from_field_name is Self)
                 else self.opts.fields[from_field_name]
             )
             to_field = (
@@ -733,6 +735,8 @@ class ForeignKey(ForeignObject):
     def __init__(self, to, on_delete=DB_PROTECT, *, related_name=None, related_query_name=None,
                  limit_choices_to=None, parent_link=False, to_field=None, name_fields=None,
                  label_from_instance=None, check_company=False, db_constraint=True, **kwargs):
+        if to is Self:
+            to = RECURSIVE_RELATIONSHIP_CONSTANT
         try:
             to.Meta.name
         except AttributeError:

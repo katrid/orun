@@ -2,9 +2,11 @@
 DATABASES = {
     "default": {
         "ENGINE": "orun.db.backends.sqlite3",
+        "NAME": ":memory:",
     },
     "other": {
         "ENGINE": "orun.db.backends.sqlite3",
+        "NAME": ":memory:",
     },
 }
 

@@ -21,7 +21,7 @@ class Draft(AdminModel):
 
     class Meta:
         name = 'content.draft'
-        db_table = '"core"."content_draft"'
+        # db_table = 'content_draft'
         db_schema = 'core'
 
     class Admin(AdminModel.Admin):

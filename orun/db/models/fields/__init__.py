@@ -12,6 +12,7 @@ from functools import partialmethod
 from orun.apps import apps
 from orun.conf import settings
 from orun.core import checks, exceptions, validators
+
 # When the _meta object was formalized, this exception was moved to
 # orun.core.exceptions. It is retained here for backwards compatibility
 # purposes.
@@ -22,7 +23,10 @@ from orun.db.models.query_utils import DeferredAttribute, RegisterLookupMixin, P
 from orun.utils import timezone
 from orun.utils.datastructures import DictWrapper
 from orun.utils.dateparse import (
-    parse_date, parse_datetime, parse_duration, parse_time,
+    parse_date,
+    parse_datetime,
+    parse_duration,
+    parse_time,
 )
 from orun.utils.duration import duration_microseconds, duration_string
 from orun.utils.functional import Promise, cached_property
@@ -37,16 +41,48 @@ if TYPE_CHECKING:
     from orun.db.backends.base.schema import BaseDatabaseSchemaEditor
 
 __all__ = [
-    'BaseField', 'AutoField', 'BLANK_CHOICE_DASH', 'BigAutoField', 'BigIntegerField',
-    'BinaryField', 'BooleanField', 'CharField', 'CommaSeparatedIntegerField',
-    'DateField', 'DateTimeField', 'DecimalField', 'DurationField', 'SmallAutoField',
-    'EmailField', 'Empty', 'Field', 'FieldDoesNotExist', 'FilePathField',
-    'FloatField', 'GenericIPAddressField', 'IPAddressField', 'IntegerField',
-    'NOT_PROVIDED', 'NullBooleanField', 'PositiveIntegerField', 'PositiveBigIntegerField',
-    'PositiveSmallIntegerField', 'SlugField', 'SmallIntegerField', 'TextField',
-    'TimeField', 'URLField', 'UUIDField', 'ChoiceField', 'SelectionField', 'StringField',
-    'XmlField', 'HtmlField', 'PasswordField',
-    'NotNullIntegerField', 'MultiChoiceField',
+    'BaseField',
+    'AutoField',
+    'BLANK_CHOICE_DASH',
+    'BigAutoField',
+    'BigIntegerField',
+    'BinaryField',
+    'BooleanField',
+    'CharField',
+    'DateField',
+    'DateTimeField',
+    'DecimalField',
+    'DurationField',
+    'SmallAutoField',
+    'EmailField',
+    'Empty',
+    'Field',
+    'FieldDoesNotExist',
+    'FilePathField',
+    'FloatField',
+    'GenericIPAddressField',
+    'IPAddressField',
+    'IntegerField',
+    'NOT_PROVIDED',
+    'NullBooleanField',
+    'PositiveIntegerField',
+    'PositiveBigIntegerField',
+    'PositiveSmallIntegerField',
+    'SlugField',
+    'SmallIntegerField',
+    'TextField',
+    'TimeField',
+    'URLField',
+    'UUIDField',
+    'ChoiceField',
+    'SelectionField',
+    'StringField',
+    'XmlField',
+    'HtmlField',
+    'PasswordField',
+    'NotNullIntegerField',
+    'MultiChoiceField',
+    'ArrayField',
 ]
 
 
@@ -60,7 +96,7 @@ class NOT_PROVIDED:
 
 # The values to use for "blank" in SelectFields. Will be appended to the start
 # of most "choices" lists.
-BLANK_CHOICE_DASH = [("", "---------")]
+BLANK_CHOICE_DASH = [('', '---------')]
 
 
 def _load_field(model_name, field_name):
@@ -81,6 +117,7 @@ def _load_field(model_name, field_name):
 # attname. For example, this gets the primary key value of object "obj":
 #
 #     getattr(obj, opts.pk.attname)
+
 
 def _empty(of_cls):
     new = Empty()
@@ -212,6 +249,8 @@ class BaseField[T](RegisterLookupMixin):
 class Field[T](BaseField[T]):
     """Base class for all field types"""
 
+    descriptor_class = DeferredAttribute
+
     # Designates whether empty strings fundamentally are allowed at the
     # database level.
     empty_values = list(validators.EMPTY_VALUES)
@@ -228,12 +267,10 @@ class Field[T](BaseField[T]):
         'invalid_choice': _('Value %(value)r is not a valid choice.'),
         'null': _('This field cannot be null.'),
         'blank': _('This field cannot be blank.'),
-        'unique': _('%(model_name)s with this %(field_label)s '
-                    'already exists.'),
+        'unique': _('%(model_name)s with this %(field_label)s already exists.'),
         # Translators: The 'lookup_type' is one of 'date', 'year' or 'month'.
         # Eg: "Title must be unique for pub_date year"
-        'unique_for_date': _("%(field_label)s must be unique for "
-                             "%(date_field_label)s %(lookup_type)s."),
+        'unique_for_date': _('%(field_label)s must be unique for %(date_field_label)s %(lookup_type)s.'),
     }
     system_check_deprecated_details = None
     system_check_removed_details = None
@@ -249,9 +286,7 @@ class Field[T](BaseField[T]):
 
     # Generic field type description, usually overridden by subclasses
     def _description(self):
-        return _('Field of type: %(field_type)s') % {
-            'field_type': self.__class__.__name__
-        }
+        return _('Field of type: %(field_type)s') % {'field_type': self.__class__.__name__}
 
     description = property(_description)
 
@@ -301,6 +336,7 @@ class Field[T](BaseField[T]):
         aggregate=None,
         aggregate_from=None,
         descriptor=None,
+        references=None,
         **kwargs,
     ):
         self.name = name
@@ -328,6 +364,7 @@ class Field[T](BaseField[T]):
         self.on_update_value = on_update_value
         self.aggregate = aggregate
         self.aggregate_from = aggregate_from
+        self.references = references
         if isinstance(choices, dict):
             choices = choices.items()
         elif isinstance(choices, (list, tuple)) and choices:
@@ -416,12 +453,10 @@ class Field[T](BaseField[T]):
             self.copy = copy
 
     @overload
-    def __get__(self, instance: None, owner) -> Self:
-        ...
+    def __get__(self, instance: None, owner) -> Self: ...
 
     @overload
-    def __get__(self, instance: object, owner) -> T:
-        ...
+    def __get__(self, instance: object, owner) -> T: ...
 
     def __get__(self, instance, owner=None) -> T | Self:
         return self
@@ -511,10 +546,7 @@ class Field[T](BaseField[T]):
                 # Containing non-pairs
                 break
             try:
-                if not all(
-                    is_value(value) and is_value(human_name)
-                    for value, human_name in group_choices
-                ):
+                if not all(is_value(value) and is_value(human_name) for value, human_name in group_choices):
                     break
             except (TypeError, ValueError):
                 # No groups, choices in the form [value, display]
@@ -530,8 +562,7 @@ class Field[T](BaseField[T]):
 
         return [
             checks.Error(
-                "'choices' must be an iterable containing "
-                "(actual value, human readable name) tuples.",
+                "'choices' must be an iterable containing (actual value, human readable name) tuples.",
                 obj=self,
                 id='fields.E005',
             )
@@ -550,16 +581,14 @@ class Field[T](BaseField[T]):
             return []
 
     def _check_null_allowed_for_primary_keys(self):
-        if (self.primary_key and self.null and
-            not connection.features.interprets_empty_strings_as_nulls):
+        if self.primary_key and self.null and not connection.features.interprets_empty_strings_as_nulls:
             # We cannot reliably check this for backends like Oracle which
             # consider NULL and '' to be equal (and thus set up
             # character-based fields a little differently).
             return [
                 checks.Error(
                     'Primary keys must not have null=True.',
-                    hint=('Set null=False on the field, or '
-                          'remove primary_key=True argument.'),
+                    hint=('Set null=False on the field, or remove primary_key=True argument.'),
                     obj=self,
                     id='fields.E007',
                 )
@@ -582,9 +611,9 @@ class Field[T](BaseField[T]):
                     checks.Error(
                         "All 'validators' must be callable.",
                         hint=(
-                            "validators[{i}] ({repr}) isn't a function or "
-                            "instance of a validator class.".format(
-                                i=i, repr=repr(validator),
+                            "validators[{i}] ({repr}) isn't a function or instance of a validator class.".format(
+                                i=i,
+                                repr=repr(validator),
                             )
                         ),
                         obj=self,
@@ -599,8 +628,7 @@ class Field[T](BaseField[T]):
                 checks.Error(
                     self.system_check_removed_details.get(
                         'msg',
-                        '%s has been removed except for support in historical '
-                        'migrations.' % self.__class__.__name__
+                        '%s has been removed except for support in historical migrations.' % self.__class__.__name__,
                     ),
                     hint=self.system_check_removed_details.get('hint'),
                     obj=self,
@@ -611,8 +639,7 @@ class Field[T](BaseField[T]):
             return [
                 checks.Warning(
                     self.system_check_deprecated_details.get(
-                        'msg',
-                        '%s has been deprecated.' % self.__class__.__name__
+                        'msg', '%s has been deprecated.' % self.__class__.__name__
                     ),
                     hint=self.system_check_deprecated_details.get('hint'),
                     obj=self,
@@ -624,11 +651,13 @@ class Field[T](BaseField[T]):
     def get_col(self, alias, output_field=None):
         if self.db_calculate is not None:
             from orun.db.models.expressions import CalcCol
+
             return CalcCol(alias, self, output_field)
         if output_field is None:
             output_field = self
         if alias != self.model._meta.db_table or output_field is not self:
             from orun.db.models.expressions import Col
+
             return Col(alias, self, output_field)
         else:
             return self.cached_col
@@ -636,6 +665,7 @@ class Field[T](BaseField[T]):
     @cached_property
     def cached_col(self):
         from orun.db.models.expressions import Col
+
         return Col(self.model._meta.db_table, self)
 
     def select_format(self, compiler, sql, params):
@@ -679,7 +709,7 @@ class Field[T](BaseField[T]):
         values.
         """
         # Work out path - we shorten it for known Orun core fields
-        path = "%s.%s" % (self.__class__.__module__, self.__class__.__qualname__)
+        path = '%s.%s' % (self.__class__.__module__, self.__class__.__qualname__)
         return (self.name, path, None, {})
 
     # def clone(self):
@@ -878,8 +908,8 @@ class Field[T](BaseField[T]):
         type_string = self.db_type(connection)
         check_string = self.db_check(connection)
         return {
-            "type": type_string,
-            "check": check_string,
+            'type': type_string,
+            'check': check_string,
         }
 
     def db_type_suffix(self, connection):
@@ -925,10 +955,11 @@ class Field[T](BaseField[T]):
             # if you have a classmethod and a field with the same name, then
             # such fields can't be deferred (we don't have a check for this).
             if not self.descriptor and not getattr(cls, self.attname, None):
-                setattr(cls, self.attname, DeferredAttribute(self))
+                setattr(cls, self.attname, self.descriptor_class(self))
+        elif self.descriptor_class and not self.descriptor:
+            setattr(cls, self.name, self.descriptor_class(self))
         if self.choices:
-            setattr(cls, 'get_%s_display' % self.name,
-                    partialmethod(cls._get_FIELD_display, field=self))
+            setattr(cls, 'get_%s_display' % self.name, partialmethod(cls._get_FIELD_display, field=self))
 
     def get_filter_kwargs_for_object(self, obj):
         """
@@ -1015,13 +1046,12 @@ class Field[T](BaseField[T]):
         rel_model = self.remote_field.model
         limit_choices_to = limit_choices_to or self.get_limit_choices_to()
         choice_func = operator.attrgetter(
-            self.remote_field.get_related_field().attname
-            if hasattr(self.remote_field, 'get_related_field')
-            else 'pk'
+            self.remote_field.get_related_field().attname if hasattr(self.remote_field, 'get_related_field') else 'pk'
         )
-        return (blank_choice if include_blank else []) + [(choice_func(x), str(x)) for x in
-                                                          rel_model._default_manager.complex_filter(
-                                                              limit_choices_to).order_by(*ordering)]
+        return (blank_choice if include_blank else []) + [
+            (choice_func(x), str(x))
+            for x in rel_model._default_manager.complex_filter(limit_choices_to).order_by(*ordering)
+        ]
 
     def value_to_string(self, obj):
         """
@@ -1075,6 +1105,7 @@ class Field[T](BaseField[T]):
     def formfield(self, form_class=None, choices_form_class=None, **kwargs):
         """Return a orun.forms.Field instance for this field."""
         from orun import forms
+
         defaults = {
             'required': not self.required,
             'label': capfirst(self.label),
@@ -1082,8 +1113,7 @@ class Field[T](BaseField[T]):
         }
         if self.choices is not None:
             # Fields with choices get special treatment.
-            include_blank = (self.required or
-                             not (self.has_default() or 'initial' in kwargs))
+            include_blank = self.required or not (self.has_default() or 'initial' in kwargs)
             defaults['choices'] = self.get_choices(include_blank=include_blank)
             defaults['coerce'] = self.to_python
             if self.null:
@@ -1096,9 +1126,19 @@ class Field[T](BaseField[T]):
             # max_value) don't apply for choice fields, so be sure to only pass
             # the values that TypedChoiceField will understand.
             for k in list(kwargs):
-                if k not in ('coerce', 'empty_value', 'choices', 'required',
-                             'widget', 'label', 'initial', 'help_text',
-                             'error_messages', 'show_hidden_initial', 'disabled'):
+                if k not in (
+                    'coerce',
+                    'empty_value',
+                    'choices',
+                    'required',
+                    'widget',
+                    'label',
+                    'initial',
+                    'help_text',
+                    'error_messages',
+                    'show_hidden_initial',
+                    'disabled',
+                ):
                     del kwargs[k]
         defaults.update(kwargs)
         if form_class is None:
@@ -1123,6 +1163,7 @@ class Field[T](BaseField[T]):
 
     def onchange(self, meth):
         from .events import FieldEvent
+
         return FieldEvent(self, meth)
 
     def _get_params(self):
@@ -1130,11 +1171,18 @@ class Field[T](BaseField[T]):
 
     def column_definition(self, editor):
         from orun.db.metadata import Column
+
         _, datatype, params, kwargs = self.deconstruct()
         generated = self.generated_as
         return Column(
-            name=self.column, type=self.get_internal_type(), params=self._get_params(), null=self.null,
-            pk=self.primary_key, tablespace=self.db_tablespace, computed=generated, stored=self.stored,
+            name=self.column,
+            type=self.get_internal_type(),
+            params=self._get_params(),
+            null=self.null,
+            pk=self.primary_key,
+            tablespace=self.db_tablespace,
+            computed=generated,
+            stored=self.stored,
             attributes=kwargs,
             default=None if self.db_default is NOT_PROVIDED else self.db_default,
             # field=self,
@@ -1146,19 +1194,56 @@ class Field[T](BaseField[T]):
         :param editor:
         :param table:
         """
-        from orun.db.metadata import Index, Trigger, AggTrigger
+        from orun.db.metadata import Index, Trigger, AggTrigger, Constraint
+
         col = self.column_definition(editor)
         table.columns[col.name] = col
         if self.db_index:
             ix_name = editor.create_index_name(self.model._meta.db_table, [self.column])
             ix = Index(
-                name=ix_name, expressions=[self.column], auto_created=True,
+                name=ix_name,
+                expressions=[self.column],
+                auto_created=True,
                 # model=self.model,
                 # tablespace=self.db_tablespace,
             )
             if self.unique:
                 ix.type = 'UNIQUE'
             table.indexes[ix_name] = ix
+        elif self.unique:
+            uq_name = 'uq_' + self.model._meta.qualname.replace('.', '_').replace('"', '') + '__' + self.column
+            table.constraints[uq_name] = Constraint(
+                name=uq_name,
+                type='UNIQUE',
+                expressions=[self.column],
+                auto_created=True,
+            )
+
+        if self.references:
+            fk_name = 'fk_ref__' + self.column
+            ref_model = None
+            ref_col = None
+            if isinstance(self.references, tuple):
+                ref_model = apps.models[self.references[0]]
+                ref_col = ref_model._meta.fields[self.references[1]]
+            elif isinstance(self.references, str):
+                ref_model = apps.models[self.references]
+                ref_col = ref_model._meta.pk
+            elif isinstance(self.references, DeferredAttribute):
+                ref_model = self.references.field.model
+                ref_col = self.references.field
+            if not ref_model or not ref_col:
+                raise ValueError(f'Invalid reference: {self.references} on {self.model._meta.name} ({self.column})')
+            table.constraints[fk_name] = Constraint(
+                name=fk_name,
+                type='FOREIGN KEY',
+                deferrable='NOT VALID',
+                expressions=[self.column],
+                on_delete='CASCADE',
+                on_update='CASCADE',
+                references=[[ref_model._meta.db_schema, ref_model._meta.tablename], [ref_col.attname]],
+                auto_created=True,
+            )
 
         # auto generated triggers
         if self.aggregate_from:
@@ -1174,7 +1259,7 @@ class BooleanField(Field[bool]):
         'invalid': _("'%(value)s' value must be either True or False."),
         'invalid_nullable': _("'%(value)s' value must be either True, False, or None."),
     }
-    description = _("Boolean (Either True or False)")
+    description = _('Boolean (Either True or False)')
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('null', False)
@@ -1184,7 +1269,7 @@ class BooleanField(Field[bool]):
         super().__init__(*args, **kwargs)
 
     def get_internal_type(self):
-        return "BooleanField"
+        return 'BooleanField'
 
     def to_python(self, value):
         if self.null and value in self.empty_values:
@@ -1210,7 +1295,7 @@ class BooleanField(Field[bool]):
 
 
 class CharField(Field[str]):
-    description = _("String (up to %(max_length)s)")
+    description = _('String (up to %(max_length)s)')
 
     def __init__(
         self, max_length_or_label=None, db_collation: str = None, trim=True, full_text_search=False, *args, **kwargs
@@ -1243,8 +1328,7 @@ class CharField(Field[str]):
                     id='fields.E120',
                 )
             ]
-        elif (not isinstance(self.max_length, int) or isinstance(self.max_length, bool) or
-              self.max_length <= 0):
+        elif not isinstance(self.max_length, int) or isinstance(self.max_length, bool) or self.max_length <= 0:
             return [
                 checks.Error(
                     "'max_length' must be a positive integer.",
@@ -1265,7 +1349,7 @@ class CharField(Field[str]):
         return super().cast_db_type(connection)
 
     def get_internal_type(self):
-        return "CharField"
+        return 'CharField'
 
     def to_python(self, value):
         if isinstance(value, str) and self.trim:
@@ -1296,24 +1380,7 @@ class StringField(CharField):
     pass
 
 
-class CommaSeparatedIntegerField(CharField):
-    default_validators = [validators.validate_comma_separated_integer_list]
-    description = _("Comma-separated integers")
-    system_check_removed_details = {
-        'msg': (
-            'CommaSeparatedIntegerField is removed except for support in '
-            'historical migrations.'
-        ),
-        'hint': (
-            'Use CharField(validators=[validate_comma_separated_integer_list]) '
-            'instead.'
-        ),
-        'id': 'fields.E901',
-    }
-
-
 class DateTimeCheckMixin:
-
     def check(self, **kwargs):
         return [
             *super().check(**kwargs),
@@ -1330,9 +1397,9 @@ class DateTimeCheckMixin:
         if enabled_options > 1:
             return [
                 checks.Error(
-                    "The options auto_now, auto_now_add, and default "
-                    "are mutually exclusive. Only one of these options "
-                    "may be present.",
+                    'The options auto_now, auto_now_add, and default '
+                    'are mutually exclusive. Only one of these options '
+                    'may be present.',
                     obj=self,
                     id='fields.E160',
                 )
@@ -1347,15 +1414,12 @@ class DateTimeCheckMixin:
 class DateField(DateTimeCheckMixin, Field[datetime.date]):
     empty_strings_allowed = False
     default_error_messages = {
-        'invalid': _("'%(value)s' value has an invalid date format. It must be "
-                     "in YYYY-MM-DD format."),
-        'invalid_date': _("'%(value)s' value has the correct format (YYYY-MM-DD) "
-                          "but it is an invalid date."),
+        'invalid': _("'%(value)s' value has an invalid date format. It must be in YYYY-MM-DD format."),
+        'invalid_date': _("'%(value)s' value has the correct format (YYYY-MM-DD) but it is an invalid date."),
     }
-    description = _("Date (without time)")
+    description = _('Date (without time)')
 
-    def __init__(self, label=None, name=None, auto_now=False,
-                 auto_now_add=False, **kwargs):
+    def __init__(self, label=None, name=None, auto_now=False, auto_now_add=False, **kwargs):
         self.auto_now, self.auto_now_add = auto_now, auto_now_add
         if auto_now or auto_now_add:
             kwargs['editable'] = False
@@ -1392,9 +1456,9 @@ class DateField(DateTimeCheckMixin, Field[datetime.date]):
                 checks.Warning(
                     'Fixed default value provided.',
                     hint='It seems you set a fixed date / time / datetime '
-                         'value as default for this field. This may not be '
-                         'what you want. If you want to have the current date '
-                         'as default, use `orun.utils.timezone.now`',
+                    'value as default for this field. This may not be '
+                    'what you want. If you want to have the current date '
+                    'as default, use `orun.utils.timezone.now`',
                     obj=self,
                     id='fields.W161',
                 )
@@ -1403,7 +1467,7 @@ class DateField(DateTimeCheckMixin, Field[datetime.date]):
         return []
 
     def get_internal_type(self):
-        return "DateField"
+        return 'DateField'
 
     def to_python(self, value):
         if value is None:
@@ -1447,12 +1511,14 @@ class DateField(DateTimeCheckMixin, Field[datetime.date]):
         super().contribute_to_class(cls, name, **kwargs)
         if not self.null:
             setattr(
-                cls, 'get_next_by_%s' % self.name,
-                partialmethod(cls._get_next_or_previous_by_FIELD, field=self, is_next=True)
+                cls,
+                'get_next_by_%s' % self.name,
+                partialmethod(cls._get_next_or_previous_by_FIELD, field=self, is_next=True),
             )
             setattr(
-                cls, 'get_previous_by_%s' % self.name,
-                partialmethod(cls._get_next_or_previous_by_FIELD, field=self, is_next=False)
+                cls,
+                'get_previous_by_%s' % self.name,
+                partialmethod(cls._get_next_or_previous_by_FIELD, field=self, is_next=False),
             )
 
     def get_prep_value(self, value):
@@ -1478,15 +1544,17 @@ class DateField(DateTimeCheckMixin, Field[datetime.date]):
 class DateTimeField(DateField):
     empty_strings_allowed = False
     default_error_messages = {
-        'invalid': _("'%(value)s' value has an invalid format. It must be in "
-                     "YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ] format."),
-        'invalid_date': _("'%(value)s' value has the correct format "
-                          "(YYYY-MM-DD) but it is an invalid date."),
-        'invalid_datetime': _("'%(value)s' value has the correct format "
-                              "(YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]) "
-                              "but it is an invalid date/time."),
+        'invalid': _(
+            "'%(value)s' value has an invalid format. It must be in YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ] format."
+        ),
+        'invalid_date': _("'%(value)s' value has the correct format (YYYY-MM-DD) but it is an invalid date."),
+        'invalid_datetime': _(
+            "'%(value)s' value has the correct format "
+            '(YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]) '
+            'but it is an invalid date/time.'
+        ),
     }
-    description = _("Date (with time)")
+    description = _('Date (with time)')
     now = lambda: None
 
     # __init__ is inherited from DateField
@@ -1524,9 +1592,9 @@ class DateTimeField(DateField):
                 checks.Warning(
                     'Fixed default value provided.',
                     hint='It seems you set a fixed date / time / datetime '
-                         'value as default for this field. This may not be '
-                         'what you want. If you want to have the current date '
-                         'as default, use `orun.utils.timezone.now`',
+                    'value as default for this field. This may not be '
+                    'what you want. If you want to have the current date '
+                    'as default, use `orun.utils.timezone.now`',
                     obj=self,
                     id='fields.W161',
                 )
@@ -1535,7 +1603,7 @@ class DateTimeField(DateField):
         return []
 
     def get_internal_type(self):
-        return "DateTimeField"
+        return 'DateTimeField'
 
     def to_python(self, value):
         if value is None:
@@ -1549,10 +1617,11 @@ class DateTimeField(DateField):
                 # local time. This won't work during DST change, but we can't
                 # do much about it, so we let the exceptions percolate up the
                 # call stack.
-                warnings.warn("DateTimeField %s.%s received a naive datetime "
-                              "(%s) while time zone support is active." %
-                              (self.model.__name__, self.name, value),
-                              RuntimeWarning)
+                warnings.warn(
+                    'DateTimeField %s.%s received a naive datetime '
+                    '(%s) while time zone support is active.' % (self.model.__name__, self.name, value),
+                    RuntimeWarning,
+                )
                 default_timezone = timezone.get_default_timezone()
                 value = timezone.make_aware(value, default_timezone)
             return value
@@ -1635,7 +1704,7 @@ class DecimalField(Field[decimal.Decimal]):
     default_error_messages = {
         'invalid': _("'%(value)s' value must be a decimal number."),
     }
-    description = _("Decimal number")
+    description = _('Decimal number')
 
     def __init__(self, max_digits=28, decimal_places=6, label=None, name=None, null=False, **kwargs):
         self.max_digits, self.decimal_places = max_digits, decimal_places
@@ -1730,7 +1799,7 @@ class DecimalField(Field[decimal.Decimal]):
         return name, path, [self.max_digits, self.decimal_places], kwargs
 
     def get_internal_type(self):
-        return "DecimalField"
+        return 'DecimalField'
 
     def to_python(self, value):
         if value is None:
@@ -1786,15 +1855,15 @@ class DurationField(Field):
     Use interval on PostgreSQL, INTERVAL DAY TO SECOND on Oracle, and bigint
     of microseconds on other databases.
     """
+
     empty_strings_allowed = False
     default_error_messages = {
-        'invalid': _("'%(value)s' value has an invalid format. It must be in "
-                     "[DD] [HH:[MM:]]ss[.uuuuuu] format.")
+        'invalid': _("'%(value)s' value has an invalid format. It must be in [DD] [HH:[MM:]]ss[.uuuuuu] format.")
     }
-    description = _("Duration")
+    description = _('Duration')
 
     def get_internal_type(self):
-        return "DurationField"
+        return 'DurationField'
 
     def to_python(self, value):
         if value is None:
@@ -1835,7 +1904,7 @@ class DurationField(Field):
 
 class EmailField(CharField):
     default_validators = [validators.validate_email]
-    description = _("Email address")
+    description = _('Email address')
 
     def __init__(self, *args, **kwargs):
         # max_length=254 to be compliant with RFCs 3696 and 5321
@@ -1854,10 +1923,19 @@ class EmailField(CharField):
 
 
 class FilePathField(Field):
-    description = _("File path")
+    description = _('File path')
 
-    def __init__(self, label=None, name=None, path='', match=None,
-                 recursive=False, allow_files=True, allow_folders=False, **kwargs):
+    def __init__(
+        self,
+        label=None,
+        name=None,
+        path='',
+        match=None,
+        recursive=False,
+        allow_files=True,
+        allow_folders=False,
+        **kwargs,
+    ):
         self.path, self.match, self.recursive = path, match, recursive
         self.allow_files, self.allow_folders = allow_files, allow_folders
         kwargs.setdefault('max_length', 254)
@@ -1892,8 +1970,8 @@ class FilePathField(Field):
             kwargs['allow_files'] = self.allow_files
         if self.allow_folders is not False:
             kwargs['allow_folders'] = self.allow_folders
-        if kwargs.get("max_length") == 100:
-            del kwargs["max_length"]
+        if kwargs.get('max_length') == 100:
+            del kwargs['max_length']
         return name, path, args, kwargs
 
     def get_prep_value(self, value):
@@ -1903,7 +1981,7 @@ class FilePathField(Field):
         return str(value)
 
     def get_internal_type(self):
-        return "FilePathField"
+        return 'FilePathField'
 
 
 class ImagePathField(FilePathField):
@@ -1915,7 +1993,7 @@ class FloatField(Field[float]):
     default_error_messages = {
         'invalid': _("'%(value)s' value must be a float."),
     }
-    description = _("Floating point number")
+    description = _('Floating point number')
 
     def get_prep_value(self, value):
         value = super().get_prep_value(value)
@@ -1924,7 +2002,7 @@ class FloatField(Field[float]):
         return float(value)
 
     def get_internal_type(self):
-        return "FloatField"
+        return 'FloatField'
 
     def to_python(self, value):
         if value is None:
@@ -1943,7 +2021,7 @@ class IntegerField(Field):
     default_error_messages = {
         'invalid': _("'%(value)s' value must be an integer."),
     }
-    description = _("Integer")
+    description = _('Integer')
 
     def check(self, **kwargs):
         return [
@@ -1972,22 +2050,18 @@ class IntegerField(Field):
         min_value, max_value = connection.ops.integer_field_range(internal_type)
         if min_value is not None and not any(
             (
-                isinstance(validator, validators.MinValueValidator) and (
-                validator.limit_value()
-                if callable(validator.limit_value)
-                else validator.limit_value
-            ) >= min_value
-            ) for validator in validators_
+                isinstance(validator, validators.MinValueValidator)
+                and (validator.limit_value() if callable(validator.limit_value) else validator.limit_value) >= min_value
+            )
+            for validator in validators_
         ):
             validators_.append(validators.MinValueValidator(min_value))
         if max_value is not None and not any(
             (
-                isinstance(validator, validators.MaxValueValidator) and (
-                validator.limit_value()
-                if callable(validator.limit_value)
-                else validator.limit_value
-            ) <= max_value
-            ) for validator in validators_
+                isinstance(validator, validators.MaxValueValidator)
+                and (validator.limit_value() if callable(validator.limit_value) else validator.limit_value) <= max_value
+            )
+            for validator in validators_
         ):
             validators_.append(validators.MaxValueValidator(max_value))
         return validators_
@@ -2001,7 +2075,7 @@ class IntegerField(Field):
         return int(value)
 
     def get_internal_type(self):
-        return "IntegerField"
+        return 'IntegerField'
 
     def to_python(self, value):
         if value is None:
@@ -2019,18 +2093,18 @@ class IntegerField(Field):
 
 
 class SmallIntegerField(IntegerField):
-    description = _("Small integer")
+    description = _('Small integer')
 
     def get_internal_type(self):
-        return "SmallIntegerField"
+        return 'SmallIntegerField'
 
 
 class BigIntegerField(IntegerField):
-    description = _("Big (8 byte) integer")
+    description = _('Big (8 byte) integer')
     MAX_BIGINT = 9223372036854775807
 
     def get_internal_type(self):
-        return "BigIntegerField"
+        return 'BigIntegerField'
 
 
 class AutoFieldMixin:
@@ -2071,10 +2145,7 @@ class AutoFieldMixin:
         return value
 
     def contribute_to_class(self, cls, name, **kwargs):
-        assert not cls._meta.auto_field, (
-            "Model %s can't have more than one auto-generated field."
-            % cls._meta.label
-        )
+        assert not cls._meta.auto_field, "Model %s can't have more than one auto-generated field." % cls._meta.label
         super().contribute_to_class(cls, name, **kwargs)
         cls._meta.auto_field = self
 
@@ -2111,9 +2182,8 @@ class AutoFieldMeta(type):
 
 
 class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):
-
     def get_internal_type(self):
-        return "AutoField"
+        return 'AutoField'
 
     def get_data_type(self) -> str:
         return 'IntegerField'
@@ -2123,7 +2193,6 @@ class AutoField(AutoFieldMixin, IntegerField, metaclass=AutoFieldMeta):
 
 
 class BigAutoField(AutoFieldMixin, BigIntegerField):
-
     def get_internal_type(self):
         return 'BigAutoField'
 
@@ -2135,7 +2204,6 @@ class BigAutoField(AutoFieldMixin, BigIntegerField):
 
 
 class SmallAutoField(AutoFieldMixin, SmallIntegerField):
-
     def get_internal_type(self):
         return 'SmallAutoField'
 
@@ -2145,12 +2213,9 @@ class SmallAutoField(AutoFieldMixin, SmallIntegerField):
 
 class IPAddressField(Field):
     empty_strings_allowed = False
-    description = _("IPv4 address")
+    description = _('IPv4 address')
     system_check_removed_details = {
-        'msg': (
-            'IPAddressField has been removed except for support in '
-            'historical migrations.'
-        ),
+        'msg': ('IPAddressField has been removed except for support in historical migrations.'),
         'hint': 'Use GenericIPAddressField instead.',
         'id': 'fields.E900',
     }
@@ -2171,20 +2236,18 @@ class IPAddressField(Field):
         return str(value)
 
     def get_internal_type(self):
-        return "IPAddressField"
+        return 'IPAddressField'
 
 
 class GenericIPAddressField(Field):
     empty_strings_allowed = False
-    description = _("IP address")
+    description = _('IP address')
     default_error_messages = {}
 
-    def __init__(self, label=None, name=None, protocol='both',
-                 unpack_ipv4=False, *args, **kwargs):
+    def __init__(self, label=None, name=None, protocol='both', unpack_ipv4=False, *args, **kwargs):
         self.unpack_ipv4 = unpack_ipv4
         self.protocol = protocol
-        self.default_validators, invalid_error_message = \
-            validators.ip_address_validators(protocol, unpack_ipv4)
+        self.default_validators, invalid_error_message = validators.ip_address_validators(protocol, unpack_ipv4)
         self.default_error_messages['invalid'] = invalid_error_message
         kwargs['max_length'] = 39
         super().__init__(label, name, *args, **kwargs)
@@ -2199,8 +2262,7 @@ class GenericIPAddressField(Field):
         if not getattr(self, 'null', False) and getattr(self, 'blank', False):
             return [
                 checks.Error(
-                    'GenericIPAddressFields cannot have blank=True if null=False, '
-                    'as blank values are stored as nulls.',
+                    'GenericIPAddressFields cannot have blank=True if null=False, as blank values are stored as nulls.',
                     obj=self,
                     id='fields.E150',
                 )
@@ -2211,14 +2273,14 @@ class GenericIPAddressField(Field):
         name, path, args, kwargs = super().deconstruct()
         if self.unpack_ipv4 is not False:
             kwargs['unpack_ipv4'] = self.unpack_ipv4
-        if self.protocol != "both":
+        if self.protocol != 'both':
             kwargs['protocol'] = self.protocol
-        if kwargs.get("max_length") == 39:
+        if kwargs.get('max_length') == 39:
             del kwargs['max_length']
         return name, path, args, kwargs
 
     def get_internal_type(self):
-        return "GenericIPAddressField"
+        return 'GenericIPAddressField'
 
     def to_python(self, value):
         if value is None:
@@ -2252,7 +2314,7 @@ class NullBooleanField(BooleanField):
         'invalid': _("'%(value)s' value must be either None, True or False."),
         'invalid_nullable': _("'%(value)s' value must be either None, True or False."),
     }
-    description = _("Boolean (Either True, False or None)")
+    description = _('Boolean (Either True, False or None)')
 
     def __init__(self, *args, **kwargs):
         kwargs['null'] = True
@@ -2266,7 +2328,6 @@ class NullBooleanField(BooleanField):
 
 
 class PositiveIntegerRelDbTypeMixin:
-
     def rel_db_type(self, connection):
         """
         Return the data type that a related field pointing to this field should
@@ -2290,22 +2351,22 @@ class PositiveBigIntegerField(PositiveIntegerRelDbTypeMixin, BigIntegerField):
 
 
 class PositiveIntegerField(PositiveIntegerRelDbTypeMixin, IntegerField):
-    description = _("Positive integer")
+    description = _('Positive integer')
 
     def get_internal_type(self):
-        return "PositiveIntegerField"
+        return 'PositiveIntegerField'
 
 
 class PositiveSmallIntegerField(PositiveIntegerRelDbTypeMixin, SmallIntegerField):
-    description = _("Positive small integer")
+    description = _('Positive small integer')
 
     def get_internal_type(self):
-        return "PositiveSmallIntegerField"
+        return 'PositiveSmallIntegerField'
 
 
 class SlugField(CharField):
     default_validators = [validators.validate_slug]
-    description = _("Slug (up to %(max_length)s)")
+    description = _('Slug (up to %(max_length)s)')
 
     def __init__(self, *args, max_length=50, db_index=True, allow_unicode=False, **kwargs):
         self.allow_unicode = allow_unicode
@@ -2315,7 +2376,7 @@ class SlugField(CharField):
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
-        if kwargs.get("max_length") == 50:
+        if kwargs.get('max_length') == 50:
             del kwargs['max_length']
         if self.db_index is False:
             kwargs['db_index'] = False
@@ -2326,18 +2387,18 @@ class SlugField(CharField):
         return name, path, args, kwargs
 
     def get_internal_type(self):
-        return "SlugField"
+        return 'SlugField'
 
 
-class TextField(Field):
-    description = _("Text")
+class TextField(Field[str]):
+    description = _('Text')
 
     def __init__(self, *args, **kwargs):
         self.trim = kwargs.pop('trim', True)
         super().__init__(*args, **kwargs)
 
     def get_internal_type(self):
-        return "TextField"
+        return 'TextField'
 
     def to_python(self, value):
         if isinstance(value, str) and self.trim:
@@ -2355,15 +2416,12 @@ class TextField(Field):
 class TimeField(DateTimeCheckMixin, Field):
     empty_strings_allowed = False
     default_error_messages = {
-        'invalid': _("'%(value)s' value has an invalid format. It must be in "
-                     "HH:MM[:ss[.uuuuuu]] format."),
-        'invalid_time': _("'%(value)s' value has the correct format "
-                          "(HH:MM[:ss[.uuuuuu]]) but it is an invalid time."),
+        'invalid': _("'%(value)s' value has an invalid format. It must be in HH:MM[:ss[.uuuuuu]] format."),
+        'invalid_time': _("'%(value)s' value has the correct format (HH:MM[:ss[.uuuuuu]]) but it is an invalid time."),
     }
-    description = _("Time")
+    description = _('Time')
 
-    def __init__(self, label=None, name=None, auto_now=False,
-                 auto_now_add=False, **kwargs):
+    def __init__(self, label=None, name=None, auto_now=False, auto_now_add=False, **kwargs):
         self.auto_now, self.auto_now_add = auto_now, auto_now_add
         if auto_now or auto_now_add:
             kwargs['editable'] = False
@@ -2403,9 +2461,9 @@ class TimeField(DateTimeCheckMixin, Field):
                 checks.Warning(
                     'Fixed default value provided.',
                     hint='It seems you set a fixed date / time / datetime '
-                         'value as default for this field. This may not be '
-                         'what you want. If you want to have the current date '
-                         'as default, use `orun.utils.timezone.now`',
+                    'value as default for this field. This may not be '
+                    'what you want. If you want to have the current date '
+                    'as default, use `orun.utils.timezone.now`',
                     obj=self,
                     id='fields.W161',
                 )
@@ -2416,16 +2474,16 @@ class TimeField(DateTimeCheckMixin, Field):
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
         if self.auto_now is not False:
-            kwargs["auto_now"] = self.auto_now
+            kwargs['auto_now'] = self.auto_now
         if self.auto_now_add is not False:
-            kwargs["auto_now_add"] = self.auto_now_add
+            kwargs['auto_now_add'] = self.auto_now_add
         if self.auto_now or self.auto_now_add:
             del kwargs['blank']
             del kwargs['editable']
         return name, path, args, kwargs
 
     def get_internal_type(self):
-        return "TimeField"
+        return 'TimeField'
 
     def to_python(self, value):
         if value is None:
@@ -2485,7 +2543,7 @@ class TimeField(DateTimeCheckMixin, Field):
 
 class URLField(CharField):
     default_validators = [validators.URLValidator()]
-    description = _("URL")
+    description = _('URL')
 
     def __init__(self, label=None, name=None, **kwargs):
         kwargs.setdefault('max_length', 200)
@@ -2493,13 +2551,13 @@ class URLField(CharField):
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
-        if kwargs.get("max_length") == 200:
+        if kwargs.get('max_length') == 200:
             del kwargs['max_length']
         return name, path, args, kwargs
 
 
 class BinaryField(Field):
-    description = _("Raw binary data")
+    description = _('Raw binary data')
     empty_values = [None, b'']
 
     def __init__(self, is_attachment=None, *args, **kwargs):
@@ -2510,7 +2568,7 @@ class BinaryField(Field):
             self.validators.append(validators.MaxLengthValidator(self.max_length))
 
     def get_internal_type(self):
-        return "BinaryField"
+        return 'BinaryField'
 
     def get_placeholder(self, value, compiler, connection):
         return connection.ops.binary_placeholder_sql(value)
@@ -2553,7 +2611,7 @@ class UUIDField(Field):
         super().__init__(label, **kwargs)
 
     def get_internal_type(self):
-        return "UUIDField"
+        return 'UUIDField'
 
     def get_db_prep_value(self, value, connection, prepared=False):
         if value is None:
@@ -2603,7 +2661,7 @@ SelectionField = ChoiceField
 
 class MultiChoiceField(ChoiceField):
     def get_internal_type(self):
-        return "MultiChoiceField"
+        return 'MultiChoiceField'
 
 
 class XmlField(TextField):
@@ -2630,9 +2688,19 @@ class PasswordField(CharField):
 
     def to_python(self, value):
         from orun.contrib.auth.hashers import is_password_usable, make_password
+
         if is_password_usable(value):
             return make_password(value)
         return value
+
+
+class ArrayField(Field[list]):
+    def __init__(self, typ: type, **kwargs):
+        self.data_type = typ
+        super().__init__(**kwargs)
+
+    def get_internal_type(self):
+        return f'ArrayField[{self.data_type.__name__}]'
 
 
 class FieldInfo(dict):

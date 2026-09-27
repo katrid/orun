@@ -1,4 +1,5 @@
 import collections
+import asyncio
 import logging
 import re
 import sys
@@ -24,6 +25,7 @@ from orun.template import Template
 from orun.test.signals import setting_changed, template_rendered
 from orun.urls import get_script_prefix, set_script_prefix
 from orun.utils.translation import deactivate
+from orun.events import Event
 
 try:
     import jinja2
@@ -32,13 +34,20 @@ except ImportError:
 
 
 __all__ = (
-    'Approximate', 'ContextList', 'isolate_lru_cache', 'get_runner',
-    'modify_settings', 'override_settings',
+    'Approximate',
+    'ContextList',
+    'isolate_lru_cache',
+    'get_runner',
+    'modify_settings',
+    'override_settings',
     'requires_tz_support',
-    'setup_test_environment', 'teardown_test_environment',
+    'setup_test_environment',
+    'teardown_test_environment',
 )
 
 TZ_SUPPORT = hasattr(time, 'tzset')
+
+test_db_created = Event('test_db_created')
 
 
 class Approximate:
@@ -58,6 +67,7 @@ class ContextList(list):
     A wrapper that provides direct key access to context items contained
     in a list of context objects.
     """
+
     def __getitem__(self, key):
         if isinstance(key, str):
             for subcontext in self:
@@ -109,7 +119,7 @@ def setup_test_environment(debug=None):
         # Executing this function twice would overwrite the saved values.
         raise RuntimeError(
             "setup_test_environment() was already called and can't be called "
-            "again without first calling teardown_test_environment()."
+            'again without first calling teardown_test_environment().'
         )
 
     if debug is None:
@@ -173,6 +183,7 @@ def setup_databases(verbosity, interactive, keepdb=False, debug_sql=False, paral
                     keepdb=keepdb,
                     serialize=connection.settings_dict.get('TEST', {}).get('SERIALIZE', True),
                 )
+
                 if parallel > 1:
                     for index in range(parallel):
                         connection.creation.clone_test_db(
@@ -186,12 +197,14 @@ def setup_databases(verbosity, interactive, keepdb=False, debug_sql=False, paral
 
     # Configure the test mirrors.
     for alias, mirror_alias in mirrored_aliases.items():
-        connections[alias].creation.set_as_test_mirror(
-            connections[mirror_alias].settings_dict)
+        connections[alias].creation.set_as_test_mirror(connections[mirror_alias].settings_dict)
 
     if debug_sql:
         for alias in connections:
             connections[alias].force_debug_cursor = True
+
+    # dispatch event
+    asyncio.run(test_db_created.dispatch())
 
     return old_names
 
@@ -214,8 +227,7 @@ def dependency_ordered(test_databases, dependencies):
             all_deps.update(dependencies.get(alias, []))
         if not all_deps.isdisjoint(aliases):
             raise ImproperlyConfigured(
-                "Circular dependency: databases %r depend on each other, "
-                "but are aliases." % aliases
+                'Circular dependency: databases %r depend on each other, but are aliases.' % aliases
             )
         dependencies_map[sig] = all_deps
 
@@ -233,7 +245,7 @@ def dependency_ordered(test_databases, dependencies):
                 deferred.append((signature, (db_name, aliases)))
 
         if not changed:
-            raise ImproperlyConfigured("Circular dependency in TEST[DEPENDENCIES]")
+            raise ImproperlyConfigured('Circular dependency in TEST[DEPENDENCIES]')
         test_databases = deferred
     return ordered_test_databases
 
@@ -269,8 +281,7 @@ def get_unique_databases_and_mirrors(aliases=None):
             # If we have two aliases with the same values for that tuple,
             # we only need to create the test database once.
             item = test_databases.setdefault(
-                connection.creation.test_db_signature(),
-                (connection.settings_dict['NAME'], set())
+                connection.creation.test_db_signature(), (connection.settings_dict['NAME'], set())
             )
             item[1].add(alias)
 
@@ -324,6 +335,7 @@ class TestContextDecorator:
     `kwarg_name`: keyword argument passing the return value of enable() if
                   used as a function decorator.
     """
+
     def __init__(self, attr_name=None, kwarg_name=None):
         self.attr_name = attr_name
         self.kwarg_name = kwarg_name
@@ -371,6 +383,7 @@ class TestContextDecorator:
                 if self.kwarg_name:
                     kwargs[self.kwarg_name] = context
                 return func(*args, **kwargs)
+
         return inner
 
     def __call__(self, decorated):
@@ -388,6 +401,7 @@ class override_settings(TestContextDecorator):
     with the ``with`` statement. In either event, entering/exiting are called
     before and after, respectively, the function/block is executed.
     """
+
     enable_exception = None
 
     def __init__(self, **kwargs):
@@ -412,7 +426,9 @@ class override_settings(TestContextDecorator):
             try:
                 setting_changed.send(
                     sender=settings._wrapped.__class__,
-                    setting=key, value=new_value, enter=True,
+                    setting=key,
+                    value=new_value,
+                    enter=True,
                 )
             except Exception as exc:
                 self.enable_exception = exc
@@ -428,7 +444,9 @@ class override_settings(TestContextDecorator):
             new_value = getattr(settings, key, None)
             responses_for_setting = setting_changed.send_robust(
                 sender=settings._wrapped.__class__,
-                setting=key, value=new_value, enter=False,
+                setting=key,
+                value=new_value,
+                enter=False,
             )
             responses.extend(responses_for_setting)
         if self.enable_exception is not None:
@@ -451,10 +469,9 @@ class override_settings(TestContextDecorator):
 
     def decorate_class(self, cls):
         from orun.test import SimpleTestCase
+
         if not issubclass(cls, SimpleTestCase):
-            raise ValueError(
-                "Only subclasses of Orun SimpleTestCase can be decorated "
-                "with override_settings")
+            raise ValueError('Only subclasses of Orun SimpleTestCase can be decorated with override_settings')
         self.save_options(cls)
         return cls
 
@@ -464,6 +481,7 @@ class modify_settings(override_settings):
     Like override_settings, but makes it possible to append, prepend, or remove
     items instead of redefining the entire list.
     """
+
     def __init__(self, *args, **kwargs):
         if args:
             # Hack used when instantiating from SimpleTestCase.setUpClass.
@@ -479,8 +497,7 @@ class modify_settings(override_settings):
             test_func._modified_settings = self.operations
         else:
             # Duplicate list to prevent subclasses from altering their parent.
-            test_func._modified_settings = list(
-                test_func._modified_settings) + self.operations
+            test_func._modified_settings = list(test_func._modified_settings) + self.operations
 
     def enable(self):
         self.options = {}
@@ -502,7 +519,7 @@ class modify_settings(override_settings):
                 elif action == 'remove':
                     value = [item for item in value if item not in items]
                 else:
-                    raise ValueError("Unsupported action: %s" % action)
+                    raise ValueError('Unsupported action: %s' % action)
             self.options[name] = value
         super().enable()
 
@@ -513,8 +530,10 @@ class override_system_checks(TestContextDecorator):
     Useful when you override `INSTALLED_APPS`, e.g. if you exclude `auth` app,
     you also need to exclude its system checks.
     """
+
     def __init__(self, new_checks, deployment_checks=None):
         from orun.core.checks.registry import registry
+
         self.registry = registry
         self.new_checks = new_checks
         self.deployment_checks = deployment_checks
@@ -550,12 +569,10 @@ def compare_xml(want, got):
         return _norm_whitespace_re.sub(' ', v)
 
     def child_text(element):
-        return ''.join(c.data for c in element.childNodes
-                       if c.nodeType == Node.TEXT_NODE)
+        return ''.join(c.data for c in element.childNodes if c.nodeType == Node.TEXT_NODE)
 
     def children(element):
-        return [c for c in element.childNodes
-                if c.nodeType == Node.ELEMENT_NODE]
+        return [c for c in element.childNodes if c.nodeType == Node.ELEMENT_NODE]
 
     def norm_child_text(element):
         return norm_whitespace(child_text(element))
@@ -606,6 +623,7 @@ class CaptureQueriesContext:
     """
     Context manager that captures queries executed by the specified connection.
     """
+
     def __init__(self, connection):
         self.connection = connection
 
@@ -620,7 +638,7 @@ class CaptureQueriesContext:
 
     @property
     def captured_queries(self):
-        return self.connection.queries[self.initial_queries:self.final_queries]
+        return self.connection.queries[self.initial_queries : self.final_queries]
 
     def __enter__(self):
         self.force_debug_cursor = self.connection.force_debug_cursor
@@ -673,6 +691,7 @@ def patch_logger(logger_name, log_level, log_kwargs=False):
     def replacement(msg, *args, **kwargs):
         call = msg % args
         calls.append((call, kwargs) if log_kwargs else call)
+
     logger = logging.getLogger(logger_name)
     orig = getattr(logger, log_level)
     setattr(logger, log_level, replacement)
@@ -689,8 +708,8 @@ def patch_logger(logger_name, log_level, log_kwargs=False):
 
 requires_tz_support = skipUnless(
     TZ_SUPPORT,
-    "This test relies on the ability to run a program in an arbitrary "
-    "time zone, but your operating system isn't able to do that."
+    'This test relies on the ability to run a program in an arbitrary '
+    "time zone, but your operating system isn't able to do that.",
 )
 
 
@@ -733,34 +752,34 @@ def captured_output(stream_name):
 def captured_stdout():
     """Capture the output of sys.stdout:
 
-       with captured_stdout() as stdout:
-           print("hello")
-       self.assertEqual(stdout.getvalue(), "hello\n")
+    with captured_stdout() as stdout:
+        print("hello")
+    self.assertEqual(stdout.getvalue(), "hello\n")
     """
-    return captured_output("stdout")
+    return captured_output('stdout')
 
 
 def captured_stderr():
     """Capture the output of sys.stderr:
 
-       with captured_stderr() as stderr:
-           print("hello", file=sys.stderr)
-       self.assertEqual(stderr.getvalue(), "hello\n")
+    with captured_stderr() as stderr:
+        print("hello", file=sys.stderr)
+    self.assertEqual(stderr.getvalue(), "hello\n")
     """
-    return captured_output("stderr")
+    return captured_output('stderr')
 
 
 def captured_stdin():
     """Capture the input to sys.stdin:
 
-       with captured_stdin() as stdin:
-           stdin.write('hello\n')
-           stdin.seek(0)
-           # call test code that consumes from sys.stdin
-           captured = input()
-       self.assertEqual(captured, "hello")
+    with captured_stdin() as stdin:
+        stdin.write('hello\n')
+        stdin.seek(0)
+        # call test code that consumes from sys.stdin
+        captured = input()
+    self.assertEqual(captured, "hello")
     """
-    return captured_output("stdin")
+    return captured_output('stdin')
 
 
 @contextmanager
@@ -785,20 +804,26 @@ def require_jinja2(test_func):
     Decorator to enable a Jinja2 template engine in addition to the regular
     Orun template engine for a test or skip it if Jinja2 isn't available.
     """
-    test_func = skipIf(jinja2 is None, "this test requires jinja2")(test_func)
-    test_func = override_settings(TEMPLATES=[{
-        'BACKEND': 'orun.template.backends.django.DjangoTemplates',
-        'APP_DIRS': True,
-    }, {
-        'BACKEND': 'orun.template.backends.jinja2.Jinja2',
-        'APP_DIRS': True,
-        'OPTIONS': {'keep_trailing_newline': True},
-    }])(test_func)
+    test_func = skipIf(jinja2 is None, 'this test requires jinja2')(test_func)
+    test_func = override_settings(
+        TEMPLATES=[
+            {
+                'BACKEND': 'orun.template.backends.django.DjangoTemplates',
+                'APP_DIRS': True,
+            },
+            {
+                'BACKEND': 'orun.template.backends.jinja2.Jinja2',
+                'APP_DIRS': True,
+                'OPTIONS': {'keep_trailing_newline': True},
+            },
+        ]
+    )(test_func)
     return test_func
 
 
 class override_script_prefix(TestContextDecorator):
     """Decorator or context manager to temporary override the script prefix."""
+
     def __init__(self, prefix):
         self.prefix = prefix
         super().__init__()
@@ -816,6 +841,7 @@ class LoggingCaptureMixin:
     Capture the output from the 'orun' logger and store it on the class's
     logger_output attribute.
     """
+
     def setUp(self):
         self.logger = logging.getLogger('orun')
         self.old_stream = self.logger.handlers[0].stream
@@ -842,6 +868,7 @@ class isolate_apps(TestContextDecorator):
     `kwarg_name`: keyword argument passing the isolated registry if used as a
                   function decorator.
     """
+
     def __init__(self, *installed_apps, **kwargs):
         self.installed_apps = installed_apps
         super().__init__(**kwargs)
@@ -858,12 +885,14 @@ class isolate_apps(TestContextDecorator):
 
 def tag(*tags):
     """Decorator to add tags to a test class or method."""
+
     def decorator(obj):
         if hasattr(obj, 'tags'):
             obj.tags = obj.tags.union(tags)
         else:
             setattr(obj, 'tags', set(tags))
         return obj
+
     return decorator
 
 

@@ -1,37 +1,43 @@
 import json
 import asyncio
 from collections import defaultdict
+from importlib import import_module
 
 from starlette.endpoints import WebSocketEndpoint, WebSocket
+
+from orun.conf import settings
+from orun.contrib.auth import SESSION_KEY
 
 rooms: dict = defaultdict(set)
 
 
 class WebSocketHandler(WebSocketEndpoint):
     event_loop = None
-    encoding = "text"
+    encoding = 'text'
 
     async def on_connect(self, websocket: WebSocket):
         await websocket.accept()
-        # TODO consume user_id from session or token
-        user_id = websocket.query_params.get("user_id")
-        websocket.scope["user_id"] = user_id
+        # decode user_id
+        engine = import_module(settings.SESSION_ENGINE)
+        store = engine.SessionStore(websocket.cookies[settings.SESSION_COOKIE_NAME])
+        user_id = store.get(SESSION_KEY)
         # auto register to default room
-        rooms[f"user:{user_id}"].add(websocket)
+        websocket.scope['user_id'] = user_id
+        rooms[f'user:{user_id}'].add(websocket)
 
     async def on_receive(self, websocket, data):
         msg = json.loads(data)
-        msg_type = msg.get("type")
-        if msg_type == "join":
-            room = msg.get("room")
+        msg_type = msg.get('type')
+        if msg_type == 'join':
+            room = msg.get('room')
             rooms[room].add(websocket)
-            await websocket.send_text(json.dumps({"type": "join", "room": room, "status": "ok"}))
-        elif msg_type == "message":
+            await websocket.send_text(json.dumps({'type': 'join', 'room': room, 'status': 'ok'}))
+        elif msg_type == 'message':
             pass
-        elif msg_type == "leave":
-            room = msg.get("room")
+        elif msg_type == 'leave':
+            room = msg.get('room')
             rooms[room].discard(websocket)
-            await websocket.send_text(json.dumps({"type": "leave", "room": room, "status": "ok"}))
+            await websocket.send_text(json.dumps({'type': 'leave', 'room': room, 'status': 'ok'}))
 
     async def on_disconnect(self, websocket, close_code):
         for room in rooms:

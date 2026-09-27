@@ -166,7 +166,8 @@ class ForeignObjectRel(FieldCacheMixin):
     def get_path_info(self, filtered_relation=None):
         return self.field.get_reverse_path_info(filtered_relation)
 
-    def get_cache_name(self):
+    @cached_property
+    def cache_name(self):
         """
         Return the name of the cache key to use for storing an instance of the
         forward model on the reverse model.
@@ -327,7 +328,8 @@ class OneToManyRel(ForeignObjectRel):
     def __set__(self, instance, value):
         self.set_cached_value(instance, value)
 
-    def get_cache_name(self):
+    @cached_property
+    def cache_name(self):
         return self.field.name
 
 

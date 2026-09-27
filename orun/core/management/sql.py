@@ -1,8 +1,10 @@
 import sys
+import asyncio
 from itertools import groupby
 
 from orun.apps import apps
 from orun.db import models
+import orun.db.models.events
 
 
 def sql_flush(style, connection, reset_sequences=True, allow_cascade=False):
@@ -63,3 +65,5 @@ def emit_post_migrate_signal(verbosity, interactive, db, created_models, **kwarg
         using=db,
         **kwargs
     )
+
+    asyncio.run(orun.db.models.events.post_migrate.dispatch(created_models))

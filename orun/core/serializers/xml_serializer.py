@@ -83,7 +83,7 @@ class Deserializer(base.Deserializer):
 
         obj_name = obj.pop('id')
         obj_id = None
-        Model = apps[obj['model']]
+        Model = apps.models[obj['model']]
         values = obj['fields']
 
         # # ui.view special case
@@ -101,7 +101,7 @@ class Deserializer(base.Deserializer):
             if no_update != obj_id.can_update:
                 obj_id.can_update = no_update
                 obj_id.save(using=self.database)
-            instance = obj_id.content_object
+            instance = Model.objects.filter(pk=obj_id.object_id).first()
             if instance is None:
                 return
                 answer = input('The object "%s" is defined but not found on module "%s". Do you want to recreate it? [Y/n]' % (obj_name, obj_id.model_name))
@@ -149,7 +149,8 @@ class Deserializer(base.Deserializer):
         icon = obj.attrib.get('icon')
         if action_id:
             try:
-                action = Object.objects.get_object(action_id).content_object
+                action_obj = Object.objects.get_object(action_id)
+                apps.models[action_obj.model_id]
                 action_id = action.pk
             except ObjectDoesNotExist:
                 raise Exception('The object id "%s" does not exist' % action_id)

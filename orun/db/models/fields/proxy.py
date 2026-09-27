@@ -11,7 +11,8 @@ class ProxyDescriptor(FieldCacheMixin):
     def __init__(self, field):
         self.field = field
 
-    def get_cache_name(self):
+    @cached_property
+    def cache_name(self):
         return '_' + self.field.name
 
     def __get__(self, instance, owner):

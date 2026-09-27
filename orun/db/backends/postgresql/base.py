@@ -96,6 +96,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'UUIDField': 'uuid',
         'JSONField': 'jsonb',
         'MultiChoiceField': 'text[]',
+        'ArrayField[str]': 'text[]',
+        'ArrayField[int]': 'bigint[]',
         # New datatype style
         'varchar': 'varchar',
         'char': 'char',

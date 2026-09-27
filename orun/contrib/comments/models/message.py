@@ -34,7 +34,7 @@ class Message(models.Model):
     url = models.TextField()
     message_type = models.SelectionField(
         (
-            ('email', _('Email')),
+            ('message', _('Message')),
             ('comment', _('Comment')),
             ('notification', _('Notification')),
         ),

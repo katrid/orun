@@ -14,8 +14,13 @@ from orun.core import signals
 from orun.core.exceptions import RequestAborted, RequestDataTooBig
 from orun.core.handlers import base
 from orun.http import (
-    FileResponse, HttpRequest, HttpResponse, HttpResponseBadRequest,
-    HttpResponseServerError, QueryDict, parse_cookie,
+    FileResponse,
+    HttpRequest,
+    HttpResponse,
+    HttpResponseBadRequest,
+    HttpResponseServerError,
+    QueryDict,
+    parse_cookie,
 )
 from orun.urls import set_script_prefix
 from orun.utils.functional import cached_property
@@ -29,6 +34,7 @@ class ASGIRequest(HttpRequest):
     Custom request subclass that decodes from an ASGI-standard request dict
     and wraps request body handling.
     """
+
     # Number of seconds until a Request gives up on trying to read a request
     # body and aborts.
     body_receive_timeout = 60
@@ -41,7 +47,7 @@ class ASGIRequest(HttpRequest):
         self.script_name = self.scope.get('root_path', '')
         if self.script_name and scope['path'].startswith(self.script_name):
             # TODO: Better is-prefix checking, slash handling?
-            self.path_info = scope['path'][len(self.script_name):]
+            self.path_info = scope['path'][len(self.script_name) :]
         else:
             self.path_info = scope['path']
         # The orun path is different from ASGI scope path args, it should
@@ -130,9 +136,10 @@ class ASGIRequest(HttpRequest):
 
 class ASGIHandler(base.BaseHandler):
     """Handler for ASGI requests."""
+
     request_class = ASGIRequest
     # Size to chunk response bodies into for multiple response messages.
-    chunk_size = 2 ** 16
+    chunk_size = 2**16
 
     def __init__(self):
         super().__init__()
@@ -145,10 +152,7 @@ class ASGIHandler(base.BaseHandler):
         # Serve only HTTP connections.
         # FIXME: Allow to override this.
         if scope['type'] != 'http':
-            raise ValueError(
-                'orun can only handle ASGI/HTTP connections, not %s.'
-                % scope['type']
-            )
+            raise ValueError('orun can only handle ASGI/HTTP connections, not %s.' % scope['type'])
 
         async with ThreadSensitiveContext():
             await self.handle(scope, receive, send)
@@ -169,6 +173,7 @@ class ASGIHandler(base.BaseHandler):
         request, error_response = self.create_request(scope, body_file)
 
         from orun.apps import apps
+
         with apps.env(request=request):
             if request is None:
                 await self.send_response(error_response, send)
@@ -242,39 +247,43 @@ class ASGIHandler(base.BaseHandler):
                 value = value.encode('latin1')
             response_headers.append((bytes(header), bytes(value)))
         for c in response.cookies.values():
-            response_headers.append(
-                (b'Set-Cookie', c.output(header='').encode('ascii').strip())
-            )
+            response_headers.append((b'Set-Cookie', c.output(header='').encode('ascii').strip()))
         # Initial response message.
-        await send({
-            'type': 'http.response.start',
-            'status': response.status_code,
-            'headers': response_headers,
-        })
+        await send(
+            {
+                'type': 'http.response.start',
+                'status': response.status_code,
+                'headers': response_headers,
+            }
+        )
         # Streaming responses need to be pinned to their iterator.
         if response.streaming:
             # Access `__iter__` and not `streaming_content` directly in case
             # it has been overridden in a subclass.
             for part in response:
                 for chunk, _ in self.chunk_bytes(part):
-                    await send({
-                        'type': 'http.response.body',
-                        'body': chunk,
-                        # Ignore "more" as there may be more parts; instead,
-                        # use an empty final closing message with False.
-                        'more_body': True,
-                    })
+                    await send(
+                        {
+                            'type': 'http.response.body',
+                            'body': chunk,
+                            # Ignore "more" as there may be more parts; instead,
+                            # use an empty final closing message with False.
+                            'more_body': True,
+                        }
+                    )
             # Final closing message.
             await send({'type': 'http.response.body'})
         # Other responses just need chunking.
         else:
             # Yield chunks of response.
             for chunk, last in self.chunk_bytes(response.content):
-                await send({
-                    'type': 'http.response.body',
-                    'body': chunk,
-                    'more_body': not last,
-                })
+                await send(
+                    {
+                        'type': 'http.response.body',
+                        'body': chunk,
+                        'more_body': not last,
+                    }
+                )
         await sync_to_async(response.close, thread_sensitive=True)()
 
     @classmethod
@@ -289,7 +298,7 @@ class ASGIHandler(base.BaseHandler):
             return
         while position < len(data):
             yield (
-                data[position:position + cls.chunk_size],
+                data[position : position + cls.chunk_size],
                 (position + cls.chunk_size) >= len(data),
             )
             position += cls.chunk_size
@@ -311,6 +320,7 @@ async def _lifespan(app: Starlette):
 
 
 from orun.apps import apps
+
 apps_routes = []
 for app in apps.addons.values():
     if app.routes:
@@ -322,5 +332,5 @@ asgi_handler = Starlette(
         *apps_routes,
         Mount('/', app=ASGIHandler()),
     ],
-    lifespan=_lifespan
+    lifespan=_lifespan,
 )

@@ -9855,6 +9855,13 @@ ${Katrid.i18n.gettext('Delete')}
                             menu.show(event.clientX, event.clientY);
                         }
                     };
+                    this.element.querySelector('.form-sheet')?.addEventListener('contextmenu', (evt) => {
+                        evt.preventDefault();
+                        let menu = new Katrid.Forms.ContextMenu();
+                        menu.add('Diagrama de Relações', () => window.open('/web/erp.core/rel-mapping-diagram?model=' + this.model.name + '&object_id=' + this.record.id));
+                        menu.show(evt.pageX, evt.pageY);
+                    });
+                    this.element.addEventListener('contextmenu', onCtxMenu);
                     this.element.querySelectorAll('section').forEach((section) => {
                         section.addEventListener('contextmenu', onCtxMenu);
                     });

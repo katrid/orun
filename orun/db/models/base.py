@@ -117,6 +117,12 @@ class ModelBase(type):
                 contributable_attrs[obj_name] = obj
             else:
                 new_attrs[obj_name] = obj
+        # new_instruments = type('_Instruments', (), {'registry': {}})
+        # if parents:
+        #     for p in parents:
+        #         new_instruments.registry.update(new_instruments.registry)
+        # kwargs['_Instruments'] = new_instruments
+
         new_class = super_new(cls, name, bases, new_attrs, **kwargs)
 
         abstract = getattr(attr_meta, 'abstract', False)
@@ -430,7 +436,16 @@ class ModelState:
         self.loading = loading
 
 
-class Model(metaclass=ModelBase):
+class RecordContract:
+    class _Instruments:
+        """Internal instruments"""
+        registry: dict[str, type] = {}
+
+    class Rules:
+        pass
+
+
+class Model(RecordContract, metaclass=ModelBase):
     _env = apps.env
     objects: Manager[Self]
     _meta: Options
@@ -687,6 +702,7 @@ class Model(metaclass=ModelBase):
                 # This field wasn't refreshed - skip ahead.
                 continue
             setattr(self, field.attname, getattr(db_instance, field.attname))
+        for field in self._meta.fields:
             # Clear cached foreign keys.
             if field.is_relation and field.is_cached(self):
                 field.delete_cached_value(self)

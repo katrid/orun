@@ -70,6 +70,6 @@ if __name__ == "__main__":
     )
 
     options = parser.parse_args()
-    os.environ.setdefault('ORUN_SETTINGS_MODULE', options.settings or 'test_sqlite')
+    os.environ.setdefault('ORUN_SETTINGS_MODULE', options.settings or 'test_duckdb')
 
     run_tests(options)

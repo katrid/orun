@@ -19,9 +19,7 @@ def setup(set_prefix=True):
 
     configure_logging(settings.LOGGING_CONFIG, settings.LOGGING)
     if set_prefix:
-        set_script_prefix(
-            '/' if settings.FORCE_SCRIPT_NAME is None else settings.FORCE_SCRIPT_NAME
-        )
+        set_script_prefix('/' if settings.FORCE_SCRIPT_NAME is None else settings.FORCE_SCRIPT_NAME)
     apps.populate(settings.INSTALLED_APPS)
 
     if settings.START_TASKS:

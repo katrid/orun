@@ -3,6 +3,7 @@ from orun.db import models, DEFAULT_DB_ALIAS
 from orun.utils.translation import gettext_lazy as _
 
 from orun.contrib.contenttypes.fields import GenericForeignKey
+# from orun.db.models.fields.generic import GenericForeignKey
 from .models import ContentType
 
 
@@ -31,7 +32,7 @@ class Object(models.Model):
     model = models.ForeignKey(ContentType, null=False)
     model_name = models.CharField(null=False)
     object_id = models.BigIntegerField()
-    content_object = GenericForeignKey()
+    content_object = GenericForeignKey('model_id')
     schema = models.CharField(null=False)
     can_update = models.BooleanField(default=True)
 
@@ -91,7 +92,8 @@ class Registrable:
             if cls.can_update != obj_id.can_update:
                 obj_id.can_update = cls.can_update
                 obj_id.save(using=using)
-            instance = obj_id.content_object
+            ct = ContentType.objects.get(id=obj_id.model_id)
+            instance = apps.models[ct.name].objects.get(pk=obj_id.object_id)
             if instance is None:
                 answer = input('The object "%s" is defined but not found on module "%s". Do you want to recreate it? [Y/n]' % (obj_name, obj_id.model_name))
                 if answer == 'y' or not answer:

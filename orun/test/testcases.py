@@ -974,9 +974,11 @@ class TransactionTestCase(SimpleTestCase):
                         for sql in sql_list:
                             cursor.execute(sql)
 
-    def _fixture_setup(self):
-        if self.fixtures:
-            for schema, fixtures in self.fixtures.items():
+    @classmethod
+    def _fixture_setup(cls):
+        return
+        if cls.fixtures:
+            for schema, fixtures in cls.fixtures.items():
                 call_command('loaddata', schema, *fixtures, **{'verbosity': 0, 'database': DEFAULT_DB_ALIAS})
         return
         for db_name in self._databases_names(include_mirrors=False):
@@ -1232,15 +1234,16 @@ class TestCase(TransactionTestCase):
             return False
         return super()._should_reload_connections()
 
-    def _fixture_setup(self):
-        if not self._databases_support_transactions():
+    @classmethod
+    def _fixture_setup(cls):
+        if not cls._databases_support_transactions():
             # If the backend does not support transactions, we should reload
             # class data before each test
-            self.setUpTestData()
+            cls.setUpTestData()
             return super()._fixture_setup()
 
-        assert not self.reset_sequences, 'reset_sequences cannot be used on TestCase instances'
-        self.atomics = self._enter_atomics()
+        assert not cls.reset_sequences, 'reset_sequences cannot be used on TestCase instances'
+        cls.atomics = cls._enter_atomics()
 
     def _fixture_teardown(self):
         if not self._databases_support_transactions():
@@ -1518,8 +1521,14 @@ class LiveServerTestCase(TransactionTestCase):
         return connections_override
 
     @classmethod
+    def setUpTestData(cls):
+        """Load initial data for the TestCase."""
+        pass
+
+    @classmethod
     def setUpClass(cls):
         super().setUpClass()
+
         cls._live_server_modified_settings = modify_settings(
             ALLOWED_HOSTS={'append': cls.allowed_host},
         )
@@ -1541,6 +1550,12 @@ class LiveServerTestCase(TransactionTestCase):
             # case of errors.
             cls._tearDownClassInternal()
             raise cls.server_thread.error
+
+        with transaction.atomic(DEFAULT_DB_ALIAS):
+            if cls.fixtures:
+                for schema, fixtures in cls.fixtures.items():
+                    call_command('loaddata', schema, *fixtures, **{'verbosity': 0, 'database': DEFAULT_DB_ALIAS})
+            cls.setUpTestData()
 
     @classmethod
     def _create_server_thread(cls, connections_override):
@@ -1565,6 +1580,10 @@ class LiveServerTestCase(TransactionTestCase):
     @classmethod
     def tearDownClass(cls):
         cls._tearDownClassInternal()
+
+    def _post_teardown(self):
+        """Perform post-test things."""
+        pass
 
 
 class SerializeMixin:

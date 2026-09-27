@@ -5,6 +5,7 @@ Factored out from orun.db.models.query to avoid making the main module very
 large and/or so that they can be used by other modules without getting into
 circular import difficulties.
 """
+from typing import TYPE_CHECKING
 import copy
 import functools
 import inspect
@@ -14,6 +15,9 @@ from orun.core.exceptions import FieldError
 from orun.db.models.constants import LOOKUP_SEP
 from orun.db.models.fields.mixins import FieldCacheMixin
 from orun.utils import tree
+
+if TYPE_CHECKING:
+    from orun.db.models.fields import Field
 
 # PathInfo is used when converting lookups (fk__somecol). The contents
 # describe the relation in Model terms (model Options and Fields for both
@@ -179,9 +183,9 @@ class DeferredAttribute(FieldComparator):
     object the first time, the query is executed.
     """
     def __init__(self, field):
-        self.field = field
+        self.field: Field = field
 
-    def __get__(self, instance, cls=None):
+    def __get__(self, instance, owner):
         """
         Retrieve and caches the value from the datastore on the first lookup.
         Return the cached value.
@@ -224,7 +228,7 @@ class PropertyDescriptor(FieldCacheMixin):
         self.getter = getter
         self.setter = setter
 
-    def get_cache_name(self):
+    def cache_name(self):
         return '_' + self.field.name
 
     def __get__(self, instance, owner):
@@ -252,6 +256,7 @@ class PropertyDescriptor(FieldCacheMixin):
 
 
 class HybridDescriptor(PropertyDescriptor):
+    """Not implemented yet"""
     pass
 
 

@@ -3,7 +3,7 @@ from orun.db import models
 from orun.utils.translation import gettext_lazy as _, gettext
 from orun.utils.module_loading import import_string
 from orun.http import HttpRequest
-from core.config import get_user_profile, set_user_profile
+from erp.core.config import get_user_profile, set_user_profile
 from .action import Action
 
 
