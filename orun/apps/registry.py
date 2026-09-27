@@ -112,12 +112,13 @@ class Registry:
 
             self.models_ready = True
 
+            self.ready = True
+
             # Phase 4: run ready() methods of app configs.
             for app_config in self.app_configs.values():
                 app_config.import_views()
                 app_config.ready()
 
-            self.ready = True
             self.ready_event.set()
 
         self.template_env = self.create_template_env()
