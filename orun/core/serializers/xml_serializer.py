@@ -149,8 +149,9 @@ class Deserializer(base.Deserializer):
         icon = obj.attrib.get('icon')
         if action_id:
             try:
-                action_obj = Object.objects.get_object(action_id)
-                apps.models[action_obj.model_id]
+                obj_ = Object.objects.get_object(action_id)
+                ct = ContentType.objects.get(pk=obj_.model_id)
+                action = apps.models[ct.name].objects.get(pk=obj_.object_id)
                 action_id = action.pk
             except ObjectDoesNotExist:
                 raise Exception('The object id "%s" does not exist' % action_id)
