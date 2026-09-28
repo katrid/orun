@@ -51,4 +51,7 @@ class ContentObject(models.Model):
 
 
 def refresh_model_cache():
-    ContentModel.model_ids = {model[0]: model[1] for model in ContentModel.objects.only('name', 'id').values_list('name', 'id')}
+    try:
+        ContentModel.model_ids = {model[0]: model[1] for model in ContentModel.objects.only('name', 'id').values_list('name', 'id')}
+    except:
+        ContentModel.model_ids = {}
