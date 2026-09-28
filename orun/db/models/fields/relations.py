@@ -1,6 +1,7 @@
 from orun.db.models.base import Model, ModelBase
 from orun.db.models.fields import Field
 
+
 class Relation:
     model: type[Model] | None
     field: Field
