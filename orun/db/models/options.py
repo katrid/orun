@@ -428,6 +428,9 @@ class Options:
         if hasattr(model, '_meta'):
             model._meta.__class__.overridden = True
 
+        for obj in model.__model_instruments__.values():
+            obj(model)
+
     def add_manager(self, manager):
         self.local_managers.append(manager)
         self._expire_cache()

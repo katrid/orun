@@ -68,14 +68,15 @@ def subclass_exception(name, bases, module, attached_to):
 
 def _has_contribute_to_class(value: Any):
     # Only call contribute_to_class() if it's bound.
-    return hasattr(value, 'contribute_to_class') and (not inspect.isclass(value) or isinstance(value.__dict__['contribute_to_class'], classmethod))
+    return hasattr(value, 'contribute_to_class')
 
 
 class ModelBase(type):
     """Metaclass for all models."""
-    Meta: Options = None
+    Meta: Options | None = None
     _meta: Options
     __model__ = None
+    __model_instruments__: dict[str, Any]
 
     def __new__(cls, name, bases, attrs, helper=False, **kwargs):
         super_new = super().__new__
@@ -85,6 +86,19 @@ class ModelBase(type):
 
         # Create the class.
         attr_meta = attrs.pop('Meta', None)
+
+        parents = [b for b in bases if isinstance(b, ModelBase)]
+        if not parents:
+            return super_new(cls, name, bases, attrs)
+
+        # create instruments
+        new_instruments = {}
+        if parents:
+            for p in parents:
+                new_instruments.update(p.__model_instruments__)
+        for k in new_instruments:
+            new_instruments[k] = attrs.get(k, new_instruments[k])
+        attrs['__model_instruments__'] = new_instruments
 
         if helper:
             base = bases[0]
@@ -98,9 +112,6 @@ class ModelBase(type):
 
         # Also ensure initialization is only performed for subclasses of Model
         # (excluding Model class itself).
-        parents = [b for b in bases if isinstance(b, ModelBase)]
-        if not parents:
-            return super_new(cls, name, bases, attrs)
 
         module = attrs.pop('__module__')
         new_attrs = {'__module__': module}
@@ -117,11 +128,6 @@ class ModelBase(type):
                 contributable_attrs[obj_name] = obj
             else:
                 new_attrs[obj_name] = obj
-        # new_instruments = type('_Instruments', (), {'registry': {}})
-        # if parents:
-        #     for p in parents:
-        #         new_instruments.registry.update(new_instruments.registry)
-        # kwargs['_Instruments'] = new_instruments
 
         new_class = super_new(cls, name, bases, new_attrs, **kwargs)
 
@@ -185,6 +191,9 @@ class ModelBase(type):
         # to the class.
         for obj_name, obj in contributable_attrs.items():
             new_class.add_to_class(obj_name, obj)
+
+        for obj in new_instruments.values():
+            obj(new_class)
 
         field_names = {f.name for f in new_class._meta.fields}
 
@@ -437,12 +446,38 @@ class ModelState:
 
 
 class RecordContract:
-    class _Instruments:
-        """Internal instruments"""
-        registry: dict[str, type] = {}
 
     class Rules:
-        pass
+        def __init__(self, model):
+            self.model = model
+            model.rules = self
+
+        @classmethod
+        def contribute_to_class(cls, model: ModelBase, name: str):
+            model.Rules = cls
+            model.__model_instruments__[name] = cls
+
+        def before_insert(self, record: 'Model', new: dict):
+            pass
+
+        def after_insert(self, record: 'Model', new: dict):
+            pass
+
+        def before_update(self, record: 'Model', old: dict, new: dict):
+            pass
+
+        def after_update(self, record: 'Model', old: dict, new: dict):
+            pass
+
+        def before_delete(self, record: 'Model'):
+            pass
+
+        def after_delete(self, record: 'Model'):
+            pass
+
+    rules: Rules
+
+    __model_instruments__ = {'Rules': Rules}
 
 
 class Model(RecordContract, metaclass=ModelBase):
@@ -2039,9 +2074,15 @@ class Model(RecordContract, metaclass=ModelBase):
         pass
 
     def update(self, **values):
+        # todo add old values
+        self.rules.before_update(self, {}, values)
+
         for k, v in values.items():
             setattr(self, k, v)
+
+        # todo remove current before_update (keep only rules.before_update)
         self.before_update(None, values)
+
         self.objects.filter(pk=self.pk).update(**values)
         self.after_update(None, values)
         self._state.update_fields = {}
