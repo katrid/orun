@@ -127,7 +127,8 @@ class Registrable:
     def get_id(cls):
         """Return id from database"""
         obj = apps['ir.object'].get_by_natural_key(cls.get_qualname())
-        return obj.content_object.pk
+        ct = ContentType.objects.get(pk=obj.model_id)
+        return ct.objects.get(pk=obj.object_id).pk
 
     @classmethod
     def get_qualname(cls):
