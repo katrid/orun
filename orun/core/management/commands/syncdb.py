@@ -9,7 +9,7 @@ from orun.core.management.base import (
     BaseCommand, CommandError, no_translations,
 )
 from orun.core.management.sql import (
-    emit_post_migrate_signal, emit_pre_migrate_signal,
+    emit_post_migrate_signal, emit_pre_migrate_signal, register_models,
 )
 from orun.db import DEFAULT_DB_ALIAS, connections, router
 from orun.utils.module_loading import module_has_submodule
@@ -58,6 +58,9 @@ class Command(BaseCommand):
                  'that the current database schema matches your initial migration before using this '
                  'flag. Orun will only check for an existing table name.',
         )
+        parser.add_argument(
+            '--register-models', action='store_true',
+        )
 
     def _run_checks(self, **kwargs):
         issues = run_checks(tags=[Tags.database])
@@ -70,6 +73,10 @@ class Command(BaseCommand):
         self.interactive = options['interactive']
         self.no_ddl = options['noddl']
         self.check_only = options['check']
+
+        reg_models = options['register_models']
+        if reg_models:
+            return register_models(list(apps.models.values()))
 
         # Import the 'management' module within each installed app, to register
         # dispatcher events.

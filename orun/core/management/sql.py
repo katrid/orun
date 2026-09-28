@@ -29,12 +29,7 @@ def emit_pre_migrate_signal(verbosity, interactive, db, **kwargs):
             stdout = kwargs.get('stdout', sys.stdout)
             stdout.write('Running pre-migrate handlers for application %s' % app_config.label)
         models.signals.pre_migrate.send(
-            sender=app_config,
-            app_config=app_config,
-            verbosity=verbosity,
-            interactive=interactive,
-            using=db,
-            **kwargs
+            sender=app_config, app_config=app_config, verbosity=verbosity, interactive=interactive, using=db, **kwargs
         )
 
 
@@ -55,15 +50,12 @@ def emit_post_migrate_signal(verbosity, interactive, db, created_models, **kwarg
             interactive=interactive,
             using=db,
             app_models=app_models,
-            **kwargs
+            **kwargs,
         )
 
-    models.signals.post_sync.send(
-        sender=None,
-        verbosity=verbosity,
-        interactive=interactive,
-        using=db,
-        **kwargs
-    )
+    models.signals.post_sync.send(sender=None, verbosity=verbosity, interactive=interactive, using=db, **kwargs)
+    register_models(created_models)
 
+
+def register_models(created_models):
     asyncio.run(orun.db.models.events.post_migrate.dispatch(created_models))
