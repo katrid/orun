@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from collections import defaultdict
 
+from orun.apps import apps
 from orun.db.backends.ddl_references import (
     Columns, Expressions, ForeignKeyName, IndexName, Statement, Table,
 )
@@ -765,8 +766,10 @@ class BaseDatabaseSchemaEditor:
                 # yield self.create_index, (new_table, ix)
 
     def collect_changes(self):
+        _tables = {t.name: t for t in self._cached_tables}
         for k, table in self.new_metadata.tables.items():
-            if table.model not in self.old_metadata.tables:
+            table_name = apps.models[table.model]._meta.qualname
+            if table.model not in self.old_metadata.tables or table_name not in _tables:
                 # new table
                 yield self.create_table, (table,)
                 # create indexes
