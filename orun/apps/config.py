@@ -4,14 +4,12 @@ import os
 from importlib import import_module
 import glob
 
-from starlette.routing import Route, Mount
-
 from orun.core.signals import Signal
 from orun.conf import settings
 from orun.utils.module_loading import import_string, module_has_submodule
 from orun.core.exceptions import ImproperlyConfigured
 
-from  .contributes import Contributes
+from .contributes import Contributes
 
 
 APPS_MODULE_NAME = 'apps'
@@ -90,11 +88,7 @@ class AppConfig:
                 app_configs = [
                     (name, candidate)
                     for name, candidate in inspect.getmembers(mod, inspect.isclass)
-                    if (
-                            issubclass(candidate, cls) and
-                            candidate is not cls and
-                            getattr(candidate, 'default', True)
-                    )
+                    if (issubclass(candidate, cls) and candidate is not cls and getattr(candidate, 'default', True))
                 ]
                 if len(app_configs) == 1:
                     app_config_class = app_configs[0][1]
@@ -103,15 +97,12 @@ class AppConfig:
                     # Check if there's exactly one AppConfig subclass,
                     # among those that explicitly define default = True.
                     app_configs = [
-                        (name, candidate)
-                        for name, candidate in app_configs
-                        if getattr(candidate, 'default', False)
+                        (name, candidate) for name, candidate in app_configs if getattr(candidate, 'default', False)
                     ]
                     if len(app_configs) > 1:
                         candidates = [repr(name) for name, _ in app_configs]
                         raise RuntimeError(
-                            '%r declares more than one default AppConfig: '
-                            '%s.' % (mod_path, ', '.join(candidates))
+                            '%r declares more than one default AppConfig: %s.' % (mod_path, ', '.join(candidates))
                         )
                     elif len(app_configs) == 1:
                         app_config_class = app_configs[0][1]
@@ -168,8 +159,7 @@ class AppConfig:
         # Check for obvious errors. (This check prevents duck typing, but
         # it could be removed if it became a problem in practice.)
         if not issubclass(app_config_class, AppConfig):
-            raise ImproperlyConfigured(
-                "'%s' isn't a subclass of AppConfig." % entry)
+            raise ImproperlyConfigured("'%s' isn't a subclass of AppConfig." % entry)
 
         # Obtain app name here rather than in AppClass.__init__ to keep
         # all error checking for entries in INSTALLED_APPS in one place.
@@ -177,16 +167,15 @@ class AppConfig:
             try:
                 app_name = app_config_class.name
             except AttributeError:
-                raise ImproperlyConfigured(
-                    "'%s' must supply a name attribute." % entry
-                )
+                raise ImproperlyConfigured("'%s' must supply a name attribute." % entry)
 
         # Ensure app_name points to a valid module.
         try:
             app_module = import_module(app_name)
         except ImportError:
             raise ImproperlyConfigured(
-                "Cannot import '%s'. Check that '%s.%s.name' is correct." % (
+                "Cannot import '%s'. Check that '%s.%s.name' is correct."
+                % (
                     app_name,
                     app_config_class.__module__,
                     app_config_class.__qualname__,
@@ -220,14 +209,16 @@ class AppConfig:
                 paths = list(set(paths))
         if len(paths) > 1:
             raise ImproperlyConfigured(
-                "The app module %r has multiple filesystem locations (%r); "
-                "you must configure this app with an AppConfig subclass "
-                "with a 'path' class attribute." % (module, paths))
+                'The app module %r has multiple filesystem locations (%r); '
+                'you must configure this app with an AppConfig subclass '
+                "with a 'path' class attribute." % (module, paths)
+            )
         elif not paths:
             raise ImproperlyConfigured(
-                "The app module %r has no filesystem location, "
-                "you must configure this app with an AppConfig subclass "
-                "with a 'path' class attribute." % (module,))
+                'The app module %r has no filesystem location, '
+                'you must configure this app with an AppConfig subclass '
+                "with a 'path' class attribute." % (module,)
+            )
         return paths[0]
 
     def import_models(self):
@@ -265,6 +256,7 @@ class AppConfig:
     def _load_file(self, filename: str, **options):
         from orun.utils.translation import activate
         from orun.core.management.commands.loaddata import load_fixture
+
         activate(settings.LANGUAGE_CODE)
         print('    ', filename)
         load_fixture(self, filename, **options)
