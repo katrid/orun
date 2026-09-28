@@ -1,4 +1,5 @@
 from orun.apps import apps
+from orun import api
 from orun.db import models, DEFAULT_DB_ALIAS
 from orun.utils.translation import gettext_lazy as _
 
@@ -64,7 +65,7 @@ class Object(models.Model):
     def get_ref(cls, ref_id: str):
         return cls.objects.only('pk').get(name=ref_id).object_id
 
-    @classmethod
+    @api.classmethod
     def resolve_ref(cls, ref_id: str):
         return cls.get_ref(ref_id)
 
