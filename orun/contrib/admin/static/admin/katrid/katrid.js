@@ -3088,6 +3088,9 @@ var Katrid;
                 else
                     this.hideMessageCounter();
             }
+            menuClick(menuId) {
+                document.querySelector('[data-menu-id="' + menuId + '"]').click();
+            }
             get notificationMessages() {
                 return this._notificationMessages;
             }
@@ -18379,6 +18382,9 @@ var Katrid;
                     }
                 });
             }
+            getGlobalSearch() {
+                return this.autocomplete;
+            }
             loadModules(items) {
                 this.nav = document.querySelector('#navbar');
                 this.navMenu = document.querySelector('#navbar-menu');
@@ -18606,6 +18612,14 @@ var Katrid;
                         }, 300);
                     });
                 });
+            }
+            menuClick(id) {
+                for (const m of this._localMenuCache) {
+                    if (id === m.id) {
+                        console.debug(m);
+                        break;
+                    }
+                }
             }
             _registerMenuItem(menuItem, path) {
                 let text = menuItem.name.trim();

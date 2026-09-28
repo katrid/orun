@@ -67,6 +67,12 @@
     name: 'Ações Mais Acessadas', description: 'Registro das ações mais acessadas pelo usuário', category: 'Core',
   }
 
+  async function resolveRef(refName) {
+    const res = await fetch('/admin/resolve-ref/?ref=' + refName).text();
+    return parseInt(res);
+  }
+
+  let workflowCounter = 0;
   function workflowPortlet(portlet) {
 
     const el = document.createElement('div');
@@ -79,8 +85,15 @@
       const res = await svc.rpc('get_view_content', null, { id: portlet.data.viewId });
       el.innerHTML = Katrid.i18n.gettext('Loading...');
       setTimeout(async () => {
-        const { svg } = await mermaid.render('diagram-' + portlet.data.viewId.toString(), res);
+        const { svg } = await mermaid.render('diagram-' + portlet.data.viewId + '-' + ++workflowCounter, res);
         el.innerHTML = svg;
+        for (const node of el.querySelectorAll('.node')) {
+          node.addEventListener('click', async () => {
+            const tags = node.id.split('-');
+            const nodeId = tags[tags.length - 2];
+            oui.intent({'menu.click': nodeId})
+          });
+        }
       }, 5000)
     }
     if (portlet.data) {

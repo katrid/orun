@@ -1,3 +1,4 @@
+from orun import api
 from orun.db import models
 from orun.db.models.fields.generic import GenericForeignKey
 
@@ -41,7 +42,7 @@ class ContentModel(models.Model):
 class ContentObject(models.Model):
     """Store registered content objects."""
 
-    name = models.CharField(255, db_index=True)
+    name = models.CharField(255, unique=True)
     model_name = models.CharField(references=ContentModel.name, null=False)
     object_id = models.BigIntegerField()
     object = GenericForeignKey('model_name', 'object_id')
@@ -52,7 +53,9 @@ class ContentObject(models.Model):
 
 def refresh_model_cache():
     try:
-        ContentModel.model_ids = {model[0]: model[1] for model in ContentModel.objects.only('name', 'id').values_list('name', 'id')}
+        ContentModel.model_ids = {
+            model[0]: model[1] for model in ContentModel.objects.only('name', 'id').values_list('name', 'id')
+        }
     except:
         # table maybe doesn't exist
         ContentModel.model_ids = {}

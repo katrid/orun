@@ -66,8 +66,8 @@ class Object(models.Model):
         return cls.objects.only('pk').get(name=ref_id).object_id
 
     @api.classmethod
-    def resolve_ref(cls, ref_id: str):
-        return cls.get_ref(ref_id)
+    def resolve_ref(cls, name: str):
+        return {'id': cls.get_ref(name)}
 
 
 # class Association(models.Model):

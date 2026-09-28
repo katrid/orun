@@ -883,6 +883,7 @@ declare namespace Katrid.Core {
         render(): void;
         protected hideMessageCounter(): void;
         set newMessagesCount(value: number);
+        menuClick(menuId: number | string): void;
         messageCounterElement: HTMLElement;
         private _notificationMessages;
         get notificationMessages(): any[];
@@ -3624,6 +3625,7 @@ declare namespace Katrid.UI {
         protected inputSearch: HTMLInputElement;
         protected autocomplete: AppGlobalSearch;
         protected create(): void;
+        getGlobalSearch(): AppGlobalSearch;
         loadModules(items: IMenuInfo[]): void;
         createMenu(menu: IMenuInfo): HTMLAnchorElement;
         showMenu(li: HTMLElement): void;
@@ -3645,6 +3647,7 @@ declare namespace Katrid.UI {
         private _source;
         private _localMenuCache;
         constructor(input: HTMLInputElement, menu: Katrid.Core.IMenuInfo[]);
+        menuClick(id: number | string): void;
         private _registerMenuItem;
         protected onInput(): void;
         protected onClick(): void;
