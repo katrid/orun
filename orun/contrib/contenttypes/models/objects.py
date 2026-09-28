@@ -3,6 +3,7 @@ from orun.db import models, DEFAULT_DB_ALIAS
 from orun.utils.translation import gettext_lazy as _
 
 from orun.contrib.contenttypes.fields import GenericForeignKey
+
 # from orun.db.models.fields.generic import GenericForeignKey
 from .models import ContentType
 
@@ -21,8 +22,12 @@ class ObjectManager(models.Manager):
 
     def register_object(self, name: str, schema: str, obj):
         from .models import ContentType
+
         return self.create(
-            name=name, model=ContentType.objects.get_for_model(type(obj)), model_name=obj._meta.name, object_id=obj.pk,
+            name=name,
+            model=ContentType.objects.get_for_model(type(obj)),
+            model_name=obj._meta.name,
+            object_id=obj.pk,
             schema=schema,
         )
 
@@ -57,7 +62,11 @@ class Object(models.Model):
 
     @classmethod
     def get_ref(cls, ref_id: str):
-        return cls.objects.get(name=ref_id).object_id
+        return cls.objects.only('pk').get(name=ref_id).object_id
+
+    @classmethod
+    def resolve_ref(cls, ref_id: str):
+        return cls.get_ref(ref_id)
 
 
 # class Association(models.Model):
@@ -95,7 +104,10 @@ class Registrable:
             ct = ContentType.objects.get(id=obj_id.model_id)
             instance = apps.models[ct.name].objects.get(pk=obj_id.object_id)
             if instance is None:
-                answer = input('The object "%s" is defined but not found on module "%s". Do you want to recreate it? [Y/n]' % (obj_name, obj_id.model_name))
+                answer = input(
+                    'The object "%s" is defined but not found on module "%s". Do you want to recreate it? [Y/n]'
+                    % (obj_name, obj_id.model_name)
+                )
                 if answer == 'y' or not answer:
                     obj_id.delete()
                     raise Object.DoesNotExist
@@ -137,5 +149,3 @@ class Registrable:
     @classmethod
     def update_info(cls):
         pass
-
-
