@@ -103,9 +103,10 @@ class Message(models.Model):
         return msg.get_message()
 
     @classmethod
-    def _post_message(cls, model_name, ref_id, content=None, user_id=None, **kwargs):
+    def _post_message(cls, model_name, ref_id, content=None, user_id=None, notify_id=None, **kwargs):
+        user_id = user_id or current_user_id()
         msg = cls.objects.create(
-            author_id=user_id or current_user_id(),  # logged in user
+            author_id=user_id,  # logged in user
             content=content,
             model=model_name,
             object_id=ref_id,
@@ -117,8 +118,8 @@ class Message(models.Model):
         # TODO set creator as follower
         # send notification message to the creator of the object
         model = apps[model_name]
-        if (obj := model.objects.filter(pk=ref_id).first()) and (created_by := getattr(obj, 'created_by_id', None)):
-            msg.send_notification(partner_id=created_by)
+        if notify_id is not None:
+            msg.send_notification(partner_id=notify_id)
         return msg
 
     @api.classmethod
