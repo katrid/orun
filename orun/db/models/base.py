@@ -460,7 +460,7 @@ class RecordContract:
         def before_insert(self, record: 'Model', new: dict):
             pass
 
-        def after_insert(self, record: 'Model', new: dict):
+        def after_insert(self, record, new: dict):
             pass
 
         def before_update(self, record: 'Model', old: dict, new: dict):
@@ -905,9 +905,12 @@ class Model(RecordContract, metaclass=ModelBase):
         self._state.adding = False
 
         if inserted:
+            # todo pass modified values
+            self.rules.after_insert(self, {})
             self.after_insert(self._state.update_fields)
         else:
             self.after_update(None, self._state.update_fields)
+            self.rules.after_update(self, {}, {})
 
         # Signal that the save is complete
         if not meta.auto_created:
