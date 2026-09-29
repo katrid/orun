@@ -38,7 +38,8 @@ class Message(models.Model):
             ('comment', _('Comment')),
             ('notification', _('Notification')),
         ),
-        default='email', null=False,
+        default='email',
+        null=False,
     )
     subtype = models.ForeignKey(Subtype, db_index=True)
     email_from = models.EmailField()
@@ -138,10 +139,7 @@ class Message(models.Model):
     def get_comments(cls, model_name, id):
         return {
             'comments': [
-                msg.get_message()
-                for msg in cls.objects.filter(
-                    model=model_name, object_id=id, message_type='comment'
-                )
+                msg.get_message() for msg in cls.objects.filter(model=model_name, object_id=id, message_type='comment')
             ]
         }
 
@@ -153,13 +151,11 @@ class Message(models.Model):
 
     @api.classmethod
     def get_unread_messages(cls, request: HttpRequest):
-        return cls.objects.filter(
-            notifications__partner_id=int(request.user_id),
-            notifications__is_read=False
-        )
+        return cls.objects.filter(notifications__partner_id=int(request.user_id), notifications__is_read=False)
 
     def send_notification(self, partner_id):
         from .notification import Notification
+
         notification = Notification.objects.create(
             mail_message=self,
             partner_id=partner_id,
@@ -167,7 +163,7 @@ class Message(models.Model):
             notification_status='ready',
         )
         # send websocket notification
-        send_to_room(f"user:{partner_id}", 'message_notification')
+        send_to_room(f'user:{partner_id}', 'message_notification')
         return notification
 
     @api.classmethod
@@ -179,6 +175,7 @@ class Message(models.Model):
         """
         user_id = int(request.user_id)
         from .notification import Notification
+
         Notification.objects.filter(
             mail_message__model=model, mail_message__object_id=id, partner_id=user_id, is_read=False
         ).update(is_read=True)
@@ -203,3 +200,7 @@ class Confirmation(models.Model):
             self.active = False
             self.data = data
             self.save()
+
+
+def post_message(record, msg: str):
+    return Message.post_message(model_name=record._meta.name, id=record.pk, content=msg)
