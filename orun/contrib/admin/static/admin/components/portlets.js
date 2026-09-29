@@ -91,7 +91,8 @@
           node.addEventListener('click', async () => {
             const tags = node.id.split('-');
             const nodeId = tags[tags.length - 2];
-            oui.intent({'menu.click': nodeId})
+            window.open('/web/#intent?menu.click=' + nodeId)
+            // oui.intent({'menu.click': nodeId})
           });
         }
       }, 5000)

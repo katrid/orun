@@ -3136,6 +3136,13 @@ var Katrid;
                     }
                     else
                         this.loadPage(location.hash);
+                    const hash = window.location.hash;
+                    if (hash.startsWith('#intent')) {
+                        const params = new URLSearchParams(hash.substring(8));
+                        for (const [k, v] of params) {
+                            oui.intent({ [k]: v });
+                        }
+                    }
                     setTimeout(() => {
                         this.initWebSocket();
                         this.checkNewMessages();
