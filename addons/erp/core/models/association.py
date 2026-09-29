@@ -1,3 +1,5 @@
+from typing import Self
+
 from orun.db import models
 from .content import ContentModel
 
@@ -11,6 +13,10 @@ class Association(models.Model):
     target_id = models.BigIntegerField()
     link_event = models.CharField(255)
     description = models.TextField()
+    parent = models.ForeignKey(
+        Self,
+        on_delete=models.DB_CASCADE,
+    )
 
     class Meta:
         name = 'content.association'
@@ -24,6 +30,7 @@ class Association(models.Model):
         *,
         link_event: str | None = 'link',
         description: str | None = None,
+        parent: Self | None = None,
     ):
         source_model_id = ContentModel.model_ids[source._meta.name]
         source_id = source.pk
@@ -40,6 +47,7 @@ class Association(models.Model):
             target_id=target_id,
             link_event=link_event,
             description=description,
+            parent=parent,
         )
 
     @classmethod
