@@ -1004,6 +1004,10 @@ declare namespace Katrid.Forms {
         viewInfo?: Katrid.Forms.ModelViewInfo;
         readonly?: boolean;
     }
+    class ViewContributions {
+        settingsContributions: any[];
+        contributeToSettings(contrib: any): void;
+    }
     class ModelView extends BaseView {
         datasource: Katrid.Data.DataSource;
         model: Katrid.Data.Model;

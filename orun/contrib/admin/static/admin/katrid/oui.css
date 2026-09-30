@@ -87,4 +87,13 @@
   }
 }
 
+/* themes/default/portlet.css */
+.portlet-toolbox {
+  display: flex;
+  flex-direction: column;
+}
+.portlet-selector {
+  overflow-y: auto;
+}
+
 /* themes/default/index.css */

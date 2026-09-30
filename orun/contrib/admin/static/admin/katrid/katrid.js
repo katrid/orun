@@ -3702,6 +3702,15 @@ var Katrid;
         }
         Forms.searchModes = ['table', 'card'];
         Forms.registry = {};
+        class ViewContributions {
+            constructor() {
+                this.settingsContributions = [];
+            }
+            contributeToSettings(contrib) {
+                this.settingsContributions.push(contrib);
+            }
+        }
+        Forms.ViewContributions = ViewContributions;
         class ModelView extends Forms.BaseView {
             constructor(info) {
                 super(info);
@@ -9866,10 +9875,12 @@ ${Katrid.i18n.gettext('Delete')}
                         }
                     };
                     this.element.querySelector('.form-sheet')?.addEventListener('contextmenu', (evt) => {
-                        evt.preventDefault();
-                        let menu = new Katrid.Forms.ContextMenu();
-                        menu.add('Diagrama de Relações', () => window.open('/web/erp.core/rel-mapping-diagram?model=' + this.model.name + '&object_id=' + this.record.id));
-                        menu.show(evt.pageX, evt.pageY);
+                        if (evt.target.classList('form-sheet')) {
+                            evt.preventDefault();
+                            let menu = new Katrid.Forms.ContextMenu();
+                            menu.add('Diagrama de Relações', () => window.open('/web/erp.core/rel-mapping-diagram?model=' + this.model.name + '&object_id=' + this.record.id));
+                            menu.show(evt.pageX, evt.pageY);
+                        }
                     });
                     this.element.addEventListener('contextmenu', onCtxMenu);
                     this.element.querySelectorAll('section').forEach((section) => {
