@@ -218,7 +218,10 @@ class Deserializer(base.Deserializer):
     def delete_object(self, obj, **attrs):
         Object = apps['ir.object']
         try:
-            xml_obj = Object.objects.get_object(obj.attrib['id'])
+            xml_obj = Object.objects.filter(name=obj.attrib['id']).first()
+            if not xml_obj:
+                print(f'Object with id {obj.attrib["id"]} not found')
+                return False
             obj = xml_obj.content_object
             # detect if cascade delete is needed
             if obj._meta.name == 'ui.menu':
