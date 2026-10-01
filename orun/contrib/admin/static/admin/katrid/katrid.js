@@ -3705,13 +3705,18 @@ var Katrid;
         class ViewContributions {
             constructor() {
                 this.settingsContributions = [];
+                this.renderContributions = [];
             }
             contributeToSettings(contrib) {
                 this.settingsContributions.push(contrib);
             }
+            contributeToRender(contrib) {
+                this.renderContributions.push(contrib);
+            }
         }
         Forms.ViewContributions = ViewContributions;
         class ModelView extends Forms.BaseView {
+            static { this.contributions = new ViewContributions(); }
             constructor(info) {
                 super(info);
                 this.pendingOperation = 0;
@@ -9648,10 +9653,6 @@ var Katrid;
             </div>
           </div>
 
-          <button type="button" class="btn btn-soft-secondary" id="btn-properties" style="transform:rotate(-90deg);position:absolute;top:0;right:0;transform-origin:bottom right;z-index: 1" v-on:click="$view.showProperties()">
-          Propriedades
-          </button>
-
           <aside class="card" v-if="propertiesVisible" style="max-width: 250px;overflow: auto;">
           <div class="properties-panel card-body">
           <div class="row">
@@ -9718,6 +9719,11 @@ var Katrid;
                     loadProps(this.vm.record);
                     this.addDataCallback(this._propsCallback);
                 }
+            }
+            createRightToolbar() {
+                const div = document.createElement('div');
+                div.classList.add('aside-toolbar right-side');
+                return div;
             }
             createToolbar() {
                 let templ = `<div class="data-heading panel panel-default">
@@ -9875,7 +9881,7 @@ ${Katrid.i18n.gettext('Delete')}
                         }
                     };
                     this.element.querySelector('.form-sheet')?.addEventListener('contextmenu', (evt) => {
-                        if (evt.target.classList('form-sheet')) {
+                        if (evt.target.classList.contains('form-sheet')) {
                             evt.preventDefault();
                             let menu = new Katrid.Forms.ContextMenu();
                             menu.add('Diagrama de Relações', () => window.open('/web/erp.core/rel-mapping-diagram?model=' + this.model.name + '&object_id=' + this.record.id));
@@ -9898,6 +9904,11 @@ ${Katrid.i18n.gettext('Delete')}
                 this.readonly = this._readonly;
                 if (this._state == null)
                     this.state = DataSourceState.editing;
+                if (this.constructor.contributions.renderContributions?.length) {
+                    this.constructor.contributions.renderContributions.forEach((contrib) => {
+                        contrib(this);
+                    });
+                }
                 return this.element;
             }
             get recordIndex() {

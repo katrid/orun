@@ -1006,7 +1006,9 @@ declare namespace Katrid.Forms {
     }
     class ViewContributions {
         settingsContributions: any[];
+        renderContributions: Function[];
         contributeToSettings(contrib: any): void;
+        contributeToRender(contrib: Function): void;
     }
     class ModelView extends BaseView {
         datasource: Katrid.Data.DataSource;
@@ -1022,6 +1024,7 @@ declare namespace Katrid.Forms {
         protected _readonly: boolean;
         protected _loadingHandle: any;
         protected info: IModelViewInfo;
+        static contributions: ViewContributions;
         constructor(info: IModelViewInfo);
         static viewType: string;
         static fromTemplate(action: Katrid.Actions.WindowAction, model: Katrid.Data.Model, template: string): ModelView;
@@ -2188,6 +2191,7 @@ declare namespace Katrid.Forms {
         private _propsCallback;
         private _propsTimeout;
         showProperties(): void;
+        createRightToolbar(): HTMLDivElement;
         createToolbar(): HTMLElement;
         createElement(): void;
         protected createToolbarButtons(container: HTMLElement): Element;

@@ -96,4 +96,13 @@
   overflow-y: auto;
 }
 
+/* themes/default/toolbars.css */
+.aside-toolbar {
+  display: flex;
+  flex-direction: column;
+  .tool-button {
+    border: 1px solid #cacaca;
+  }
+}
+
 /* themes/default/index.css */
