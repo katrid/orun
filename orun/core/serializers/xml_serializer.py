@@ -144,7 +144,7 @@ class Deserializer(base.Deserializer):
                 instance._meta.fields[k].deserialize(v, instance)
             return instance
         except Exception as e:
-            print(f'Error deserializing object: {obj["id"]}')
+            print(f'Error deserializing object: {obj_name}')
             raise
 
     def read_menu(self, obj, parent=None, **attrs):
