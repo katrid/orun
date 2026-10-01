@@ -11,6 +11,7 @@ Katrid.Forms.ModelView.contributions.contributeToRender((view) => {
       btn.className = 'btn tool-button';
       btn.innerHTML = '<i class="fa fa-duotone fa-2x fa-file-circle-info"></i>';
       btn.onclick = () => view.showProperties();
+      btn.title = 'Propriedades';
       div.appendChild(btn);
       // rel diagram
       btn = document.createElement('button');
