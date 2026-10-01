@@ -15,7 +15,7 @@ Katrid.Forms.ModelView.contributions.contributeToRender((view) => {
       // rel diagram
       btn = document.createElement('button');
       btn.className = 'btn tool-button';
-      btn.innerHTML = '<i class="fa fa-duotone fa-2x fa-diagram-project"></i>';
+      btn.innerHTML = '<i class="fa fa-duotone fa-light fa-2x fa-diagram-project"></i>';
       btn.title = 'Diagrama de relações';
       btn.onclick = () => {
         if (view.record) {
