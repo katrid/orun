@@ -233,7 +233,7 @@ class Deserializer(base.Deserializer):
             obj.delete()
             xml_obj.delete()
         except:
-            pass
+            raise
         else:
             return True
 
