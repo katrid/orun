@@ -48,99 +48,104 @@ class Deserializer(base.Deserializer):
         return lst
 
     def read_object(self, obj, trans=False, **attrs):
-        if not isinstance(obj, dict):
-            values = list(obj)
-            obj = dict(obj.attrib)
-        else:
-            values = obj.get('children', [])
-
-        if 'fields' not in obj:
-            obj['fields'] = {}
-
-        for child in values:
-            if child.tag == 'field':
-                field_name = child.attrib['name']
-                if 'ref' in child.attrib:
-                    try:
-                        obj['fields'][field_name] = ref(child.attrib['ref'])
-                    except:
-                        print('Error reading xml file file: ref:', child.attrib['ref'], self.path)
-                        raise
-                elif 'eval' in child.attrib:
-                    obj['fields'][field_name] = eval(child.attrib['eval'], {'ref': functools.partial(ref, self.app)})
-                elif 'model' in child.attrib:
-                    obj['fields'][field_name] = ContentType.objects.only('pk').filter(name=child.attrib['model']).first().pk
-                elif 'file' in child.attrib:
-                    with open(
-                        os.path.join(self.addon.path, child.attrib['file']), encoding='utf-8'
-                    ) as f:
-                        obj['fields'][field_name] = f.read()
-                else:
-                    s = child.text
-                    if child.attrib.get('translate', trans):
-                        s = (s,)
-                    obj['fields'][field_name] = s
-
-        obj_name = obj.pop('id')
-        obj_id = None
-        Model = apps.models[obj['model']]
-        values = obj['fields']
-
-        # # ui.view special case
-        # if Model._meta.name == 'ui.view' and 'template_name' in values:
-        #     template_name = values['template_name']
-        #     values['template_name'] = self.app_config.schema + ':' + template_name
-        #     assert '..' not in template_name
-        #     template_name = os.path.join(self.app_config.path, self.app_config.template_folder, template_name)
-        #     with open(template_name, encoding='utf-8') as f:
-        #         values['content'] = f.read()
-
-        no_update = 'no-update' not in obj
         try:
-            obj_id = Object.objects.get(name=obj_name)
-            if no_update != obj_id.can_update:
-                obj_id.can_update = no_update
-                obj_id.save(using=self.database)
-            instance = Model.objects.filter(pk=obj_id.object_id).first()
-            if instance is None:
-                return
-                answer = input('The object "%s" is defined but not found on module "%s". Do you want to recreate it? [Y/n]' % (obj_name, obj_id.model_name))
-                if answer == 'y' or not answer:
-                    obj_id.delete()
-                    raise ObjectDoesNotExist
-            if not no_update:
-                return instance
-        except ObjectDoesNotExist:
-            instance = Model()
-        pk = instance.pk
-        children = {}
-        for k, v in values.items():
-            field = instance._meta.fields.get(k)
-            if field:
-                k = field.attname
-            if isinstance(v, list) and isinstance(field, models.OneToManyField):
-                children[k] = v
-            elif isinstance(v, tuple) and isinstance(field, models.CharField) and not field.translate:
-                children[k] = _(v[0])
+
+            if not isinstance(obj, dict):
+                values = list(obj)
+                obj = dict(obj.attrib)
             else:
-                setattr(instance, k, v)
-        instance.save(using=self.database)
-        if pk is None:
-            ct = ContentType.objects.get_by_natural_key(instance._meta.name)
-            obj_id = Object.objects.using(self.database).create(
-                schema=self.addon.schema,
-                name=obj_name,
-                object_id=instance.pk,
-                model=ct,
-                model_name=ct.name,
-                can_update=not obj.get('no-update', False),
-            )
-        for child, v in children.items():
-            # Delete all items
-            getattr(instance, child).delete(using=self.database)
-            # Re-eval the xml data
-            instance._meta.fields[k].deserialize(v, instance)
-        return instance
+                values = obj.get('children', [])
+
+            if 'fields' not in obj:
+                obj['fields'] = {}
+
+            for child in values:
+                if child.tag == 'field':
+                    field_name = child.attrib['name']
+                    if 'ref' in child.attrib:
+                        try:
+                            obj['fields'][field_name] = ref(child.attrib['ref'])
+                        except:
+                            print('Error reading xml file file: ref:', child.attrib['ref'], self.path)
+                            raise
+                    elif 'eval' in child.attrib:
+                        obj['fields'][field_name] = eval(child.attrib['eval'], {'ref': functools.partial(ref, self.app)})
+                    elif 'model' in child.attrib:
+                        obj['fields'][field_name] = ContentType.objects.only('pk').filter(name=child.attrib['model']).first().pk
+                    elif 'file' in child.attrib:
+                        with open(
+                            os.path.join(self.addon.path, child.attrib['file']), encoding='utf-8'
+                        ) as f:
+                            obj['fields'][field_name] = f.read()
+                    else:
+                        s = child.text
+                        if child.attrib.get('translate', trans):
+                            s = (s,)
+                        obj['fields'][field_name] = s
+
+            obj_name = obj.pop('id')
+            obj_id = None
+            Model = apps.models[obj['model']]
+            values = obj['fields']
+
+            # # ui.view special case
+            # if Model._meta.name == 'ui.view' and 'template_name' in values:
+            #     template_name = values['template_name']
+            #     values['template_name'] = self.app_config.schema + ':' + template_name
+            #     assert '..' not in template_name
+            #     template_name = os.path.join(self.app_config.path, self.app_config.template_folder, template_name)
+            #     with open(template_name, encoding='utf-8') as f:
+            #         values['content'] = f.read()
+
+            no_update = 'no-update' not in obj
+            try:
+                obj_id = Object.objects.get(name=obj_name)
+                if no_update != obj_id.can_update:
+                    obj_id.can_update = no_update
+                    obj_id.save(using=self.database)
+                instance = Model.objects.filter(pk=obj_id.object_id).first()
+                if instance is None:
+                    return
+                    answer = input('The object "%s" is defined but not found on module "%s". Do you want to recreate it? [Y/n]' % (obj_name, obj_id.model_name))
+                    if answer == 'y' or not answer:
+                        obj_id.delete()
+                        raise ObjectDoesNotExist
+                if not no_update:
+                    return instance
+            except ObjectDoesNotExist:
+                instance = Model()
+            pk = instance.pk
+            children = {}
+            for k, v in values.items():
+                field = instance._meta.fields.get(k)
+                if field:
+                    k = field.attname
+                if isinstance(v, list) and isinstance(field, models.OneToManyField):
+                    children[k] = v
+                elif isinstance(v, tuple) and isinstance(field, models.CharField) and not field.translate:
+                    children[k] = _(v[0])
+                else:
+                    setattr(instance, k, v)
+            instance.save(using=self.database)
+            if pk is None:
+                ct = ContentType.objects.get_by_natural_key(instance._meta.name)
+                obj_id = Object.objects.using(self.database).create(
+                    schema=self.addon.schema,
+                    name=obj_name,
+                    object_id=instance.pk,
+                    model=ct,
+                    model_name=ct.name,
+                    can_update=not obj.get('no-update', False),
+                )
+            for child, v in children.items():
+                # Delete all items
+                getattr(instance, child).delete(using=self.database)
+                # Re-eval the xml data
+                instance._meta.fields[k].deserialize(v, instance)
+            return instance
+        except Exception as e:
+            print(f'Error deserializing object: {obj["id"]}')
+            raise
 
     def read_menu(self, obj, parent=None, **attrs):
         lst = []
