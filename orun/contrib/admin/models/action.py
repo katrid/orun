@@ -120,7 +120,7 @@ class WindowAction(Action):
         ('search', 'Search'),
         ('calendar', 'Calendar'),
     )
-    view = models.ForeignKey('ui.view', label=_('View'))
+    view = models.ForeignKey('ui.view', label=_('View'), on_delete=models.DB_CASCADE)
     domain = models.TextField(label=_('Domain'))
     context = models.TextField(label=_('Context'))
     model = models.CharField(128, null=False, label=_('Model'))
