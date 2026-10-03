@@ -26,6 +26,8 @@ def user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIE
                 if token.startswith('Bearer '):
                     token = token[7:]
                     if user_token := UserModel.get_token(token):
+                        from . import login
+                        login(request, user_token.user)
                         request.user = user_token.user
                         return view_func(request, *args, **kwargs)
                 raise PermissionDenied('Permission denied')
