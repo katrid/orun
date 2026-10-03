@@ -1,4 +1,5 @@
 import secrets
+import datetime
 import hashlib
 
 from orun import api
@@ -260,6 +261,9 @@ class UserToken(models.Model):
                 token = generate_api_token()
             self.token = token
         super().save(*args, **kwargs)
+
+    def is_valid(self):
+        return self.active and (not self.valid_until or self.valid_until >= datetime.now().date())
 
 
 def generate_api_token():
