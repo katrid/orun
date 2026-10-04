@@ -15,6 +15,8 @@ from orun.utils.functional import cached_property
 
 
 class DatabaseOperations(BaseDatabaseOperations):
+    vsql_compiler_module = "orun.db.backends.sqlite3.vsql"
+
     cast_char_field_without_max_length = 'text'
     cast_data_types = {
         'DateField': 'TEXT',
@@ -283,8 +285,8 @@ class DatabaseOperations(BaseDatabaseOperations):
             converters.append(self.convert_datefield_value)
         elif internal_type == 'TimeField':
             converters.append(self.convert_timefield_value)
-        elif internal_type == 'DecimalField':
-            converters.append(self.get_decimalfield_converter(expression))
+        # elif internal_type == 'DecimalField':
+        #     converters.append(self.get_decimalfield_converter(expression))
         elif internal_type == 'UUIDField':
             converters.append(self.convert_uuidfield_value)
         elif internal_type == 'BooleanField':

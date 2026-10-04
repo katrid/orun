@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 
 from orun.conf import settings
 from orun.contrib.auth import REDIRECT_FIELD_NAME
+from orun.contrib.auth.models import AbstractUser
 from orun.core.exceptions import PermissionDenied
 from orun.shortcuts import resolve_url
 from orun.apps import apps
@@ -10,7 +11,7 @@ from orun.apps import apps
 UserModel = apps.models['auth.user']
 
 
-def user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIELD_NAME):
+def user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIELD_NAME, is_staff=False):
     """
     Decorator for views that checks that the user passes the given test,
     redirecting to the log-in page if necessary. The test should be a callable
@@ -26,13 +27,14 @@ def user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIE
                 if token.startswith('Bearer '):
                     token = token[7:]
                     if user_token := UserModel.get_token(token):
-                        from . import login
-                        login(request, user_token.user)
-                        request.user = user_token.user
-                        return view_func(request, *args, **kwargs)
+                        if (is_staff and user_token.user.is_staff) or not is_staff or user_token.user.is_superuser:
+                            from . import login
+                            login(request, user_token.user)
+                            request.user = user_token.user
+                            return view_func(request, *args, **kwargs)
                 raise PermissionDenied('Permission denied')
 
-            if test_func(request.user):
+            if test_func(request.user) and ((is_staff and request.user.is_staff) or not is_staff or request.user.is_superuser):
                 return view_func(request, *args, **kwargs)
             path = request.build_absolute_uri()
             resolved_login_url = resolve_url(login_url or settings.LOGIN_URL)
@@ -52,7 +54,7 @@ def user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIE
     return decorator
 
 
-def login_required(function=None, redirect_field_name=REDIRECT_FIELD_NAME, login_url=None):
+def login_required(function=None, redirect_field_name=REDIRECT_FIELD_NAME, login_url=None, is_staff=False):
     """
     Decorator for views that checks that the user is logged in, redirecting
     to the log-in page if necessary.
@@ -60,7 +62,8 @@ def login_required(function=None, redirect_field_name=REDIRECT_FIELD_NAME, login
     actual_decorator = user_passes_test(
         lambda u: u.is_authenticated,
         login_url=login_url,
-        redirect_field_name=redirect_field_name
+        redirect_field_name=redirect_field_name,
+        is_staff=is_staff,
     )
     if function:
         return actual_decorator(function)

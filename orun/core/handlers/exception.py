@@ -1,6 +1,7 @@
 import logging
 import sys
 from functools import wraps
+import traceback
 
 from orun.conf import settings
 from orun.core import signals
@@ -8,7 +9,7 @@ from orun.core.exceptions import (
     PermissionDenied, RequestDataTooBig, SuspiciousOperation,
     TooManyFieldsSent,
 )
-from orun.http import Http404
+from orun.http import Http404, HttpRequest, JsonResponse
 from orun.http.multipartparser import MultiPartParserError
 from orun.urls import get_resolver, get_urlconf
 from orun.utils.log import log_response
@@ -29,7 +30,7 @@ def convert_exception_to_response(get_response):
     can rely on getting a response instead of an exception.
     """
     @wraps(get_response)
-    def inner(request):
+    def inner(request: HttpRequest):
         try:
             response = get_response(request)
         except Exception as exc:
@@ -38,7 +39,28 @@ def convert_exception_to_response(get_response):
     return inner
 
 
-def response_for_exception(request, exc):
+def response_for_exception(request, exc: Exception):
+    if request.is_json():
+        if isinstance(exc, Http404):
+            status_code = 404
+        elif isinstance(exc, PermissionDenied):
+            status_code = 403
+        elif isinstance(exc, (SuspiciousOperation, MultiPartParserError)):
+            status_code = 400
+        elif isinstance(exc, SystemExit):
+            raise
+        else:
+            status_code = 500
+            traceback.print_exc()
+
+        return JsonResponse(
+            {
+                'error': 'An error occurred',
+                'detail': traceback.format_exc(),
+            },
+            status=status_code,
+        )
+
     if isinstance(exc, Http404):
         if settings.DEBUG:
             response = debug.technical_404_response(request, exc)

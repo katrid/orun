@@ -1,27 +1,27 @@
 
-class HTMLElement:
+class Element:
     pass
 
 
-class Div(HTMLElement):
+class Div(Element):
     pass
 
 
-class Input(HTMLElement):
+class Input(Element):
     pass
 
 
-class Table(HTMLElement):
+class Table(Element):
     pass
 
 
-class Tr(HTMLElement):
+class Tr(Element):
     pass
 
 
-class Td(HTMLElement):
+class Td(Element):
     pass
 
 
-class Th(HTMLElement):
+class Th(Element):
     pass

@@ -1,11 +1,13 @@
 import json
-
 import traceback
+
+from orun.contrib.auth.models import AbstractUser
 from orun.core.exceptions import ValidationError
 from orun.shortcuts import render
 from orun.conf import settings
 from orun.utils.translation import gettext
 from orun.http import HttpResponse, HttpRequest, JsonResponse, HttpResponseRedirect
+from orun.core.exceptions import PermissionDenied
 from orun.contrib import messages
 from orun.contrib.auth.decorators import login_required
 from orun.contrib import auth
@@ -16,18 +18,21 @@ from orun.db.transaction import atomic
 View = apps['ui.view']
 
 
-@login_required
+@login_required(is_staff=True)
 def index(request: HttpRequest, template_name='/admin/index.jinja2', **context):
     menu_items = json.dumps(apps['ui.menu'].search_visible_items(request))
-    context.update({
-        'menu': menu_items,
-        'user_info': json.dumps(request.user.user_info()),
-        'settings': settings,
-        'js_assets': '\n'.join(apps.collect_js_assets()),
-        'lang': settings.LANGUAGE_CODE,
-    })
+    context.update(
+        {
+            'menu': menu_items,
+            'user_info': json.dumps(request.user.user_info()),
+            'settings': settings,
+            'js_assets': '\n'.join(apps.collect_js_assets()),
+            'lang': settings.LANGUAGE_CODE,
+        }
+    )
     if settings.USE_I18N:
         from .i18n import javascript_catalog
+
         context['i18n_js_catalog'] = javascript_catalog(request, packages=apps.addons.keys())
     return render(request, template_name, context)
 
@@ -39,13 +44,16 @@ def is_authenticated(request: HttpRequest):
         return JsonResponse({'result': False})
 
 
+@login_required(is_staff=True)
 def search_menu(request: HttpRequest):
     from orun.contrib.admin.models import Menu
+
     term = request.json.get('term')
     items = Menu.Admin.admin_search_menu(request, term)
     return JsonResponse({'items': items})
 
 
+@login_required
 def _company_logo(request: HttpRequest):
     # first active company
     company = apps['res.company'].objects.filter(active=True).first()
@@ -54,6 +62,7 @@ def _company_logo(request: HttpRequest):
     return '/static/admin/assets/img/logo.svg'
 
 
+@login_required
 def company_logo(request: HttpRequest):
     # first active company
     company = apps['res.company'].objects.filter(active=True).first()
@@ -84,27 +93,34 @@ def login(request: HttpRequest, template_name='/admin/login.jinja2', **kwargs):
         u = auth.authenticate(username=username, password=password)
         if u and u.is_authenticated:
             if not u.active:
-                return JsonResponse({
-                    'error': True,
-                    'message': gettext('Login is inactive.'),
-                })
+                return JsonResponse(
+                    {
+                        'error': True,
+                        'message': gettext('Login is inactive.'),
+                    }
+                )
             auth.login(request, u)
             if request.is_json():
-                return JsonResponse({
-                    'ok': True,
-                    'user_id': u.id,
-                    'redirect': next_url,
-                    'message': gettext('Login successful, please wait...'),
-                })
+                return JsonResponse(
+                    {
+                        'ok': True,
+                        'user_id': u.id,
+                        'redirect': next_url,
+                        'message': gettext('Login successful, please wait...'),
+                    }
+                )
             return HttpResponseRedirect(next_url)
         if request.is_json():
-            return JsonResponse({
-                'error': True,
-                'message': gettext('Invalid username and password.'),
-            })
+            return JsonResponse(
+                {
+                    'error': True,
+                    'message': gettext('Invalid username and password.'),
+                }
+            )
         messages.error(request, gettext('Invalid username and password.'))
 
     from .i18n import javascript_catalog
+
     context = {
         'i18n_js_catalog': javascript_catalog(request, packages=apps.addons.keys()),
         'settings': settings,
@@ -122,9 +138,8 @@ def logout(request):
 @login_required
 def js_templates(self):
     return HttpResponse(
-        b'<templates>%s</templates>' % b''.join(
-            [b''.join(addon.get_js_templates()) for addon in apps.addons.values() if addon.js_templates]
-        )
+        b'<templates>%s</templates>'
+        % b''.join([b''.join(addon.get_js_templates()) for addon in apps.addons.values() if addon.js_templates])
     )
 
 
@@ -162,23 +177,24 @@ def upload_file(request, model, meth):
                 res = meth(**request.POST.dict(), files=[file for file in request.FILES.getlist('files')])
         except ValidationError as e:
             traceback.print_exc()
-            return JsonResponse({
-                'error': True,
-                'messages': e.messages,
-            })
+            return JsonResponse(
+                {
+                    'error': True,
+                    'messages': e.messages,
+                }
+            )
         except ValueError as e:
             traceback.print_exc()
-            return JsonResponse({
-                'error': True,
-                'messages': [str(e)],
-            })
+            return JsonResponse(
+                {
+                    'error': True,
+                    'messages': [str(e)],
+                }
+            )
         except Exception as e:
             # print traceback.format_exc()
             traceback.print_exc()
-            return JsonResponse({
-                'error': True,
-                'message': 'Server error'
-            })
+            return JsonResponse({'error': True, 'message': 'Server error'})
         if isinstance(res, dict):
             res = JsonResponse(res)
         return res
@@ -209,6 +225,7 @@ def report_preview(request):
 def heartbeat(request):
     return HttpResponse('ok')
 
+
 # @login_required
 # def query(request):
 #     id = request.args.get('id')
@@ -221,4 +238,3 @@ def heartbeat(request):
 #     for q in queries:
 #         cats[q.category].append(q)
 #     return render_template('/web/query.html', categories=cats, query=query)
-

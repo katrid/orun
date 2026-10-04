@@ -76,7 +76,12 @@ Database.register_converter("time", decoder(parse_time))
 Database.register_converter("datetime", decoder(parse_datetime))
 Database.register_converter("timestamp", decoder(parse_datetime))
 
-Database.register_adapter(decimal.Decimal, str)
+def conv_decimal(s):
+    return float(s.decode('utf-8'))
+
+Database.register_converter("decimal", conv_decimal)
+
+# Database.register_adapter(decimal.Decimal, str)
 
 
 class DatabaseWrapper(BaseDatabaseWrapper):
@@ -120,6 +125,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'BooleanField': 'bool',
         'CharField': 'varchar',
         'BigAutoField': 'integer',
+        'IntegerField': 'integer',
         'SmallIntegerField': 'integer',
         'PositiveIntegerField': 'integer',
         'PositiveSmallIntegerField': 'integer',

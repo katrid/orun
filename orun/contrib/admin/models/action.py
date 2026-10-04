@@ -208,9 +208,9 @@ class WindowAction(Action):
 
 
 class WindowActionView(models.Model):
-    window_action = models.ForeignKey(WindowAction, null=False)
+    window_action = models.ForeignKey(WindowAction, null=False, on_delete=models.DB_CASCADE)
     sequence = models.SmallIntegerField()
-    view = models.ForeignKey('ui.view')
+    view = models.ForeignKey('ui.view', on_delete=models.DB_CASCADE)
     view_mode = models.SelectionField(WindowAction.VIEW_MODE, label=_('View Type'))
 
     class Meta:
@@ -219,7 +219,7 @@ class WindowActionView(models.Model):
 
 
 class ViewAction(Action):
-    view = models.ForeignKey('ui.view', label=_('View'))
+    view = models.ForeignKey('ui.view', label=_('View'), on_delete=models.DB_CASCADE)
 
     class Meta:
         name = 'ui.action.view'
