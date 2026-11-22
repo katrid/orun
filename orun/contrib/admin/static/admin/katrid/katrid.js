@@ -3003,6 +3003,7 @@ var Katrid;
               <img class="user-avatar" src="/static/admin/assets/img/avatar.png"> <span class="user-name">${this.userInfo.name}</span>
             </a>
             <div class="dropdown-menu dropdown-menu-end">
+              <a class="dropdown-item" id="ai-agent-menu-item"><i class="fa fa-fw"></i> ${katrid.i18n.gettext('Ask to Agent')}</a>
               <a class="dropdown-item" id="user-support-menu-item" href="https://support.katrid.com/buy" target="_blank"><i class="fa fa-fw"></i> ${katrid.i18n.gettext('Support')}</a>
               <a class="dropdown-item" id="user-support-menu-item" href="/admin/help-center/" target="_blank"><i class="fa fa-fw"></i> Help Center</a>
               <div class="dropdown-divider"></div>
