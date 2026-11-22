@@ -2905,6 +2905,7 @@ var Katrid;
         }
         Core.Application = Application;
         class WebApplication extends Application {
+            static { this.wsEventRegistry = {}; }
             constructor(config) {
                 super(config);
                 Katrid.webApp = this;
@@ -3165,8 +3166,16 @@ var Katrid;
                         console.debug('WebSocket connected');
                     };
                     this.ws.onmessage = (event) => {
-                        if (event.data === 'message_notification')
+                        if (event.data === 'message_notification') {
                             this.checkNewMessages();
+                        }
+                        else if (event.data && event.data[0] === '{') {
+                            const eventData = JSON.parse(event.data);
+                            console.debug('WebSocket event data:', eventData);
+                            if (eventData.event && WebApplication.wsEventRegistry[eventData.event]) {
+                                WebApplication.wsEventRegistry[eventData.event](eventData);
+                            }
+                        }
                     };
                     this.ws.onclose = (event) => {
                         console.log('WebSocket closed');

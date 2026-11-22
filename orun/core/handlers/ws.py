@@ -1,3 +1,4 @@
+from typing import Callable
 import json
 import asyncio
 from collections import defaultdict
@@ -14,6 +15,7 @@ rooms: dict = defaultdict(set)
 class WebSocketHandler(WebSocketEndpoint):
     event_loop = None
     encoding = 'text'
+    event_registry: dict[str, Callable] = {}
 
     async def on_connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -21,16 +23,18 @@ class WebSocketHandler(WebSocketEndpoint):
         engine = import_module(settings.SESSION_ENGINE)
         store = engine.SessionStore(websocket.cookies[settings.SESSION_COOKIE_NAME])
         user_id = store.get(SESSION_KEY)
-        # auto register to default room
-        websocket.scope['user_id'] = user_id
-        rooms[f'user:{user_id}'].add(websocket)
+        if user_id:
+            # auto register to default room
+            websocket.scope['user_id'] = user_id
+            rooms[f'user:{user_id}'].add(websocket)
+        else:
+            raise ValueError('User not logged in')
 
     async def on_receive(self, websocket, data):
         msg = json.loads(data)
-        msg_type = msg.get('type')
+        msg_type = msg.get('event')
         if msg_type == 'join':
             room = msg.get('room')
-            rooms[room].add(websocket)
             await websocket.send_text(json.dumps({'type': 'join', 'room': room, 'status': 'ok'}))
         elif msg_type == 'message':
             pass
@@ -38,6 +42,8 @@ class WebSocketHandler(WebSocketEndpoint):
             room = msg.get('room')
             rooms[room].discard(websocket)
             await websocket.send_text(json.dumps({'type': 'leave', 'room': room, 'status': 'ok'}))
+        elif msg_type in self.event_registry:
+            await self.event_registry[msg_type](websocket, msg)
 
     async def on_disconnect(self, websocket, close_code):
         for room in rooms:

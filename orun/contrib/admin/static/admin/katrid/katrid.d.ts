@@ -876,6 +876,7 @@ declare namespace Katrid.Core {
         protected ws: WebSocket;
         private _currentMenu;
         private _actionManager;
+        static wsEventRegistry: Record<string, (event: any) => void>;
         constructor(config: any);
         beforeUnload(event: any): void;
         setAction(action: Katrid.Actions.Action): Promise<void>;
