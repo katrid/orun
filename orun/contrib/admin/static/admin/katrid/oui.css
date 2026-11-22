@@ -105,4 +105,31 @@
   }
 }
 
+/* themes/default/dialogs.css */
+.dialog {
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  .dialog-header {
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+    h3 {
+      margin: 0;
+    }
+  }
+  .dialog-body {
+    padding: 10px;
+  }
+  .dialog-footer {
+    padding: 10px;
+    border-top: 1px solid #ccc;
+  }
+  &.dialog-md {
+    width: 500px;
+  }
+  &.dialog-lg {
+    width: 800px;
+  }
+}
+
 /* themes/default/index.css */
