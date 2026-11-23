@@ -377,3 +377,12 @@ msgstr "Tornar Campo Obrigatório"
 
 msgid "Save and new"
 msgstr "Salvar e novo"
+
+msgid "Type a message..."
+msgstr "Digite uma mensagem..."
+
+msgid "AI Assistant"
+msgstr "Assistente de IA"
+
+msgid "Ask to Agent"
+msgstr "Agente de IA"
