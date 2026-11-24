@@ -3171,7 +3171,6 @@ var Katrid;
                         }
                         else if (event.data && event.data[0] === '{') {
                             const eventData = JSON.parse(event.data);
-                            console.debug('WebSocket event data:', eventData);
                             if (eventData.event && WebApplication.wsEventRegistry[eventData.event]) {
                                 WebApplication.wsEventRegistry[eventData.event](eventData);
                             }
