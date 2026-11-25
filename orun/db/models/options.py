@@ -357,32 +357,32 @@ class Options:
                 auto = import_string(settings.DEFAULT_AUTO_FIELD)(verbose_name='ID', primary_key=True, auto_created=True)
                 model.add_to_class('id', auto)
 
-                # TODO move to audit log
-                if self.log_changes and 'created_by' not in self.fields:
-                    from orun.db.models.fields import DateTimeField
-                    from orun.db.models.fields.related import ForeignKey
-                    from orun.contrib.auth import current_user_id
-                    user_model = settings.AUTH_USER_MODEL
-                    model.add_to_class('created_by', ForeignKey(
-                        user_model, verbose_name=_('Created by'),
-                        on_insert_value=current_user_id,
-                        auto_created=True, editable=False, defer=True, db_index=False, copy=False,
-                        db_constraint=False,
-                    ))
-                    model.add_to_class('created_on', DateTimeField(
-                        auto_now_add=True, verbose_name=_('Created on'),
-                        auto_created=True, editable=False, defer=True, copy=False
-                    ))
-                    model.add_to_class('updated_by', ForeignKey(
-                        user_model, verbose_name=_('Updated by'),
-                        on_update_value=current_user_id,
-                        auto_created=True, editable=False, defer=True, db_index=False, copy=False,
-                        db_constraint=False,
-                    ))
-                    model.add_to_class('updated_on', DateTimeField(
-                        auto_now=True, verbose_name=_('Updated on'),
-                        auto_created=True, editable=False, defer=True, copy=False
-                    ))
+        # TODO move to audit log
+        if not self.parents and self.log_changes and 'created_by' not in self.fields:
+            from orun.db.models.fields import DateTimeField
+            from orun.db.models.fields.related import ForeignKey
+            from orun.contrib.auth import current_user_id
+            user_model = settings.AUTH_USER_MODEL
+            model.add_to_class('created_by', ForeignKey(
+                user_model, verbose_name=_('Created by'),
+                on_insert_value=current_user_id,
+                auto_created=True, editable=False, defer=True, db_index=False, copy=False,
+                db_constraint=False,
+            ))
+            model.add_to_class('created_on', DateTimeField(
+                auto_now_add=True, verbose_name=_('Created on'),
+                auto_created=True, editable=False, defer=True, copy=False
+            ))
+            model.add_to_class('updated_by', ForeignKey(
+                user_model, verbose_name=_('Updated by'),
+                on_update_value=current_user_id,
+                auto_created=True, editable=False, defer=True, db_index=False, copy=False,
+                db_constraint=False,
+            ))
+            model.add_to_class('updated_on', DateTimeField(
+                auto_now=True, verbose_name=_('Updated on'),
+                auto_created=True, editable=False, defer=True, copy=False
+            ))
 
     @classmethod
     def create_helper(cls, model, attrs, meta):
