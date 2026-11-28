@@ -53,7 +53,6 @@ def search_menu(request: HttpRequest):
     return JsonResponse({'items': items})
 
 
-@login_required
 def _company_logo(request: HttpRequest):
     # first active company
     company = apps['res.company'].objects.filter(active=True).first()
@@ -62,7 +61,6 @@ def _company_logo(request: HttpRequest):
     return '/static/admin/assets/img/logo.svg'
 
 
-@login_required
 def company_logo(request: HttpRequest):
     # first active company
     company = apps['res.company'].objects.filter(active=True).first()
